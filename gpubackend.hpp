@@ -3,30 +3,23 @@
 #include <CL/cl.h>
 #define CL_HPP_TARGET_OPENCL_VERSION 300
 #include <CL/opencl.hpp>
+#include <fstream>
+#include <sstream>
 
 
-static const std::string kernel_add = R"(
-    void kernel int_add(global const int* A, global const int* B, global int* C){
-        C[get_global_id(0)] = A[get_global_id(0)] + B[get_global_id(0)]; 
-    }
-    void kernel float_add(global const float* A, global const float* B, global float* C){
-        C[get_global_id(0)] = A[get_global_id(0)] + B[get_global_id(0)]; 
-    }
-    void kernel double_add(global const double* A, global const double* B, global double* C){
-        C[get_global_id(0)] = A[get_global_id(0)] + B[get_global_id(0)]; 
-    }
-    void kernel long_add(global const long* A, global const long* B, global long* C){
-        C[get_global_id(0)] = A[get_global_id(0)] + B[get_global_id(0)]; 
-    }
-)";
-inline cl::Program GPUBackend::buildProgram(std::string code){
+inline cl::Program GPUBackend::buildProgram(std::string code_file){
+    std::ifstream t(code_file);
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+    std::string code = buffer.str();
     cl::Program::Sources sources;
     sources.push_back({code.c_str(), code.length()});
     cl::Program program(*context, sources);
     if(program.build({device})!=CL_SUCCESS){
-        log(ERROR, "Could not build a program! Build log: " + program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device));
+        log(ERROR, "Could not build program \"" + code_file + "\"! Build log: " + program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device));
         exit(-1);
     }
+    log(VERBOSE, "Loaded program \"" + code_file + "\"");
     return program;
 }
 inline GPUBackend::GPUBackend(){
@@ -58,7 +51,7 @@ inline GPUBackend::GPUBackend(){
     log(INFO, "Chosen Device: " + device.getInfo<CL_DEVICE_NAME>() + " on platform: " + platform.getInfo<CL_PLATFORM_NAME>());
     context = new cl::Context({device});
     queue = cl::CommandQueue(*context, device);
-    cl::Program add = buildProgram(kernel_add);
+    cl::Program add = buildProgram("opencl/basic_math.cl");
     func_add_int = new cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer>(cl::Kernel(add, "int_add"));
     func_add_float = new cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer>(cl::Kernel(add, "float_add"));
     func_add_long = new cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer>(cl::Kernel(add, "long_add"));
