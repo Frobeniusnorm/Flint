@@ -203,6 +203,7 @@ private:
     }
 public:
     typedef typename Tensor<T, n-1>::type rektype;
+    typedef std::vector<rektype> type;
     Tensor(){
         checkTypes<T>();
     }

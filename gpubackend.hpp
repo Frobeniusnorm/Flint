@@ -82,7 +82,7 @@ inline void GPUBackend::add(Tensor<T, n>& a, Tensor<T, n>& b, Tensor<T, n>& dest
         (*func_add_float)(ea, *bA, *bB, *bC).wait();
     else if(std::is_same<T, long>())
         (*func_add_long)(ea, *bA, *bB, *bC).wait();
-     else if(std::is_same<T, double>())
+    else if(std::is_same<T, double>())
         (*func_add_long)(ea, *bA, *bB, *bC).wait();
     //TODO maybe it's smarter to read memory lazy on demand and mark cpu data as outdated here
     std::vector<T> C(fdA.size());

@@ -15,4 +15,5 @@ int main(){
         std::cout << "] ";
     }
     std::cout<< "]" << std::endl;
+    Tensor<float, 3> c;
 }
