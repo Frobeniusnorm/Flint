@@ -61,21 +61,25 @@ static void add(Tensor<T, n>& a, Tensor<T, n>& b, Tensor<T, n>& dest){
         Flint::gpuBackend->add(a,b,dest);
     }
 }
-
+template <typename T>
+static constexpr void checkTypes(){
+    static_assert(std::is_same<T, int>() || std::is_same<T, float>());
+}
 template <typename T>
 struct Tensor<T, 1> : public BaseTensor<T>{
     friend class GPUBackend; 
 protected:
     int vaultID = -1;
-    typedef std::vector<T> type;
     std::vector<T> data;
     size_t sizes;
 public:
+    typedef std::vector<T> type;
     Tensor(){
-        static_assert(std::is_same<T, int>() || std::is_same<T, float>());
+        checkTypes<T>();
     }
     Tensor(std::vector<T> data):data(data){
-        static_assert(std::is_same<T, int>() || std::is_same<T, float>());
+        checkTypes<T>();
+        sizes = data.size();
         updateTensor(*this);
     }
     ~Tensor(){
@@ -135,7 +139,6 @@ struct Tensor : public BaseTensor<T>{
     friend class GPUBackend; 
 protected:
     int vaultID = -1;
-    typedef typename Tensor<T, n-1>::type rektype;
     std::array<size_t, n> sizes;
     std::vector<T> data;
 private:
@@ -154,10 +157,62 @@ private:
         sizes[sizes.size() - subv] = vec.size();
         return subv;
     }
-
+    size_t calculateSize(std::vector<T>& vec){
+        return vec.size();
+    }
+    template<typename E>
+    size_t calculateSize(std::vector<std::vector<E>>& vec){
+        if(vec.size() == 0) log(ERROR, "A tensor does not allow empty vectors!");
+        return vec.size() * calculateSize(vec[0]);
+    }
+    int assignData(std::vector<T>& vec, int index){
+        for(int i = 0; i < vec.size(); i++)
+            data[index + i] = vec[i];
+        return vec.size();
+    }
+    template<typename E>
+    int assignData(std::vector<std::vector<E>>& vec, int index){
+        int curridx = index;
+        for(std::vector<E>& r : vec){
+            curridx += assignData(r, curridx);
+        }
+        return curridx - index;
+    }
+    template<typename E>
+    void assignRekVector(std::vector<E>& vec){
+        assignSizes(vec);
+        //calculate overall size
+        size_t dataSize = calculateSize(vec);
+        data = std::vector<T>(dataSize);
+        assignData(vec, 0);
+    }
+    int fillVector(std::vector<T>& vec, int index, int depth){
+        vec.resize(sizes[depth]);
+        for(int i = 0; i < vec.size(); i++)
+            vec[i] = data[index + i];
+        return vec.size();
+    }
+    template<typename E>
+    int fillVector(std::vector<std::vector<E>>& vec, int index, int depth){
+        vec.resize(sizes[depth]);
+        int curridx = index;
+        for(std::vector<E>& r : vec){
+            curridx += fillVector(r, curridx, depth+1);
+        }
+        return curridx - index;
+    }
 public:
-    Tensor(){}
-    Tensor(std::vector<T> data):data(data){
+    typedef typename Tensor<T, n-1>::type rektype;
+    Tensor(){
+        checkTypes<T>();
+    }
+    Tensor(std::vector<T> data, std::array<size_t, n> sizes):data(data), sizes(sizes){
+        checkTypes<T>();
+        updateTensor(*this);
+    }
+    Tensor(std::vector<rektype> data){
+        checkTypes<T>();
+        assignRekVector(data);
         updateTensor(*this);
     }
     ~Tensor(){
@@ -174,12 +229,12 @@ public:
         sizes = other.sizes;
         other.vaultID = -1;
     }
-    Tensor<T, n>& operator=(const Tensor<T, 1>& other){
+    Tensor<T, n>& operator=(const Tensor<T, n>& other){
         data = other.data;
         sizes = other.sizes;
         return *this;
     }
-    Tensor<T, n>& operator=(Tensor<T, 1>&& other){
+    Tensor<T, n>& operator=(Tensor<T, n>&& other){
         if(vaultID >= 0) Flint::gpuBackend->deleteTensor(vaultID);
         vaultID = other.vaultID;
         data = other.data;
@@ -191,7 +246,9 @@ public:
         return data;
     }
     std::vector<rektype> operator*(){
-        return std::vector<rektype>(); //TODO
+        std::vector<rektype> foo = std::vector<rektype>();
+        fillVector(foo, 0, 0);
+        return foo;
     }
     Tensor<T, n-1> operator[](unsigned index){
         Tensor<T, n-1> foo;
@@ -204,8 +261,7 @@ public:
         return foo;
     }
     void operator=(std::vector<rektype> asgn){
-        assignSizes(asgn);
-        data = asgn;
+        assignRekVector(asgn);
         updateTensor(*this);
     }
     void operator+=(Tensor<T, n>& other){
