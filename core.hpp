@@ -216,28 +216,32 @@ private:
         return curridx - index;
     }
     std::string toString(int dimension = n-1, int* start = nullptr) const{
-      int startbf = 0;
-      if(!start) start = &startbf;
+        int startbf = 0;
+        if(!start) start = &startbf;
 
-      std::string res = "[";
-      bool first = true;
-      size_t size = sizes[dimension];
-      if(dimension == 0){
-        for(int i = 0; i < size; i++){
-          if(!first) res += ", ";
-          else first = false;
-          res += std::to_string(data[*start + i]);
+        std::string res = "[";
+        bool first = true;
+        size_t size = sizes[dimension];
+        if(dimension == 0){
+            for(int i = 0; i < size; i++){
+                if(!first) res += ", ";
+                else first = false;
+                res += std::to_string(data[*start + i]);
+            }
+            *start += size;
+        }else{
+            for(int i = 0; i < size; i++){
+                if(!first){
+                    res += ", ";
+                    if(dimension == 1)
+                        res += "\n";
+                }
+                else first = false;
+                res += toString(dimension - 1, start);
+            }
         }
-        *start += size;
-      }else{
-        for(int i = 0; i < size; i++){
-          if(!first) res += ", ";
-          else first = false;
-          res += toString(dimension - 1, start);
-        }
-      }
-      res += "]";
-      return res;
+        res += "]";
+        return res;
     }
 public:
     typedef typename Tensor<T, n-1>::type rektype;
