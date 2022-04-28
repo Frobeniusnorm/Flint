@@ -63,11 +63,11 @@ static void add(Tensor<T, n>& a, Tensor<T, n>& b, Tensor<T, n>& dest){
 }
 template <typename T>
 static constexpr void checkTypes(){
-    static_assert(std::is_same<T, int>() || std::is_same<T, float>());
+    static_assert(std::is_same<T, int>() || std::is_same<T, float>(), "Only integer and floating-point Tensor types are allowed");
 }
 template <typename T>
 struct Tensor<T, 1> : public BaseTensor<T>{
-    friend class GPUBackend; 
+    friend class GPUBackend;
 protected:
     int vaultID = -1;
     std::vector<T> data;
@@ -83,7 +83,7 @@ public:
         updateTensor(*this);
     }
     ~Tensor(){
-        if(vaultID >= 0 && Flint::gpuBackend) Flint::gpuBackend->deleteTensor(vaultID); 
+        if(vaultID >= 0 && Flint::gpuBackend) Flint::gpuBackend->deleteTensor(vaultID);
         vaultID = -1;
     }
     Tensor(const Tensor<T, 1>& other){
@@ -109,13 +109,27 @@ public:
         other.vaultID = -1;
         return *this;
     }
+    std::string to_string() const{
+        std::string res = "[";
+        bool first = true;
+        for(const T& el : data){
+          if(!first) res += ", ";
+          else first = false;
+          res += std::to_string(el);
+        }
+        res += "]";
+        return res;
+    }
+    operator std::string() const{
+      return to_string();
+    }
     std::vector<T>& flatData(){
         return data;
     }
-    std::vector<T> operator*(){
+    std::vector<T> operator*() const{
         return data;
     }
-    T operator[](unsigned index){
+    T operator[](unsigned index) const{
         return data[index];
     }
     void operator=(std::vector<T> asgn){
@@ -126,7 +140,7 @@ public:
     void operator+=(Tensor<T, 1>& other){
         add(*this, other, *this);
     }
-    Tensor<T, 1> operator+(Tensor<T, 1>& other){
+    Tensor<T, 1> operator+(Tensor<T, 1>& other) const{
         Tensor<T, 1> result;
         result.sizes = sizes;
         add(*this, other, result);
@@ -136,7 +150,7 @@ public:
 
 template <typename T, unsigned int n>
 struct Tensor : public BaseTensor<T>{
-    friend class GPUBackend; 
+    friend class GPUBackend;
 protected:
     int vaultID = -1;
     std::array<size_t, n> sizes;
@@ -157,11 +171,11 @@ private:
         sizes[sizes.size() - subv] = vec.size();
         return subv;
     }
-    size_t calculateSize(std::vector<T>& vec){
+    size_t calculateSize(std::vector<T>& vec) const{
         return vec.size();
     }
     template<typename E>
-    size_t calculateSize(std::vector<std::vector<E>>& vec){
+    size_t calculateSize(std::vector<std::vector<E>>& vec) const{
         if(vec.size() == 0) log(ERROR, "A tensor does not allow empty vectors!");
         return vec.size() * calculateSize(vec[0]);
     }
@@ -186,20 +200,44 @@ private:
         data = std::vector<T>(dataSize);
         assignData(vec, 0);
     }
-    int fillVector(std::vector<T>& vec, int index, int depth){
+    int fillVector(std::vector<T>& vec, int index, int depth) const{
         vec.resize(sizes[depth]);
         for(int i = 0; i < vec.size(); i++)
             vec[i] = data[index + i];
         return vec.size();
     }
     template<typename E>
-    int fillVector(std::vector<std::vector<E>>& vec, int index, int depth){
+    int fillVector(std::vector<std::vector<E>>& vec, int index, int depth) const{
         vec.resize(sizes[depth]);
         int curridx = index;
         for(std::vector<E>& r : vec){
             curridx += fillVector(r, curridx, depth+1);
         }
         return curridx - index;
+    }
+    std::string toString(int dimension = n-1, int* start = nullptr) const{
+      int startbf = 0;
+      if(!start) start = &startbf;
+
+      std::string res = "[";
+      bool first = true;
+      size_t size = sizes[dimension];
+      if(dimension == 0){
+        for(int i = 0; i < size; i++){
+          if(!first) res += ", ";
+          else first = false;
+          res += std::to_string(data[*start + i]);
+        }
+        *start += size;
+      }else{
+        for(int i = 0; i < size; i++){
+          if(!first) res += ", ";
+          else first = false;
+          res += toString(dimension - 1, start);
+        }
+      }
+      res += "]";
+      return res;
     }
 public:
     typedef typename Tensor<T, n-1>::type rektype;
@@ -217,7 +255,7 @@ public:
         updateTensor(*this);
     }
     ~Tensor(){
-        if(vaultID >= 0 && Flint::gpuBackend) Flint::gpuBackend->deleteTensor(vaultID); 
+        if(vaultID >= 0 && Flint::gpuBackend) Flint::gpuBackend->deleteTensor(vaultID);
         vaultID = -1;
     }
     Tensor(const Tensor<T, n>& other){
@@ -246,12 +284,12 @@ public:
     std::vector<T>& flatData(){
         return data;
     }
-    std::vector<rektype> operator*(){
+    std::vector<rektype> operator*() const{
         std::vector<rektype> foo = std::vector<rektype>();
         fillVector(foo, 0, 0);
         return foo;
     }
-    Tensor<T, n-1> operator[](unsigned index){
+    Tensor<T, n-1> operator[](unsigned index) const{
         Tensor<T, n-1> foo;
         size_t sum = 0;
         for(int i = 0; i < n - 1; i++){
@@ -268,11 +306,17 @@ public:
     void operator+=(Tensor<T, n>& other){
         add(*this, other, *this);
     }
-    Tensor<T, n> operator+(Tensor<T, n>& other){
+    Tensor<T, n> operator+(Tensor<T, n>& other) const{
         Tensor<T, n> result;
         result.sizes = sizes;
         add(*this, other, result);
         return result;
+    }
+    std::string to_string() const{
+        return toString();
+    }
+    operator std::string() const{
+      return to_string();
     }
 };
 

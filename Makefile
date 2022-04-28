@@ -4,5 +4,8 @@ test: main.o
 	g++ -o test main.o $(LIBS)
 
 main.o: main.cpp core.hpp flint.hpp gpubackend.hpp
-	g++ -c -g main.cpp 
+	g++ -c -g main.cpp
 
+clean:
+	rm *.o
+	rm test

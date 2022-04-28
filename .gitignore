@@ -34,3 +34,4 @@ test
 
 #vscode
 .vscode
+.ccls-cache
