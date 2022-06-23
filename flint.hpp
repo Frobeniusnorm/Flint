@@ -20,7 +20,7 @@ struct Operation {
 // out going edge
 struct GraphNode {
   int num_predecessor;
-  GraphNode *predecessors, *successor;
+  GraphNode **predecessors, *successor;
   Operation *operation; // the operation represented by this graph node
 };
 // Operations
