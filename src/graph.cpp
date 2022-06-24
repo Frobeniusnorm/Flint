@@ -69,15 +69,29 @@ GraphNode *mul(GraphNode *a, GraphNode *b) {
   Mul *op = new Mul();
   return addNode(op, {a, b});
 }
-
+template <typename T>
+static GraphNode *addNodeWithConst(Operation *op, GraphNode *a, T b) {
+  Const<T> *cons = new Const<T>();
+  cons->value = b;
+  return addNode(op, {a, cons});
+}
 // adds the constant value to each entry in a
 template <typename T> GraphNode *add(GraphNode *a, T b) {
   Add *op = new Add();
-  return addNode(op, {a, new Const(b)});
+  return addNodeWithConst(op, a, b);
 }
 // subtracts the constant value from each entry in a
-template <typename T> GraphNode *sub(GraphNode *a, T b);
+template <typename T> GraphNode *sub(GraphNode *a, T b) {
+  Sub *op = new Sub();
+  return addNodeWithConst(op, a, b);
+}
 // divides each entry in a by the constant value
-template <typename T> GraphNode *div(GraphNode *a, T b);
+template <typename T> GraphNode *div(GraphNode *a, T b) {
+  Div *op = new Div();
+  return addNodeWithConst(op, a, b);
+}
 // multiplicates the constant value with each entry in a
-template <typename T> GraphNode *mul(GraphNode *a, T b);
+template <typename T> GraphNode *mul(GraphNode *a, T b) {
+  Mul *op = new Mul();
+  return addNodeWithConst(op, a, b);
+}

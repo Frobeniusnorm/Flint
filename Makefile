@@ -17,7 +17,7 @@ C_OBJS := $(C_SRCS:$(SRCDIR)/%.cpp=$(BUILDDIR)/%.o)
 
 # TEST, IT'S ALSO THE DEFAULT
 test/test: $(C_OBJS) $(BUILDDIR)/test.o | $(BUILDDIR)
-	g++ -o $@ $(C_OBJS)$(BUILDDIR)/test.o
+	g++ -o $@ $(C_OBJS) $(BUILDDIR)/test.o
 
 $(BUILDDIR)/test.o: test/test.cpp
 	$(COMPILER) -c -o $(BUILDDIR)/test.o test/test.cpp
