@@ -64,6 +64,5 @@ template <typename T> GraphNode *sub(GraphNode *a, T b);
 template <typename T> GraphNode *div(GraphNode *a, T b);
 // multiplicates the constant value with each entry in a
 template <typename T> GraphNode *mul(GraphNode *a, T b);
-
 }; // namespace FlintBackend
 #endif
