@@ -1,13 +1,13 @@
-SRCDIR = src
-BUILDDIR = build
-MODE = debug # or production, defines the compiler arguments
+SRCDIR=src
+BUILDDIR=build
+MODE=debug # unset to enable production mode 
 
 
-COMPILER = g++
-ifeq ($(MODE),"debug")
-COMPILER += -Og -Wall
+COMPILER = g++ -std=c++20 -l OpenCL
+ifeq ($(strip $(MODE)),$(strip debug))
+	COMPILER += -Og -Wall
 else
-COMPILER += -O3
+	COMPILER += -O3
 endif
 
 # WILD CARDS FOR COMPILATION
@@ -16,14 +16,14 @@ C_SRCS := $(wildcard $(SRCDIR)/*.cpp)
 C_OBJS := $(C_SRCS:$(SRCDIR)/%.cpp=$(BUILDDIR)/%.o)
 
 # TEST, IT'S ALSO THE DEFAULT
-test/test: $(C_OBJS) $(BUILDDIR)/test.o | $(BUILDDIR)
-	g++ -o $@ $(C_OBJS) $(BUILDDIR)/test.o
+test/test: $(C_OBJS) $(H_SRCS) $(BUILDDIR)/test.o | $(BUILDDIR)
+	$(COMPILER) -o $@ $(C_OBJS) $(BUILDDIR)/test.o
 
-$(BUILDDIR)/test.o: test/test.cpp
+$(BUILDDIR)/test.o: test/test.cpp flint.hpp 
 	$(COMPILER) -c -o $(BUILDDIR)/test.o test/test.cpp
 
 # THE OBJECT FILES
-$(BUILDDIR)/%.o: src/%.cpp $(C_SRCS)
+$(BUILDDIR)/%.o: src/%.cpp $(H_SRCS)
 	$(COMPILER) -c -o $@ $<
 
 # OTHER TARGETS

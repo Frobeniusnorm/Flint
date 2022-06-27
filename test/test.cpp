@@ -44,3 +44,7 @@ TEST_CASE("Graph Implementation (createGraph, add, mul, sub, div)") {
     freeGraph(gn2);
   }
 }
+TEST_CASE("Init and cleanup") {
+  using namespace FlintBackend;
+  init();
+}

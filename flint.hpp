@@ -11,6 +11,14 @@
   compiled to a specific OpenCL program
 */
 namespace FlintBackend {
+
+void init();
+void cleanup();
+
+// 0 no logging, 1 only errors, 2 errors and warnings, 3 error, warnings and
+// info, 4 verbose
+void setLoggingLevel(int);
+
 enum Type { FLOAT32, FLOAT64, INT32, INT64 };
 struct Operation {
   // an Operation always is linked to the resulting tensor
@@ -30,15 +38,18 @@ struct Store : public Operation {
   void *data;
   int num_entries;
 };
-// Load data from the tensor, always the Exit (sink) of the graph
-struct Load : public Operation {};
+struct ResultData {
+  Type data_type;
+  void *data;
+  int num_entries;
+};
 // Addition of two tensors
 struct Add : public Operation {};
 // Subtraction of two tensors
 struct Sub : public Operation {};
 // Multiplication of two tensors
 struct Mul : public Operation {};
-// Division of two tensors
+// Division of two tesors
 struct Div : public Operation {};
 // A single-value constant (does not have to be loaded as a tensor)
 template <typename T> struct Const : public Operation {
@@ -52,6 +63,11 @@ template <typename T> struct Const : public Operation {
 GraphNode *createGraph(void *data, int num_entries, Type data_type);
 // frees all allocated data from the graph and the nodes that are reachable
 void freeGraph(GraphNode *graph);
+/* executes the Graph which starts with the root of the given node and stores
+ * the result for that node in result. If Flint was not initialized yet, this
+ * function will do that automatically. */
+void executeGraph(GraphNode *node, ResultData *data);
+// operations
 GraphNode *add(GraphNode *a, GraphNode *b);
 GraphNode *sub(GraphNode *a, GraphNode *b);
 GraphNode *div(GraphNode *a, GraphNode *b);
