@@ -3,7 +3,7 @@ BUILDDIR=build
 MODE=debug # unset to enable production mode 
 
 
-COMPILER = g++ -std=c++20 -l OpenCL
+COMPILER = g++ -std=c++2a  -l OpenCL
 ifeq ($(strip $(MODE)),$(strip debug))
 	COMPILER += -g -Og -Wall
 else
