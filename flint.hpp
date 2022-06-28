@@ -5,7 +5,8 @@
   This is the basic header file and implementation of Flint, to be compatible
   with as many languages as possible. Though it is written in C++ for object
   orientation it is as close to C as possible to guarantee compatibility,
-  nevertheless it is NOT compatible to C.
+  nevertheless it is NOT compatible to C. Maybe in the future i will rewrite
+  this header to add C compatibility.
 
   Flints Execution structure represents an AST, so that each Graph may be
   compiled to a specific OpenCL program
@@ -14,7 +15,6 @@ namespace FlintBackend {
 
 void init();
 void cleanup();
-
 // 0 no logging, 1 only errors, 2 errors and warnings, 3 error, warnings and
 // info, 4 verbose
 void setLoggingLevel(int);
@@ -52,7 +52,7 @@ struct Mul : public Operation {};
 // Division of two tesors
 struct Div : public Operation {};
 // A single-value constant (does not have to be loaded as a tensor)
-template <typename T> struct Const : public Operation {
+template <typename T> struct Const : public GraphNode {
   T value; // has to be one of Type
 };
 

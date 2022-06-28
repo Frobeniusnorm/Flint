@@ -9,9 +9,16 @@
 #else
 #include <CL/cl.h>
 #endif
-
+static void openclCallback(const char *errinfo, const void *privateinfo,
+                           size_t cb, void *user_data) {
+  log(WARNING, "{OpenCL} " + std::string(errinfo));
+}
+static bool initialized = false;
+// opencl vars
+static cl_context context;
+static cl_command_queue queue;
 void FlintBackend::init() {
-  log(VERBOSE, "initializing Flint");
+  log(VERBOSE, "Initializing Flint");
   cl_platform_id platform = NULL;
   cl_device_id device = NULL;
   cl_uint num_dev, num_plat;
@@ -52,14 +59,45 @@ void FlintBackend::init() {
     dev_type_string = "Accelerator";
   } else
     dev_type_string = "Device";
-  std::string info = "Using " + dev_type_string + "  '" +
-                     std::string(dev_vend, dev_vend_size) + "', '" +
-                     std::string(dev_name, dev_name_size) +
-                     "' with OpenCL version " +
-                     std::string(dev_vers, dev_vers_size);
+  std::string info =
+      "Using " + dev_type_string + " '" + std::string(dev_vend, dev_vend_size) +
+      "', '" + std::string(dev_name, dev_name_size) + "' with OpenCL version " +
+      std::string(dev_vers, dev_vers_size);
   log(INFO, info);
+  int status = 0;
+  context = clCreateContext(NULL, 1, &device, openclCallback, NULL, &status);
+  if (status != CL_SUCCESS) {
+    std::string err = "Could not create OpenCL context: ";
+    switch (status) {
+    case CL_INVALID_VALUE:
+      err += "invalid value";
+      break;
+    case CL_INVALID_DEVICE:
+      err += "invalid device";
+      break;
+    case CL_DEVICE_NOT_AVAILABLE:
+      err += "device is not available";
+      break;
+    case CL_OUT_OF_RESOURCES:
+      err += "out of resources";
+      break;
+    case CL_OUT_OF_HOST_MEMORY:
+      err += "out of host memory";
+      break;
+    }
+    log(ERROR, err);
+  }
+  queue = clCreateCommandQueueWithProperties(context, device, NULL, &status);
+  if (status != CL_SUCCESS)
+    log(ERROR, "clCreateCommandQueue");
+  initialized = true;
   log(VERBOSE, "Flint was initialized!");
 }
-void cleanup();
+void FlintBackend::cleanup() {
+  if (initialized) {
+    clReleaseCommandQueue(queue);
+    clReleaseContext(context);
+  }
+}
 
 void FlintBackend::setLoggingLevel(int level) { setLoggerLevel(level); }

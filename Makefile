@@ -5,7 +5,7 @@ MODE=debug # unset to enable production mode
 
 COMPILER = g++ -std=c++20 -l OpenCL
 ifeq ($(strip $(MODE)),$(strip debug))
-	COMPILER += -Og -Wall
+	COMPILER += -g -Og -Wall
 else
 	COMPILER += -O3
 endif

@@ -38,6 +38,8 @@ void FlintBackend::freeGraph(GraphNode *graph) {
     // delete gn->operation;
     if (gn->predecessors != NULL && gn->num_predecessor != 0)
       free(gn->predecessors);
+    if (gn->operation != NULL)
+      delete gn->operation;
     delete gn;
   }
 }
