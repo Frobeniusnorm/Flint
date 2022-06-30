@@ -1,5 +1,6 @@
 #include "../flint.hpp"
 #include "logger.hpp"
+#include "utils.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
@@ -9,6 +10,7 @@
 #else
 #include <CL/cl.h>
 #endif
+using namespace FlintBackend;
 static void openclCallback(const char *errinfo, const void *privateinfo,
                            size_t cb, void *user_data) {
   log(WARNING, "{OpenCL} " + std::string(errinfo));
@@ -101,3 +103,20 @@ void FlintBackend::cleanup() {
 }
 
 void FlintBackend::setLoggingLevel(int level) { setLoggerLevel(level); }
+ResultData *FlintBackend::executeGraph(GraphNode *node) {
+  if (node->successor != NULL) {
+    log(WARNING, "Only leaf nodes (without successor) may be executed!");
+    return nullptr;
+  }
+  ResultData *result = new ResultData();
+  GraphNode *newsucc = new GraphNode();
+  newsucc->successor = nullptr;
+  newsucc->num_predecessor = 1;
+  newsucc->predecessors = safe_mal<GraphNode *>(1);
+  newsucc->predecessors[0] = node;
+  newsucc->operation = result;
+  node->successor = newsucc;
+  // TODO execute and store data
+
+  return result;
+}

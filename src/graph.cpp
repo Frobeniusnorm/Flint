@@ -120,3 +120,8 @@ template GraphNode *FlintBackend::mul<double>(GraphNode *, double);
 template GraphNode *FlintBackend::mul<float>(GraphNode *, float);
 template GraphNode *FlintBackend::mul<int>(GraphNode *, int);
 template GraphNode *FlintBackend::mul<long>(GraphNode *, long);
+
+FlintBackend::ResultData::~ResultData() {
+  if (this->data)
+    free(this->data);
+}

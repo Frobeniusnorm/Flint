@@ -38,10 +38,11 @@ struct Store : public Operation {
   void *data;
   int num_entries;
 };
-struct ResultData {
+struct ResultData : public Operation {
   Type data_type;
   void *data;
   int num_entries;
+  ~ResultData();
 };
 // Addition of two tensors
 struct Add : public Operation {};
@@ -49,7 +50,7 @@ struct Add : public Operation {};
 struct Sub : public Operation {};
 // Multiplication of two tensors
 struct Mul : public Operation {};
-// Division of two tesors
+// Division of two tensors
 struct Div : public Operation {};
 // A single-value constant (does not have to be loaded as a tensor)
 template <typename T> struct Const : public GraphNode {
@@ -65,8 +66,9 @@ GraphNode *createGraph(void *data, int num_entries, Type data_type);
 void freeGraph(GraphNode *graph);
 /* executes the Graph which starts with the root of the given node and stores
  * the result for that node in result. If Flint was not initialized yet, this
- * function will do that automatically. */
-void executeGraph(GraphNode *node, ResultData *data);
+ * function will do that automatically.
+ * The result data is automatically freed with the Graph */
+ResultData *executeGraph(GraphNode *node);
 // operations
 GraphNode *add(GraphNode *a, GraphNode *b);
 GraphNode *sub(GraphNode *a, GraphNode *b);
