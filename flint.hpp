@@ -23,6 +23,9 @@ enum Type { FLOAT32, FLOAT64, INT32, INT64 };
 struct Operation {
   // an Operation always is linked to the resulting tensor
   unsigned int id;
+  // shape of the data after execution
+  int dimensions;
+  int *shape;
 };
 // each Graph Node represents one Operation with multiple ingoing edges and one
 // out going edge
@@ -58,10 +61,13 @@ template <typename T> struct Const : public GraphNode {
 };
 
 // functions
-// creates a Graph with a single store instruction, the data is _during
-// execution_ copied to intern memory, till then the pointer has to point to
-// valid data.
-GraphNode *createGraph(void *data, int num_entries, Type data_type);
+// creates a Graph with a single store instruction, data is copied _during
+// execution_ to intern memory, till then the pointer has to point to
+// valid data. Shape is instantly copied and has to be alive only during this
+// function call. Data contains the flattened data array from type data_type and
+// shape contains the size on each dimension as an array with length dimensions.
+GraphNode *createGraph(void *data, int num_entries, Type data_type, int *shape,
+                       int dimensions);
 // frees all allocated data from the graph and the nodes that are reachable
 void freeGraph(GraphNode *graph);
 /* executes the Graph which starts with the root of the given node and stores

@@ -1,15 +1,20 @@
 #include "../flint.hpp"
 #include "logger.hpp"
 #include "utils.hpp"
+#include <cstring>
 #include <stdlib.h>
 #include <unordered_set>
 #include <vector>
 using namespace FlintBackend;
 
 GraphNode *FlintBackend::createGraph(void *data, int num_entries,
-                                     Type data_type) {
+                                     Type data_type, int *shape,
+                                     int dimensions) {
   GraphNode *gn = new GraphNode();
   Store *op = new Store();
+  op->dimensions = dimensions;
+  op->shape = (int *)malloc(sizeof(int) * dimensions);
+  std::memcpy((void *)op->shape, (void *)shape, dimensions * sizeof(int));
   op->data = data;
   op->num_entries = num_entries;
   op->data_type = data_type;
@@ -38,8 +43,11 @@ void FlintBackend::freeGraph(GraphNode *graph) {
     // delete gn->operation;
     if (gn->predecessors != NULL && gn->num_predecessor != 0)
       free(gn->predecessors);
-    if (gn->operation != NULL)
+    if (gn->operation != NULL) {
+      if (gn->operation->shape)
+        free(gn->operation->shape);
       delete gn->operation;
+    }
     delete gn;
   }
 }
@@ -61,32 +69,49 @@ static GraphNode *addNode(Operation *op, std::vector<GraphNode *> pre) {
   }
   return foo;
 }
-
+static inline void initShape_keep(Operation *op, Operation *a, Operation *b) {
+  int *src = nullptr;
+  if (!b || a->dimensions >= b->dimensions) {
+    op->dimensions = a->dimensions;
+    src = a->shape;
+  } else {
+    op->dimensions = b->dimensions;
+    src = b->shape;
+  }
+  op->shape = (int *)malloc(sizeof(int) * op->dimensions);
+  memcpy((void *)op->shape, src, sizeof(int) * op->dimensions);
+}
 GraphNode *FlintBackend::add(GraphNode *a, GraphNode *b) {
   Add *op = new Add();
+  initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
 GraphNode *FlintBackend::sub(GraphNode *a, GraphNode *b) {
   Sub *op = new Sub();
+  initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
 GraphNode *FlintBackend::div(GraphNode *a, GraphNode *b) {
   Div *op = new Div();
+  initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
 GraphNode *FlintBackend::mul(GraphNode *a, GraphNode *b) {
   Mul *op = new Mul();
+  initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
 template <typename T>
 static GraphNode *addNodeWithConst(Operation *op, GraphNode *a, T b) {
   Const<T> *cons = new Const<T>();
   cons->value = b;
+  cons->operation = nullptr;
   return addNode(op, {a, (GraphNode *)cons});
 }
 // adds the constant value to each entry in a
 template <typename T> GraphNode *FlintBackend::add(GraphNode *a, T b) {
   Add *op = new Add();
+  initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
 template GraphNode *FlintBackend::add<double>(GraphNode *, double);
@@ -96,6 +121,7 @@ template GraphNode *FlintBackend::add<long>(GraphNode *, long);
 // subtracts the constant value from each entry in a
 template <typename T> GraphNode *FlintBackend::sub(GraphNode *a, T b) {
   Sub *op = new Sub();
+  initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
 template GraphNode *FlintBackend::sub<double>(GraphNode *, double);
@@ -105,6 +131,7 @@ template GraphNode *FlintBackend::sub<long>(GraphNode *, long);
 // divides each entry in a by the constant value
 template <typename T> GraphNode *FlintBackend::div(GraphNode *a, T b) {
   Div *op = new Div();
+  initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
 template GraphNode *FlintBackend::div<double>(GraphNode *, double);
@@ -114,6 +141,7 @@ template GraphNode *FlintBackend::div<long>(GraphNode *, long);
 // multiplicates the constant value with each entry in a
 template <typename T> GraphNode *FlintBackend::mul(GraphNode *a, T b) {
   Mul *op = new Mul();
+  initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
 template GraphNode *FlintBackend::mul<double>(GraphNode *, double);
