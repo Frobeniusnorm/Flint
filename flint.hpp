@@ -20,12 +20,17 @@ void cleanup();
 void setLoggingLevel(int);
 
 enum Type { FLOAT32, FLOAT64, INT32, INT64 };
+enum OperationType { STORE, RESULTDATA, CONST, ADD, SUB, MUL, DIV };
 struct Operation {
   // an Operation always is linked to the resulting tensor
   unsigned int id;
   // shape of the data after execution
   int dimensions;
   int *shape;
+  // type of operation, to enable switch cases and avoid v-table lookups
+  OperationType op_type;
+  // datatype of result
+  Type data_type;
 };
 // each Graph Node represents one Operation with multiple ingoing edges and one
 // out going edge
@@ -37,12 +42,10 @@ struct GraphNode {
 // Operations
 // Store data in the tensor, always an Entry (source) of the graph
 struct Store : public Operation {
-  Type data_type;
   void *data;
   int num_entries;
 };
 struct ResultData : public Operation {
-  Type data_type;
   void *data;
   int num_entries;
   ~ResultData();
@@ -56,7 +59,7 @@ struct Mul : public Operation {};
 // Division of two tensors
 struct Div : public Operation {};
 // A single-value constant (does not have to be loaded as a tensor)
-template <typename T> struct Const : public GraphNode {
+template <typename T> struct Const : public Operation {
   T value; // has to be one of Type
 };
 

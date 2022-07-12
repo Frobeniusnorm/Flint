@@ -1,9 +1,13 @@
 #include "../flint.hpp"
 #include "logger.hpp"
 #include "utils.hpp"
+#include <list>
+#include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
+#include <tuple>
+#include <typeinfo>
 #define CL_TARGET_OPENCL_VERSION 200
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -102,7 +106,90 @@ void FlintBackend::cleanup() {
   }
 }
 
+static std::string typeString(Type t) {
+  switch (t) {
+  case INT32:
+    return "int";
+  case INT64:
+    return "long";
+  case FLOAT32:
+    return "float";
+  case FLOAT64:
+    return "double";
+  }
+  return "";
+}
 void FlintBackend::setLoggingLevel(int level) { setLoggerLevel(level); }
+
+static std::string
+generateCode(GraphNode *node,
+             std::list<std::pair<Store *, std::string>> &parameters) {
+  using namespace std;
+  list<pair<GraphNode *, string>> todo;
+  int variable_index = 0;
+  string code = "";
+  todo.push_front({node, "v0"});
+  while (!todo.empty()) {
+    // take from queue
+    const auto [node, name] = todo.front();
+    todo.pop_front();
+    // write code
+    char op = '\0';
+    string type = typeString(node->operation->data_type);
+    switch (node->operation->op_type) {
+    case STORE:
+      parameters.push_front({(Store *)node->operation, name});
+      break;
+    case CONST:
+      switch (node->operation->data_type) {
+      case INT32: {
+        Const<int> *actcst = (Const<int> *)node->operation;
+        code =
+            type + " " + name + " = " + to_string(actcst->value) + ";\n" + code;
+      } break;
+      case INT64: {
+        Const<long> *actcst = (Const<long> *)node->operation;
+        code =
+            type + " " + name + " = " + to_string(actcst->value) + ";\n" + code;
+      } break;
+      case FLOAT64: {
+        Const<double> *actcst = (Const<double> *)node->operation;
+        code =
+            type + " " + name + " = " + to_string(actcst->value) + ";\n" + code;
+      } break;
+      case FLOAT32: {
+        Const<float> *actcst = (Const<float> *)node->operation;
+        code =
+            type + " " + name + " = " + to_string(actcst->value) + ";\n" + code;
+      } break;
+      }
+      break;
+    // Binary Operators
+    case ADD:
+      op = '+';
+    case SUB:
+      if (op != '\0')
+        op = '-';
+    case DIV:
+      if (op != '\0')
+        op = '/';
+    case MUL:
+      if (op != '\0')
+        op = '*';
+      code = type + " " + name + " = v" + to_string(variable_index + 1) + " " +
+             op + " v" + to_string(variable_index + 2) + ";\n" + code;
+      break;
+    case RESULTDATA:
+      throw std::runtime_error("Can't execute a ResultData node!");
+    }
+    // push predecessors
+    for (int i = 0; i < node->num_predecessor; i++)
+      todo.push_front(
+          {node->predecessors[i], "v" + to_string(++variable_index)});
+  }
+  return code;
+}
+
 ResultData *FlintBackend::executeGraph(GraphNode *node) {
   if (node->successor != NULL) {
     log(WARNING, "Only leaf nodes (without successor) may be executed!");
@@ -116,7 +203,10 @@ ResultData *FlintBackend::executeGraph(GraphNode *node) {
   newsucc->predecessors[0] = node;
   newsucc->operation = result;
   node->successor = newsucc;
-  // TODO execute and store data
+  // calculate Code and Parameters
+  using namespace std;
+  list<pair<Store *, string>> parameters;
+  string code = generateCode(node, parameters);
 
   return result;
 }

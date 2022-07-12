@@ -80,24 +80,37 @@ static inline void initShape_keep(Operation *op, Operation *a, Operation *b) {
   }
   op->shape = (int *)malloc(sizeof(int) * op->dimensions);
   memcpy((void *)op->shape, src, sizeof(int) * op->dimensions);
+  // determine type
+  Type highest = INT32;
+  if (a->data_type == FLOAT64 || (b && b->data_type == FLOAT64))
+    highest = FLOAT64;
+  else if (a->data_type == FLOAT32 || (b && b->data_type == FLOAT32))
+    highest = FLOAT32;
+  else if (a->data_type == INT64 || (b && b->data_type == INT64))
+    highest = INT64;
+  op->data_type = highest;
 }
 GraphNode *FlintBackend::add(GraphNode *a, GraphNode *b) {
   Add *op = new Add();
+  op->op_type = ADD;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
 GraphNode *FlintBackend::sub(GraphNode *a, GraphNode *b) {
   Sub *op = new Sub();
+  op->op_type = SUB;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
 GraphNode *FlintBackend::div(GraphNode *a, GraphNode *b) {
   Div *op = new Div();
+  op->op_type = DIV;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
 GraphNode *FlintBackend::mul(GraphNode *a, GraphNode *b) {
   Mul *op = new Mul();
+  op->op_type = MUL;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
@@ -105,12 +118,20 @@ template <typename T>
 static GraphNode *addNodeWithConst(Operation *op, GraphNode *a, T b) {
   Const<T> *cons = new Const<T>();
   cons->value = b;
-  cons->operation = nullptr;
-  return addNode(op, {a, (GraphNode *)cons});
+  if (typeid(T) == typeid(int))
+    cons->data_type = INT32;
+  else if (typeid(T) == typeid(long))
+    cons->data_type = INT64;
+  else if (typeid(T) == typeid(float))
+    cons->data_type = FLOAT32;
+  else if (typeid(T) == typeid(double))
+    cons->data_type = FLOAT64;
+  return addNode(op, {a, addNode(cons, {})});
 }
 // adds the constant value to each entry in a
 template <typename T> GraphNode *FlintBackend::add(GraphNode *a, T b) {
   Add *op = new Add();
+  op->op_type = ADD;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
@@ -121,6 +142,7 @@ template GraphNode *FlintBackend::add<long>(GraphNode *, long);
 // subtracts the constant value from each entry in a
 template <typename T> GraphNode *FlintBackend::sub(GraphNode *a, T b) {
   Sub *op = new Sub();
+  op->op_type = SUB;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
@@ -131,6 +153,7 @@ template GraphNode *FlintBackend::sub<long>(GraphNode *, long);
 // divides each entry in a by the constant value
 template <typename T> GraphNode *FlintBackend::div(GraphNode *a, T b) {
   Div *op = new Div();
+  op->op_type = DIV;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
@@ -141,6 +164,7 @@ template GraphNode *FlintBackend::div<long>(GraphNode *, long);
 // multiplicates the constant value with each entry in a
 template <typename T> GraphNode *FlintBackend::mul(GraphNode *a, T b) {
   Mul *op = new Mul();
+  op->op_type = MUL;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
