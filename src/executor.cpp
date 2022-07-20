@@ -123,7 +123,7 @@ void FlintBackend::setLoggingLevel(int level) { setLoggerLevel(level); }
 
 static std::string
 generateCode(GraphNode *node,
-             std::list<std::pair<Store *, std::string>> &parameters) {
+             std::list<std::pair<Operation *, std::string>> &parameters) {
   using namespace std;
   list<pair<GraphNode *, string>> todo;
   int variable_index = 0;
@@ -134,11 +134,11 @@ generateCode(GraphNode *node,
     const auto [node, name] = todo.front();
     todo.pop_front();
     // write code
-    char op = '\0';
     string type = typeString(node->operation->data_type);
     switch (node->operation->op_type) {
+    case RESULTDATA:
     case STORE:
-      parameters.push_front({(Store *)node->operation, name});
+      parameters.push_front({node->operation, name});
       break;
     case CONST:
       switch (node->operation->data_type) {
@@ -166,21 +166,30 @@ generateCode(GraphNode *node,
       break;
     // Binary Operators
     case ADD:
-      op = '+';
     case SUB:
-      if (op != '\0')
-        op = '-';
     case DIV:
-      if (op != '\0')
+    case MUL: {
+      // size of current variable has to be equal to the size of one opperand,
+      // the other one is at least smaller but not larger
+      char op = '\0';
+      switch (node->operation->op_type) {
+      case ADD:
+        op = '+';
+        break;
+      case SUB:
+        op = '-';
+        break;
+      case DIV:
         op = '/';
-    case MUL:
-      if (op != '\0')
+        break;
+      case MUL:
         op = '*';
+        break;
+      }
       code = type + " " + name + " = v" + to_string(variable_index + 1) + " " +
              op + " v" + to_string(variable_index + 2) + ";\n" + code;
       break;
-    case RESULTDATA:
-      throw std::runtime_error("Can't execute a ResultData node!");
+    }
     }
     // push predecessors
     for (int i = 0; i < node->num_predecessor; i++)
@@ -192,8 +201,8 @@ generateCode(GraphNode *node,
 
 ResultData *FlintBackend::executeGraph(GraphNode *node) {
   if (node->successor != NULL) {
-    log(WARNING, "Only leaf nodes (without successor) may be executed!");
-    return nullptr;
+    log(WARNING, "Executing node with successor. Successor tree will not be "
+                 "executed and not linked to the result!");
   }
   ResultData *result = new ResultData();
   GraphNode *newsucc = new GraphNode();
@@ -205,8 +214,39 @@ ResultData *FlintBackend::executeGraph(GraphNode *node) {
   node->successor = newsucc;
   // calculate Code and Parameters
   using namespace std;
-  list<pair<Store *, string>> parameters;
-  string code = generateCode(node, parameters);
-
+  list<pair<Operation *, string>> parameters;
+  string graph_code = generateCode(node, parameters);
+  string code = "__kernel void execute_graph(__global ";
+  code += typeString(node->operation->data_type);
+  code += " *R";
+  // insert parameters
+  int par_idx = 0;
+  for (auto &[op, name] : parameters)
+    code += ", __global__ const " + typeString(op->data_type) + " *P" +
+            to_string(par_idx++);
+  code += "){\n";
+  // bind parameters to variables
+  // currently we only work on flat arrays
+  code += "int index = get_global_id(0);\n";
+  par_idx = 0;
+  for (auto &[op, name] : parameters) {
+    string type = typeString(op->data_type);
+    code += type + " " + name + " = ";
+    string indx_mod = "";
+    if (op->dimensions < node->operation->dimensions) {
+      // we divide through the sizes of the dimensions that are not shared by op
+      int factor = 1;
+      for (int i = op->dimensions; i < node->operation->dimensions; i++)
+        factor *= node->operation->shape[i];
+      indx_mod = "/" + to_string(factor);
+    }
+    code += "P" + to_string(par_idx) + "[index" + indx_mod + "];\n";
+    par_idx++;
+  }
+  // add the execution code
+  code += graph_code;
+  // store result
+  code += "R[index] = v0;\n}";
+  log(INFO, "code:\n " + code);
   return result;
 }
