@@ -1,6 +1,7 @@
 #ifndef FLINT_H
 #define FLINT_H
 #include "src/logger.hpp"
+#include <CL/cl.h>
 /*
   This is the basic header file and implementation of Flint, to be compatible
   with as many languages as possible. Though it is written in C++ for object
@@ -22,8 +23,8 @@ void setLoggingLevel(int);
 enum Type { FLOAT32, FLOAT64, INT32, INT64 };
 enum OperationType { STORE, RESULTDATA, CONST, ADD, SUB, MUL, DIV };
 struct Operation {
-  // an Operation always is linked to the resulting tensor
-  unsigned int id;
+  // link to gpu data
+  cl_mem mem_id = nullptr;
   // shape of the data after execution
   int dimensions;
   int *shape;

@@ -8,6 +8,7 @@
 #include <string>
 #include <tuple>
 #include <typeinfo>
+#include <vector>
 #define CL_TARGET_OPENCL_VERSION 200
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -23,10 +24,11 @@ static bool initialized = false;
 // opencl vars
 static cl_context context;
 static cl_command_queue queue;
+static cl_device_id device;
 void FlintBackend::init() {
   log(VERBOSE, "Initializing Flint");
   cl_platform_id platform = NULL;
-  cl_device_id device = NULL;
+  device = NULL;
   cl_uint num_dev, num_plat;
   if (clGetPlatformIDs(1, &platform, &num_plat) != CL_SUCCESS)
     log(ERROR, "clGetPlatformIds");
@@ -101,6 +103,7 @@ void FlintBackend::init() {
 }
 void FlintBackend::cleanup() {
   if (initialized) {
+    clReleaseDevice(device);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
   }
@@ -118,6 +121,19 @@ static std::string typeString(Type t) {
     return "double";
   }
   return "";
+}
+static size_t typeSize(Type t) {
+  switch (t) {
+  case INT32:
+    return sizeof(int);
+  case INT64:
+    return sizeof(long);
+  case FLOAT32:
+    return sizeof(float);
+  case FLOAT64:
+    return sizeof(double);
+  }
+  return 1;
 }
 void FlintBackend::setLoggingLevel(int level) { setLoggerLevel(level); }
 
@@ -247,6 +263,52 @@ ResultData *FlintBackend::executeGraph(GraphNode *node) {
   code += graph_code;
   // store result
   code += "R[index] = v0;\n}";
-  log(INFO, "code:\n " + code);
+  // create program
+  cl_int err_code;
+  const char *code_data = code.data();
+  const size_t code_length = code.length();
+  cl_program prog = clCreateProgramWithSource(context, 1, &code_data,
+                                              &code_length, &err_code);
+  if (err_code == CL_OUT_OF_RESOURCES)
+    log(ERROR, "Out of resources while creating program!");
+  if (err_code == CL_OUT_OF_HOST_MEMORY)
+    log(ERROR, "Not enough memory to create program!");
+  // build program
+  err_code = clBuildProgram(prog, 1, &device, nullptr, nullptr, nullptr);
+  if (err_code == CL_INVALID_PROGRAM)
+    log(ERROR, "Invalid Program was generated! Generated code: \"\n" + code +
+                   "\"\nPlease contact a developer and/or file a bug report.");
+  else if (err_code == CL_COMPILER_NOT_AVAILABLE)
+    log(ERROR, "Compiler of your GPU driver is not available!");
+  else if (err_code == CL_OUT_OF_HOST_MEMORY)
+    log(ERROR, "Not enough memory to create program!");
+  // get kernel
+  cl_kernel kernel = clCreateKernel(prog, "execute_graph", &err_code);
+  if (err_code == CL_OUT_OF_HOST_MEMORY)
+    log(ERROR, "Not enough memory to create program!");
+  // TODO: memoriting kernels
+  vector<cl_mem> memory_objects(parameters.size());
+  int index = 0;
+  for (auto &[op, name] : parameters) {
+    // TODO keep track of when data in Store is changed
+    bool doWrite =
+        op->op_type ==
+        STORE; // can always be changed, ResultData only changes with gpu data
+    if (op->mem_id) {
+      memory_objects[index++] = op->mem_id;
+    } else {
+      size_t total_size = 1;
+      for (int i = 0; i < op->dimensions; i++)
+        total_size *= op->shape[i];
+      memory_objects[index++] =
+          clCreateBuffer(context, CL_MEM_READ_ONLY,
+                         total_size * typeSize(op->data_type), NULL, &err_code);
+      if (err_code == CL_OUT_OF_HOST_MEMORY)
+        log(ERROR, "Not enough memory to create program!");
+      op->mem_id = memory_objects[index - 1];
+      doWrite = true;
+    }
+    // TODO actually write the buffer
+  }
   return result;
 }
