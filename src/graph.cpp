@@ -118,6 +118,7 @@ template <typename T>
 static GraphNode *addNodeWithConst(Operation *op, GraphNode *a, T b) {
   Const<T> *cons = new Const<T>();
   cons->value = b;
+  cons->op_type = CONST;
   if (typeid(T) == typeid(int))
     cons->data_type = INT32;
   else if (typeid(T) == typeid(long))

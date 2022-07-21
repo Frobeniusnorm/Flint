@@ -51,11 +51,23 @@ TEST_CASE("Graph Implementation (createGraph, add, mul, sub, div)") {
     CHECK(store2->data_type == INT32);
     CHECK(store2->num_entries == 100);
     CHECK(store2->data == v2.data());
+    GraphNode *left1 = gn2->predecessors[0];
+    GraphNode *const1 = left1->predecessors[1];
+    CHECK(const1->operation->op_type == CONST);
     freeGraph(gn2);
   }
 }
-// TEST_CASE("Init and cleanup") {
-//   using namespace FlintBackend;
-//   init();
-//   cleanup();
-// }
+TEST_CASE("Init, Execution and cleanup") {
+  using namespace FlintBackend;
+  using namespace std;
+  init();
+  vector<double> v1(100);
+  vector<float> v2(100);
+  // construct graph 1
+  vector<int> shape{100};
+  GraphNode *gn1 = createGraph(v1.data(), v1.size(), FLOAT64, shape.data(), 1);
+  gn1 = add(gn1, 7.0);
+  gn1 = mul(gn1, createGraph(v2.data(), v2.size(), FLOAT32, shape.data(), 1));
+  executeGraph(gn1);
+  cleanup();
+}
