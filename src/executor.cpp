@@ -123,7 +123,7 @@ void FlintBackend::setLoggingLevel(int level) { setLoggerLevel(level); }
 
 static std::string
 generateCode(GraphNode *node,
-             std::list<std::pair<Store *, std::string>> &parameters) {
+             std::list<std::pair<Operation *, std::string>> &parameters) {
   using namespace std;
   list<pair<GraphNode *, string>> todo;
   int variable_index = 0;
@@ -137,8 +137,9 @@ generateCode(GraphNode *node,
     char op = '\0';
     string type = typeString(node->operation->data_type);
     switch (node->operation->op_type) {
+    case RESULTDATA: // already executed data that can be used as a parameter
     case STORE:
-      parameters.push_front({(Store *)node->operation, name});
+      parameters.push_front({node->operation, name});
       break;
     case CONST:
       switch (node->operation->data_type) {
@@ -176,11 +177,10 @@ generateCode(GraphNode *node,
     case MUL:
       if (op != '\0')
         op = '*';
+      // TODO check if one dimension > other dimension and add a for
       code = type + " " + name + " = v" + to_string(variable_index + 1) + " " +
              op + " v" + to_string(variable_index + 2) + ";\n" + code;
       break;
-    case RESULTDATA:
-      throw std::runtime_error("Can't execute a ResultData node!");
     }
     // push predecessors
     for (int i = 0; i < node->num_predecessor; i++)
@@ -192,8 +192,8 @@ generateCode(GraphNode *node,
 
 ResultData *FlintBackend::executeGraph(GraphNode *node) {
   if (node->successor != NULL) {
-    log(WARNING, "Only leaf nodes (without successor) may be executed!");
-    return nullptr;
+    log(WARNING, "Executing node with successor. Successor will be removed "
+                 "from the Graph, make sure to save it.");
   }
   ResultData *result = new ResultData();
   GraphNode *newsucc = new GraphNode();
@@ -205,7 +205,7 @@ ResultData *FlintBackend::executeGraph(GraphNode *node) {
   node->successor = newsucc;
   // calculate Code and Parameters
   using namespace std;
-  list<pair<Store *, string>> parameters;
+  list<pair<Operation *, string>> parameters;
   string code = generateCode(node, parameters);
 
   return result;
