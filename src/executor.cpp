@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <string>
 #include <tuple>
 #include <typeinfo>
@@ -286,29 +287,97 @@ ResultData *FlintBackend::executeGraph(GraphNode *node) {
   cl_kernel kernel = clCreateKernel(prog, "execute_graph", &err_code);
   if (err_code == CL_OUT_OF_HOST_MEMORY)
     log(ERROR, "Not enough memory to create program!");
-  // TODO: memoriting kernels
-  vector<cl_mem> memory_objects(parameters.size());
-  int index = 0;
+  // TODO: memorizing kernels
+  // result buffer
+  Operation *node_op = node->operation;
+  size_t total_size_node = 1;
+  for (int i = 0; i < node_op->dimensions; i++)
+    total_size_node *= node_op->shape[i];
+  size_t type_size_node = typeSize(node_op->data_type);
+  cl_mem result_mem =
+      clCreateBuffer(context, CL_MEM_READ_WRITE,
+                     total_size_node * type_size_node, nullptr, &err_code);
+  node_op->mem_id = result_mem;
+  if (err_code == CL_OUT_OF_HOST_MEMORY)
+    log(ERROR, "Not enough memory to create buffer!");
+  int index = 1;
   for (auto &[op, name] : parameters) {
     // TODO keep track of when data in Store is changed
+    cl_mem mem_obj = nullptr;
     bool doWrite =
         op->op_type ==
         STORE; // can always be changed, ResultData only changes with gpu data
-    if (op->mem_id) {
-      memory_objects[index++] = op->mem_id;
+    size_t type_size = typeSize(op->data_type);
+    size_t total_size = op->op_type == STORE ? ((Store *)op)->num_entries
+                                             : ((ResultData *)op)->num_entries;
+    if (op->mem_id &&
+        op != node_op) { // second case is needed for the case that the result
+                         // node is a parameter at the same time
+      mem_obj = op->mem_id;
     } else {
-      size_t total_size = 1;
-      for (int i = 0; i < op->dimensions; i++)
-        total_size *= op->shape[i];
-      memory_objects[index++] =
-          clCreateBuffer(context, CL_MEM_READ_ONLY,
-                         total_size * typeSize(op->data_type), NULL, &err_code);
+      mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY,
+                               total_size * type_size, nullptr, &err_code);
       if (err_code == CL_OUT_OF_HOST_MEMORY)
-        log(ERROR, "Not enough memory to create program!");
-      op->mem_id = memory_objects[index - 1];
+        log(ERROR, "Not enough memory to create buffer!");
+      op->mem_id = mem_obj;
       doWrite = true;
     }
-    // TODO actually write the buffer
+    // actually write the buffer
+    if (doWrite) {
+      void *data =
+          op->op_type == STORE ? ((Store *)op)->data : ((ResultData *)op)->data;
+      err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_TRUE, 0,
+                                      total_size * type_size, data, 0, nullptr,
+                                      nullptr);
+      if (err_code != CL_SUCCESS) {
+        string msg = "Unknown Error while loading data to GPU!";
+        if (err_code == CL_OUT_OF_HOST_MEMORY)
+          msg = "Not enough memory to load data to GPU!";
+        log(ERROR, msg);
+      }
+    }
+    if (clSetKernelArg(kernel, index++, sizeof(cl_mem), (void *)&mem_obj) !=
+        CL_SUCCESS)
+      log(ERROR, "Could not load Argument to kernel!");
+  }
+  if (clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&result_mem) !=
+      CL_SUCCESS)
+    log(ERROR, "Could not set Kernel Argument for the result!");
+  // execute kernel
+  const size_t global_size = total_size_node;
+  err_code = clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &global_size,
+                                    nullptr, 0, nullptr, nullptr);
+  if (err_code != CL_SUCCESS) {
+    string msg;
+    switch (err_code) {
+    case CL_OUT_OF_HOST_MEMORY:
+      msg = "Not enough memory to execute kernel!";
+      break;
+    case CL_OUT_OF_RESOURCES:
+      msg = "Out of resources!";
+      break;
+    default:
+      msg = "Unknown Error during kernel execution!";
+      break;
+    }
+    log(ERROR, msg);
+  }
+  // size for result
+  result->dimensions = node_op->dimensions;
+  result->shape = safe_mal<int>(result->dimensions);
+  memcpy((void *)result->shape, (void *)node_op->shape,
+         result->dimensions * sizeof(int));
+  result->data = malloc(total_size_node);
+  if (!result->data)
+    log(ERROR, "Not enough memory to store result!");
+  // wait for result
+  err_code = clEnqueueReadBuffer(queue, result_mem, CL_TRUE, 0, total_size_node,
+                                 (void *)result->data, 0, nullptr, nullptr);
+  if (err_code != CL_SUCCESS) {
+    string msg = "Unknown Error while reading the result!";
+    if (err_code == CL_OUT_OF_HOST_MEMORY)
+      msg = "Not enough memory to read result!";
+    log(ERROR, msg);
   }
   return result;
 }
