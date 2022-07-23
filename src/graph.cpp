@@ -21,15 +21,11 @@ GraphNode *FlintBackend::createGraph(void *data, int num_entries,
   gn->operation = op;
   gn->num_predecessor = 0;
   gn->predecessors = NULL;
-  gn->successor = NULL;
   return gn;
 }
 static void collectAllNodes(GraphNode *graph,
                             std::unordered_set<GraphNode *> &set) {
   set.insert(graph);
-  if (graph->successor && set.find(graph->successor) == set.end()) {
-    collectAllNodes(graph->successor, set);
-  }
   for (int i = 0; i < graph->num_predecessor; i++) {
     if (graph->predecessors[i] && set.find(graph->predecessors[i]) == set.end())
       collectAllNodes(graph->predecessors[i], set);
@@ -46,6 +42,10 @@ void FlintBackend::freeGraph(GraphNode *graph) {
     if (gn->operation != NULL) {
       if (gn->operation->shape)
         free(gn->operation->shape);
+      if (gn->operation->op_type == RESULTDATA) {
+        ResultData *rd = (ResultData *)gn->operation;
+        free(rd->data);
+      }
       delete gn->operation;
     }
     delete gn;
@@ -59,13 +59,11 @@ static GraphNode *addNode(Operation *op, std::vector<GraphNode *> pre) {
   }
   GraphNode *foo = new GraphNode();
   foo->operation = op;
-  foo->successor = NULL;
   foo->num_predecessor = pre.size();
   foo->predecessors =
       pre.size() == 0 ? NULL : safe_mal<GraphNode *>(pre.size());
   for (int i = 0; i < pre.size(); i++) {
     foo->predecessors[i] = pre[i];
-    pre[i]->successor = foo;
   }
   return foo;
 }

@@ -1,7 +1,12 @@
 #ifndef FLINT_H
 #define FLINT_H
 #include "src/logger.hpp"
+#define CL_TARGET_OPENCL_VERSION 200
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
 #include <CL/cl.h>
+#endif
 /*
   This is the basic header file and implementation of Flint, to be compatible
   with as many languages as possible. Though it is written in C++ for object
@@ -23,8 +28,6 @@ void setLoggingLevel(int);
 enum Type { FLOAT32, FLOAT64, INT32, INT64 };
 enum OperationType { STORE, RESULTDATA, CONST, ADD, SUB, MUL, DIV };
 struct Operation {
-  // link to gpu data
-  cl_mem mem_id = nullptr;
   // shape of the data after execution
   int dimensions;
   int *shape;
@@ -37,16 +40,20 @@ struct Operation {
 // out going edge
 struct GraphNode {
   int num_predecessor;
-  GraphNode **predecessors, *successor;
+  GraphNode **predecessors;
   Operation *operation; // the operation represented by this graph node
 };
 // Operations
 // Store data in the tensor, always an Entry (source) of the graph
 struct Store : public Operation {
+  // link to gpu data
+  cl_mem mem_id = nullptr;
   void *data;
   int num_entries;
 };
 struct ResultData : public Operation {
+  // link to gpu data
+  cl_mem mem_id = nullptr;
   void *data;
   int num_entries;
   ~ResultData();
@@ -78,7 +85,7 @@ void freeGraph(GraphNode *graph);
  * the result for that node in result. If Flint was not initialized yet, this
  * function will do that automatically.
  * The result data is automatically freed with the Graph */
-ResultData *executeGraph(GraphNode *node);
+GraphNode *executeGraph(GraphNode *node);
 // operations
 GraphNode *add(GraphNode *a, GraphNode *b);
 GraphNode *sub(GraphNode *a, GraphNode *b);
