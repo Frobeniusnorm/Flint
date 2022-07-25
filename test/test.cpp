@@ -15,18 +15,18 @@ TEST_CASE("Graph Implementation (createGraph, add, mul, sub, div)") {
     gn1 = add(gn1, 7.0);
     gn1 = mul(gn1, createGraph(v2.data(), v2.size(), FLOAT32, shape.data(), 1));
     // test
-    REQUIRE(gn1->num_predecessor == 2);
+    REQUIRE_EQ(gn1->num_predecessor, 2);
     REQUIRE(gn1->operation);
-    CHECK(gn1->operation->data_type == FLOAT64);
+    CHECK_EQ(gn1->operation->data_type, FLOAT64);
     GraphNode *right1 = gn1->predecessors[1];
-    CHECK(right1->successor == gn1);
-    CHECK(right1->num_predecessor == 0);
-    CHECK(right1->predecessors == NULL);
+    CHECK_EQ(right1->successor, gn1);
+    CHECK_EQ(right1->num_predecessor, 0);
+    CHECK_EQ(right1->predecessors, NULL);
     REQUIRE(right1->operation);
     Store *store1 = (Store *)right1->operation;
-    CHECK(store1->data_type == FLOAT32);
-    CHECK(store1->num_entries == 100);
-    CHECK(store1->data == v2.data());
+    CHECK_EQ(store1->data_type, FLOAT32);
+    CHECK_EQ(store1->num_entries, 100);
+    CHECK_EQ(store1->data, v2.data());
     freeGraph(gn1);
   }
   {
