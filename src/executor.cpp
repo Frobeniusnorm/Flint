@@ -252,11 +252,19 @@ GraphNode *FlintBackend::executeGraph(GraphNode *node) {
     code += type + " " + name + " = ";
     string indx_mod = "";
     if (op->dimensions < node->operation->dimensions) {
-      // we divide through the sizes of the dimensions that are not shared by op
+      // we take the remainder of the division of the product of the sizes of
+      // the dimensions that are not shared by op
       int factor = 1;
-      for (int i = op->dimensions; i < node->operation->dimensions; i++)
-        factor *= node->operation->shape[i];
-      indx_mod = "/" + to_string(factor);
+      // for (int i = 0; i < node->operation->dimensions - op->dimensions; i++)
+      //   factor *= node->operation->shape[i];
+      for (int i = 0; i < op->dimensions; i++) {
+        if (node->operation
+                ->shape[i + (node->operation->dimensions - op->dimensions)] !=
+            op->shape[i])
+          log(ERROR, "incompatible shape for operands!");
+        factor *= op->shape[i];
+      }
+      indx_mod = "%" + to_string(factor);
     }
     code += "P" + to_string(par_idx) + "[index" + indx_mod + "];\n";
     par_idx++;

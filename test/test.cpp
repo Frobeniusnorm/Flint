@@ -1,5 +1,5 @@
 #include "../flint.hpp"
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
 #include "testutils.hpp"
 #include <vector>
@@ -65,7 +65,6 @@ TEST_SUITE("Execution") {
   TEST_CASE("init, execution (add, sub, mul) and cleanup") {
     using namespace FlintBackend;
     using namespace std;
-    init();
     vector<double> v1(10, 4.0);
     vector<float> v2(10, 4.0f);
     // construct graph 1
@@ -95,18 +94,14 @@ TEST_SUITE("Execution") {
     for (int i = 0; i < 10; i++)
       CHECK_EQ(((double *)rd->data)[i], 8 + (i + 1) * 2);
     freeGraph(result);
-    cleanup();
   }
   TEST_CASE("Multidimensional Data") {
     using namespace FlintBackend;
     using namespace std;
-    init();
     vector<vector<double>> v1{
         {0.0, 1.0, 2.0}, {0.0, -1.0, -2.0}, {0.0, 1.0, 2.0}};
     vector<vector<double>> v2{
         {2.0, 1.0, 0.0}, {0.0, -1.0, -2.0}, {2.0, 1.0, 2.0}};
-    vector<vector<double>> v3{
-        {2.0, 2.0, 2.0}, {0.0, -2.0, -4.0}, {2.0, 2.0, 4.0}};
     vector<double> f1 = flattened(v1);
     vector<double> f2 = flattened(v2);
     vector<int> shape{3, 3};
@@ -125,7 +120,38 @@ TEST_SUITE("Execution") {
     for (int i = 0; i < 3; i++)
       for (int j = 0; j < 3; j++)
         CHECK_EQ(((double *)rd->data)[i * 3 + j], v1[i][j] + v2[i][j]);
+    // 3d + 2d
+    vector<vector<vector<int>>> v3{{{0, 1, 2}, {2, 1, 0}, {0, 1, 2}},
+                                   {{5, 9, 2}, {3, 5, 7}, {3, 4, 1}},
+                                   {{0, 1, 2}, {9, 8, 7}, {5, 9, 7}},
+                                   {{-3, -2, 4}, {-1, -2, 3}, {11, 1, 0}}};
+
+    vector<int> f3 = flattened(v3);
+    vector<int> shape_f3{4, 3, 3};
+    GraphNode *gn4 =
+        createGraph(f3.data(), f3.size(), INT32, shape_f3.data(), 3);
+    GraphNode *gn5 = add(gn4, result);
+    result = executeGraph(gn5);
+    rd = (ResultData *)result->operation;
+
+    for (int i = 0; i < 4; i++)
+      for (int j = 0; j < 3; j++)
+        for (int k = 0; k < 3; k++)
+          CHECK_EQ(((double *)rd->data)[i * 9 + j * 3 + k],
+                   v1[j][k] + v2[j][k] + v3[i][j][k]);
     freeGraph(result);
-    cleanup();
   }
+}
+
+int main(int argc, char **argv) {
+  FlintBackend::init();
+  doctest::Context context;
+  context.applyCommandLine(argc, argv);
+  int res = context.run();
+  FlintBackend::cleanup();
+  if (context.shouldExit())
+    return res;
+  int client_stuff_return_code = 0;
+
+  return res + client_stuff_return_code;
 }
