@@ -20,7 +20,7 @@ TEST_CASE("Graph Implementation (createGraph, add, mul, sub, div)") {
     CHECK_EQ(gn1->operation->data_type, FLOAT64);
     GraphNode *right1 = gn1->predecessors[1];
     CHECK_EQ(right1->num_predecessor, 0);
-    CHECK_EQ(right1->predecessors, NULL);
+    CHECK(right1->predecessors == nullptr);
     REQUIRE(right1->operation);
     Store *store1 = (Store *)right1->operation;
     CHECK_EQ(store1->data_type, FLOAT32);
@@ -37,21 +37,21 @@ TEST_CASE("Graph Implementation (createGraph, add, mul, sub, div)") {
     gn2 = sub(gn2, 7.0);
     gn2 = div(gn2, createGraph(v2.data(), v2.size(), INT32, shape.data(), 2));
     // test
-    REQUIRE(gn2->num_predecessor == 2);
+    REQUIRE_EQ(gn2->num_predecessor, 2);
     REQUIRE(gn2->operation);
-    CHECK(gn2->operation->op_type == DIV);
-    CHECK(gn2->operation->data_type == INT64);
+    CHECK_EQ(gn2->operation->op_type, DIV);
+    CHECK_EQ(gn2->operation->data_type, INT64);
     GraphNode *right2 = gn2->predecessors[1];
-    CHECK(right2->num_predecessor == 0);
-    CHECK(right2->predecessors == NULL);
+    CHECK_EQ(right2->num_predecessor, 0);
+    CHECK(right2->predecessors == nullptr);
     REQUIRE(gn2->operation);
     Store *store2 = (Store *)right2->operation;
-    CHECK(store2->data_type == INT32);
-    CHECK(store2->num_entries == 100);
-    CHECK(store2->data == v2.data());
+    CHECK_EQ(store2->data_type, INT32);
+    CHECK_EQ(store2->num_entries, 100);
+    CHECK_EQ(store2->data, v2.data());
     GraphNode *left1 = gn2->predecessors[0];
     GraphNode *const1 = left1->predecessors[1];
-    CHECK(const1->operation->op_type == CONST);
+    CHECK_EQ(const1->operation->op_type, CONST);
     freeGraph(gn2);
   }
 }
@@ -68,9 +68,9 @@ TEST_CASE("Init, Execution and cleanup") {
   gn1 = mul(gn1, createGraph(v2.data(), v2.size(), FLOAT32, shape.data(), 1));
   GraphNode *result = executeGraph(gn1);
   ResultData *rd = (ResultData *)result->operation;
-  CHECK(rd->num_entries == 10);
+  CHECK_EQ(rd->num_entries, 10);
   for (int i = 0; i < rd->num_entries; i++)
-    CHECK(((double *)rd->data)[i] == 44);
+    CHECK_EQ(((double *)rd->data)[i], 44);
   // construct graph 2 (first not-tree)
   vector<float> v3(10);
   for (int i = 0; i < 10; i++)
@@ -82,9 +82,9 @@ TEST_CASE("Init, Execution and cleanup") {
   gn3 = add(gn3, gn2);
   result = executeGraph(gn3);
   rd = (ResultData *)result->operation;
-  CHECK(rd->num_entries == 10);
+  CHECK_EQ(rd->num_entries, 10);
   for (int i = 0; i < 10; i++)
-    CHECK(((double *)rd->data)[i] == 8 + (i + 1) * 2);
+    CHECK_EQ(((double *)rd->data)[i], 8 + (i + 1) * 2);
   freeGraph(result);
   cleanup();
 }
