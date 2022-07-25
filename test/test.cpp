@@ -19,7 +19,6 @@ TEST_CASE("Graph Implementation (createGraph, add, mul, sub, div)") {
     REQUIRE(gn1->operation);
     CHECK_EQ(gn1->operation->data_type, FLOAT64);
     GraphNode *right1 = gn1->predecessors[1];
-    CHECK_EQ(right1->successor, gn1);
     CHECK_EQ(right1->num_predecessor, 0);
     CHECK_EQ(right1->predecessors, NULL);
     REQUIRE(right1->operation);
@@ -43,7 +42,6 @@ TEST_CASE("Graph Implementation (createGraph, add, mul, sub, div)") {
     CHECK(gn2->operation->op_type == DIV);
     CHECK(gn2->operation->data_type == INT64);
     GraphNode *right2 = gn2->predecessors[1];
-    CHECK(right2->successor == gn2);
     CHECK(right2->num_predecessor == 0);
     CHECK(right2->predecessors == NULL);
     REQUIRE(gn2->operation);
@@ -61,13 +59,32 @@ TEST_CASE("Init, Execution and cleanup") {
   using namespace FlintBackend;
   using namespace std;
   init();
-  vector<double> v1(100);
-  vector<float> v2(100);
+  vector<double> v1(10, 4.0);
+  vector<float> v2(10, 4.0f);
   // construct graph 1
-  vector<int> shape{100};
+  vector<int> shape{10};
   GraphNode *gn1 = createGraph(v1.data(), v1.size(), FLOAT64, shape.data(), 1);
   gn1 = add(gn1, 7.0);
   gn1 = mul(gn1, createGraph(v2.data(), v2.size(), FLOAT32, shape.data(), 1));
-  executeGraph(gn1);
+  GraphNode *result = executeGraph(gn1);
+  ResultData *rd = (ResultData *)result->operation;
+  CHECK(rd->num_entries == 10);
+  for (int i = 0; i < rd->num_entries; i++)
+    CHECK(((double *)rd->data)[i] == 44);
+  // construct graph 2 (first not-tree)
+  vector<float> v3(10);
+  for (int i = 0; i < 10; i++)
+    v3[i] = i + 1;
+  GraphNode *gn2 = createGraph(v3.data(), v3.size(), FLOAT32, shape.data(), 1);
+  GraphNode *gn3 = add(gn2, result);
+  gn3 = add(gn3, result);
+  gn3 = sub(gn3, 80);
+  gn3 = add(gn3, gn2);
+  result = executeGraph(gn3);
+  rd = (ResultData *)result->operation;
+  CHECK(rd->num_entries == 10);
+  for (int i = 0; i < 10; i++)
+    CHECK(((double *)rd->data)[i] == 8 + (i + 1) * 2);
+  freeGraph(result);
   cleanup();
 }
