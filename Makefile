@@ -19,7 +19,7 @@ C_OBJS := $(C_SRCS:$(SRCDIR)/%.cpp=$(BUILDDIR)/%.o)
 test/test: $(C_OBJS) $(H_SRCS) $(BUILDDIR)/test.o | $(BUILDDIR)
 	$(COMPILER) -o $@ $(C_OBJS) $(BUILDDIR)/test.o
 
-$(BUILDDIR)/test.o: test/test.cpp flint.hpp 
+$(BUILDDIR)/test.o: test/test.cpp flint.h 
 	$(COMPILER) -c -o $(BUILDDIR)/test.o test/test.cpp
 
 # THE OBJECT FILES

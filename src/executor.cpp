@@ -1,4 +1,4 @@
-#include "../flint.hpp"
+#include "../flint.h"
 #include "logger.hpp"
 #include "utils.hpp"
 #include <list>
@@ -11,7 +11,6 @@
 #include <typeinfo>
 #include <unordered_map>
 #include <vector>
-using namespace FlintBackend;
 static void openclCallback(const char *errinfo, const void *privateinfo,
                            size_t cb, void *user_data) {
   log(WARNING, "{OpenCL} " + std::string(errinfo));
@@ -21,7 +20,7 @@ static bool initialized = false;
 static cl_context context;
 static cl_command_queue queue;
 static cl_device_id device;
-void FlintBackend::init() {
+void flintInit() {
   log(VERBOSE, "Initializing Flint");
   cl_platform_id platform = NULL;
   device = NULL;
@@ -97,7 +96,7 @@ void FlintBackend::init() {
   initialized = true;
   log(VERBOSE, "Flint was initialized!");
 }
-void FlintBackend::cleanup() {
+void flintCleanup() {
   if (initialized) {
     clReleaseDevice(device);
     clReleaseCommandQueue(queue);
@@ -105,7 +104,7 @@ void FlintBackend::cleanup() {
   }
 }
 
-static std::string typeString(Type t) {
+static std::string typeString(FType t) {
   switch (t) {
   case INT32:
     return "int";
@@ -118,7 +117,7 @@ static std::string typeString(Type t) {
   }
   return "";
 }
-static size_t typeSize(Type t) {
+static size_t typeSize(FType t) {
   switch (t) {
   case INT32:
     return sizeof(int);
@@ -131,14 +130,14 @@ static size_t typeSize(Type t) {
   }
   return 1;
 }
-void FlintBackend::setLoggingLevel(int level) { setLoggerLevel(level); }
+void setLoggingLevel(int level) { setLoggerLevel(level); }
 
 static std::string
-generateCode(GraphNode *node,
-             std::list<std::pair<Operation *, std::string>> &parameters) {
+generateCode(FGraphNode *node,
+             std::list<std::pair<FOperation *, std::string>> &parameters) {
   using namespace std;
-  list<pair<GraphNode *, string>> todo;
-  unordered_map<Operation *, std::string> assigned_params;
+  list<pair<FGraphNode *, string>> todo;
+  unordered_map<FOperation *, std::string> assigned_params;
   int variable_index = 0;
   string code = "";
   todo.push_front({node, "v0"});
@@ -164,24 +163,24 @@ generateCode(GraphNode *node,
     case CONST:
       switch (node->operation->data_type) {
       case INT32: {
-        Const<int> *actcst = (Const<int> *)node->operation;
-        code =
-            type + " " + name + " = " + to_string(actcst->value) + ";\n" + code;
+        FConst *actcst = (FConst *)node->operation->additional_data;
+        code = type + " " + name + " = " + to_string(*((int *)actcst->value)) +
+               ";\n" + code;
       } break;
       case INT64: {
-        Const<long> *actcst = (Const<long> *)node->operation;
-        code =
-            type + " " + name + " = " + to_string(actcst->value) + ";\n" + code;
+        FConst *actcst = (FConst *)node->operation;
+        code = type + " " + name + " = " + to_string(*((long *)actcst->value)) +
+               ";\n" + code;
       } break;
       case FLOAT64: {
-        Const<double> *actcst = (Const<double> *)node->operation;
-        code =
-            type + " " + name + " = " + to_string(actcst->value) + ";\n" + code;
+        FConst *actcst = (FConst *)node->operation;
+        code = type + " " + name + " = " +
+               to_string(*((double *)actcst->value)) + ";\n" + code;
       } break;
       case FLOAT32: {
-        Const<float> *actcst = (Const<float> *)node->operation;
-        code =
-            type + " " + name + " = " + to_string(actcst->value) + ";\n" + code;
+        FConst *actcst = (FConst *)node->operation;
+        code = type + " " + name + " = " +
+               to_string(*((float *)actcst->value)) + ";\n" + code;
       } break;
       }
       break;
@@ -221,18 +220,20 @@ generateCode(GraphNode *node,
   return code;
 }
 
-GraphNode *FlintBackend::executeGraph(GraphNode *node) {
-  ResultData *result = new ResultData();
+FGraphNode *executeGraph(FGraphNode *node) {
+  FOperation *result = new FOperation();
+  FResultData *resultData = new FResultData();
   result->op_type = RESULTDATA;
   result->data_type = node->operation->data_type;
-  GraphNode *newsucc = new GraphNode();
+  result->additional_data = resultData;
+  FGraphNode *newsucc = new FGraphNode();
   newsucc->num_predecessor = 1;
-  newsucc->predecessors = safe_mal<GraphNode *>(1);
+  newsucc->predecessors = safe_mal<FGraphNode *>(1);
   newsucc->predecessors[0] = node;
   newsucc->operation = result;
   // calculate Code and Parameters
   using namespace std;
-  list<pair<Operation *, string>> parameters;
+  list<pair<FOperation *, string>> parameters;
   string graph_code = generateCode(node, parameters);
   string code = "__kernel void execute_graph(__global ";
   code += typeString(node->operation->data_type);
@@ -298,7 +299,7 @@ GraphNode *FlintBackend::executeGraph(GraphNode *node) {
     log(ERROR, "Not enough memory to build kernel!");
   // TODO: memorizing kernels
   // result buffer
-  Operation *node_op = node->operation;
+  FOperation *node_op = node->operation;
   size_t total_size_node = 1;
   for (int i = 0; i < node_op->dimensions; i++)
     total_size_node *= node_op->shape[i];
@@ -306,7 +307,7 @@ GraphNode *FlintBackend::executeGraph(GraphNode *node) {
   cl_mem result_mem =
       clCreateBuffer(context, CL_MEM_READ_WRITE,
                      total_size_node * type_size_node, nullptr, &err_code);
-  result->mem_id = result_mem;
+  resultData->mem_id = result_mem;
   if (err_code == CL_OUT_OF_HOST_MEMORY)
     log(ERROR, "Not enough memory to create buffer!");
   int index = 1;
@@ -317,10 +318,12 @@ GraphNode *FlintBackend::executeGraph(GraphNode *node) {
         op->op_type ==
         STORE; // can always be changed, ResultData only changes with gpu data
     size_t type_size = typeSize(op->data_type);
-    size_t total_size = op->op_type == STORE ? ((Store *)op)->num_entries
-                                             : ((ResultData *)op)->num_entries;
-    cl_mem mem_id = op->op_type == STORE ? ((Store *)op)->mem_id
-                                         : ((ResultData *)op)->mem_id;
+    size_t total_size = op->op_type == STORE
+                            ? ((FStore *)op->additional_data)->num_entries
+                            : ((FResultData *)op->additional_data)->num_entries;
+    cl_mem mem_id = op->op_type == STORE
+                        ? ((FStore *)op->additional_data)->mem_id
+                        : ((FResultData *)op->additional_data)->mem_id;
     if (mem_id) {
       mem_obj = mem_id;
     } else {
@@ -329,15 +332,16 @@ GraphNode *FlintBackend::executeGraph(GraphNode *node) {
       if (err_code == CL_OUT_OF_HOST_MEMORY)
         log(ERROR, "Not enough memory to create buffer!");
       if (op->op_type == STORE)
-        ((Store *)op)->mem_id = mem_obj;
+        ((FStore *)op->additional_data)->mem_id = mem_obj;
       else
-        ((ResultData *)op)->mem_id = mem_obj;
+        ((FResultData *)op->additional_data)->mem_id = mem_obj;
       doWrite = true;
     }
     // actually write the buffer
     if (doWrite) {
-      void *data =
-          op->op_type == STORE ? ((Store *)op)->data : ((ResultData *)op)->data;
+      void *data = op->op_type == STORE
+                       ? ((FStore *)op->additional_data)->data
+                       : ((FResultData *)op->additional_data)->data;
       string buffer_data = "";
       for (int i = 0; i < total_size; i++)
         if (op->data_type == FLOAT32)
@@ -387,14 +391,14 @@ GraphNode *FlintBackend::executeGraph(GraphNode *node) {
   result->shape = safe_mal<int>(result->dimensions);
   memcpy((void *)result->shape, (void *)node_op->shape,
          result->dimensions * sizeof(int));
-  result->data = malloc(total_size_node * type_size_node);
-  result->num_entries = total_size_node;
-  if (!result->data)
+  resultData->data = malloc(total_size_node * type_size_node);
+  resultData->num_entries = total_size_node;
+  if (!resultData->data)
     log(ERROR, "Not enough memory to store result!");
   // wait for result
   err_code = clEnqueueReadBuffer(queue, result_mem, CL_TRUE, 0,
                                  total_size_node * type_size_node,
-                                 (void *)result->data, 0, nullptr, nullptr);
+                                 (void *)resultData->data, 0, nullptr, nullptr);
   if (err_code != CL_SUCCESS) {
     string msg = "Unknown Error while reading the result!";
     if (err_code == CL_OUT_OF_HOST_MEMORY)
