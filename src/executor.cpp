@@ -168,17 +168,17 @@ generateCode(FGraphNode *node,
                ";\n" + code;
       } break;
       case INT64: {
-        FConst *actcst = (FConst *)node->operation;
+        FConst *actcst = (FConst *)node->operation->additional_data;
         code = type + " " + name + " = " + to_string(*((long *)actcst->value)) +
                ";\n" + code;
       } break;
       case FLOAT64: {
-        FConst *actcst = (FConst *)node->operation;
+        FConst *actcst = (FConst *)node->operation->additional_data;
         code = type + " " + name + " = " +
                to_string(*((double *)actcst->value)) + ";\n" + code;
       } break;
       case FLOAT32: {
-        FConst *actcst = (FConst *)node->operation;
+        FConst *actcst = (FConst *)node->operation->additional_data;
         code = type + " " + name + " = " +
                to_string(*((float *)actcst->value)) + ";\n" + code;
       } break;
@@ -219,8 +219,9 @@ generateCode(FGraphNode *node,
   }
   return code;
 }
-
+#include <chrono>
 FGraphNode *executeGraph(FGraphNode *node) {
+  auto start = std::chrono::high_resolution_clock::now();
   FOperation *result = new FOperation();
   FResultData *resultData = new FResultData();
   result->op_type = RESULTDATA;
@@ -274,6 +275,10 @@ FGraphNode *executeGraph(FGraphNode *node) {
   code += graph_code;
   // store result
   code += "R[index] = v0;\n}";
+  chrono::duration<double, std::milli> elapsed =
+      chrono::high_resolution_clock::now() - start;
+  log(DEBUG, "code generation finished (in " + to_string(elapsed.count()) +
+                 " ms): \n" + code);
   // create program
   cl_int err_code;
   const char *code_data = code.data();
@@ -298,6 +303,9 @@ FGraphNode *executeGraph(FGraphNode *node) {
   if (err_code == CL_OUT_OF_HOST_MEMORY)
     log(ERROR, "Not enough memory to build kernel!");
   // TODO: memorizing kernels
+  chrono::duration<double, std::milli> compilation_time =
+      chrono::high_resolution_clock::now() - start;
+  start = std::chrono::high_resolution_clock::now();
   // result buffer
   FOperation *node_op = node->operation;
   size_t total_size_node = 1;
@@ -405,6 +413,9 @@ FGraphNode *executeGraph(FGraphNode *node) {
       msg = "Not enough memory to read result!";
     log(ERROR, msg);
   }
+  elapsed = chrono::high_resolution_clock::now() - start;
+  log(DEBUG, "compilation took " + to_string(compilation_time.count()) +
+                 "ms, execution took " + to_string(elapsed.count()) + "ms");
   clReleaseKernel(kernel);
   clReleaseProgram(prog);
   return newsucc;
