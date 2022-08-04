@@ -40,8 +40,6 @@ struct FOperation {
 // out going edge
 struct FGraphNode {
   int num_predecessor;
-  int kernel_tree_id; // internal node id of current operation in kernel caching
-                      // tree
   FGraphNode **predecessors;
   FOperation *operation; // the operation represented by this graph node
 };

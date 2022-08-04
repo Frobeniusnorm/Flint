@@ -128,15 +128,18 @@ TEST_SUITE("Execution") {
     FGraphNode *gn4 =
         createGraph(f3.data(), f3.size(), INT32, shape_f3.data(), 3);
     FGraphNode *gn5 = add(gn4, result);
-    result = executeGraph(gn5);
-    rd = (FResultData *)result->operation->additional_data;
+    FGraphNode *newResult = nullptr;
+    for (int i = 0; i < 2; i++) {
+      newResult = executeGraph(gn5);
+      rd = (FResultData *)newResult->operation->additional_data;
 
-    for (int i = 0; i < 4; i++)
-      for (int j = 0; j < 3; j++)
-        for (int k = 0; k < 3; k++)
-          CHECK_EQ(((double *)rd->data)[i * 9 + j * 3 + k],
-                   v1[j][k] + v2[j][k] + v3[i][j][k]);
-    freeGraph(result);
+      for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 3; j++)
+          for (int k = 0; k < 3; k++)
+            CHECK_EQ(((double *)rd->data)[i * 9 + j * 3 + k],
+                     v1[j][k] + v2[j][k] + v3[i][j][k]);
+    }
+    freeGraph(newResult);
   }
 }
 

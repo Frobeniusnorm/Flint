@@ -1,5 +1,4 @@
 #include "../flint.h"
-#include "kernel_tree.hpp"
 #include "logger.hpp"
 #include "utils.hpp"
 #include <list>
@@ -23,7 +22,6 @@ static cl_command_queue queue;
 static cl_device_id device;
 void flintInit() {
   log(VERBOSE, "Initializing Flint");
-  KernelTree::kernelTreeInit();
   cl_platform_id platform = NULL;
   device = NULL;
   cl_uint num_dev, num_plat;
@@ -100,7 +98,6 @@ void flintInit() {
 }
 void flintCleanup() {
   if (initialized) {
-    KernelTree::kernelTreeCleanUp();
     clReleaseDevice(device);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
@@ -223,6 +220,11 @@ generateCode(FGraphNode *node,
   return code;
 }
 #include <chrono>
+#include <unordered_map>
+
+static std::unordered_map<std::string, std::pair<cl_program, cl_kernel>>
+    kernel_cache;
+
 FGraphNode *executeGraph(FGraphNode *node) {
   auto start = std::chrono::high_resolution_clock::now();
   FOperation *result = new FOperation();
@@ -282,30 +284,39 @@ FGraphNode *executeGraph(FGraphNode *node) {
       chrono::high_resolution_clock::now() - start;
   log(DEBUG, "code generation finished (in " + to_string(elapsed.count()) +
                  " ms): \n" + code);
-  // create program
+  // TODO don't create code when in tree
+  auto cache_val = kernel_cache.find(code);
+  cl_kernel kernel = nullptr;
   cl_int err_code;
-  const char *code_data = code.data();
-  const size_t code_length = code.length();
-  cl_program prog = clCreateProgramWithSource(context, 1, &code_data,
-                                              &code_length, &err_code);
-  if (err_code == CL_OUT_OF_RESOURCES)
-    log(ERROR, "Out of resources while creating program!");
-  if (err_code == CL_OUT_OF_HOST_MEMORY)
-    log(ERROR, "Not enough memory to create program!");
-  // build program
-  err_code = clBuildProgram(prog, 1, &device, nullptr, nullptr, nullptr);
-  if (err_code == CL_INVALID_PROGRAM)
-    log(ERROR, "Invalid Program was generated! Generated code: \"\n" + code +
-                   "\"\nPlease contact a developer and/or file a bug report.");
-  else if (err_code == CL_COMPILER_NOT_AVAILABLE)
-    log(ERROR, "Compiler of your GPU driver is not available!");
-  else if (err_code == CL_OUT_OF_HOST_MEMORY)
-    log(ERROR, "Not enough memory to build program!");
-  // get kernel
-  cl_kernel kernel = clCreateKernel(prog, "execute_graph", &err_code);
-  if (err_code == CL_OUT_OF_HOST_MEMORY)
-    log(ERROR, "Not enough memory to build kernel!");
-  // TODO: memorizing kernels
+  if (cache_val == kernel_cache.end()) {
+    // create program
+    const char *code_data = code.data();
+    const size_t code_length = code.length();
+    cl_program prog = clCreateProgramWithSource(context, 1, &code_data,
+                                                &code_length, &err_code);
+    if (err_code == CL_OUT_OF_RESOURCES)
+      log(ERROR, "Out of resources while creating program!");
+    if (err_code == CL_OUT_OF_HOST_MEMORY)
+      log(ERROR, "Not enough memory to create program!");
+    // build program
+    err_code = clBuildProgram(prog, 1, &device, nullptr, nullptr, nullptr);
+    if (err_code == CL_INVALID_PROGRAM)
+      log(ERROR,
+          "Invalid Program was generated! Generated code: \"\n" + code +
+              "\"\nPlease contact a developer and/or file a bug report.");
+    else if (err_code == CL_COMPILER_NOT_AVAILABLE)
+      log(ERROR, "Compiler of your GPU driver is not available!");
+    else if (err_code == CL_OUT_OF_HOST_MEMORY)
+      log(ERROR, "Not enough memory to build program!");
+    // get kernel
+    kernel = clCreateKernel(prog, "execute_graph", &err_code);
+    if (err_code == CL_OUT_OF_HOST_MEMORY)
+      log(ERROR, "Not enough memory to build kernel!");
+    kernel_cache.insert({code, {prog, kernel}});
+  } else {
+    log(DEBUG, "code from cache");
+    kernel = cache_val->second.second;
+  }
   chrono::duration<double, std::milli> compilation_time =
       chrono::high_resolution_clock::now() - start;
   start = std::chrono::high_resolution_clock::now();
@@ -419,7 +430,5 @@ FGraphNode *executeGraph(FGraphNode *node) {
   elapsed = chrono::high_resolution_clock::now() - start;
   log(DEBUG, "compilation took " + to_string(compilation_time.count()) +
                  "ms, execution took " + to_string(elapsed.count()) + "ms");
-  clReleaseKernel(kernel);
-  clReleaseProgram(prog);
   return newsucc;
 }

@@ -37,7 +37,6 @@ void freeGraph(FGraphNode *graph) {
   std::unordered_set<FGraphNode *> all;
   collectAllNodes(graph, all);
   for (FGraphNode *gn : all) {
-    // delete gn->operation;
     if (gn->predecessors != NULL && gn->num_predecessor != 0)
       free(gn->predecessors);
     if (gn->operation != NULL) {
