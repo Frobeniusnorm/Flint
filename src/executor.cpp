@@ -1,4 +1,5 @@
 #include "../flint.h"
+#include "kernel_tree.hpp"
 #include "logger.hpp"
 #include "utils.hpp"
 #include <list>
@@ -22,6 +23,7 @@ static cl_command_queue queue;
 static cl_device_id device;
 void flintInit() {
   log(VERBOSE, "Initializing Flint");
+  KernelTree::kernelTreeInit();
   cl_platform_id platform = NULL;
   device = NULL;
   cl_uint num_dev, num_plat;
@@ -98,6 +100,7 @@ void flintInit() {
 }
 void flintCleanup() {
   if (initialized) {
+    KernelTree::kernelTreeCleanUp();
     clReleaseDevice(device);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);

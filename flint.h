@@ -25,7 +25,7 @@ void flintCleanup();
 void setLoggingLevel(int);
 
 enum FType { FLOAT32, FLOAT64, INT32, INT64 };
-enum FOperationType { STORE, RESULTDATA, CONST, ADD, SUB, MUL, DIV };
+enum FOperationType { STORE, RESULTDATA, CONST, ADD, SUB, MUL, DIV, Length };
 struct FOperation {
   // shape of the data after execution
   int dimensions;
@@ -40,6 +40,8 @@ struct FOperation {
 // out going edge
 struct FGraphNode {
   int num_predecessor;
+  int kernel_tree_id; // internal node id of current operation in kernel caching
+                      // tree
   FGraphNode **predecessors;
   FOperation *operation; // the operation represented by this graph node
 };
