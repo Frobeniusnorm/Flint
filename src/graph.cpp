@@ -2,6 +2,7 @@
 #include "logger.hpp"
 #include "utils.hpp"
 #include <cstring>
+#include <list>
 #include <stdlib.h>
 #include <unordered_set>
 #include <vector>
@@ -9,6 +10,7 @@
 FGraphNode *createGraph(void *data, int num_entries, FType data_type,
                         int *shape, int dimensions) {
   FGraphNode *gn = new FGraphNode();
+  gn->reference_counter = 0;
   FOperation *op = new FOperation();
   FStore *store = new FStore();
   op->dimensions = dimensions;
@@ -24,19 +26,26 @@ FGraphNode *createGraph(void *data, int num_entries, FType data_type,
   gn->predecessors = NULL;
   return gn;
 }
-static void collectAllNodes(FGraphNode *graph,
-                            std::unordered_set<FGraphNode *> &set) {
-  set.insert(graph);
-  for (int i = 0; i < graph->num_predecessor; i++) {
-    if (graph->predecessors[i] && set.find(graph->predecessors[i]) == set.end())
-      collectAllNodes(graph->predecessors[i], set);
-  }
-}
 // frees all allocated data from the graph and the nodes that are reachable
 void freeGraph(FGraphNode *graph) {
   std::unordered_set<FGraphNode *> all;
-  collectAllNodes(graph, all);
-  for (FGraphNode *gn : all) {
+  std::list<FGraphNode *> wq;
+  all.insert(graph);
+  wq.push_back(graph);
+  while (!wq.empty()) {
+    FGraphNode *gn = wq.front();
+    wq.pop_front();
+    all.erase(gn);
+    if (gn->reference_counter != 0)
+      continue;
+    for (int i = 0; i < gn->num_predecessor; i++) {
+      if (gn->predecessors[i] &&
+          --(gn->predecessors[i]->reference_counter) == 0 &&
+          all.find(gn->predecessors[i]) == all.end()) {
+        wq.push_back(gn->predecessors[i]);
+        all.insert(gn->predecessors[i]);
+      }
+    }
     if (gn->predecessors != NULL && gn->num_predecessor != 0)
       free(gn->predecessors);
     if (gn->operation != NULL) {
@@ -73,12 +82,14 @@ static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
                  "correct behaviour!");
   }
   FGraphNode *foo = new FGraphNode();
+  foo->reference_counter = 0;
   foo->operation = op;
   foo->num_predecessor = pre.size();
   foo->predecessors =
       pre.size() == 0 ? NULL : safe_mal<FGraphNode *>(pre.size());
   for (int i = 0; i < pre.size(); i++) {
     foo->predecessors[i] = pre[i];
+    pre[i]->reference_counter++;
   }
   return foo;
 }
@@ -212,7 +223,7 @@ FGraphNode *mul(FGraphNode *a, long b) { return mul<long>(a, b); }
 template <typename T> FGraphNode *pow(FGraphNode *a, T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = MUL;
+  op->op_type = POW;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }

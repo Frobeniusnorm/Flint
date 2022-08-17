@@ -141,6 +141,49 @@ TEST_SUITE("Execution") {
     }
     freeGraph(newResult);
   }
+  TEST_CASE("pow") {
+    using namespace std;
+    vector<int> s1{3, 2};
+    int s2 = 2;
+    vector<vector<int>> d1{{1, 3}, {0, 8}, {-3, -3}};
+    vector<int> f1 = flattened(d1);
+    vector<long> d2{2, 1};
+    vector<vector<float>> d3{{0, 2}, {1, 0}, {-1, 2}};
+    vector<float> f3 = flattened(d3);
+    FGraphNode *g1 = createGraph(f1.data(), f1.size(), INT32, s1.data(), 2);
+    FGraphNode *g2 = pow(g1, createGraph(d2.data(), d2.size(), INT64, &s2, 1));
+    FGraphNode *g3 =
+        pow(g1, createGraph(f3.data(), f3.size(), FLOAT32, s1.data(), 2));
+    FGraphNode *g4 = pow(g1, 2);
+    vector<vector<long>> e1{{1, 3}, {0, 8}, {9, -3}};
+    vector<vector<float>> e2{{1, 9}, {0, 1}, {-0.3333333333333333, 9}};
+    vector<vector<int>> e3{{1, 9}, {0, 64}, {9, 9}};
+
+    FGraphNode *r1 = executeGraph(g2);
+    FGraphNode *r3 = executeGraph(g4);
+    FGraphNode *r2 = executeGraph(g3);
+
+    FResultData *res = (FResultData *)r1->operation->additional_data;
+    long *ldata = (long *)res->data;
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 2; j++)
+        CHECK_EQ(ldata[i * 2 + j], e1[i][j]);
+
+    res = (FResultData *)r2->operation->additional_data;
+    float *fdata = (float *)res->data;
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 2; j++)
+        CHECK_EQ(fdata[i * 2 + j], e2[i][j]);
+
+    res = (FResultData *)r3->operation->additional_data;
+    int *idata = (int *)res->data;
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 2; j++)
+        CHECK_EQ(idata[i * 2 + j], e3[i][j]);
+    freeGraph(r1);
+    freeGraph(r2);
+    freeGraph(r3);
+  }
 }
 
 int main(int argc, char **argv) {

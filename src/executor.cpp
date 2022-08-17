@@ -103,7 +103,25 @@ void flintCleanup() {
     clReleaseContext(context);
   }
 }
-
+template <typename T> static std::string vectorString(std::vector<T> vec) {
+  std::string res = "[";
+  for (int i = 0; i < vec.size(); i++) {
+    res += std::to_string(vec[i]);
+    if (i != vec.size() - 1)
+      res += ", ";
+  }
+  return res + "]";
+}
+template <typename T>
+static std::string vectorString(std::vector<std::vector<T>> &vec) {
+  std::string res = "[";
+  for (int i = 0; i < vec.size(); i++) {
+    res += vectorString(vec[i]);
+    if (i != vec.size() - 1)
+      res += ",\n";
+  }
+  return res + "]";
+}
 static std::string typeString(FType t) {
   switch (t) {
   case INT32:
@@ -211,8 +229,26 @@ generateCode(FGraphNode *node,
       break;
     }
     case POW: {
-      code = type + " " + name + " = pow(v" + to_string(variable_index + 1) +
-             ", v" + to_string(variable_index + 2) + ");\n" + code;
+      FOperation *x = node->predecessors[0]->operation;
+      FOperation *y = node->predecessors[1]->operation;
+      if ((x->data_type == FLOAT32 || x->data_type == FLOAT64) &&
+          (y->data_type == FLOAT32 && y->data_type == FLOAT64))
+        code = type + " " + name + " = pow(v" + to_string(variable_index + 1) +
+               ", v" + to_string(variable_index + 2) + ");\n" + code;
+      else if (x->data_type == INT64 &&
+               (y->data_type == INT32 || y->data_type == INT64))
+        code = type + " " + name + " = (long)pown((double)v" +
+               to_string(variable_index + 1) + ", (int)v" +
+               to_string(variable_index + 2) + ");\n" + code;
+      else if (x->data_type == INT32 &&
+               (y->data_type == INT32 || y->data_type == INT64))
+        code = type + " " + name + " = (int)pown((float)v" +
+               to_string(variable_index + 1) + ", (int)v" +
+               to_string(variable_index + 2) + ");\n" + code;
+      else
+        code = type + " " + name + " = pow((double)v" +
+               to_string(variable_index + 1) + ", (double)v" +
+               to_string(variable_index + 2) + ");\n" + code;
     } break;
     }
     // push predecessors
@@ -238,8 +274,10 @@ FGraphNode *executeGraph(FGraphNode *node) {
   result->additional_data = resultData;
   FGraphNode *newsucc = new FGraphNode();
   newsucc->num_predecessor = 1;
+  newsucc->reference_counter = 1;
   newsucc->predecessors = safe_mal<FGraphNode *>(1);
   newsucc->predecessors[0] = node;
+  // node->reference_counter stays the same -> ownership is transfered to result
   newsucc->operation = result;
   // calculate Code and Parameters
   using namespace std;
@@ -272,7 +310,14 @@ FGraphNode *executeGraph(FGraphNode *node) {
         if (node->operation
                 ->shape[i + (node->operation->dimensions - op->dimensions)] !=
             op->shape[i])
-          log(ERROR, "incompatible shape for operands!");
+          log(ERROR,
+              "incompatible shapes of operands: " +
+                  vectorString(vector<int>(node->operation->shape,
+                                           node->operation->shape +
+                                               node->operation->dimensions)) +
+                  " and " +
+                  vectorString(
+                      vector<int>(op->shape, op->shape + op->dimensions)));
         factor *= op->shape[i];
       }
       indx_mod = "%" + to_string(factor);
@@ -312,10 +357,20 @@ FGraphNode *executeGraph(FGraphNode *node) {
       log(ERROR, "Compiler of your GPU driver is not available!");
     else if (err_code == CL_OUT_OF_HOST_MEMORY)
       log(ERROR, "Not enough memory to build program!");
+    else if (err_code != CL_SUCCESS) {
+      char build_log[4096];
+      size_t actual_size = 0;
+      clGetProgramBuildInfo(prog, device, CL_PROGRAM_BUILD_LOG, 4096,
+                            (void *)&build_log[0], &actual_size);
+      log(ERROR,
+          "Unknown Error during program compilation! Generated code: \"\n" +
+              code + "\nBuild Log:\n" + string(&build_log[0]) +
+              "\"\nPlease contact a developer and/or file a bug report.");
+    }
     // get kernel
     kernel = clCreateKernel(prog, "execute_graph", &err_code);
-    if (err_code == CL_OUT_OF_HOST_MEMORY)
-      log(ERROR, "Not enough memory to build kernel!");
+    if (err_code != CL_SUCCESS)
+      log(ERROR, "kernel compilation failed!");
     kernel_cache.insert({code, {prog, kernel}});
   } else {
     log(DEBUG, "code from cache");

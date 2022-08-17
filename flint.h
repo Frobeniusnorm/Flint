@@ -51,7 +51,8 @@ struct FOperation {
 struct FGraphNode {
   int num_predecessor;
   FGraphNode **predecessors;
-  FOperation *operation; // the operation represented by this graph node
+  FOperation *operation;    // the operation represented by this graph node
+  size_t reference_counter; // for garbage collection in free graph
 };
 // Operations
 // Store data in the tensor, always an Entry (source) of the graph
