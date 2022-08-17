@@ -210,6 +210,10 @@ generateCode(FGraphNode *node,
              op + " v" + to_string(variable_index + 2) + ";\n" + code;
       break;
     }
+    case POW: {
+      code = type + " " + name + " = pow(v" + to_string(variable_index + 1) +
+             ", v" + to_string(variable_index + 2) + ");\n" + code;
+    } break;
     }
     // push predecessors
     if (push_pred)
@@ -284,7 +288,7 @@ FGraphNode *executeGraph(FGraphNode *node) {
       chrono::high_resolution_clock::now() - start;
   log(DEBUG, "code generation finished (in " + to_string(elapsed.count()) +
                  " ms): \n" + code);
-  // TODO don't create code when in tree
+  // don't create code when in cache
   auto cache_val = kernel_cache.find(code);
   cl_kernel kernel = nullptr;
   cl_int err_code;

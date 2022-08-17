@@ -25,7 +25,17 @@ void flintCleanup();
 void setLoggingLevel(int);
 
 enum FType { FLOAT32, FLOAT64, INT32, INT64 };
-enum FOperationType { STORE, RESULTDATA, CONST, ADD, SUB, MUL, DIV, Length };
+enum FOperationType {
+  STORE,
+  RESULTDATA,
+  CONST,
+  ADD,
+  SUB,
+  MUL,
+  DIV,
+  POW,
+  Length
+};
 struct FOperation {
   // shape of the data after execution
   int dimensions;
@@ -82,12 +92,30 @@ FGraphNode *add(FGraphNode *a, FGraphNode *b);
 FGraphNode *sub(FGraphNode *a, FGraphNode *b);
 FGraphNode *div(FGraphNode *a, FGraphNode *b);
 FGraphNode *mul(FGraphNode *a, FGraphNode *b);
+FGraphNode *pow(FGraphNode *a, FGraphNode *b);
 // adds the constant value to each entry in a
 FGraphNode *add(FGraphNode *a, int b);
+FGraphNode *add(FGraphNode *a, long b);
+FGraphNode *add(FGraphNode *a, float b);
+FGraphNode *add(FGraphNode *a, double b);
 // subtracts the constant value from each entry in a
+FGraphNode *sub(FGraphNode *a, int b);
 FGraphNode *sub(FGraphNode *a, long b);
+FGraphNode *sub(FGraphNode *a, float b);
+FGraphNode *sub(FGraphNode *a, double b);
 // divides each entry in a by the constant value
+FGraphNode *div(FGraphNode *a, int b);
+FGraphNode *div(FGraphNode *a, long b);
 FGraphNode *div(FGraphNode *a, float b);
+FGraphNode *div(FGraphNode *a, double b);
 // multiplicates the constant value with each entry in a
+FGraphNode *mul(FGraphNode *a, int b);
+FGraphNode *mul(FGraphNode *a, long b);
+FGraphNode *mul(FGraphNode *a, float b);
 FGraphNode *mul(FGraphNode *a, double b);
+// computes the power of each entry to the constant
+FGraphNode *pow(FGraphNode *a, int b);
+FGraphNode *pow(FGraphNode *a, long b);
+FGraphNode *pow(FGraphNode *a, float b);
+FGraphNode *pow(FGraphNode *a, double b);
 #endif

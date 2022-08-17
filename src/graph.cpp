@@ -132,6 +132,15 @@ FGraphNode *mul(FGraphNode *a, FGraphNode *b) {
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
+FGraphNode *pow(FGraphNode *a, FGraphNode *b) {
+  if (!(a->operation->dimensions >= b->operation->dimensions))
+    log(ERROR, "pow(a, b) must fulfill a->dimensions >= b->dimensions");
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = POW;
+  initShape_keep(op, a->operation, b->operation);
+  return addNode(op, {a, b});
+}
 template <typename T>
 static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, T b) {
   FConst *cons = new FConst();
@@ -199,3 +208,15 @@ FGraphNode *mul(FGraphNode *a, double b) { return mul<double>(a, b); }
 FGraphNode *mul(FGraphNode *a, float b) { return mul<float>(a, b); }
 FGraphNode *mul(FGraphNode *a, int b) { return mul<int>(a, b); }
 FGraphNode *mul(FGraphNode *a, long b) { return mul<long>(a, b); }
+// takes the power of each element in a to b
+template <typename T> FGraphNode *pow(FGraphNode *a, T b) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = MUL;
+  initShape_keep(op, a->operation, nullptr);
+  return addNodeWithConst(op, a, b);
+}
+FGraphNode *pow(FGraphNode *a, double b) { return pow<double>(a, b); }
+FGraphNode *pow(FGraphNode *a, float b) { return pow<float>(a, b); }
+FGraphNode *pow(FGraphNode *a, int b) { return pow<int>(a, b); }
+FGraphNode *pow(FGraphNode *a, long b) { return pow<long>(a, b); }
