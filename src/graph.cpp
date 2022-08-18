@@ -247,4 +247,25 @@ FGraphNode *flatten(FGraphNode *a) {
   op->data_type = prev_op->data_type;
   return addNode(op, {a});
 }
-// FGraphNode *flatten(FGraphNode *a, int dimension);
+FGraphNode *flatten(FGraphNode *a, int dimension) {
+  if (dimension == 0)
+    log(ERROR, "Flattening the first dimension of a tensor is not possible!");
+
+  FOperation *prev_op = a->operation;
+  int new_prevdim_size =
+      prev_op->shape[dimension - 1] * prev_op->shape[dimension];
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = FLATTEN;
+  op->dimensions = prev_op->dimensions - 1;
+  op->shape = safe_mal<int>(prev_op->dimensions - 1);
+  // copy into shape
+  memcpy(op->shape, prev_op->shape, sizeof(int) * dimension);
+  memcpy(op->shape + dimension, prev_op->shape + (dimension + 1),
+         sizeof(int) * (prev_op->dimensions - dimension - 1));
+  op->shape[dimension - 1] = new_prevdim_size;
+
+  op->additional_data = prev_op->additional_data;
+  op->data_type = prev_op->data_type;
+  return addNode(op, {a});
+}

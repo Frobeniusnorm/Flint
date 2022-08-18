@@ -11,6 +11,33 @@
 #include <typeinfo>
 #include <unordered_map>
 #include <vector>
+inline std::string typeString(FType t) {
+  switch (t) {
+  case INT32:
+    return "int";
+  case INT64:
+    return "long";
+  case FLOAT32:
+    return "float";
+  case FLOAT64:
+    return "double";
+  }
+  return "";
+}
+inline size_t typeSize(FType t) {
+  switch (t) {
+  case INT32:
+    return sizeof(int);
+  case INT64:
+    return sizeof(long);
+  case FLOAT32:
+    return sizeof(float);
+  case FLOAT64:
+    return sizeof(double);
+  }
+  return 1;
+}
+
 static void openclCallback(const char *errinfo, const void *privateinfo,
                            size_t cb, void *user_data) {
   log(WARNING, "{OpenCL} " + std::string(errinfo));
@@ -102,51 +129,6 @@ void flintCleanup() {
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
   }
-}
-template <typename T> static std::string vectorString(std::vector<T> vec) {
-  std::string res = "[";
-  for (int i = 0; i < vec.size(); i++) {
-    res += std::to_string(vec[i]);
-    if (i != vec.size() - 1)
-      res += ", ";
-  }
-  return res + "]";
-}
-template <typename T>
-static std::string vectorString(std::vector<std::vector<T>> &vec) {
-  std::string res = "[";
-  for (int i = 0; i < vec.size(); i++) {
-    res += vectorString(vec[i]);
-    if (i != vec.size() - 1)
-      res += ",\n";
-  }
-  return res + "]";
-}
-static std::string typeString(FType t) {
-  switch (t) {
-  case INT32:
-    return "int";
-  case INT64:
-    return "long";
-  case FLOAT32:
-    return "float";
-  case FLOAT64:
-    return "double";
-  }
-  return "";
-}
-static size_t typeSize(FType t) {
-  switch (t) {
-  case INT32:
-    return sizeof(int);
-  case INT64:
-    return sizeof(long);
-  case FLOAT32:
-    return sizeof(float);
-  case FLOAT64:
-    return sizeof(double);
-  }
-  return 1;
 }
 void setLoggingLevel(int level) { setLoggerLevel(level); }
 

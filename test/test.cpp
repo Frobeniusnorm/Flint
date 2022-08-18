@@ -200,6 +200,35 @@ TEST_SUITE("Execution") {
     for (int i = 0; i < 6; i++)
       CHECK_EQ(data[i], e1[i]);
     freeGraph(g);
+    // flatten with index
+    vector<vector<vector<int>>> d3{{{0, 1}, {2, 3}, {4, 5}},
+                                   {{6, 7}, {8, 9}, {10, 11}}};
+    vector<int> f3 = flattened(d3);
+    vector<int> s3{2, 3, 2};
+    vector<vector<int>> d4{{3, 3, 4, 4, 5, 5}, {5, 5, 4, 4, 3, 3}};
+    vector<int> f4 = flattened(d4);
+    vector<int> s4{2, 6};
+    vector<vector<int>> d5{{3, 3}, {4, 4}, {5, 5}, {5, 5}, {4, 4}, {3, 3}};
+    vector<int> f5 = flattened(d5);
+    vector<int> s5{6, 2};
+    g = createGraph(f3.data(), f3.size(), INT32, s3.data(), 3);
+    FGraphNode *g1 = flatten(g, 2);
+    FGraphNode *g2 = flatten(g, 1);
+    g1 = flatten(
+        add(g1, createGraph(f4.data(), f4.size(), INT32, s4.data(), 2)));
+    g2 = flatten(
+        add(g2, createGraph(f5.data(), f5.size(), INT32, s5.data(), 2)));
+    vector<int> exp{3, 4, 6, 7, 9, 10, 11, 12, 12, 13, 13, 14};
+    g1 = executeGraph(g1);
+    // g2 = executeGraph(g2);
+    int *r1 = (int *)((FResultData *)g1->operation->additional_data)->data;
+    // int *r2 = (int *)((FResultData *)g2->operation->additional_data)->data;
+    for (int i = 0; i < 12; i++) {
+      CHECK_EQ(r1[i], exp[i]);
+      // CHECK_EQ(r2[i], exp[i]);
+    }
+    freeGraph(g1);
+    freeGraph(g2);
   }
 }
 

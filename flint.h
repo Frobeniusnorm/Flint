@@ -124,5 +124,5 @@ FGraphNode *pow(FGraphNode *a, double b);
 // allocated
 FGraphNode *flatten(FGraphNode *a);
 // flattens a specific dimension of the tensor, no additional data is allocated
-// FGraphNode *flatten(FGraphNode *a, int dimension);
+FGraphNode *flatten(FGraphNode *a, int dimension);
 #endif
