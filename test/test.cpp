@@ -184,6 +184,23 @@ TEST_SUITE("Execution") {
     freeGraph(r2);
     freeGraph(r3);
   }
+  TEST_CASE("flatten") {
+    using namespace std;
+    vector<vector<int>> d1{{1, 3}, {0, 8}, {-3, -3}};
+    vector<int> f1 = flattened(d1);
+    vector<int> d2{3, 3, 4, 4, 5, 5};
+    vector<int> e1{4, 6, 4, 12, 2, 2};
+    vector<int> s1{3, 2};
+    int s2 = 6;
+    FGraphNode *g = createGraph(f1.data(), f1.size(), INT32, s1.data(), 2);
+    g = add(flatten(g), createGraph(d2.data(), d2.size(), INT32, &s2, 1));
+    g = executeGraph(g);
+    FResultData *res = (FResultData *)g->operation->additional_data;
+    int *data = (int *)res->data;
+    for (int i = 0; i < 6; i++)
+      CHECK_EQ(data[i], e1[i]);
+    freeGraph(g);
+  }
 }
 
 int main(int argc, char **argv) {

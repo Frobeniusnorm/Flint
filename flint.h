@@ -34,6 +34,7 @@ enum FOperationType {
   MUL,
   DIV,
   POW,
+  FLATTEN,
   Length
 };
 struct FOperation {
@@ -119,4 +120,9 @@ FGraphNode *pow(FGraphNode *a, int b);
 FGraphNode *pow(FGraphNode *a, long b);
 FGraphNode *pow(FGraphNode *a, float b);
 FGraphNode *pow(FGraphNode *a, double b);
+// flattens the GraphNode data to a 1 dimensional tensor, no additional data is
+// allocated
+FGraphNode *flatten(FGraphNode *a);
+// flattens a specific dimension of the tensor, no additional data is allocated
+// FGraphNode *flatten(FGraphNode *a, int dimension);
 #endif

@@ -231,3 +231,20 @@ FGraphNode *pow(FGraphNode *a, double b) { return pow<double>(a, b); }
 FGraphNode *pow(FGraphNode *a, float b) { return pow<float>(a, b); }
 FGraphNode *pow(FGraphNode *a, int b) { return pow<int>(a, b); }
 FGraphNode *pow(FGraphNode *a, long b) { return pow<long>(a, b); }
+
+FGraphNode *flatten(FGraphNode *a) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = FLATTEN;
+  op->dimensions = 1;
+  op->shape = safe_mal<int>(1);
+  const FOperation *prev_op = a->operation;
+  size_t total_size = 1;
+  for (int i = 0; i < prev_op->dimensions; i++)
+    total_size *= prev_op->shape[i];
+  op->shape[0] = total_size;
+  op->additional_data = prev_op->additional_data;
+  op->data_type = prev_op->data_type;
+  return addNode(op, {a});
+}
+// FGraphNode *flatten(FGraphNode *a, int dimension);

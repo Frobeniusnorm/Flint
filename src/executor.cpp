@@ -250,6 +250,10 @@ generateCode(FGraphNode *node,
                to_string(variable_index + 1) + ", (double)v" +
                to_string(variable_index + 2) + ");\n" + code;
     } break;
+    case FLATTEN: {
+      code = type + " " + name + " = v" + to_string(variable_index + 1) +
+             ";\n" + code;
+    } break;
     }
     // push predecessors
     if (push_pred)
