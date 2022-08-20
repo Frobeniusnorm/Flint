@@ -248,8 +248,8 @@ TEST_SUITE("Execution") {
 #include "../flint.hpp"
 TEST_SUITE("C++ Bindings") {
   TEST_CASE("Basic Functions and Classes") {
-    Tensor<float, 3> t1;
-    Tensor<long, 1> t2;
+    Tensor<float, 3> t1({{{0}, {1}}, {{2}, {3}}});
+    Tensor<long, 1> t2({4, 5, 6, 7});
   }
 }
 int main(int argc, char **argv) {

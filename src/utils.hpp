@@ -12,6 +12,8 @@
    See the License for the specific language governing permissions and
    limitations under the License. */
 
+#ifndef UTILS_HPP
+#define UTILS_HPP
 #include "logger.hpp"
 #include <vector>
 template <typename T> inline T *safe_mal(unsigned int count) {
@@ -41,3 +43,4 @@ inline std::string vectorString(std::vector<std::vector<T>> &vec) {
   }
   return res + "]";
 }
+#endif
