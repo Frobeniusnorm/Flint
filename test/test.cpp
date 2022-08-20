@@ -245,7 +245,13 @@ TEST_SUITE("Execution") {
     freeGraph(g2);
   }
 }
-
+#include "../flint.hpp"
+TEST_SUITE("C++ Bindings") {
+  TEST_CASE("Basic Functions and Classes") {
+    Tensor<float, 3> t1;
+    Tensor<long, 1> t2;
+  }
+}
 int main(int argc, char **argv) {
   flintInit();
   doctest::Context context;
