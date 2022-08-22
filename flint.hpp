@@ -96,8 +96,36 @@ template <typename T> struct Tensor<T, 1> {
     other.node = nullptr;
   }
   ~Tensor() { freeGraph(node); }
-  std::vector<T> operator*() { return {}; }
-  void execute() {}
+  std::vector<T> operator*() {
+    switch (node->operation->op_type) {
+    case STORE: {
+      FStore *store = (FStore *)node->operation->additional_data;
+      return std::vector<T>((T *)store->data,
+                            (T *)store->data + store->num_entries);
+    }
+    case RESULTDATA: {
+      FResultData *store = (FResultData *)node->operation->additional_data;
+      return std::vector<T>((T *)store->data,
+                            (T *)store->data + store->num_entries);
+    }
+    case CONST: {
+      FConst *store = (FConst *)node->operation->additional_data;
+      return std::vector<T>(*(T *)store->value);
+    }
+    default: {
+      execute();
+      FResultData *store = (FResultData *)node->operation->additional_data;
+      return std::vector<T>((T *)store->data,
+                            (T *)store->data + store->num_entries);
+    }
+    }
+  }
+  void execute() {
+    FOperation *op = node->operation;
+    if (op->op_type != STORE && op->op_type != RESULTDATA &&
+        op->op_type != CONST)
+      node = executeGraph(node);
+  }
 
 private:
   FGraphNode *node;
@@ -150,15 +178,49 @@ template <typename T, int n> struct Tensor {
     if (node)
       freeGraph(node);
   }
-  storage_type operator*() { return {}; }
-  void execute() {}
+  storage_type operator*() {
+    switch (node->operation->op_type) {
+    case STORE: {
+      FStore *store = (FStore *)node->operation->additional_data;
+      storage_type result(shape[0]);
+      const std::vector<T> src = std::vector<T>(
+          (T *)store->data, (T *)store->data + store->num_entries);
+      bringIntoShape(result, src, 0, 0, total_size);
+      return result;
+    }
+    case RESULTDATA: {
+      FResultData *store = (FResultData *)node->operation->additional_data;
+      storage_type result(shape[0]);
+      const std::vector<T> src = std::vector<T>(
+          (T *)store->data, (T *)store->data + store->num_entries);
+      bringIntoShape(result, src, 0, 0, total_size);
+      return result;
+    }
+    default: {
+      execute();
+      FResultData *store = (FResultData *)node->operation->additional_data;
+      storage_type result(shape[0]);
+      const std::vector<T> src = std::vector<T>(
+          (T *)store->data, (T *)store->data + store->num_entries);
+      bringIntoShape(result, src, 0, 0, total_size);
+      return result;
+    }
+    }
+  }
+  void execute() {
+    FOperation *op = node->operation;
+    if (op->op_type != STORE && op->op_type != RESULTDATA &&
+        op->op_type != CONST)
+      node = executeGraph(node);
+  }
 
 private:
   FGraphNode *node;
   std::vector<int> shape;
-
+  size_t total_size;
   template <typename K> void initShape(const std::vector<K> &vec, int dim) {
     shape[dim] = vec.size();
+    total_size = shape[dim];
   }
   template <typename K>
   void initShape(const std::vector<std::vector<K>> &vec, int dim) {
@@ -166,6 +228,23 @@ private:
     if (vec.size() <= 0)
       log(ERROR, "No dimension of the Tensor may have size 0!");
     initShape(vec[0], dim + 1);
+    total_size *= vec.size();
+  }
+  template <typename K>
+  void bringIntoShape(std::vector<K> &dest, const std::vector<K> &src, int off,
+                      int dim, size_t element_size) {
+    dest.insert(dest.begin(), src.begin() + off,
+                src.begin() + off + shape[dim]);
+  }
+  template <typename K, typename V>
+  void bringIntoShape(std::vector<std::vector<K>> &dest,
+                      const std::vector<V> &src, int off, int dim,
+                      size_t element_size) {
+    int nes = element_size / shape[dim];
+    for (int i = 0; i < shape[dim]; i++) {
+      dest[i] = std::vector<K>(shape[dim + 1]);
+      bringIntoShape(dest[i], src, off + i * nes, dim + 1, nes);
+    }
   }
 };
 #endif
