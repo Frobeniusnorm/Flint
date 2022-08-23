@@ -249,9 +249,24 @@ TEST_SUITE("Execution") {
 TEST_SUITE("C++ Bindings") {
   TEST_CASE("Basic Functions and Classes") {
     Tensor<float, 3> t1({{{0}, {1}}, {{2}, {3}}});
-    Tensor<long, 1> t2({4, 5, 6, 7});
+    Tensor<long, 1> t2({3});
     using namespace std;
-    vector<vector<vector<float>>> foo = *t1;
+    log(INFO, "a");
+    vector<vector<vector<float>>> od_t1 = *t1;
+    log(INFO, "debug: " + FLINT_HPP_HELPER::vectorString(od_t1));
+    vector<long> od_t2 = *t2;
+    CHECK_EQ(od_t1[1][0][0], 2);
+    CHECK_EQ(od_t1[1][1][0], 3);
+    CHECK_EQ(od_t2[0], 3);
+    log(INFO, "b");
+
+    Tensor<float, 3> t3 = t1 + t2;
+    log(INFO, "c");
+    // test
+    vector<vector<vector<float>>> foo = *t3;
+    for (int i = 0; i < 2; i++)
+      for (int j = 0; j < 2; j++)
+        CHECK_EQ(i * 2 + j + 3, foo[i][j][0]);
   }
 }
 int main(int argc, char **argv) {
