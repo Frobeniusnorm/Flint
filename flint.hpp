@@ -21,7 +21,7 @@
 
 namespace FLINT_HPP_HELPER {
 template <typename T>
-inline std::string vectorString(const std::vector<T> vec) {
+inline std::string vectorString(const std::vector<T> &vec) {
   std::string res = "[";
   for (int i = 0; i < vec.size(); i++) {
     res += std::to_string(vec[i]);
@@ -103,10 +103,11 @@ template <typename T> struct Tensor<T, 1> {
     node = createGraph(allocated, data.size(), toFlintType<T>(), &shape, 1);
   }
   // copy
-  Tensor(Tensor<T, 1> &other) {
+  // TODO: does not work -> find a smarter way
+  Tensor(Tensor &other) {
     shape = other.shape;
     node = other.node;
-    storage_type other_data = *other;
+    const storage_type other_data = *other;
     allocated = (T *)malloc(shape * sizeof(T));
     if (!allocated)
       log(ERROR, "Not enough memory!");
@@ -217,8 +218,8 @@ template <typename T, int n> struct Tensor {
                        shape.size());
   }
   // copy
-  Tensor(const Tensor &other) {
-    std::cout << " () copy" << std::endl;
+  // TODO: does not work, copy in graph
+  Tensor(Tensor &other) {
     shape = other.shape;
     const storage_type other_data = *other;
     std::vector<T> flat = FLINT_HPP_HELPER::flattened(other_data);
@@ -229,8 +230,7 @@ template <typename T, int n> struct Tensor {
     node = createGraph(allocated, flat.size(), toFlintType<T>(), shape.data(),
                        shape.size());
   }
-  void operator=(const Tensor &other) {
-    std::cout << " = copy" << std::endl;
+  void operator=(Tensor &other) {
     if (node)
       freeGraph(node);
     if (allocated)
@@ -247,7 +247,6 @@ template <typename T, int n> struct Tensor {
   }
   // move
   Tensor(Tensor &&other) {
-    std::cout << " () move" << std::endl;
     shape = other.shape;
     node = other.node;
     allocated = other.allocated;
@@ -255,7 +254,6 @@ template <typename T, int n> struct Tensor {
     other.node = nullptr;
   }
   void operator=(Tensor &&other) {
-    std::cout << " = move" << std::endl;
     if (node)
       freeGraph(node);
     if (allocated)
@@ -289,6 +287,8 @@ template <typename T, int n> struct Tensor {
       const std::vector<T> src = std::vector<T>(
           (T *)store->data, (T *)store->data + store->num_entries);
       bringIntoShape(result, src, 0, 0, total_size);
+      std::cout << "prior return " << FLINT_HPP_HELPER::vectorString(result)
+                << std::endl;
       return result;
     }
     default: {
@@ -298,6 +298,8 @@ template <typename T, int n> struct Tensor {
       const std::vector<T> src = std::vector<T>(
           (T *)store->data, (T *)store->data + store->num_entries);
       bringIntoShape(result, src, 0, 0, total_size);
+      std::cout << "after execute " << FLINT_HPP_HELPER::vectorString(result)
+                << std::endl;
       return result;
     }
     }
@@ -315,9 +317,8 @@ template <typename T, int n> struct Tensor {
   // OPERATIONS
   template <typename K, int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
-  operator+(const Tensor<K, k> other) const {
-    std::cout << "add: " << FLINT_HPP_HELPER::vectorString(**this) << " + "
-              << FLINT_HPP_HELPER::vectorString(*other) << std::endl;
+  operator+(const Tensor<K, k> &other) const {
+
     return Tensor < stronger_return<K>,
            k >= n ? k : n > (add(node, other.node), shape);
   }
@@ -346,8 +347,9 @@ protected:
   template <typename K>
   void bringIntoShape(std::vector<K> &dest, const std::vector<K> &src, int off,
                       int dim, size_t element_size) {
-    dest.insert(dest.begin(), src.begin() + off,
-                src.begin() + off + shape[dim]);
+    for (int i = 0; i < shape[dim]; i++) {
+      dest[i] = src[off + i];
+    }
   }
   template <typename K, typename V>
   void bringIntoShape(std::vector<std::vector<K>> &dest,

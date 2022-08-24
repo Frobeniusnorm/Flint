@@ -429,11 +429,14 @@ FGraphNode *executeGraph(FGraphNode *node) {
           buffer_data += to_string(((float *)data)[i]) + " ";
         else if (op->data_type == FLOAT64)
           buffer_data += to_string(((double *)data)[i]) + " ";
-        else
+        else if (op->data_type == INT32)
           buffer_data += to_string(((int *)data)[i]) + " ";
+        else
+          buffer_data += to_string(((long *)data)[i]) + " ";
       err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_TRUE, 0,
                                       total_size * type_size, data, 0, nullptr,
                                       nullptr);
+      std::cout << "input buffer data: " << buffer_data << std::endl;
       if (err_code != CL_SUCCESS) {
         string msg = "Unknown Error while loading data to GPU!";
         if (err_code == CL_OUT_OF_HOST_MEMORY)
