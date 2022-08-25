@@ -104,29 +104,17 @@ template <typename T> struct Tensor<T, 1> {
   }
   // copy
   // TODO: does not work -> find a smarter way
-  Tensor(Tensor &other) {
+  Tensor(const Tensor &other) {
     shape = other.shape;
-    node = other.node;
-    const storage_type other_data = *other;
-    allocated = (T *)malloc(shape * sizeof(T));
-    if (!allocated)
-      log(ERROR, "Not enough memory!");
-    memcpy(allocated, other_data.data(), shape * sizeof(T));
-    node = createGraph(allocated, shape, toFlintType<T>(), &shape, 1);
+    node = copyGraph(other.node, (void **)&allocated);
   }
-  void operator=(Tensor<T, 1> &other) {
+  void operator=(const Tensor<T, 1> &other) {
     if (node)
       freeGraph(node);
     if (allocated)
       free(allocated);
-    storage_type other_data = *other;
     shape = other.shape;
-    std::vector<T> flat = other_data;
-    allocated = (T *)malloc(flat.size() * sizeof(T));
-    if (!allocated)
-      log(ERROR, "Not enough memory!");
-    std::memcpy(allocated, flat.data(), flat.size() * sizeof(T));
-    node = createGraph(allocated, flat.size(), toFlintType<T>(), &shape, 1);
+    node = copyGraph(other.node, (void **)&allocated);
   }
   // move
   Tensor(Tensor &&other) {
@@ -219,31 +207,17 @@ template <typename T, int n> struct Tensor {
   }
   // copy
   // TODO: does not work, copy in graph
-  Tensor(Tensor &other) {
+  Tensor(const Tensor &other) {
     shape = other.shape;
-    const storage_type other_data = *other;
-    std::vector<T> flat = FLINT_HPP_HELPER::flattened(other_data);
-    allocated = (T *)malloc(flat.size() * sizeof(T));
-    if (!allocated)
-      log(ERROR, "Not enough memory!");
-    std::memcpy(allocated, flat.data(), flat.size() * sizeof(T));
-    node = createGraph(allocated, flat.size(), toFlintType<T>(), shape.data(),
-                       shape.size());
+    node = copyGraph(other.node, (void **)&allocated);
   }
-  void operator=(Tensor &other) {
+  void operator=(const Tensor &other) {
     if (node)
       freeGraph(node);
     if (allocated)
       free(allocated);
-    const storage_type other_data = *other;
     shape = other.shape;
-    std::vector<T> flat = FLINT_HPP_HELPER::flattened(other_data);
-    allocated = (T *)malloc(flat.size() * sizeof(T));
-    if (!allocated)
-      log(ERROR, "Not enough memory!");
-    std::memcpy(allocated, flat.data(), flat.size() * sizeof(T));
-    node = createGraph(allocated, flat.size(), toFlintType<T>(), shape.data(),
-                       shape.size());
+    node = copyGraph(other.node, (void **)&allocated);
   }
   // move
   Tensor(Tensor &&other) {
@@ -317,8 +291,7 @@ template <typename T, int n> struct Tensor {
   // OPERATIONS
   template <typename K, int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
-  operator+(const Tensor<K, k> &other) const {
-
+  operator+(const Tensor<K, k> other) const {
     return Tensor < stronger_return<K>,
            k >= n ? k : n > (add(node, other.node), shape);
   }

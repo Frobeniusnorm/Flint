@@ -107,6 +107,94 @@ static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
   }
   return foo;
 }
+FGraphNode *copyGraph(const FGraphNode *node, void **copied_data) {
+  FGraphNode *foo = new FGraphNode();
+  // predecessors
+  foo->num_predecessor = node->num_predecessor;
+  if (foo->num_predecessor) {
+    foo->predecessors = safe_mal<FGraphNode *>(foo->num_predecessor);
+    for (int i = 0; i < foo->num_predecessor; i++) {
+      foo->predecessors[i] = node->predecessors[i];
+      node->predecessors[i]->reference_counter++;
+    }
+  }
+
+  foo->reference_counter =
+      0; // is not copied since it is not yet referenced in contrast to node
+  FOperation *op = new FOperation();
+  foo->operation = op;
+  op->data_type = node->operation->data_type;
+  op->op_type = node->operation->op_type;
+  op->dimensions = node->operation->dimensions;
+  // shape
+  if (op->dimensions) {
+    op->shape = safe_mal<int>(op->dimensions);
+    std::memcpy(op->shape, node->operation->shape,
+                op->dimensions * sizeof(int));
+  }
+  // additional data
+  if (node->operation->additional_data) {
+    void **data = nullptr;
+    void *src = nullptr;
+    int num_entries = 0;
+    switch (op->op_type) {
+    case RESULTDATA: {
+      FResultData *ord = (FResultData *)node->operation->additional_data;
+      FResultData *crd = new FResultData();
+      op->additional_data = (void *)crd;
+      crd->mem_id = nullptr;
+      crd->num_entries = ord->num_entries;
+      num_entries = crd->num_entries;
+      src = ord->data;
+      data = &crd->data;
+    } break;
+    case STORE: {
+      FStore *ord = (FStore *)node->operation->additional_data;
+      FStore *crd = new FStore();
+      op->additional_data = (void *)crd;
+      crd->mem_id = nullptr;
+      crd->num_entries = ord->num_entries;
+      num_entries = crd->num_entries;
+      src = ord->data;
+      data = &crd->data;
+    } break;
+    case CONST: {
+      FConst *ord = (FConst *)node->operation->additional_data;
+      FConst *crd = new FConst();
+      op->additional_data = (void *)crd;
+      num_entries = 1;
+      src = ord->value;
+      data = &crd->value;
+    } break;
+    default:
+      break;
+    }
+    if (data) {
+      size_t byte_size = num_entries;
+      switch (op->data_type) {
+      case INT32:
+        *data = safe_mal<int>(num_entries);
+        byte_size *= sizeof(int);
+        break;
+      case INT64:
+        *data = safe_mal<long>(num_entries);
+        byte_size *= sizeof(long);
+        break;
+      case FLOAT32:
+        *data = safe_mal<float>(num_entries);
+        byte_size *= sizeof(float);
+        break;
+      case FLOAT64:
+        *data = safe_mal<double>(num_entries);
+        byte_size *= sizeof(double);
+        break;
+      }
+      *copied_data = *data;
+      std::memcpy(*data, src, byte_size);
+    }
+  }
+  return foo;
+}
 static inline void initShape_keep(FOperation *op, FOperation *a,
                                   FOperation *b) {
   int *src = nullptr;

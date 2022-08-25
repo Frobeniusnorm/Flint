@@ -96,6 +96,8 @@ FGraphNode *createGraph(void *data, int num_entries, FType data_type,
                         int *shape, int dimensions);
 // frees all allocated data from the graph and the nodes that are reachable
 void freeGraph(FGraphNode *graph);
+
+FGraphNode *copyGraph(const FGraphNode *graph, void **copied_data);
 /* executes the Graph which starts with the root of the given node and stores
  * the result for that node in result. If Flint was not initialized yet, this
  * function will do that automatically.
