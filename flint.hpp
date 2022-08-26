@@ -189,6 +189,8 @@ template <typename T> struct Tensor<T, 1> {
         foo += std::to_string(((T *)store->value)[0]);
         break;
       }
+      default: // to make the compiler shut up
+        break;
       }
     }
     foo += ")";
@@ -202,6 +204,34 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K>
   Tensor<stronger_return<K>, 1> operator+(const Tensor<K, 1> other) const {
     return Tensor<stronger_return<K>, 1>(add(node, other.node), shape);
+  }
+  template <typename K>
+  Tensor<stronger_return<K>, 1> operator+(const K con) const {
+    return Tensor<stronger_return<K>, 1>(add(node, con), shape);
+  }
+  template <typename K>
+  Tensor<stronger_return<K>, 1> operator-(const Tensor<K, 1> other) const {
+    return Tensor<stronger_return<K>, 1>(sub(node, other.node), shape);
+  }
+  template <typename K>
+  Tensor<stronger_return<K>, 1> operator-(const K con) const {
+    return Tensor<stronger_return<K>, 1>(sub(node, con), shape);
+  }
+  template <typename K>
+  Tensor<stronger_return<K>, 1> operator*(const Tensor<K, 1> other) const {
+    return Tensor<stronger_return<K>, 1>(mul(node, other.node), shape);
+  }
+  template <typename K>
+  Tensor<stronger_return<K>, 1> operator*(const K con) const {
+    return Tensor<stronger_return<K>, 1>(mul(node, con), shape);
+  }
+  template <typename K>
+  Tensor<stronger_return<K>, 1> operator/(const Tensor<K, 1> other) const {
+    return Tensor<stronger_return<K>, 1>(div(node, other.node), shape);
+  }
+  template <typename K>
+  Tensor<stronger_return<K>, 1> operator/(const K con) const {
+    return Tensor<stronger_return<K>, 1>(div(node, con), shape);
   }
 
 protected:
@@ -320,6 +350,8 @@ template <typename T, int n> struct Tensor {
         foo += std::to_string(((T *)store->value)[0]);
         break;
       }
+      default:
+        break;
       }
     }
     foo += ")";
@@ -335,6 +367,40 @@ template <typename T, int n> struct Tensor {
   operator+(const Tensor<K, k> other) const {
     return Tensor < stronger_return<K>,
            k >= n ? k : n > (add(node, other.node), shape);
+  }
+  template <typename K>
+  Tensor<stronger_return<K>, n> operator+(const K other) const {
+    return Tensor<stronger_return<K>, n>(add(node, other), shape);
+  }
+  template <typename K, int k>
+  Tensor<stronger_return<K>, k >= n ? k : n>
+  operator-(const Tensor<K, k> other) const {
+    return Tensor < stronger_return<K>,
+           k >= n ? k : n > (sub(node, other.node), shape);
+  }
+  template <typename K>
+  Tensor<stronger_return<K>, n> operator-(const K other) const {
+    return Tensor<stronger_return<K>, n>(sub(node, other), shape);
+  }
+  template <typename K, int k>
+  Tensor<stronger_return<K>, k >= n ? k : n>
+  operator*(const Tensor<K, k> other) const {
+    return Tensor < stronger_return<K>,
+           k >= n ? k : n > (mul(node, other.node), shape);
+  }
+  template <typename K>
+  Tensor<stronger_return<K>, n> operator*(const K other) const {
+    return Tensor<stronger_return<K>, n>(mul(node, other), shape);
+  }
+  template <typename K, int k>
+  Tensor<stronger_return<K>, k >= n ? k : n>
+  operator/(const Tensor<K, k> other) const {
+    return Tensor < stronger_return<K>,
+           k >= n ? k : n > (div(node, other.node), shape);
+  }
+  template <typename K>
+  Tensor<stronger_return<K>, n> operator/(const K other) const {
+    return Tensor<stronger_return<K>, n>(div(node, other), shape);
   }
 
 protected:
