@@ -256,6 +256,8 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(od_t2[0], 3);
 
     Tensor<float, 3> t3 = t1 + t2;
+    CHECK_EQ((std::string)t3,
+             "Tensor<FLOAT32, shape: [2, 2, 1]>(<not yet executed>)");
     // test
     vector<vector<vector<float>>> foo = *t3;
     for (int i = 0; i < 2; i++)

@@ -159,6 +159,41 @@ template <typename T> struct Tensor<T, 1> {
         op->op_type != CONST)
       node = executeGraph(node);
   }
+  operator std::string() const {
+    FOperation *op = node->operation;
+    std::string foo = "Tensor<" +
+                      (op->data_type == INT32     ? std::string("INT32")
+                       : op->data_type == INT64   ? std::string("INT64")
+                       : op->data_type == FLOAT32 ? std::string("FLOAT32")
+                                                  : std::string("FLOAT64")) +
+                      ", shape: " + std::to_string(shape) + ">(";
+    if (op->op_type != STORE && op->op_type != RESULTDATA &&
+        op->op_type != CONST)
+      foo += "<not yet executed>";
+    else {
+      switch (op->op_type) {
+      case STORE: {
+        FStore *store = (FStore *)node->operation->additional_data;
+        foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
+            (T *)store->data, (T *)store->data + store->num_entries));
+        break;
+      }
+      case RESULTDATA: {
+        FResultData *store = (FResultData *)node->operation->additional_data;
+        foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
+            (T *)store->data, (T *)store->data + store->num_entries));
+        break;
+      }
+      case CONST: {
+        FConst *store = (FConst *)node->operation->additional_data;
+        foo += std::to_string(((T *)store->value)[0]);
+        break;
+      }
+      }
+    }
+    foo += ")";
+    return foo;
+  }
   // to calculate the return type of two tensors at compile time
   template <typename K>
   using stronger_return =
@@ -253,6 +288,42 @@ template <typename T, int n> struct Tensor {
         op->op_type != CONST) {
       node = executeGraph(node);
     }
+  }
+  operator std::string() const {
+    FOperation *op = node->operation;
+    std::string foo = "Tensor<" +
+                      (op->data_type == INT32     ? std::string("INT32")
+                       : op->data_type == INT64   ? std::string("INT64")
+                       : op->data_type == FLOAT32 ? std::string("FLOAT32")
+                                                  : std::string("FLOAT64")) +
+                      ", shape: " + FLINT_HPP_HELPER::vectorString(shape) +
+                      ">(";
+    if (op->op_type != STORE && op->op_type != RESULTDATA &&
+        op->op_type != CONST)
+      foo += "<not yet executed>";
+    else {
+      switch (op->op_type) {
+      case STORE: {
+        FStore *store = (FStore *)node->operation->additional_data;
+        foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
+            (T *)store->data, (T *)store->data + store->num_entries));
+        break;
+      }
+      case RESULTDATA: {
+        FResultData *store = (FResultData *)node->operation->additional_data;
+        foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
+            (T *)store->data, (T *)store->data + store->num_entries));
+        break;
+      }
+      case CONST: {
+        FConst *store = (FConst *)node->operation->additional_data;
+        foo += std::to_string(((T *)store->value)[0]);
+        break;
+      }
+      }
+    }
+    foo += ")";
+    return foo;
   }
   // to calculate the return type of two tensors at compile time
   template <typename K>
