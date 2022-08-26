@@ -96,50 +96,38 @@ template <typename T> struct Tensor<T, 1> {
   typedef std::vector<T> storage_type;
   Tensor(storage_type data) : shape(data.size()) {
     isTensorType<T>();
-    allocated = (T *)malloc(data.size() * sizeof(T));
-    if (!allocated)
-      log(ERROR, "Not enough memory!");
-    std::memcpy(allocated, data.data(), data.size() * sizeof(T));
-    node = createGraph(allocated, data.size(), toFlintType<T>(), &shape, 1);
+    node = createGraph(data.data(), data.size(), toFlintType<T>(), &shape, 1);
   }
   // copy
   // TODO: does not work -> find a smarter way
   Tensor(const Tensor &other) {
     shape = other.shape;
-    node = copyGraph(other.node, (void **)&allocated);
+    node = copyGraph(other.node);
   }
   void operator=(const Tensor<T, 1> &other) {
     if (node)
       freeGraph(node);
-    if (allocated)
-      free(allocated);
     shape = other.shape;
-    node = copyGraph(other.node, (void **)&allocated);
+    node = copyGraph(other.node);
   }
   // move
   Tensor(Tensor &&other) {
     shape = other.shape;
     node = other.node;
-    allocated = other.allocated;
     other.allocated = nullptr;
     other.node = nullptr;
   }
   void operator=(Tensor &&other) {
     if (node)
       freeGraph(node);
-    if (allocated)
-      free(allocated);
     shape = other.shape;
     node = other.node;
-    allocated = other.allocated;
     other.allocated = nullptr;
     other.node = nullptr;
   }
   ~Tensor() {
     if (node)
       freeGraph(node);
-    if (allocated)
-      free(allocated);
   }
   std::vector<T> operator*() {
     switch (node->operation->op_type) {
@@ -184,7 +172,6 @@ template <typename T> struct Tensor<T, 1> {
 protected:
   Tensor(FGraphNode *node, int shape) : node(node), shape(shape) {}
   FGraphNode *node;
-  T *allocated = nullptr;
   int shape;
 };
 
@@ -198,51 +185,37 @@ template <typename T, int n> struct Tensor {
     static_assert(n > 1, "Dimension must be at least 1");
     initShape(data);
     std::vector<T> flat = FLINT_HPP_HELPER::flattened(data);
-    allocated = (T *)malloc(flat.size() * sizeof(T));
-    if (!allocated)
-      log(ERROR, "Not enough memory!");
-    std::memcpy(allocated, flat.data(), flat.size() * sizeof(T));
-    node = createGraph(allocated, flat.size(), toFlintType<T>(), shape.data(),
+    node = createGraph(flat.data(), flat.size(), toFlintType<T>(), shape.data(),
                        shape.size());
   }
   // copy
   // TODO: does not work, copy in graph
   Tensor(const Tensor &other) {
     shape = other.shape;
-    node = copyGraph(other.node, (void **)&allocated);
+    node = copyGraph(other.node);
   }
   void operator=(const Tensor &other) {
     if (node)
       freeGraph(node);
-    if (allocated)
-      free(allocated);
     shape = other.shape;
-    node = copyGraph(other.node, (void **)&allocated);
+    node = copyGraph(other.node);
   }
   // move
   Tensor(Tensor &&other) {
     shape = other.shape;
     node = other.node;
-    allocated = other.allocated;
-    other.allocated = nullptr;
     other.node = nullptr;
   }
   void operator=(Tensor &&other) {
     if (node)
       freeGraph(node);
-    if (allocated)
-      free(allocated);
     shape = other.shape;
     node = other.node;
-    allocated = other.allocated;
-    other.allocated = nullptr;
     other.node = nullptr;
   }
   ~Tensor() {
     if (node)
       freeGraph(node);
-    if (allocated)
-      free(allocated);
   }
   // TODO does not work
   storage_type operator*() {
@@ -261,8 +234,6 @@ template <typename T, int n> struct Tensor {
       const std::vector<T> src = std::vector<T>(
           (T *)store->data, (T *)store->data + store->num_entries);
       bringIntoShape(result, src, 0, 0, total_size);
-      std::cout << "prior return " << FLINT_HPP_HELPER::vectorString(result)
-                << std::endl;
       return result;
     }
     default: {
@@ -272,8 +243,6 @@ template <typename T, int n> struct Tensor {
       const std::vector<T> src = std::vector<T>(
           (T *)store->data, (T *)store->data + store->num_entries);
       bringIntoShape(result, src, 0, 0, total_size);
-      std::cout << "after execute " << FLINT_HPP_HELPER::vectorString(result)
-                << std::endl;
       return result;
     }
     }
@@ -281,8 +250,9 @@ template <typename T, int n> struct Tensor {
   void execute() {
     FOperation *op = node->operation;
     if (op->op_type != STORE && op->op_type != RESULTDATA &&
-        op->op_type != CONST)
+        op->op_type != CONST) {
       node = executeGraph(node);
+    }
   }
   // to calculate the return type of two tensors at compile time
   template <typename K>
@@ -298,12 +268,12 @@ template <typename T, int n> struct Tensor {
 
 protected:
   Tensor(FGraphNode *node, std::vector<int> shape) : node(node), shape(shape) {
+    // here data is still fine
     total_size = 1;
     for (int ds : shape)
       total_size *= ds;
   }
   FGraphNode *node;
-  T *allocated = nullptr;
   std::vector<int> shape;
   size_t total_size;
   template <typename K> void initShape(const std::vector<std::vector<K>> &vec) {

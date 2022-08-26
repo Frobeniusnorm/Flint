@@ -42,7 +42,6 @@ TEST_SUITE("Graph implementation") {
       FStore *store1 = (FStore *)right1->operation->additional_data;
       CHECK_EQ(right1->operation->data_type, FLOAT32);
       CHECK_EQ(store1->num_entries, 100);
-      CHECK_EQ(store1->data, v2.data());
       freeGraph(gn1);
     }
     {
@@ -66,7 +65,6 @@ TEST_SUITE("Graph implementation") {
       FStore *store2 = (FStore *)right2->operation->additional_data;
       CHECK_EQ(right2->operation->data_type, INT32);
       CHECK_EQ(store2->num_entries, 100);
-      CHECK_EQ(store2->data, v2.data());
       FGraphNode *left1 = gn2->predecessors[0];
       FGraphNode *const1 = left1->predecessors[1];
       CHECK_EQ(const1->operation->op_type, CONST);
@@ -260,10 +258,10 @@ TEST_SUITE("C++ Bindings") {
     Tensor<float, 3> t3 = t1 + t2;
     // test
     vector<vector<vector<float>>> foo = *t3;
-    CHECK_EQ((*t2)[0], 3);
     for (int i = 0; i < 2; i++)
       for (int j = 0; j < 2; j++)
         CHECK_EQ(i * 2 + j + 3, foo[i][j][0]);
+    CHECK_EQ((*t2)[0], 3);
   }
 }
 int main(int argc, char **argv) {

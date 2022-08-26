@@ -436,7 +436,6 @@ FGraphNode *executeGraph(FGraphNode *node) {
       err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_TRUE, 0,
                                       total_size * type_size, data, 0, nullptr,
                                       nullptr);
-      std::cout << "input buffer data: " << buffer_data << std::endl;
       if (err_code != CL_SUCCESS) {
         string msg = "Unknown Error while loading data to GPU!";
         if (err_code == CL_OUT_OF_HOST_MEMORY)

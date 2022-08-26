@@ -32,7 +32,26 @@ FGraphNode *createGraph(void *data, int num_entries, FType data_type,
   std::memcpy((void *)op->shape, (void *)shape, dimensions * sizeof(int));
   op->additional_data = (void *)store;
   op->op_type = STORE;
-  store->data = data;
+  size_t byte_size = num_entries;
+  switch (data_type) {
+  case INT32:
+    store->data = safe_mal<int>(num_entries);
+    byte_size *= sizeof(int);
+    break;
+  case INT64:
+    store->data = safe_mal<long>(num_entries);
+    byte_size *= sizeof(long);
+    break;
+  case FLOAT32:
+    store->data = safe_mal<float>(num_entries);
+    byte_size *= sizeof(float);
+    break;
+  case FLOAT64:
+    store->data = safe_mal<long>(num_entries);
+    byte_size *= sizeof(long);
+    break;
+  }
+  memcpy(store->data, data, byte_size);
   store->num_entries = num_entries;
   op->data_type = data_type;
   gn->operation = op;
@@ -74,6 +93,7 @@ void freeGraph(FGraphNode *graph) {
           delete rd;
         } break;
         case STORE:
+          free(((FStore *)gn->operation->additional_data)->data);
           delete (FStore *)gn->operation->additional_data;
           break;
         case CONST: {
@@ -107,7 +127,7 @@ static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
   }
   return foo;
 }
-FGraphNode *copyGraph(const FGraphNode *node, void **copied_data) {
+FGraphNode *copyGraph(const FGraphNode *node) {
   FGraphNode *foo = new FGraphNode();
   // predecessors
   foo->num_predecessor = node->num_predecessor;
@@ -189,7 +209,6 @@ FGraphNode *copyGraph(const FGraphNode *node, void **copied_data) {
         byte_size *= sizeof(double);
         break;
       }
-      *copied_data = *data;
       std::memcpy(*data, src, byte_size);
     }
   }

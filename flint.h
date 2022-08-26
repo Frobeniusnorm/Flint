@@ -87,17 +87,18 @@ struct FConst {
 };
 
 // functions
-// creates a Graph with a single store instruction, data is copied _during
-// execution_ to intern memory, till then the pointer has to point to
-// valid data. Shape is instantly copied and has to be alive only during this
-// function call. Data contains the flattened data array from type data_type and
-// shape contains the size on each dimension as an array with length dimensions.
+
+// creates a Graph with a single store instruction, data is copied to intern
+// memory, so after return of the function, data may be deleted. Shape is also
+// instantly copied. Data contains the flattened data array from type data_type
+// and shape contains the size on each dimension as an array with length
+// dimensions.
 FGraphNode *createGraph(void *data, int num_entries, FType data_type,
                         int *shape, int dimensions);
 // frees all allocated data from the graph and the nodes that are reachable
 void freeGraph(FGraphNode *graph);
 
-FGraphNode *copyGraph(const FGraphNode *graph, void **copied_data);
+FGraphNode *copyGraph(const FGraphNode *graph);
 /* executes the Graph which starts with the root of the given node and stores
  * the result for that node in result. If Flint was not initialized yet, this
  * function will do that automatically.
