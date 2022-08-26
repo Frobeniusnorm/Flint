@@ -266,6 +266,7 @@ static std::unordered_map<std::string, std::pair<cl_program, cl_kernel>>
     kernel_cache;
 
 FGraphNode *executeGraph(FGraphNode *node) {
+
   auto start = std::chrono::high_resolution_clock::now();
   FOperation *result = new FOperation();
   FResultData *resultData = new FResultData();

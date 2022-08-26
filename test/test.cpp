@@ -29,8 +29,10 @@ TEST_SUITE("Graph implementation") {
       FGraphNode *gn1 =
           createGraph(v1.data(), v1.size(), FLOAT64, shape.data(), 1);
       gn1 = add(gn1, 7.0);
-      gn1 =
-          mul(gn1, createGraph(v2.data(), v2.size(), FLOAT32, shape.data(), 1));
+      FGraphNode *gn12 =
+          createGraph(v2.data(), v2.size(), FLOAT32, shape.data(), 1);
+      gn1 = mul(gn1, gn12);
+      freeGraph(gn12);
       // test
       REQUIRE_EQ(gn1->num_predecessor, 2);
       REQUIRE(gn1->operation);
@@ -52,7 +54,9 @@ TEST_SUITE("Graph implementation") {
       FGraphNode *gn2 =
           createGraph(v1.data(), v1.size(), INT64, shape.data(), 2);
       gn2 = sub(gn2, 7.0);
-      gn2 = div(gn2, createGraph(v2.data(), v2.size(), INT32, shape.data(), 2));
+      FGraphNode *gn21 =
+          createGraph(v2.data(), v2.size(), INT32, shape.data(), 2);
+      gn2 = div(gn2, gn21);
       // test
       REQUIRE_EQ(gn2->num_predecessor, 2);
       REQUIRE(gn2->operation);
@@ -82,7 +86,10 @@ TEST_SUITE("Execution") {
     FGraphNode *gn1 =
         createGraph(v1.data(), v1.size(), FLOAT64, shape.data(), 1);
     gn1 = add(gn1, 7.0);
-    gn1 = mul(gn1, createGraph(v2.data(), v2.size(), FLOAT32, shape.data(), 1));
+    FGraphNode *gn11 =
+        createGraph(v2.data(), v2.size(), FLOAT32, shape.data(), 1);
+    gn1 = mul(gn1, gn11);
+    freeGraph(gn11); // delete handle
     FGraphNode *result = executeGraph(gn1);
     FResultData *rd = (FResultData *)result->operation->additional_data;
     CHECK_EQ(rd->num_entries, 10);
@@ -163,9 +170,12 @@ TEST_SUITE("Execution") {
     vector<vector<float>> d3{{0, 2}, {1, 0}, {-1, 2}};
     vector<float> f3 = flattened(d3);
     FGraphNode *g1 = createGraph(f1.data(), f1.size(), INT32, s1.data(), 2);
-    FGraphNode *g2 = pow(g1, createGraph(d2.data(), d2.size(), INT64, &s2, 1));
-    FGraphNode *g3 =
-        pow(g1, createGraph(f3.data(), f3.size(), FLOAT32, s1.data(), 2));
+    FGraphNode *g12 = createGraph(d2.data(), d2.size(), INT64, &s2, 1);
+    FGraphNode *g2 = pow(g1, g12);
+    FGraphNode *g13 = createGraph(f3.data(), f3.size(), FLOAT32, s1.data(), 2);
+    FGraphNode *g3 = pow(g1, g13);
+    freeGraph(g13); // delete handles
+    freeGraph(g12);
     FGraphNode *g4 = pow(g1, 2);
     vector<vector<long>> e1{{1, 3}, {0, 8}, {9, -3}};
     vector<vector<float>> e2{{1, 9}, {0, 1}, {-0.3333333333333333, 9}};
@@ -205,7 +215,9 @@ TEST_SUITE("Execution") {
     vector<int> s1{3, 2};
     int s2 = 6;
     FGraphNode *g = createGraph(f1.data(), f1.size(), INT32, s1.data(), 2);
-    g = add(flatten(g), createGraph(d2.data(), d2.size(), INT32, &s2, 1));
+    FGraphNode *gi = createGraph(d2.data(), d2.size(), INT32, &s2, 1);
+    g = add(flatten(g), gi);
+    freeGraph(gi);
     g = executeGraph(g);
     FResultData *res = (FResultData *)g->operation->additional_data;
     int *data = (int *)res->data;
@@ -226,10 +238,12 @@ TEST_SUITE("Execution") {
     g = createGraph(f3.data(), f3.size(), INT32, s3.data(), 3);
     FGraphNode *g1 = flatten(g, 2);
     FGraphNode *g2 = flatten(g, 1);
-    g1 = flatten(
-        add(g1, createGraph(f4.data(), f4.size(), INT32, s4.data(), 2)));
-    g2 = flatten(
-        add(g2, createGraph(f5.data(), f5.size(), INT32, s5.data(), 2)));
+    FGraphNode *g11 = createGraph(f4.data(), f4.size(), INT32, s4.data(), 2);
+    FGraphNode *g21 = createGraph(f5.data(), f5.size(), INT32, s5.data(), 2);
+    g1 = flatten(add(g1, g11));
+    g2 = flatten(add(g2, g21));
+    freeGraph(g11);
+    freeGraph(g21);
     vector<int> exp{3, 4, 6, 7, 9, 10, 11, 12, 12, 13, 13, 14};
     g1 = executeGraph(g1);
     // g2 = executeGraph(g2);
@@ -258,13 +272,13 @@ TEST_SUITE("C++ Bindings") {
     Tensor<float, 3> t3 = t1 + t2;
     CHECK_EQ((std::string)t3,
              "Tensor<FLOAT32, shape: [2, 2, 1]>(<not yet executed>)");
-    t3 = t3 + 7;
+    t3 + 7;
     // TODO: just writing t3 + 7 segfaults
     //   test
     vector<vector<vector<float>>> foo = *t3;
     for (int i = 0; i < 2; i++)
       for (int j = 0; j < 2; j++)
-        CHECK_EQ(i * 2 + j + 3 + 7, foo[i][j][0]);
+        CHECK_EQ(i * 2 + j + 3, foo[i][j][0]);
     CHECK_EQ((*t2)[0], 3);
   }
 }

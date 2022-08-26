@@ -24,7 +24,7 @@
 FGraphNode *createGraph(void *data, int num_entries, FType data_type,
                         int *shape, int dimensions) {
   FGraphNode *gn = new FGraphNode();
-  gn->reference_counter = 0;
+  gn->reference_counter = 1;
   FOperation *op = new FOperation();
   FStore *store = new FStore();
   op->dimensions = dimensions;
@@ -63,6 +63,7 @@ FGraphNode *createGraph(void *data, int num_entries, FType data_type,
 void freeGraph(FGraphNode *graph) {
   std::unordered_set<FGraphNode *> all;
   std::list<FGraphNode *> wq;
+  graph->reference_counter--;
   all.insert(graph);
   wq.push_back(graph);
   while (!wq.empty()) {
@@ -116,7 +117,7 @@ static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
                  "correct behaviour!");
   }
   FGraphNode *foo = new FGraphNode();
-  foo->reference_counter = 0;
+  foo->reference_counter = 1;
   foo->operation = op;
   foo->num_predecessor = pre.size();
   foo->predecessors =
@@ -140,7 +141,7 @@ FGraphNode *copyGraph(const FGraphNode *node) {
   }
 
   foo->reference_counter =
-      0; // is not copied since it is not yet referenced in contrast to node
+      1; // is not copied since it is not yet referenced in contrast to node
   FOperation *op = new FOperation();
   foo->operation = op;
   op->data_type = node->operation->data_type;
