@@ -1,4 +1,4 @@
-![Flint Logo](https://repository-images.githubusercontent.com/477020131/188e8ae0-19e2-4dd2-8cbb-edd03333612d)
+![Flint Logo](https://repository-images.githubusercontent.com/477020131/eb3b8c99-91f5-4e06-bfe4-de866b24d100)
 # Flint
 Tensor math framework based on OpenCL
 
