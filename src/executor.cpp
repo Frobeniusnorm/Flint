@@ -245,7 +245,7 @@ generateCode(FGraphNode *node,
 }
 FGraphNode *executeGraph(FGraphNode *node) {
   // TODO
-  return executeGraph_gpu(node);
+  return executeGraph_cpu(node);
 }
 #include <chrono>
 #include <unordered_map>

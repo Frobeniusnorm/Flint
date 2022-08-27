@@ -31,7 +31,6 @@ C_OBJS := $(C_SRCS:$(SRCDIR)/%.cpp=$(BUILDDIR)/%.o)
 # TEST
 test/test: libflint.a $(BUILDDIR)/test.o | $(BUILDDIR)
 	$(COMPILER) -o $@ $(BUILDDIR)/test.o -L. -lflint
-	test/test
 
 $(BUILDDIR)/test.o: test/test.cpp flint.h flint.hpp 
 	$(COMPILER) -c -o $(BUILDDIR)/test.o test/test.cpp
