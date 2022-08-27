@@ -30,7 +30,11 @@
   compiled to a specific OpenCL program
 */
 
-void flintInit();
+// initializes flint, if cpu is set the cpu backend is initialized and used, if
+// gpu is set the gpu backend is initialized and used
+void flintInit(int cpu, int gpu);
+void flintInit_cpu();
+void flintInit_gpu();
 void flintCleanup();
 // 0 no logging, 1 only errors, 2 errors and warnings, 3 error, warnings and
 // info, 4 verbose
@@ -102,8 +106,11 @@ FGraphNode *copyGraph(const FGraphNode *graph);
 /* executes the Graph which starts with the root of the given node and stores
  * the result for that node in result. If Flint was not initialized yet, this
  * function will do that automatically.
- * The result data is automatically freed with the Graph */
+ * This function will automatically determine if the graph is executed on the
+ * cpu or on the gpu. The result data is automatically freed with the Graph */
 FGraphNode *executeGraph(FGraphNode *node);
+FGraphNode *executeGraph_cpu(FGraphNode *node);
+FGraphNode *executeGraph_gpu(FGraphNode *node);
 // operations
 FGraphNode *add(FGraphNode *a, FGraphNode *b);
 FGraphNode *sub(FGraphNode *a, FGraphNode *b);

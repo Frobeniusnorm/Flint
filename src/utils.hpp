@@ -14,6 +14,7 @@
 
 #ifndef UTILS_HPP
 #define UTILS_HPP
+#include "../flint.h"
 #include "logger.hpp"
 #include <vector>
 template <typename T> inline T *safe_mal(unsigned int count) {
@@ -42,5 +43,31 @@ inline std::string vectorString(std::vector<std::vector<T>> &vec) {
       res += ",\n";
   }
   return res + "]";
+}
+inline std::string typeString(FType t) {
+  switch (t) {
+  case INT32:
+    return "int";
+  case INT64:
+    return "long";
+  case FLOAT32:
+    return "float";
+  case FLOAT64:
+    return "double";
+  }
+  return "";
+}
+inline size_t typeSize(FType t) {
+  switch (t) {
+  case INT32:
+    return sizeof(int);
+  case INT64:
+    return sizeof(long);
+  case FLOAT32:
+    return sizeof(float);
+  case FLOAT64:
+    return sizeof(double);
+  }
+  return 1;
 }
 #endif

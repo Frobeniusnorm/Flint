@@ -288,7 +288,7 @@ TEST_SUITE("C++ Bindings") {
   }
 }
 int main(int argc, char **argv) {
-  flintInit();
+  flintInit(1, 1);
   doctest::Context context;
   context.applyCommandLine(argc, argv);
   int res = context.run();
