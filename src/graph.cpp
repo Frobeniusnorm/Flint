@@ -275,7 +275,7 @@ FGraphNode *pow(FGraphNode *a, FGraphNode *b) {
   return addNode(op, {a, b});
 }
 template <typename T>
-static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, T b) {
+static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, const T b) {
   FConst *cons = new FConst();
   T *cons_val = (T *)malloc(sizeof(T));
   *cons_val = b;
@@ -294,65 +294,65 @@ static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, T b) {
   return addNode(op, {a, addNode(cop, {})});
 }
 // adds the constant value to each entry in a
-template <typename T> FGraphNode *add(FGraphNode *a, T b) {
+template <typename T> FGraphNode *add(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = ADD;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
-FGraphNode *add(FGraphNode *a, double b) { return add<double>(a, b); }
-FGraphNode *add(FGraphNode *a, float b) { return add<float>(a, b); }
-FGraphNode *add(FGraphNode *a, int b) { return add<int>(a, b); }
-FGraphNode *add(FGraphNode *a, long b) { return add<long>(a, b); }
+FGraphNode *add(FGraphNode *a, const double b) { return add<double>(a, b); }
+FGraphNode *add(FGraphNode *a, const float b) { return add<float>(a, b); }
+FGraphNode *add(FGraphNode *a, const int b) { return add<int>(a, b); }
+FGraphNode *add(FGraphNode *a, const long b) { return add<long>(a, b); }
 // subtracts the constant value from each entry in a
-template <typename T> FGraphNode *sub(FGraphNode *a, T b) {
+template <typename T> FGraphNode *sub(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->op_type = SUB;
   op->additional_data = nullptr;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
-FGraphNode *sub(FGraphNode *a, double b) { return sub<double>(a, b); }
-FGraphNode *sub(FGraphNode *a, float b) { return sub<float>(a, b); }
-FGraphNode *sub(FGraphNode *a, int b) { return sub<int>(a, b); }
-FGraphNode *sub(FGraphNode *a, long b) { return sub<long>(a, b); }
+FGraphNode *sub(FGraphNode *a, const double b) { return sub<double>(a, b); }
+FGraphNode *sub(FGraphNode *a, const float b) { return sub<float>(a, b); }
+FGraphNode *sub(FGraphNode *a, const int b) { return sub<int>(a, b); }
+FGraphNode *sub(FGraphNode *a, const long b) { return sub<long>(a, b); }
 // divides each entry in a by the constant value
-template <typename T> FGraphNode *div(FGraphNode *a, T b) {
+template <typename T> FGraphNode *div(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = DIV;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
-FGraphNode *div(FGraphNode *a, double b) { return div<double>(a, b); }
-FGraphNode *div(FGraphNode *a, float b) { return div<float>(a, b); }
-FGraphNode *div(FGraphNode *a, int b) { return div<int>(a, b); }
-FGraphNode *div(FGraphNode *a, long b) { return div<long>(a, b); }
+FGraphNode *div(FGraphNode *a, const double b) { return div<double>(a, b); }
+FGraphNode *div(FGraphNode *a, const float b) { return div<float>(a, b); }
+FGraphNode *div(FGraphNode *a, const int b) { return div<int>(a, b); }
+FGraphNode *div(FGraphNode *a, const long b) { return div<long>(a, b); }
 // multiplicates the constant value with each entry in a
-template <typename T> FGraphNode *mul(FGraphNode *a, T b) {
+template <typename T> FGraphNode *mul(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = MUL;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
-FGraphNode *mul(FGraphNode *a, double b) { return mul<double>(a, b); }
-FGraphNode *mul(FGraphNode *a, float b) { return mul<float>(a, b); }
-FGraphNode *mul(FGraphNode *a, int b) { return mul<int>(a, b); }
-FGraphNode *mul(FGraphNode *a, long b) { return mul<long>(a, b); }
+FGraphNode *mul(FGraphNode *a, const double b) { return mul<double>(a, b); }
+FGraphNode *mul(FGraphNode *a, const float b) { return mul<float>(a, b); }
+FGraphNode *mul(FGraphNode *a, const int b) { return mul<int>(a, b); }
+FGraphNode *mul(FGraphNode *a, const long b) { return mul<long>(a, b); }
 // takes the power of each element in a to b
-template <typename T> FGraphNode *pow(FGraphNode *a, T b) {
+template <typename T> FGraphNode *pow(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = POW;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
-FGraphNode *pow(FGraphNode *a, double b) { return pow<double>(a, b); }
-FGraphNode *pow(FGraphNode *a, float b) { return pow<float>(a, b); }
-FGraphNode *pow(FGraphNode *a, int b) { return pow<int>(a, b); }
-FGraphNode *pow(FGraphNode *a, long b) { return pow<long>(a, b); }
+FGraphNode *pow(FGraphNode *a, const double b) { return pow<double>(a, b); }
+FGraphNode *pow(FGraphNode *a, const float b) { return pow<float>(a, b); }
+FGraphNode *pow(FGraphNode *a, const int b) { return pow<int>(a, b); }
+FGraphNode *pow(FGraphNode *a, const long b) { return pow<long>(a, b); }
 
 FGraphNode *flatten(FGraphNode *a) {
   FOperation *op = new FOperation();
@@ -369,7 +369,7 @@ FGraphNode *flatten(FGraphNode *a) {
   op->data_type = prev_op->data_type;
   return addNode(op, {a});
 }
-FGraphNode *flatten(FGraphNode *a, int dimension) {
+FGraphNode *flatten(FGraphNode *a, const int dimension) {
   if (dimension == 0)
     log(ERROR, "Flattening the first dimension of a tensor is not possible!");
 

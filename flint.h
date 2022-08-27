@@ -111,33 +111,34 @@ FGraphNode *div(FGraphNode *a, FGraphNode *b);
 FGraphNode *mul(FGraphNode *a, FGraphNode *b);
 FGraphNode *pow(FGraphNode *a, FGraphNode *b);
 // adds the constant value to each entry in a
-FGraphNode *add(FGraphNode *a, int b);
-FGraphNode *add(FGraphNode *a, long b);
-FGraphNode *add(FGraphNode *a, float b);
-FGraphNode *add(FGraphNode *a, double b);
+FGraphNode *add(FGraphNode *a, const int b);
+FGraphNode *add(FGraphNode *a, const long b);
+FGraphNode *add(FGraphNode *a, const float b);
+FGraphNode *add(FGraphNode *a, const double b);
 // subtracts the constant value from each entry in a
-FGraphNode *sub(FGraphNode *a, int b);
-FGraphNode *sub(FGraphNode *a, long b);
-FGraphNode *sub(FGraphNode *a, float b);
-FGraphNode *sub(FGraphNode *a, double b);
+FGraphNode *sub(FGraphNode *a, const int b);
+FGraphNode *sub(FGraphNode *a, const long b);
+FGraphNode *sub(FGraphNode *a, const float b);
+FGraphNode *sub(FGraphNode *a, const double b);
 // divides each entry in a by the constant value
-FGraphNode *div(FGraphNode *a, int b);
-FGraphNode *div(FGraphNode *a, long b);
-FGraphNode *div(FGraphNode *a, float b);
-FGraphNode *div(FGraphNode *a, double b);
+FGraphNode *div(FGraphNode *a, const int b);
+FGraphNode *div(FGraphNode *a, const long b);
+FGraphNode *div(FGraphNode *a, const float b);
+FGraphNode *div(FGraphNode *a, const double b);
 // multiplicates the constant value with each entry in a
-FGraphNode *mul(FGraphNode *a, int b);
-FGraphNode *mul(FGraphNode *a, long b);
-FGraphNode *mul(FGraphNode *a, float b);
-FGraphNode *mul(FGraphNode *a, double b);
+FGraphNode *mul(FGraphNode *a, const int b);
+FGraphNode *mul(FGraphNode *a, const long b);
+FGraphNode *mul(FGraphNode *a, const float b);
+FGraphNode *mul(FGraphNode *a, const double b);
 // computes the power of each entry to the constant
-FGraphNode *pow(FGraphNode *a, int b);
-FGraphNode *pow(FGraphNode *a, long b);
-FGraphNode *pow(FGraphNode *a, float b);
-FGraphNode *pow(FGraphNode *a, double b);
+FGraphNode *pow(FGraphNode *a, const int b);
+FGraphNode *pow(FGraphNode *a, const long b);
+FGraphNode *pow(FGraphNode *a, const float b);
+FGraphNode *pow(FGraphNode *a, const double b);
 // flattens the GraphNode data to a 1 dimensional tensor, no additional data is
-// allocated
+// allocated besides the new node
 FGraphNode *flatten(FGraphNode *a);
 // flattens a specific dimension of the tensor, no additional data is allocated
+// besides the new node
 FGraphNode *flatten(FGraphNode *a, int dimension);
 #endif

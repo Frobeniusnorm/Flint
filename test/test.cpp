@@ -272,14 +272,19 @@ TEST_SUITE("C++ Bindings") {
     Tensor<float, 3> t3 = t1 + t2;
     CHECK_EQ((std::string)t3,
              "Tensor<FLOAT32, shape: [2, 2, 1]>(<not yet executed>)");
-    t3 + 7;
-    // TODO: just writing t3 + 7 segfaults
+    t3 = t3 + 7;
     //   test
     vector<vector<vector<float>>> foo = *t3;
     for (int i = 0; i < 2; i++)
       for (int j = 0; j < 2; j++)
-        CHECK_EQ(i * 2 + j + 3, foo[i][j][0]);
-    CHECK_EQ((*t2)[0], 3);
+        CHECK_EQ(i * 2 + j + 3 + 7, foo[i][j][0]);
+
+    t3 = t3.pow(3);
+
+    foo = *t3;
+    for (int i = 0; i < 2; i++)
+      for (int j = 0; j < 2; j++)
+        CHECK_EQ(pow(i * 2 + j + 3 + 7, 3), foo[i][j][0]);
   }
 }
 int main(int argc, char **argv) {

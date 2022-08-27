@@ -21,7 +21,7 @@
 
 namespace FLINT_HPP_HELPER {
 template <typename T>
-inline std::string vectorString(const std::vector<T> &vec) {
+static inline std::string vectorString(const std::vector<T> &vec) {
   std::string res = "[";
   for (int i = 0; i < vec.size(); i++) {
     res += std::to_string(vec[i]);
@@ -31,7 +31,7 @@ inline std::string vectorString(const std::vector<T> &vec) {
   return res + "]";
 }
 template <typename T>
-inline std::string vectorString(const std::vector<std::vector<T>> &vec) {
+static inline std::string vectorString(const std::vector<std::vector<T>> &vec) {
   std::string res = "[";
   for (int i = 0; i < vec.size(); i++) {
     res += vectorString(vec[i]);
@@ -60,6 +60,10 @@ flattened(const std::vector<std::vector<std::vector<T>>> vec) {
     result.insert(result.end(), rec.begin(), rec.end());
   }
   return result;
+}
+template <typename K>
+static inline FGraphNode *pow_wrapper(FGraphNode *node, const K c) {
+  return pow(node, c);
 }
 }; // namespace FLINT_HPP_HELPER
 template <typename T> static constexpr void isTensorType() {
@@ -234,6 +238,16 @@ template <typename T> struct Tensor<T, 1> {
     return Tensor<stronger_return<K>, 1>(div(node, con), shape);
   }
 
+  template <typename K>
+  Tensor<stronger_return<K>, 1> pow(const Tensor<stronger_return<K>, 1> other) {
+    return Tensor<stronger_return<K>, 1>(
+        FLINT_HPP_HELPER::pow_wrapper(node, other.node), shape);
+  }
+  template <typename K> Tensor<stronger_return<K>, 1> pow(const K other) {
+    return Tensor<stronger_return<K>, 1>(
+        FLINT_HPP_HELPER::pow_wrapper(node, other), shape);
+  }
+
 protected:
   Tensor(FGraphNode *node, int shape) : node(node), shape(shape) {}
   FGraphNode *node;
@@ -254,7 +268,6 @@ template <typename T, int n> struct Tensor {
                        shape.size());
   }
   // copy
-  // TODO: does not work, copy in graph
   Tensor(const Tensor &other) {
     shape = other.shape;
     node = copyGraph(other.node);
@@ -282,7 +295,6 @@ template <typename T, int n> struct Tensor {
     if (node)
       freeGraph(node);
   }
-  // TODO does not work
   storage_type operator*() {
     switch (node->operation->op_type) {
     case STORE: {
@@ -401,6 +413,24 @@ template <typename T, int n> struct Tensor {
   template <typename K>
   Tensor<stronger_return<K>, n> operator/(const K other) const {
     return Tensor<stronger_return<K>, n>(div(node, other), shape);
+  }
+  Tensor<T, n - 1> flattened() const {
+    FGraphNode *foo = flatten(node);
+    std::vector<int> ns(foo->operation->shape,
+                        foo->operation->shape + foo->operation->dimensions);
+    return Tensor<T, n - 1>(foo, ns);
+  }
+  template <typename K, int k>
+  Tensor<stronger_return<K>, n> pow(const Tensor<stronger_return<K>, k> other) {
+    static_assert(
+        k <= n,
+        "Can't take the power of a tensor to a tensor with higher dimension!");
+    return Tensor<stronger_return<K>, n>(
+        FLINT_HPP_HELPER::pow_wrapper(node, other.node), shape);
+  }
+  template <typename K> Tensor<stronger_return<K>, n> pow(const K other) {
+    return Tensor<stronger_return<K>, n>(
+        FLINT_HPP_HELPER::pow_wrapper(node, other), shape);
   }
 
 protected:
