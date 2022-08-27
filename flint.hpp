@@ -103,7 +103,6 @@ template <typename T> struct Tensor<T, 1> {
     node = createGraph(data.data(), data.size(), toFlintType<T>(), &shape, 1);
   }
   // copy
-  // TODO: does not work -> find a smarter way
   Tensor(const Tensor &other) {
     shape = other.shape;
     node = copyGraph(other.node);

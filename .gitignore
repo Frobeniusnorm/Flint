@@ -32,6 +32,7 @@ build/
 *.out
 *.app
 test/test
+libflint.a
 
 #vscode
 .vscode
