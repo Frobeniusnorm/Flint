@@ -87,6 +87,11 @@ static void executeNode(FGraphNode *node,
     FConst *cons = (FConst *)node->operation->additional_data;
     result[from] = ((T *)cons->value)[0];
   } break;
+  case FLATTEN: {
+    CPUResultData pred = predecessor_data[0];
+    for (int i = from; i < from + size; i++)
+      result[i] = ((T *)pred.data)[i];
+  } break;
   default: { // binary operations
     CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];
     int im1 = p1.num_entries, im2 = p2.num_entries;
@@ -186,6 +191,7 @@ FGraphNode *executeGraph_cpu(FGraphNode *node) {
   unordered_map<FGraphNode *, CPUResultData> results;
   queue<FGraphNode *> workList; // traverse bottom up
   list<FGraphNode *> toExecute; // in top down order
+  workList.push(node);
   // collect nodes
   while (!workList.empty()) {
     FGraphNode *curr = workList.front();
