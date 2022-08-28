@@ -18,21 +18,35 @@
 #include "../flint.h"
 #include "logger.hpp"
 #include "utils.hpp"
+#include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <list>
 #include <queue>
+#include <semaphore>
+#include <string>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
-static bool initialized = false;
 
+static bool initialized = false;
+static std::vector<std::thread *> threads;
+
+static void threadRoutine();
 void flintInit_cpu() {
   if (!initialized) {
     initialized = true;
+    int cores = std::thread::hardware_concurrency();
+    if (!cores)
+      cores = 8;
+    log(INFO, "Using " + std::to_string(cores) + " threads for CPU-backend");
+    threads = std::vector<std::thread *>(cores);
+    for (int i = 0; i < cores; i++)
+      threads[i] = new std::thread(threadRoutine);
   }
-  // TODO
 }
-
 struct CPUResultData {
   void *data;
   FType type;
@@ -184,6 +198,73 @@ static void executeNode(FGraphNode *node,
   }
 }
 
+static blocking_queue<std::tuple<FGraphNode *, std::vector<CPUResultData>,
+                                 void *, int, int, std::binary_semaphore *>>
+    thread_queue;
+
+void flintCleanup_cpu() {
+  if (initialized) {
+    log(DEBUG, "Sending kill signal and poisson pills");
+    initialized = false;
+    for (int i = 0; i < threads.size(); i++)
+      thread_queue.push_front({nullptr, {}, nullptr, -1, -1, nullptr});
+    for (std::thread *t : threads) {
+      t->join();
+      delete t;
+    }
+  }
+}
+
+static void threadRoutine() {
+  while (true) {
+    auto [node, pred_data, result, from, to, sem] = thread_queue.pop_front();
+    if (!node) {
+      break;
+    }
+    switch (node->operation->data_type) {
+    case FLOAT32:
+      executeNode(node, pred_data, (float *)result, from, to);
+      break;
+    case FLOAT64:
+      executeNode(node, pred_data, (double *)result, from, to);
+      break;
+    case INT32:
+      executeNode(node, pred_data, (int *)result, from, to);
+      break;
+    case INT64:
+      executeNode(node, pred_data, (long *)result, from, to);
+      break;
+    }
+    sem->release();
+  }
+}
+#define PARALLEL_EXECUTION_SIZE 1
+template <typename T>
+inline void chooseExecutionMethod(FGraphNode *node,
+                                  std::vector<CPUResultData> pred_data,
+                                  T *result, int size) {
+  auto start = std::chrono::high_resolution_clock::now();
+  if (size >= PARALLEL_EXECUTION_SIZE) {
+    int workSize = ceil((double)size / (double)threads.size());
+    std::binary_semaphore *sem = new std::binary_semaphore(0);
+    // for (int i = 0; i < threads.size(); i++) {
+    //   thread_queue.push_front({node, pred_data, result, i * workSize,
+    //                            std::min((i + 1) * workSize, size), sem});
+    // }
+    thread_queue.push_front({node, pred_data, result, 0, size, sem});
+    // for (int i = 0; i < threads.size(); i++)
+    sem->acquire();
+    delete sem;
+  } else {
+    executeNode(node, pred_data, result, 0, size);
+  }
+  std::chrono::duration<double, std::milli> elapsed =
+      std::chrono::high_resolution_clock::now() - start;
+  log(DEBUG, (size >= PARALLEL_EXECUTION_SIZE
+                  ? std::string("Parallel Execution on CPU ")
+                  : std::string("Sequential Execution on CPU ")) +
+                 "took " + std::to_string(elapsed.count()) + "ms");
+}
 FGraphNode *executeGraph_cpu(FGraphNode *node) {
   if (!initialized)
     flintInit_cpu();
@@ -221,7 +302,7 @@ FGraphNode *executeGraph_cpu(FGraphNode *node) {
     switch (curr->operation->data_type) {
     case INT32: {
       int *result = (int *)malloc(size * sizeof(int));
-      executeNode(curr, predData, result, 0, size);
+      chooseExecutionMethod(curr, predData, result, size);
       results.insert({curr,
                       {.data = (void *)result,
                        .type = INT32,
@@ -232,7 +313,7 @@ FGraphNode *executeGraph_cpu(FGraphNode *node) {
     } break;
     case INT64: {
       long *result = (long *)malloc(size * sizeof(long));
-      executeNode(curr, predData, result, 0, size);
+      chooseExecutionMethod(curr, predData, result, size);
       results.insert({curr,
                       {.data = (void *)result,
                        .type = INT64,
@@ -243,7 +324,7 @@ FGraphNode *executeGraph_cpu(FGraphNode *node) {
     } break;
     case FLOAT32: {
       float *result = (float *)malloc(size * sizeof(float));
-      executeNode(curr, predData, result, 0, size);
+      chooseExecutionMethod(curr, predData, result, size);
       results.insert({curr,
                       {.data = (void *)result,
                        .type = FLOAT32,
@@ -254,7 +335,7 @@ FGraphNode *executeGraph_cpu(FGraphNode *node) {
     } break;
     case FLOAT64: {
       double *result = (double *)malloc(size * sizeof(double));
-      executeNode(curr, predData, result, 0, size);
+      chooseExecutionMethod(curr, predData, result, size);
       results.insert({curr,
                       {.data = (void *)result,
                        .type = FLOAT64,

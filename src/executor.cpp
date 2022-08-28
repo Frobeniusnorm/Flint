@@ -122,7 +122,12 @@ void flintInit_gpu() {
   log(VERBOSE, "Flint GPU backend was initialized!");
 }
 void flintCleanup() {
+  flintCleanup_cpu();
+  flintCleanup_gpu();
+}
+void flintCleanup_gpu() {
   if (initialized) {
+    initialized = false;
     clReleaseDevice(device);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);

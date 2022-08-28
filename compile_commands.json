@@ -1,0 +1,66 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++2a",
+      "-g",
+      "-Og",
+      "-Wall",
+      "-c",
+      "-o",
+      "build/cpuimpl.o",
+      "src/cpuimpl.cpp"
+    ],
+    "directory": "/home/david/Documents/Programmieren/c++/Flint",
+    "file": "/home/david/Documents/Programmieren/c++/Flint/src/cpuimpl.cpp",
+    "output": "/home/david/Documents/Programmieren/c++/Flint/build/cpuimpl.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++2a",
+      "-g",
+      "-Og",
+      "-Wall",
+      "-c",
+      "-o",
+      "build/executor.o",
+      "src/executor.cpp"
+    ],
+    "directory": "/home/david/Documents/Programmieren/c++/Flint",
+    "file": "/home/david/Documents/Programmieren/c++/Flint/src/executor.cpp",
+    "output": "/home/david/Documents/Programmieren/c++/Flint/build/executor.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++2a",
+      "-g",
+      "-Og",
+      "-Wall",
+      "-c",
+      "-o",
+      "build/graph.o",
+      "src/graph.cpp"
+    ],
+    "directory": "/home/david/Documents/Programmieren/c++/Flint",
+    "file": "/home/david/Documents/Programmieren/c++/Flint/src/graph.cpp",
+    "output": "/home/david/Documents/Programmieren/c++/Flint/build/graph.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++2a",
+      "-g",
+      "-Og",
+      "-Wall",
+      "-c",
+      "-o",
+      "build/test.o",
+      "test/test.cpp"
+    ],
+    "directory": "/home/david/Documents/Programmieren/c++/Flint",
+    "file": "/home/david/Documents/Programmieren/c++/Flint/test/test.cpp",
+    "output": "/home/david/Documents/Programmieren/c++/Flint/build/test.o"
+  }
+]

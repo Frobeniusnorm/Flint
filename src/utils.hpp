@@ -16,7 +16,11 @@
 #define UTILS_HPP
 #include "../flint.h"
 #include "logger.hpp"
+#include <condition_variable>
+#include <list>
+#include <mutex>
 #include <vector>
+
 template <typename T> inline T *safe_mal(unsigned int count) {
   T *data = (T *)malloc(sizeof(T) * count);
   if (!data) {
@@ -70,4 +74,26 @@ inline size_t typeSize(FType t) {
   }
   return 1;
 }
+template <typename T> class blocking_queue {
+private:
+  std::mutex mutex;
+  std::condition_variable condition;
+  std::list<T> queue;
+
+public:
+  void push_front(const T &el) {
+    { // own visibility block to force destructor of lock
+      std::unique_lock<std::mutex> lock(mutex);
+      queue.push_front(el);
+    }
+    condition.notify_one();
+  }
+  T pop_front() {
+    std::unique_lock<std::mutex> lock(mutex);
+    condition.wait(lock, [this] { return !queue.empty(); });
+    T foo = queue.front();
+    queue.pop_front();
+    return foo;
+  }
+};
 #endif

@@ -36,6 +36,8 @@ void flintInit(int cpu, int gpu);
 void flintInit_cpu();
 void flintInit_gpu();
 void flintCleanup();
+void flintCleanup_cpu();
+void flintCleanup_gpu();
 // 0 no logging, 1 only errors, 2 errors and warnings, 3 error, warnings and
 // info, 4 verbose
 void setLoggingLevel(int);
