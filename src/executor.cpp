@@ -263,10 +263,10 @@ FGraphNode *executeGraph_gpu(FGraphNode *node) {
   result->additional_data = resultData;
   FGraphNode *newsucc = new FGraphNode();
   newsucc->num_predecessor = 1;
-  newsucc->reference_counter = 1;
+  newsucc->reference_counter = 0;
   newsucc->predecessors = safe_mal<FGraphNode *>(1);
   newsucc->predecessors[0] = node;
-  // node->reference_counter stays the same -> ownership is transfered to result
+  node->reference_counter++;
   newsucc->operation = result;
   // calculate Code and Parameters
   using namespace std;

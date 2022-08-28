@@ -147,10 +147,10 @@ TEST_SUITE("Execution") {
     FGraphNode *gn4 =
         createGraph(f3.data(), f3.size(), INT32, shape_f3.data(), 3);
     FGraphNode *gn5 = add(gn4, result);
-    FGraphNode *newResult = nullptr;
+    FGraphNode *newResult[2] = {nullptr, nullptr};
     for (int i = 0; i < 2; i++) {
-      newResult = executeGraph(gn5);
-      rd = (FResultData *)newResult->operation->additional_data;
+      newResult[i] = executeGraph(gn5);
+      rd = (FResultData *)newResult[i]->operation->additional_data;
 
       for (int i = 0; i < 4; i++)
         for (int j = 0; j < 3; j++)
@@ -158,7 +158,8 @@ TEST_SUITE("Execution") {
             CHECK_EQ(((double *)rd->data)[i * 9 + j * 3 + k],
                      v1[j][k] + v2[j][k] + v3[i][j][k]);
     }
-    freeGraph(newResult);
+    freeGraph(newResult[0]);
+    freeGraph(newResult[1]);
   }
   TEST_CASE("pow") {
     using namespace std;

@@ -23,6 +23,7 @@
 #include <list>
 #include <queue>
 #include <unordered_map>
+#include <unordered_set>
 static bool initialized = false;
 
 void flintInit_cpu() {
@@ -189,24 +190,27 @@ FGraphNode *executeGraph_cpu(FGraphNode *node) {
   // TODO parallel execution
   using namespace std;
   unordered_map<FGraphNode *, CPUResultData> results;
-  queue<FGraphNode *> workList; // traverse bottom up
+  unordered_set<FGraphNode *> inExecuteList;
+  list<FGraphNode *> workList;  // traverse bottom up
   list<FGraphNode *> toExecute; // in top down order
-  workList.push(node);
+  workList.push_front(node);
   // collect nodes
   while (!workList.empty()) {
     FGraphNode *curr = workList.front();
-    workList.pop();
+    workList.pop_front();
+    for (int i = 0; i < curr->num_predecessor; i++) {
+      workList.push_back(curr->predecessors[i]);
+    }
+    if (inExecuteList.find(curr) != inExecuteList.end())
+      toExecute.remove(curr);
+    inExecuteList.insert(curr);
     toExecute.push_front(curr);
-    for (int i = 0; i < curr->num_predecessor; i++)
-      workList.push(curr->predecessors[i]);
   }
   // work them in correct oder
   for (FGraphNode *curr : toExecute) {
     // collect predecessor results
     vector<CPUResultData> predData(curr->num_predecessor);
     for (int i = 0; i < curr->num_predecessor; i++) {
-      if (results.find(curr->predecessors[i]) == results.end())
-        log(ERROR, "oh i fucked up");
       predData[i] = results[curr->predecessors[i]];
     }
     // calculate total size
@@ -262,6 +266,12 @@ FGraphNode *executeGraph_cpu(FGraphNode *node) {
     }
   }
   CPUResultData final = results[node];
+  // free all other data
+  for (auto &[gn, rd] : results) {
+    if (gn != node)
+      free(rd.data);
+  }
+  // return data
   FResultData *rd = new FResultData();
   rd->data = final.data;
   rd->num_entries = final.num_entries;
@@ -277,7 +287,8 @@ FGraphNode *executeGraph_cpu(FGraphNode *node) {
   rn->operation = op;
   rn->predecessors = safe_mal<FGraphNode *>(1);
   rn->predecessors[0] = node;
+  node->reference_counter++;
   rn->num_predecessor = 1;
-  rn->reference_counter = 1;
+  rn->reference_counter = 0;
   return rn;
 }
