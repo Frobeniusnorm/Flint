@@ -283,52 +283,20 @@ TEST_SUITE("C++ Bindings") {
 
     t3 = t3.pow(3);
 
-    foo = *t3;
+    vector<float> bar = *t3.flattened();
     for (int i = 0; i < 2; i++)
       for (int j = 0; j < 2; j++)
-        CHECK_EQ(pow(i * 2 + j + 3 + 7, 3), foo[i][j][0]);
-  }
-}
-TEST_SUITE("Benchmarking") {
-  TEST_CASE("Benchmark 1") {
-    using namespace std;
-    vector<vector<vector<double>>> data = vector<vector<vector<double>>>(100);
-#pragma omp parallel for
-    for (int i = 0; i < 100; i++) {
-      data[i] = vector<vector<double>>(100);
-      for (int j = 0; j < 100; j++) {
-        data[i][j] = vector<double>(10);
-        for (int k = 0; k < 10; k++)
-          data[i][j][k] = i / 100.0 + 100.0 / j + 10.0 / k;
-      }
-    }
-    vector<vector<long>> data2 = vector<vector<long>>(100);
-    for (int i = 0; i < 100; i++) {
-      data2[i] = vector<long>(10);
-      for (int j = 0; j < 10; j++) {
-        data2[i][j] = 12345678;
-      }
-    }
+        CHECK_EQ(pow(i * 2 + j + 3 + 7, 3), bar[i * 2 + j]);
+
+    Tensor<float, 2> t4 = t1.flattened(1);
+    vector<vector<float>> foobar = *t4;
     for (int i = 0; i < 2; i++) {
-      Tensor<double, 3> t1(data);
-      t1 = t1 + 1234567.8;
-      Tensor<long, 2> t2(data2);
-      t2 = t2 - 2000000;
-      t1 = t1 / t2;
-      t1 = t1.pow(0.5);
-      auto start = std::chrono::high_resolution_clock::now();
-      if (i == 0)
-        t1.execute_cpu();
-      else
-        t1.execute_gpu();
-      chrono::duration<double, std::milli> elapsed =
-          chrono::high_resolution_clock::now() - start;
-      log(INFO, (i == 0 ? string("CPU") : string("GPU")) +
-                    " implementation took " + to_string(elapsed.count()) +
-                    "ms!");
+      for (int j = 0; j < 2; j++)
+        CHECK_EQ(i * 2 + j, foobar[i * 2 + j][0]);
     }
   }
 }
+
 int main(int argc, char **argv) {
   flintInit(1, 1);
   doctest::Context context;

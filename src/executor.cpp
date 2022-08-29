@@ -250,7 +250,7 @@ generateCode(FGraphNode *node,
 }
 FGraphNode *executeGraph(FGraphNode *node) {
   // TODO
-  return executeGraph_cpu(node);
+  return executeGraph_gpu(node);
 }
 #include <chrono>
 #include <unordered_map>
@@ -386,6 +386,7 @@ FGraphNode *executeGraph_gpu(FGraphNode *node) {
   if (err_code == CL_OUT_OF_HOST_MEMORY)
     log(ERROR, "Not enough memory to create buffer!");
   int index = 1;
+  std::vector<cl_event> writeEvents;
   for (auto &[op, name] : parameters) {
     // TODO keep track of when data in Store is changed
     cl_mem mem_obj = nullptr;
@@ -427,9 +428,10 @@ FGraphNode *executeGraph_gpu(FGraphNode *node) {
           buffer_data += to_string(((int *)data)[i]) + " ";
         else
           buffer_data += to_string(((long *)data)[i]) + " ";
+      writeEvents.emplace_back();
       err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_TRUE, 0,
                                       total_size * type_size, data, 0, nullptr,
-                                      nullptr);
+                                      &writeEvents[writeEvents.size() - 1]);
       if (err_code != CL_SUCCESS) {
         string msg = "Unknown Error while loading data to GPU!";
         if (err_code == CL_OUT_OF_HOST_MEMORY)
@@ -446,8 +448,10 @@ FGraphNode *executeGraph_gpu(FGraphNode *node) {
     log(ERROR, "Could not set Kernel Argument for the result!");
   // execute kernel
   const size_t global_size = total_size_node;
+  const size_t local_size = 1;
   err_code = clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &global_size,
-                                    nullptr, 0, nullptr, nullptr);
+                                    &local_size, writeEvents.size(),
+                                    writeEvents.data(), nullptr);
   if (err_code != CL_SUCCESS) {
     string msg;
     switch (err_code) {

@@ -461,11 +461,16 @@ template <typename T, int n> struct Tensor {
   Tensor<stronger_return<K>, n> operator/(const K other) const {
     return Tensor<stronger_return<K>, n>(div(node, other), shape);
   }
-  Tensor<T, n - 1> flattened() const {
+  Tensor<T, 1> flattened() const {
     FGraphNode *foo = flatten(node);
-    std::vector<int> ns(foo->operation->shape,
-                        foo->operation->shape + foo->operation->dimensions);
-    return Tensor<T, n - 1>(foo, ns);
+    return Tensor<T, 1>(foo, total_size);
+  }
+  Tensor<T, n - 1> flattened(const int dimension) const {
+    FGraphNode *foo = flatten(node, dimension);
+    return Tensor<T, n - 1>(
+        foo,
+        std::vector<int>(foo->operation->shape,
+                         foo->operation->shape + foo->operation->dimensions));
   }
   template <typename K, int k>
   Tensor<stronger_return<K>, n> pow(const Tensor<stronger_return<K>, k> other) {
