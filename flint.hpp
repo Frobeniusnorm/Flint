@@ -466,7 +466,7 @@ template <typename T, int n> struct Tensor {
     return Tensor<T, 1>(foo, total_size);
   }
   Tensor<T, n - 1> flattened(const int dimension) const {
-    FGraphNode *foo = flatten(node, dimension);
+    FGraphNode *foo = flatten_dimension(node, dimension);
     return Tensor<T, n - 1>(
         foo,
         std::vector<int>(foo->operation->shape,

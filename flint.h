@@ -21,6 +21,9 @@
 #else
 #include <CL/cl.h>
 #endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
   This is the basic header file and implementation of Flint, to be compatible
   with as many languages as possible. I have never tested it with the bare C
@@ -114,40 +117,77 @@ FGraphNode *executeGraph(FGraphNode *node);
 FGraphNode *executeGraph_cpu(FGraphNode *node);
 FGraphNode *executeGraph_gpu(FGraphNode *node);
 // operations
-FGraphNode *add(FGraphNode *a, FGraphNode *b);
-FGraphNode *sub(FGraphNode *a, FGraphNode *b);
-FGraphNode *div(FGraphNode *a, FGraphNode *b);
-FGraphNode *mul(FGraphNode *a, FGraphNode *b);
-FGraphNode *pow(FGraphNode *a, FGraphNode *b);
+FGraphNode *add_g(FGraphNode *a, FGraphNode *b);
+FGraphNode *sub_g(FGraphNode *a, FGraphNode *b);
+FGraphNode *div_g(FGraphNode *a, FGraphNode *b);
+FGraphNode *mul_g(FGraphNode *a, FGraphNode *b);
+FGraphNode *pow_g(FGraphNode *a, FGraphNode *b);
 // adds the constant value to each entry in a
-FGraphNode *add(FGraphNode *a, const int b);
-FGraphNode *add(FGraphNode *a, const long b);
-FGraphNode *add(FGraphNode *a, const float b);
-FGraphNode *add(FGraphNode *a, const double b);
+FGraphNode *add_ci(FGraphNode *a, const int b);
+FGraphNode *add_cl(FGraphNode *a, const long b);
+FGraphNode *add_cf(FGraphNode *a, const float b);
+FGraphNode *add_cd(FGraphNode *a, const double b);
 // subtracts the constant value from each entry in a
-FGraphNode *sub(FGraphNode *a, const int b);
-FGraphNode *sub(FGraphNode *a, const long b);
-FGraphNode *sub(FGraphNode *a, const float b);
-FGraphNode *sub(FGraphNode *a, const double b);
+FGraphNode *sub_ci(FGraphNode *a, const int b);
+FGraphNode *sub_cl(FGraphNode *a, const long b);
+FGraphNode *sub_cf(FGraphNode *a, const float b);
+FGraphNode *sub_cd(FGraphNode *a, const double b);
 // divides each entry in a by the constant value
-FGraphNode *div(FGraphNode *a, const int b);
-FGraphNode *div(FGraphNode *a, const long b);
-FGraphNode *div(FGraphNode *a, const float b);
-FGraphNode *div(FGraphNode *a, const double b);
+FGraphNode *div_ci(FGraphNode *a, const int b);
+FGraphNode *div_cl(FGraphNode *a, const long b);
+FGraphNode *div_cf(FGraphNode *a, const float b);
+FGraphNode *div_cd(FGraphNode *a, const double b);
 // multiplicates the constant value with each entry in a
-FGraphNode *mul(FGraphNode *a, const int b);
-FGraphNode *mul(FGraphNode *a, const long b);
-FGraphNode *mul(FGraphNode *a, const float b);
-FGraphNode *mul(FGraphNode *a, const double b);
+FGraphNode *mul_ci(FGraphNode *a, const int b);
+FGraphNode *mul_cl(FGraphNode *a, const long b);
+FGraphNode *mul_cf(FGraphNode *a, const float b);
+FGraphNode *mul_cd(FGraphNode *a, const double b);
 // computes the power of each entry to the constant
-FGraphNode *pow(FGraphNode *a, const int b);
-FGraphNode *pow(FGraphNode *a, const long b);
-FGraphNode *pow(FGraphNode *a, const float b);
-FGraphNode *pow(FGraphNode *a, const double b);
+FGraphNode *pow_ci(FGraphNode *a, const int b);
+FGraphNode *pow_cl(FGraphNode *a, const long b);
+FGraphNode *pow_cf(FGraphNode *a, const float b);
+FGraphNode *pow_cd(FGraphNode *a, const double b);
 // flattens the GraphNode data to a 1 dimensional tensor, no additional data is
 // allocated besides the new node
 FGraphNode *flatten(FGraphNode *a);
 // flattens a specific dimension of the tensor, no additional data is allocated
 // besides the new node
-FGraphNode *flatten(FGraphNode *a, int dimension);
+FGraphNode *flatten_dimension(FGraphNode *a, int dimension);
+#ifdef __cplusplus
+}
+// no c++ bindings, but function overloading for c++ header
+inline FGraphNode *add(FGraphNode *a, FGraphNode *b) { return add_g(a, b); }
+inline FGraphNode *add(FGraphNode *a, const int b) { return add_ci(a, b); }
+inline FGraphNode *add(FGraphNode *a, const long b) { return add_cl(a, b); }
+inline FGraphNode *add(FGraphNode *a, const float b) { return add_cf(a, b); }
+inline FGraphNode *add(FGraphNode *a, const double b) { return add_cd(a, b); }
+
+inline FGraphNode *sub(FGraphNode *a, FGraphNode *b) { return sub_g(a, b); }
+inline FGraphNode *sub(FGraphNode *a, const int b) { return sub_ci(a, b); }
+inline FGraphNode *sub(FGraphNode *a, const long b) { return sub_cl(a, b); }
+inline FGraphNode *sub(FGraphNode *a, const float b) { return sub_cf(a, b); }
+inline FGraphNode *sub(FGraphNode *a, const double b) { return sub_cd(a, b); }
+
+inline FGraphNode *mul(FGraphNode *a, FGraphNode *b) { return mul_g(a, b); }
+inline FGraphNode *mul(FGraphNode *a, const int b) { return mul_ci(a, b); }
+inline FGraphNode *mul(FGraphNode *a, const long b) { return mul_cl(a, b); }
+inline FGraphNode *mul(FGraphNode *a, const float b) { return mul_cf(a, b); }
+inline FGraphNode *mul(FGraphNode *a, const double b) { return mul_cd(a, b); }
+
+inline FGraphNode *div(FGraphNode *a, FGraphNode *b) { return div_g(a, b); }
+inline FGraphNode *div(FGraphNode *a, const int b) { return div_ci(a, b); }
+inline FGraphNode *div(FGraphNode *a, const long b) { return div_cl(a, b); }
+inline FGraphNode *div(FGraphNode *a, const float b) { return div_cf(a, b); }
+inline FGraphNode *div(FGraphNode *a, const double b) { return div_cd(a, b); }
+
+inline FGraphNode *pow(FGraphNode *a, FGraphNode *b) { return pow_g(a, b); }
+inline FGraphNode *pow(FGraphNode *a, const int b) { return pow_ci(a, b); }
+inline FGraphNode *pow(FGraphNode *a, const long b) { return pow_cl(a, b); }
+inline FGraphNode *pow(FGraphNode *a, const float b) { return pow_cf(a, b); }
+inline FGraphNode *pow(FGraphNode *a, const double b) { return pow_cd(a, b); }
+
+inline FGraphNode *flatten(FGraphNode *a, int dimension) {
+  return flatten_dimension(a, dimension);
+}
+#endif
 #endif
