@@ -357,6 +357,27 @@ template <typename T, int n> struct Tensor {
       node->reference_counter++;
     }
   }
+  void execute_cpu() {
+    FOperation *op = node->operation;
+    if (op->op_type != STORE && op->op_type != RESULTDATA &&
+        op->op_type != CONST) {
+      // no longer held by this tensor
+      node->reference_counter--;
+      node = executeGraph_cpu(node);
+      node->reference_counter++;
+    }
+  }
+  void execute_gpu() {
+    FOperation *op = node->operation;
+    if (op->op_type != STORE && op->op_type != RESULTDATA &&
+        op->op_type != CONST) {
+      // no longer held by this tensor
+      node->reference_counter--;
+      node = executeGraph_gpu(node);
+      node->reference_counter++;
+    }
+  }
+
   operator std::string() const {
     FOperation *op = node->operation;
     std::string foo = "Tensor<" +
