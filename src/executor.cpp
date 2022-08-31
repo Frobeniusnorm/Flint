@@ -234,7 +234,7 @@ generateCode(FGraphNode *node,
         code = type + " " + name + " = pow((double)v" +
                to_string(variable_index + 1) + ", (double)v" +
                to_string(variable_index + 2) + ");\n" + code;
-    } break;
+    } break; // TODO matmul
     case FLATTEN: {
       code = type + " " + name + " = v" + to_string(variable_index + 1) +
              ";\n" + code;

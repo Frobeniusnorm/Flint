@@ -79,6 +79,7 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
     for (int i = from; i < from + size; i++)
       result[i] = pow(data1[i % index_man_1], data2[i % index_man_2]);
     break;
+  // TODO matmul
   default:
     break;
   }
