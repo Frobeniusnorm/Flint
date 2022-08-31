@@ -391,3 +391,42 @@ FGraphNode *flatten_dimension(FGraphNode *a, const int dimension) {
   op->data_type = prev_op->data_type;
   return addNode(op, {a});
 }
+FGraphNode *matmul(FGraphNode *a, FGraphNode *b) {
+  FOperation *ao = a->operation;
+  FOperation *bo = b->operation;
+  if (ao->dimensions < bo->dimensions)
+    log(ERROR, "For Matrix multiplication a x b, the dimension of a must be "
+               "greater or equal to that of b!");
+  if (ao->dimensions < 2 || bo->dimensions)
+    log(ERROR,
+        "Dimensions of operands of matrix multiplications must be at least 2!");
+  int l = ao->shape[ao->dimensions - 2];
+  int m = ao->shape[ao->dimensions - 1];
+  int mb = bo->shape[bo->dimensions - 2];
+  int n = bo->shape[bo->dimensions - 1];
+  if (m != mb)
+    log(ERROR,
+        "Incompatible Shapes for matrix multiplications: " +
+            vectorString(std::vector(ao->shape, ao->shape + ao->dimensions)) +
+            " and " +
+            vectorString(std::vector(bo->shape, bo->shape + bo->dimensions)));
+  FOperation *res = new FOperation();
+  res->dimensions = ao->dimensions;
+  res->shape = safe_mal<int>(res->dimensions);
+  if (res->dimensions > 2)
+    memcpy(res->shape, ao->shape, sizeof(int) * (res->dimensions - 2));
+  res->shape[res->dimensions - 2] = l;
+  res->shape[res->dimensions - 1] = n;
+  res->data_type =
+      ao->data_type > bo->data_type ? ao->data_type : bo->data_type;
+  res->op_type = MATMUL;
+
+  FGraphNode *node = new FGraphNode();
+  node->operation = res;
+  node->num_predecessor = 2;
+  node->predecessors = safe_mal<FGraphNode *>(2);
+  node->predecessors[0] = a;
+  node->predecessors[1] = b;
+  node->reference_counter = 0;
+  return node;
+}

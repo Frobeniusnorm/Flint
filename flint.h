@@ -45,7 +45,7 @@ void flintCleanup_gpu();
 // info, 4 verbose
 void setLoggingLevel(int);
 
-enum FType { FLOAT32, FLOAT64, INT32, INT64 };
+enum FType { INT32, INT64, FLOAT32, FLOAT64 };
 enum FOperationType {
   STORE,
   RESULTDATA,
@@ -56,6 +56,7 @@ enum FOperationType {
   DIV,
   POW,
   FLATTEN,
+  MATMUL,
   Length
 };
 struct FOperation {
@@ -147,6 +148,9 @@ FGraphNode *pow_ci(FGraphNode *a, const int b);
 FGraphNode *pow_cl(FGraphNode *a, const long b);
 FGraphNode *pow_cf(FGraphNode *a, const float b);
 FGraphNode *pow_cd(FGraphNode *a, const double b);
+// matrix multiplication, multiplication is carried out on the two inner most
+// dimensions
+FGraphNode *matmul(FGraphNode *a, FGraphNode *b);
 // flattens the GraphNode data to a 1 dimensional tensor, no additional data is
 // allocated besides the new node
 FGraphNode *flatten(FGraphNode *a);
