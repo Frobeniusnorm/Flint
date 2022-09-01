@@ -149,8 +149,10 @@ FGraphNode *pow_cl(FGraphNode *a, const long b);
 FGraphNode *pow_cf(FGraphNode *a, const float b);
 FGraphNode *pow_cd(FGraphNode *a, const double b);
 // matrix multiplication, multiplication is carried out on the two inner most
-// dimensions
-FGraphNode *matmul(FGraphNode *a, FGraphNode *b);
+// dimensions. The results of the two predecessors nodes must be available; to
+// ensure that the method may execute the parameter nodes. The corresponding
+// result nodes are then stored in the memory pointed to by a and b.
+FGraphNode *matmul(FGraphNode **a, FGraphNode **b);
 // flattens the GraphNode data to a 1 dimensional tensor, no additional data is
 // allocated besides the new node
 FGraphNode *flatten(FGraphNode *a);

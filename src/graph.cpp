@@ -391,11 +391,21 @@ FGraphNode *flatten_dimension(FGraphNode *a, const int dimension) {
   op->data_type = prev_op->data_type;
   return addNode(op, {a});
 }
-FGraphNode *matmul(FGraphNode *a, FGraphNode *b) {
-  FOperation *ao = a->operation;
-  FOperation *bo = b->operation;
+FGraphNode *matmul(FGraphNode **a, FGraphNode **b) {
+  FGraphNode *x = *a;
+  FGraphNode *y = *b;
+  if (x->operation->op_type != STORE && x->operation->op_type != RESULTDATA) {
+    x = executeGraph(x);
+    *a = x;
+  }
+  if (y->operation->op_type != STORE && y->operation->op_type != RESULTDATA) {
+    y = executeGraph(y);
+    *b = y;
+  }
+  FOperation *ao = x->operation;
+  FOperation *bo = y->operation;
   if (ao->dimensions < bo->dimensions)
-    log(ERROR, "For Matrix multiplication a x b, the dimension of a must be "
+    log(ERROR, "For Matrix multiplication a x b the dimension of a must be "
                "greater or equal to that of b!");
   if (ao->dimensions < 2 || bo->dimensions)
     log(ERROR,
@@ -425,8 +435,10 @@ FGraphNode *matmul(FGraphNode *a, FGraphNode *b) {
   node->operation = res;
   node->num_predecessor = 2;
   node->predecessors = safe_mal<FGraphNode *>(2);
-  node->predecessors[0] = a;
-  node->predecessors[1] = b;
+  node->predecessors[0] = x;
+  node->predecessors[1] = y;
+  x->reference_counter++;
+  y->reference_counter++;
   node->reference_counter = 0;
   return node;
 }

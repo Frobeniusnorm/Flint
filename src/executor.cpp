@@ -234,7 +234,71 @@ generateCode(FGraphNode *node,
         code = type + " " + name + " = pow((double)v" +
                to_string(variable_index + 1) + ", (double)v" +
                to_string(variable_index + 2) + ");\n" + code;
-    } break; // TODO matmul
+    } break;
+    case MATMUL: {
+      push_pred = false;
+      string par1, par2;
+      FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
+      // we ignore the value assignment of the parameters since we have to
+      // access the arrays directly parameter 1
+      if (assigned_params.find(gnp1->operation) != assigned_params.end()) {
+        int index = 0;
+        for (auto &[pnode, pname] : parameters) {
+          if (pnode == gnp1->operation)
+            break;
+          index++;
+        }
+        par1 = "P" + to_string(index);
+      } else {
+        par1 = "P" + to_string(parameters.size());
+        parameters.push_front({node->operation, to_string(variable_index + 1)});
+      }
+      // parameter 2
+      if (assigned_params.find(gnp2->operation) != assigned_params.end()) {
+        int index = 0;
+        for (auto &[pnode, pname] : parameters) {
+          if (pnode == gnp2->operation)
+            break;
+          index++;
+        }
+        par2 = "P" + to_string(index);
+      } else {
+        par2 = "P" + to_string(parameters.size());
+        parameters.push_front({node->operation, to_string(variable_index + 1)});
+      }
+      int l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
+      int m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
+      int n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
+      // we need to compute $name
+      // indices j and k of $name
+      string j = "((index % " + to_string(l * n) + ")/" + to_string(n) + ")";
+      string k = "((index % " + to_string(l * n) + ")%" + to_string(n) + ")";
+      // base index of matrix start of p1 and p2
+      string base_p1 = "";
+      if (gnp1->operation->dimensions > 2) {
+        // index modulo product of shapes of gnp1
+        size_t prod = 1;
+        for (int i = 0; i < gnp1->operation->dimensions; i++)
+          prod *= gnp1->operation->shape[i];
+        base_p1 = "index % " + to_string(prod);
+      } else
+        base_p1 = "0";
+      string base_p2 = "";
+      if (gnp2->operation->dimensions > 2) {
+        // index modulo product of shapes of gnp1
+        size_t prod = 1;
+        for (int i = 0; i < gnp2->operation->dimensions; i++)
+          prod *= gnp2->operation->shape[i];
+        base_p2 = "index % " + to_string(prod);
+      } else
+        base_p2 = "0";
+      code = "for(int i = 0; i < " + to_string(m) +
+             "; i++){\n"
+             "  " +
+             name + " += " + par1 + "[" + base_p1 + " + " + j + " * " +
+             to_string(m) + " + i] * " + par2 + "[" + base_p2 + " + i * " +
+             to_string(n) + " + " + k + "];\n}\n";
+    } break;
     case FLATTEN: {
       code = type + " " + name + " = v" + to_string(variable_index + 1) +
              ";\n" + code;
