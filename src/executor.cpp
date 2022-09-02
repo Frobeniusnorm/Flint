@@ -251,7 +251,8 @@ generateCode(FGraphNode *node,
         par1 = "P" + to_string(index);
       } else {
         par1 = "P" + to_string(parameters.size());
-        parameters.push_front({node->operation, to_string(variable_index + 1)});
+        parameters.push_front(
+            {gnp1->operation, "v" + to_string(++variable_index)});
       }
       // parameter 2
       if (assigned_params.find(gnp2->operation) != assigned_params.end()) {
@@ -264,7 +265,8 @@ generateCode(FGraphNode *node,
         par2 = "P" + to_string(index);
       } else {
         par2 = "P" + to_string(parameters.size());
-        parameters.push_front({node->operation, to_string(variable_index + 1)});
+        parameters.push_front(
+            {gnp2->operation, "v" + to_string(++variable_index)});
       }
       int l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
       int m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
@@ -297,7 +299,8 @@ generateCode(FGraphNode *node,
              "  " +
              name + " += " + par1 + "[" + base_p1 + " + " + j + " * " +
              to_string(m) + " + i] * " + par2 + "[" + base_p2 + " + i * " +
-             to_string(n) + " + " + k + "];\n}\n";
+             to_string(n) + " + " + k + "];\n}\n" + code;
+      code = type + " " + name + " = 0;\n" + code;
     } break;
     case FLATTEN: {
       code = type + " " + name + " = v" + to_string(variable_index + 1) +

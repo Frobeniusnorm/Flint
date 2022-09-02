@@ -257,6 +257,44 @@ TEST_SUITE("Execution") {
     freeGraph(g1);
     freeGraph(g2);
   }
+  TEST_CASE("matmul") {
+    using namespace std;
+    vector<float> data1{1, 2, 3, 4};
+    vector<float> data2{4, 3, 2, 1};
+    vector<int> s1{2, 2};
+    FGraphNode *g1 =
+        createGraph(data1.data(), data1.size(), FLOAT32, s1.data(), 2);
+    FGraphNode *g2 =
+        createGraph(data2.data(), data2.size(), FLOAT32, s1.data(), 2);
+    FGraphNode *mm1 = matmul(&g1, &g2);
+    FGraphNode *r1 = executeGraph(mm1);
+    FResultData *rd1 = (FResultData *)r1->operation->additional_data;
+    vector<float> exp1{4 + 9, 8 + 12, 2 + 3, 4 + 4};
+    float *d1 = (float *)rd1->data;
+    for (int i = 0; i < 4; i++)
+      CHECK_EQ(exp1[i], d1[i]);
+    freeGraph(r1);
+
+    // different sizes along axis
+    vector<int> data4{6, 5, 4, 3, 2, 1};
+    vector<int> data3{1, 2, 3, 4, 5, 6};
+    vector<int> exp2{1 * 6 + 2 * 4 + 3 * 2, 1 * 5 + 2 * 3 + 3 * 1,
+                     4 * 6 + 5 * 4 + 6 * 2, 4 * 5 + 5 * 3 + 6 * 1};
+    s1 = vector<int>{2, 3};
+    vector<int> s2{3, 2};
+    vector<int> s3{2, 2};
+    g1 = createGraph(data3.data(), data3.size(), INT32, s1.data(), 2);
+    g2 = createGraph(data4.data(), data4.size(), INT32, s2.data(), 2);
+    FGraphNode *mm2 = matmul(&g1, &g2);
+    REQUIRE_EQ(mm2->operation->shape[0], s3[0]);
+    REQUIRE_EQ(mm2->operation->shape[1], s3[1]);
+    FGraphNode *r2 = executeGraph(mm2);
+    FResultData *rd2 = (FResultData *)r2->operation->additional_data;
+    int *d2 = (int *)rd2->data;
+    for (int i = 0; i < 4; i++)
+      CHECK_EQ(exp2[i], d2[i]);
+    freeGraph(r2);
+  }
 }
 #include "../flint.hpp"
 #include <chrono>
