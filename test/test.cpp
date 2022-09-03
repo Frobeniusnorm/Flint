@@ -269,7 +269,7 @@ TEST_SUITE("Execution") {
     FGraphNode *mm1 = matmul(&g1, &g2);
     FGraphNode *r1 = executeGraph(mm1);
     FResultData *rd1 = (FResultData *)r1->operation->additional_data;
-    vector<float> exp1{4 + 9, 8 + 12, 2 + 3, 4 + 4};
+    vector<float> exp1{4 + 4, 3 + 2, 12 + 8, 9 + 4};
     float *d1 = (float *)rd1->data;
     for (int i = 0; i < 4; i++)
       CHECK_EQ(exp1[i], d1[i]);

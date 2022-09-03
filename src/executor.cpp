@@ -160,7 +160,7 @@ generateCode(FGraphNode *node,
                ";\n" + code;
       } else {
         assigned_params.insert({node->operation, name});
-        parameters.push_front({node->operation, name});
+        parameters.push_back({node->operation, name});
       }
     } break;
     case CONST:
@@ -251,8 +251,7 @@ generateCode(FGraphNode *node,
         par1 = "P" + to_string(index);
       } else {
         par1 = "P" + to_string(parameters.size());
-        parameters.push_front(
-            {gnp1->operation, "v" + to_string(++variable_index)});
+        parameters.push_back({gnp1->operation, ""});
       }
       // parameter 2
       if (assigned_params.find(gnp2->operation) != assigned_params.end()) {
@@ -265,8 +264,7 @@ generateCode(FGraphNode *node,
         par2 = "P" + to_string(index);
       } else {
         par2 = "P" + to_string(parameters.size());
-        parameters.push_front(
-            {gnp2->operation, "v" + to_string(++variable_index)});
+        parameters.push_back({gnp2->operation, ""});
       }
       int l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
       int m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
@@ -358,32 +356,35 @@ FGraphNode *executeGraph_gpu(FGraphNode *node) {
   code += "int index = get_global_id(0);\n";
   par_idx = 0;
   for (auto &[op, name] : parameters) {
-    string type = typeString(op->data_type);
-    code += type + " " + name + " = ";
-    string indx_mod = "";
-    if (op->dimensions < node->operation->dimensions) {
-      // we take the remainder of the division of the product of the sizes of
-      // the dimensions that are not shared by op
-      int factor = 1;
-      // for (int i = 0; i < node->operation->dimensions - op->dimensions; i++)
-      //   factor *= node->operation->shape[i];
-      for (int i = 0; i < op->dimensions; i++) {
-        if (node->operation
-                ->shape[i + (node->operation->dimensions - op->dimensions)] !=
-            op->shape[i])
-          log(ERROR,
-              "incompatible shapes of operands: " +
-                  vectorString(vector<int>(node->operation->shape,
-                                           node->operation->shape +
-                                               node->operation->dimensions)) +
-                  " and " +
-                  vectorString(
-                      vector<int>(op->shape, op->shape + op->dimensions)));
-        factor *= op->shape[i];
+    if (!name.empty()) {
+      string type = typeString(op->data_type);
+      code += type + " " + name + " = ";
+      string indx_mod = "";
+      if (op->dimensions < node->operation->dimensions) {
+        // we take the remainder of the division of the product of the sizes of
+        // the dimensions that are not shared by op
+        int factor = 1;
+        // for (int i = 0; i < node->operation->dimensions - op->dimensions;
+        // i++)
+        //   factor *= node->operation->shape[i];
+        for (int i = 0; i < op->dimensions; i++) {
+          if (node->operation
+                  ->shape[i + (node->operation->dimensions - op->dimensions)] !=
+              op->shape[i])
+            log(ERROR,
+                "incompatible shapes of operands: " +
+                    vectorString(vector<int>(node->operation->shape,
+                                             node->operation->shape +
+                                                 node->operation->dimensions)) +
+                    " and " +
+                    vectorString(
+                        vector<int>(op->shape, op->shape + op->dimensions)));
+          factor *= op->shape[i];
+        }
+        indx_mod = "%" + to_string(factor);
       }
-      indx_mod = "%" + to_string(factor);
+      code += "P" + to_string(par_idx) + "[index" + indx_mod + "];\n";
     }
-    code += "P" + to_string(par_idx) + "[index" + indx_mod + "];\n";
     par_idx++;
   }
   // add the execution code
