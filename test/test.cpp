@@ -294,6 +294,33 @@ TEST_SUITE("Execution") {
     for (int i = 0; i < 4; i++)
       CHECK_EQ(exp2[i], d2[i]);
     freeGraph(r2);
+
+    // multidim test
+    vector<vector<vector<double>>> data5{{{0, 1, 2}, {1, 2, 3}},
+                                         {{2, 3, 4}, {3, 4, 5}}};
+    vector<int> s5{2, 2, 3};
+    vector<double> f5 = flattened(data5);
+
+    vector<vector<float>> data6{{0, 1}, {2, 3}, {4, 5}};
+    vector<int> s6{3, 2};
+    vector<float> f6 = flattened(data6);
+
+    vector<vector<vector<double>>> exp3{{{10, 13}, {16, 22}},
+                                        {{22, 31}, {28, 40}}};
+    vector<double> fe3 = flattened(exp3);
+
+    g1 = createGraph(f5.data(), f5.size(), FLOAT64, s5.data(), s5.size());
+    g2 = createGraph(f6.data(), f6.size(), FLOAT32, s6.data(), s6.size());
+    mm2 = matmul(&g1, &g2);
+    REQUIRE_EQ(mm2->operation->shape[0], 2);
+    REQUIRE_EQ(mm2->operation->shape[1], 2);
+    REQUIRE_EQ(mm2->operation->shape[2], 2);
+    r2 = executeGraph(mm2);
+    FResultData *rd3 = (FResultData *)r2->operation->additional_data;
+    double *d3 = (double *)rd3->data;
+    for (int i = 0; i < rd3->num_entries; i++)
+      CHECK_EQ(fe3[i], d3[i]);
+    freeGraph(r2);
   }
 }
 #include "../flint.hpp"

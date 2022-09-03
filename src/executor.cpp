@@ -277,6 +277,7 @@ generateCode(FGraphNode *node,
       string base_p1 = "";
       if (gnp1->operation->dimensions > 2) {
         // index modulo product of shapes of gnp1
+        // TODO DOES NOT WORK, since gnp1 dimensions may be larger than index
         size_t prod = 1;
         for (int i = 0; i < gnp1->operation->dimensions; i++)
           prod *= gnp1->operation->shape[i];
@@ -285,7 +286,8 @@ generateCode(FGraphNode *node,
         base_p1 = "0";
       string base_p2 = "";
       if (gnp2->operation->dimensions > 2) {
-        // index modulo product of shapes of gnp1
+        // index modulo product of shapes of gnp2
+        // TODO DOES NOT WORK, since gnp2 dimensions may be larger than index
         size_t prod = 1;
         for (int i = 0; i < gnp2->operation->dimensions; i++)
           prod *= gnp2->operation->shape[i];
