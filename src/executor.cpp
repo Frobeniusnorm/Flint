@@ -276,22 +276,14 @@ generateCode(FGraphNode *node,
       // base index of matrix start of p1 and p2
       string base_p1 = "";
       if (gnp1->operation->dimensions > 2) {
-        // index modulo product of shapes of gnp1
-        // TODO DOES NOT WORK, since gnp1 dimensions may be larger than index
-        size_t prod = 1;
-        for (int i = 0; i < gnp1->operation->dimensions; i++)
-          prod *= gnp1->operation->shape[i];
-        base_p1 = "index % " + to_string(prod);
+        // get matrix number of index and then reproject
+        base_p1 = "(index / " + to_string(l * n) + ") * " + to_string(l * m);
       } else
         base_p1 = "0";
       string base_p2 = "";
       if (gnp2->operation->dimensions > 2) {
-        // index modulo product of shapes of gnp2
-        // TODO DOES NOT WORK, since gnp2 dimensions may be larger than index
-        size_t prod = 1;
-        for (int i = 0; i < gnp2->operation->dimensions; i++)
-          prod *= gnp2->operation->shape[i];
-        base_p2 = "index % " + to_string(prod);
+        // get matrix number of index and then reproject
+        base_p2 = "(index / " + to_string(l * n) + ") * " + to_string(m * n);
       } else
         base_p2 = "0";
       code = "for(int i = 0; i < " + to_string(m) +
