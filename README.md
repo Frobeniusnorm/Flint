@@ -14,4 +14,4 @@ Planed Language Bindings include Java, Scala and a C++ wrapper library.
 Just as other Tensor libraries, Flint collects operations in a graph and executes multiple operations at once in OpenCL when needed. 
 
 ## Usage ##
-There is no first official version yet and i haven't implemented a deploy target yet. However if you want to build it you need GCC, Make and a installed OpenCL library. Then just run make and test if the implementation works on your machine with the test executable build in the test directory.
+There is no first official version yet. However if you want to build it you need GCC (g++), Make and a installed OpenCL library. Then just run make and test if the implementation works on your machine with the test executable build in the test directory.

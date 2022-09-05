@@ -160,7 +160,7 @@ generateCode(FGraphNode *node,
                ";\n" + code;
       } else {
         assigned_params.insert({node->operation, name});
-        parameters.push_front({node->operation, name});
+        parameters.push_back({node->operation, name});
       }
     } break;
     case CONST:
@@ -235,6 +235,65 @@ generateCode(FGraphNode *node,
                to_string(variable_index + 1) + ", (double)v" +
                to_string(variable_index + 2) + ");\n" + code;
     } break;
+    case MATMUL: {
+      push_pred = false;
+      string par1, par2;
+      FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
+      // we ignore the value assignment of the parameters since we have to
+      // access the arrays directly parameter 1
+      if (assigned_params.find(gnp1->operation) != assigned_params.end()) {
+        int index = 0;
+        for (auto &[pnode, pname] : parameters) {
+          if (pnode == gnp1->operation)
+            break;
+          index++;
+        }
+        par1 = "P" + to_string(index);
+      } else {
+        par1 = "P" + to_string(parameters.size());
+        parameters.push_back({gnp1->operation, ""});
+      }
+      // parameter 2
+      if (assigned_params.find(gnp2->operation) != assigned_params.end()) {
+        int index = 0;
+        for (auto &[pnode, pname] : parameters) {
+          if (pnode == gnp2->operation)
+            break;
+          index++;
+        }
+        par2 = "P" + to_string(index);
+      } else {
+        par2 = "P" + to_string(parameters.size());
+        parameters.push_back({gnp2->operation, ""});
+      }
+      int l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
+      int m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
+      int n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
+      // we need to compute $name
+      // indices j and k of $name
+      string j = "((index % " + to_string(l * n) + ")/" + to_string(n) + ")";
+      string k = "((index % " + to_string(l * n) + ")%" + to_string(n) + ")";
+      // base index of matrix start of p1 and p2
+      string base_p1 = "";
+      if (gnp1->operation->dimensions > 2) {
+        // get matrix number of index and then reproject
+        base_p1 = "(index / " + to_string(l * n) + ") * " + to_string(l * m);
+      } else
+        base_p1 = "0";
+      string base_p2 = "";
+      if (gnp2->operation->dimensions > 2) {
+        // get matrix number of index and then reproject
+        base_p2 = "(index / " + to_string(l * n) + ") * " + to_string(m * n);
+      } else
+        base_p2 = "0";
+      code = "for(int i = 0; i < " + to_string(m) +
+             "; i++){\n"
+             "  " +
+             name + " += " + par1 + "[" + base_p1 + " + " + j + " * " +
+             to_string(m) + " + i] * " + par2 + "[" + base_p2 + " + i * " +
+             to_string(n) + " + " + k + "];\n}\n" + code;
+      code = type + " " + name + " = 0;\n" + code;
+    } break;
     case FLATTEN: {
       code = type + " " + name + " = v" + to_string(variable_index + 1) +
              ";\n" + code;
@@ -250,7 +309,7 @@ generateCode(FGraphNode *node,
 }
 FGraphNode *executeGraph(FGraphNode *node) {
   // TODO
-  return executeGraph_cpu(node);
+  return executeGraph_gpu(node);
 }
 #include <chrono>
 #include <unordered_map>
@@ -291,32 +350,35 @@ FGraphNode *executeGraph_gpu(FGraphNode *node) {
   code += "int index = get_global_id(0);\n";
   par_idx = 0;
   for (auto &[op, name] : parameters) {
-    string type = typeString(op->data_type);
-    code += type + " " + name + " = ";
-    string indx_mod = "";
-    if (op->dimensions < node->operation->dimensions) {
-      // we take the remainder of the division of the product of the sizes of
-      // the dimensions that are not shared by op
-      int factor = 1;
-      // for (int i = 0; i < node->operation->dimensions - op->dimensions; i++)
-      //   factor *= node->operation->shape[i];
-      for (int i = 0; i < op->dimensions; i++) {
-        if (node->operation
-                ->shape[i + (node->operation->dimensions - op->dimensions)] !=
-            op->shape[i])
-          log(ERROR,
-              "incompatible shapes of operands: " +
-                  vectorString(vector<int>(node->operation->shape,
-                                           node->operation->shape +
-                                               node->operation->dimensions)) +
-                  " and " +
-                  vectorString(
-                      vector<int>(op->shape, op->shape + op->dimensions)));
-        factor *= op->shape[i];
+    if (!name.empty()) {
+      string type = typeString(op->data_type);
+      code += type + " " + name + " = ";
+      string indx_mod = "";
+      if (op->dimensions < node->operation->dimensions) {
+        // we take the remainder of the division of the product of the sizes of
+        // the dimensions that are not shared by op
+        int factor = 1;
+        // for (int i = 0; i < node->operation->dimensions - op->dimensions;
+        // i++)
+        //   factor *= node->operation->shape[i];
+        for (int i = 0; i < op->dimensions; i++) {
+          if (node->operation
+                  ->shape[i + (node->operation->dimensions - op->dimensions)] !=
+              op->shape[i])
+            log(ERROR,
+                "incompatible shapes of operands: " +
+                    vectorString(vector<int>(node->operation->shape,
+                                             node->operation->shape +
+                                                 node->operation->dimensions)) +
+                    " and " +
+                    vectorString(
+                        vector<int>(op->shape, op->shape + op->dimensions)));
+          factor *= op->shape[i];
+        }
+        indx_mod = "%" + to_string(factor);
       }
-      indx_mod = "%" + to_string(factor);
+      code += "P" + to_string(par_idx) + "[index" + indx_mod + "];\n";
     }
-    code += "P" + to_string(par_idx) + "[index" + indx_mod + "];\n";
     par_idx++;
   }
   // add the execution code
@@ -386,6 +448,7 @@ FGraphNode *executeGraph_gpu(FGraphNode *node) {
   if (err_code == CL_OUT_OF_HOST_MEMORY)
     log(ERROR, "Not enough memory to create buffer!");
   int index = 1;
+  std::vector<cl_event> writeEvents;
   for (auto &[op, name] : parameters) {
     // TODO keep track of when data in Store is changed
     cl_mem mem_obj = nullptr;
@@ -427,9 +490,10 @@ FGraphNode *executeGraph_gpu(FGraphNode *node) {
           buffer_data += to_string(((int *)data)[i]) + " ";
         else
           buffer_data += to_string(((long *)data)[i]) + " ";
+      writeEvents.emplace_back();
       err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_TRUE, 0,
                                       total_size * type_size, data, 0, nullptr,
-                                      nullptr);
+                                      &writeEvents[writeEvents.size() - 1]);
       if (err_code != CL_SUCCESS) {
         string msg = "Unknown Error while loading data to GPU!";
         if (err_code == CL_OUT_OF_HOST_MEMORY)
@@ -446,8 +510,10 @@ FGraphNode *executeGraph_gpu(FGraphNode *node) {
     log(ERROR, "Could not set Kernel Argument for the result!");
   // execute kernel
   const size_t global_size = total_size_node;
+  const size_t local_size = 1;
   err_code = clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &global_size,
-                                    nullptr, 0, nullptr, nullptr);
+                                    &local_size, writeEvents.size(),
+                                    writeEvents.data(), nullptr);
   if (err_code != CL_SUCCESS) {
     string msg;
     switch (err_code) {

@@ -30,6 +30,7 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
+#define MAX_PARALLELITY 1024
 
 static bool initialized = false;
 static std::vector<std::thread *> threads;
@@ -78,6 +79,7 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
     for (int i = from; i < from + size; i++)
       result[i] = pow(data1[i % index_man_1], data2[i % index_man_2]);
     break;
+  // TODO matmul
   default:
     break;
   }
@@ -198,8 +200,9 @@ static void executeNode(FGraphNode *node,
   }
 }
 
-static blocking_queue<std::tuple<FGraphNode *, std::vector<CPUResultData>,
-                                 void *, int, int, std::binary_semaphore *>>
+static blocking_queue<
+    std::tuple<FGraphNode *, std::vector<CPUResultData>, void *, int, int,
+               std::counting_semaphore<MAX_PARALLELITY> *>>
     thread_queue;
 
 void flintCleanup_cpu() {
@@ -218,9 +221,9 @@ void flintCleanup_cpu() {
 static void threadRoutine() {
   while (true) {
     auto [node, pred_data, result, from, to, sem] = thread_queue.pop_front();
-    if (!node) {
+    if (!node)
       break;
-    }
+
     switch (node->operation->data_type) {
     case FLOAT32:
       executeNode(node, pred_data, (float *)result, from, to);
@@ -238,22 +241,24 @@ static void threadRoutine() {
     sem->release();
   }
 }
-#define PARALLEL_EXECUTION_SIZE 1
+#define PARALLEL_EXECUTION_SIZE 500
 template <typename T>
 inline void chooseExecutionMethod(FGraphNode *node,
                                   std::vector<CPUResultData> pred_data,
                                   T *result, int size) {
   auto start = std::chrono::high_resolution_clock::now();
   if (size >= PARALLEL_EXECUTION_SIZE) {
-    int workSize = ceil((double)size / (double)threads.size());
-    std::binary_semaphore *sem = new std::binary_semaphore(0);
-    // for (int i = 0; i < threads.size(); i++) {
-    //   thread_queue.push_front({node, pred_data, result, i * workSize,
-    //                            std::min((i + 1) * workSize, size), sem});
-    // }
-    thread_queue.push_front({node, pred_data, result, 0, size, sem});
-    // for (int i = 0; i < threads.size(); i++)
-    sem->acquire();
+    int exeUnits = std::min(size, (int)threads.size());
+    int workSize = size / exeUnits;
+    std::counting_semaphore<MAX_PARALLELITY> *sem =
+        new std::counting_semaphore<MAX_PARALLELITY>(0);
+    for (int i = 0; i < exeUnits; i++) {
+      const int to = i == exeUnits - 1 ? size : (i + 1) * workSize;
+      thread_queue.push_front(
+          {node, pred_data, result, i * workSize, to - i * workSize, sem});
+    }
+    for (int i = 0; i < exeUnits; i++)
+      sem->acquire();
     delete sem;
   } else {
     executeNode(node, pred_data, result, 0, size);

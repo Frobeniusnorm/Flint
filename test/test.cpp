@@ -257,8 +257,74 @@ TEST_SUITE("Execution") {
     freeGraph(g1);
     freeGraph(g2);
   }
+  TEST_CASE("matmul") {
+    using namespace std;
+    vector<float> data1{1, 2, 3, 4};
+    vector<float> data2{4, 3, 2, 1};
+    vector<int> s1{2, 2};
+    FGraphNode *g1 =
+        createGraph(data1.data(), data1.size(), FLOAT32, s1.data(), 2);
+    FGraphNode *g2 =
+        createGraph(data2.data(), data2.size(), FLOAT32, s1.data(), 2);
+    FGraphNode *mm1 = matmul(&g1, &g2);
+    FGraphNode *r1 = executeGraph(mm1);
+    FResultData *rd1 = (FResultData *)r1->operation->additional_data;
+    vector<float> exp1{4 + 4, 3 + 2, 12 + 8, 9 + 4};
+    float *d1 = (float *)rd1->data;
+    for (int i = 0; i < 4; i++)
+      CHECK_EQ(exp1[i], d1[i]);
+    freeGraph(r1);
+
+    // different sizes along axis
+    vector<int> data4{6, 5, 4, 3, 2, 1};
+    vector<int> data3{1, 2, 3, 4, 5, 6};
+    vector<int> exp2{1 * 6 + 2 * 4 + 3 * 2, 1 * 5 + 2 * 3 + 3 * 1,
+                     4 * 6 + 5 * 4 + 6 * 2, 4 * 5 + 5 * 3 + 6 * 1};
+    s1 = vector<int>{2, 3};
+    vector<int> s2{3, 2};
+    vector<int> s3{2, 2};
+    g1 = createGraph(data3.data(), data3.size(), INT32, s1.data(), 2);
+    g2 = createGraph(data4.data(), data4.size(), INT32, s2.data(), 2);
+    FGraphNode *mm2 = matmul(&g1, &g2);
+    REQUIRE_EQ(mm2->operation->shape[0], s3[0]);
+    REQUIRE_EQ(mm2->operation->shape[1], s3[1]);
+    FGraphNode *r2 = executeGraph(mm2);
+    FResultData *rd2 = (FResultData *)r2->operation->additional_data;
+    int *d2 = (int *)rd2->data;
+    for (int i = 0; i < 4; i++)
+      CHECK_EQ(exp2[i], d2[i]);
+    freeGraph(r2);
+
+    // multidim test
+    vector<vector<vector<double>>> data5{{{0, 1, 2}, {1, 2, 3}},
+                                         {{2, 3, 4}, {3, 4, 5}}};
+    vector<int> s5{2, 2, 3};
+    vector<double> f5 = flattened(data5);
+
+    vector<vector<float>> data6{{0, 1}, {2, 3}, {4, 5}};
+    vector<int> s6{3, 2};
+    vector<float> f6 = flattened(data6);
+
+    vector<vector<vector<double>>> exp3{{{10, 13}, {16, 22}},
+                                        {{22, 31}, {28, 40}}};
+    vector<double> fe3 = flattened(exp3);
+
+    g1 = createGraph(f5.data(), f5.size(), FLOAT64, s5.data(), s5.size());
+    g2 = createGraph(f6.data(), f6.size(), FLOAT32, s6.data(), s6.size());
+    mm2 = matmul(&g1, &g2);
+    REQUIRE_EQ(mm2->operation->shape[0], 2);
+    REQUIRE_EQ(mm2->operation->shape[1], 2);
+    REQUIRE_EQ(mm2->operation->shape[2], 2);
+    r2 = executeGraph(mm2);
+    FResultData *rd3 = (FResultData *)r2->operation->additional_data;
+    double *d3 = (double *)rd3->data;
+    for (int i = 0; i < rd3->num_entries; i++)
+      CHECK_EQ(fe3[i], d3[i]);
+    freeGraph(r2);
+  }
 }
 #include "../flint.hpp"
+#include <chrono>
 TEST_SUITE("C++ Bindings") {
   TEST_CASE("Basic Functions and Classes") {
     Tensor<float, 3> t1({{{0}, {1}}, {{2}, {3}}});
@@ -282,14 +348,21 @@ TEST_SUITE("C++ Bindings") {
 
     t3 = t3.pow(3);
 
-    foo = *t3;
+    vector<float> bar = *t3.flattened();
     for (int i = 0; i < 2; i++)
       for (int j = 0; j < 2; j++)
-        CHECK_EQ(pow(i * 2 + j + 3 + 7, 3), foo[i][j][0]);
+        CHECK_EQ(pow(i * 2 + j + 3 + 7, 3), bar[i * 2 + j]);
+
+    Tensor<float, 2> t4 = t1.flattened(1);
+    vector<vector<float>> foobar = *t4;
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++)
+        CHECK_EQ(i * 2 + j, foobar[i * 2 + j][0]);
+    }
   }
 }
+
 int main(int argc, char **argv) {
-  flintInit(1, 0);
   doctest::Context context;
   context.applyCommandLine(argc, argv);
   int res = context.run();
