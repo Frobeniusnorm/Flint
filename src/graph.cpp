@@ -425,9 +425,7 @@ FGraphNode *matmul(FGraphNode **a, FGraphNode **b) {
   }
   FOperation *ao = x->operation;
   FOperation *bo = y->operation;
-  if (ao->dimensions < bo->dimensions)
-    log(ERROR, "For Matrix multiplication a x b the dimension of a must be "
-               "greater or equal to that of b!");
+
   if (ao->dimensions < 2 || bo->dimensions < 2)
     log(ERROR,
         "Dimensions of operands of matrix multiplications must be at least 2!");

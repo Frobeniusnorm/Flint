@@ -359,6 +359,32 @@ TEST_SUITE("C++ Bindings") {
       for (int j = 0; j < 2; j++)
         CHECK_EQ(i * 2 + j, foobar[i * 2 + j][0]);
     }
+
+    Tensor<double, 3> t5({{{0, 1, 2}, {1, 2, 3}}, {{2, 3, 4}, {3, 4, 5}}});
+    Tensor<float, 2> t6({{0, 1}, {2, 3}, {4, 5}});
+    Tensor<double, 3> t7 = t5.matmul(t6);
+
+    vector<vector<vector<double>>> exp3{{{10, 13}, {16, 22}},
+                                        {{22, 31}, {28, 40}}};
+    vector<vector<vector<double>>> res3 = *t7;
+    CHECK_EQ(exp3, res3);
+
+    Tensor<double, 3> t8 = t6.matmul(t5);
+    vector<vector<vector<double>>> exp4{
+        {{1, 2, 3}, {3, 8, 13}, {5, 14, 23}},
+        {{3, 4, 5}, {13, 18, 23}, {23, 32, 41}}};
+    vector<vector<vector<double>>> res4 = *t8;
+    // CHECK_EQ(exp4, res4);
+    // CHECK_EQ(exp4.size(), res4.size());
+    // for (int i = 0; i < 2; i++) {
+    //   CHECK_EQ(exp4[i].size(), res4[i].size());
+    //   for (int j = 0; j < 3; j++) {
+    //     CHECK_EQ(exp4[i][j].size(), res4[i][j].size());
+    //     for (int k = 0; k < 3; k++) {
+    //       CHECK_EQ(exp4[i][j][k], res4[i][j][k]);
+    //     }
+    //   }
+    // }
   }
 }
 

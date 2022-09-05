@@ -61,11 +61,19 @@ flattened(const std::vector<std::vector<std::vector<T>>> vec) {
   }
   return result;
 }
+// operation wrapper because C++ namespaces dont't see overloaded global
+// functions
 template <typename K>
 static inline FGraphNode *pow_wrapper(FGraphNode *node, const K c) {
   return pow(node, c);
 }
+static inline FGraphNode *matmul_wrapper(FGraphNode **a, FGraphNode **b) {
+  return matmul(a, b);
+}
 }; // namespace FLINT_HPP_HELPER
+// TODO for everything the c interface allows only one operand order, write
+// general header functions or rewrite
+// TODO efficient tensor indexing (no need to write everything to a vector)
 template <typename T> static constexpr void isTensorType() {
   static_assert(std::is_same<T, int>() || std::is_same<T, float>() ||
                     std::is_same<T, long>() || std::is_same<T, double>(),
@@ -257,6 +265,10 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K> Tensor<stronger_return<K>, 1> pow(const K other) {
     return Tensor<stronger_return<K>, 1>(
         FLINT_HPP_HELPER::pow_wrapper(node, other), shape);
+  }
+  template <typename K, int k>
+  Tensor<stronger_return<K>, k> matmul(const Tensor<K, k> other) const {
+    return Tensor<stronger_return<K>, k>(matmul(node, other.node));
   }
 
 protected:
@@ -483,6 +495,18 @@ template <typename T, int n> struct Tensor {
   template <typename K> Tensor<stronger_return<K>, n> pow(const K other) {
     return Tensor<stronger_return<K>, n>(
         FLINT_HPP_HELPER::pow_wrapper(node, other), shape);
+  }
+  template <typename K, int k>
+  Tensor<stronger_return<K>, k >= n ? k : n> matmul(Tensor<K, k> other) {
+    int x = shape[shape.size() - 2];
+    int z = other.shape[other.shape.size() - 1];
+    std::vector<int> ns(shape);
+    ns[ns.size() - 2] = x;
+    ns[ns.size() - 1] = z;
+    return Tensor < stronger_return<K>,
+           k >= n
+               ? k
+               : n > (FLINT_HPP_HELPER::matmul_wrapper(&node, &other.node), ns);
   }
 
 protected:

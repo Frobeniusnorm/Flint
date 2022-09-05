@@ -103,10 +103,6 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
         base_p2 = (index / (l * n)) * (m * n);
       }
       for (int i = 0; i < m; i++) {
-        //           for(int i = 0; i < 3; i++){
-        //   v0 += P0[(index / 4) * 6 + ((index % 4)/2) * 3 + i] * P1[0 + i * 2
-        //   + ((index % 4)%2)];
-        // }
         result[index] +=
             data1[base_p1 + j * m + i] * data2[base_p2 + i * n + k];
       }
