@@ -91,12 +91,17 @@ void freeGraph(FGraphNode *graph) {
           FResultData *rd = (FResultData *)gn->operation->additional_data;
           if (rd->data)
             free(rd->data);
+          if (rd->mem_id)
+            clReleaseMemObject(rd->mem_id);
           delete rd;
         } break;
-        case STORE:
-          free(((FStore *)gn->operation->additional_data)->data);
-          delete (FStore *)gn->operation->additional_data;
-          break;
+        case STORE: {
+          FStore *st = (FStore *)gn->operation->additional_data;
+          free(st->data);
+          if (st->mem_id)
+            clReleaseMemObject(st->mem_id);
+          delete st;
+        } break;
         case CONST: {
           FConst *c = (FConst *)gn->operation->additional_data;
           free(c->value);

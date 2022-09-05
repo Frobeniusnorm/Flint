@@ -23,8 +23,7 @@
 #endif
 /*
   This is the basic header file and implementation of Flint, to be compatible
-  with as many languages as possible. I have never tested it with the bare C
-  compiler, but it should be C compatible.
+  with as many languages as possible. It should be C compatible.
 
   Flints Execution structure represents an AST, so that each Graph may be
   compiled to a specific OpenCL program
