@@ -30,7 +30,8 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
-#define MAX_PARALLELITY 1024
+// virtual maximum number of threads
+#define MAX_PARALLELITY 4096
 
 static bool initialized = false;
 static std::vector<std::thread *> threads;
@@ -57,7 +58,7 @@ struct CPUResultData {
 template <typename T, typename A, typename B>
 static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
                              int from, int size, int index_man_1,
-                             int index_man_2) {
+                             int index_man_2, FGraphNode *curr) {
   switch (op) {
   case ADD:
     for (int i = from; i < from + size; i++)
@@ -79,7 +80,38 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
     for (int i = from; i < from + size; i++)
       result[i] = pow(data1[i % index_man_1], data2[i % index_man_2]);
     break;
-  // TODO matmul
+  case MATMUL: {
+    FGraphNode *gnp1 = curr->predecessors[0], *gnp2 = curr->predecessors[1];
+    int l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
+    int m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
+    int n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
+    for (int index = from; index < from + size; index++) {
+      result[index] = 0;
+      // indices in node matrix
+      int j = (index % (l * n)) / n;
+      int k = (index % (l * n)) % n;
+
+      // matrix number of predecessors
+      int base_p1 = 0;
+      if (gnp1->operation->dimensions > 2) {
+        // get matrix number of index and then reproject
+        base_p1 = (index / (l * n)) * (l * m);
+      }
+      int base_p2 = 0;
+      if (gnp2->operation->dimensions > 2) {
+        // get matrix number of index and then reproject
+        base_p2 = (index / (l * n)) * (m * n);
+      }
+      for (int i = 0; i < m; i++) {
+        //           for(int i = 0; i < 3; i++){
+        //   v0 += P0[(index / 4) * 6 + ((index % 4)/2) * 3 + i] * P1[0 + i * 2
+        //   + ((index % 4)%2)];
+        // }
+        result[index] +=
+            data1[base_p1 + j * m + i] * data2[base_p2 + i * n + k];
+      }
+    }
+  } break;
   default:
     break;
   }
@@ -118,19 +150,19 @@ static void executeNode(FGraphNode *node,
       switch (p2.type) {
       case INT32:
         binaryExpression(result, (int *)p1.data, (int *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       case FLOAT32:
         binaryExpression(result, (int *)p1.data, (float *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       case FLOAT64:
         binaryExpression(result, (int *)p1.data, (double *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       case INT64:
         binaryExpression(result, (int *)p1.data, (long *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       }
       break;
@@ -138,19 +170,19 @@ static void executeNode(FGraphNode *node,
       switch (p2.type) {
       case INT32:
         binaryExpression(result, (float *)p1.data, (int *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       case FLOAT32:
         binaryExpression(result, (float *)p1.data, (float *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       case FLOAT64:
         binaryExpression(result, (float *)p1.data, (double *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       case INT64:
         binaryExpression(result, (float *)p1.data, (long *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       }
       break;
@@ -158,19 +190,19 @@ static void executeNode(FGraphNode *node,
       switch (p2.type) {
       case INT32:
         binaryExpression(result, (double *)p1.data, (int *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       case FLOAT32:
         binaryExpression(result, (double *)p1.data, (float *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       case FLOAT64:
         binaryExpression(result, (double *)p1.data, (double *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       case INT64:
         binaryExpression(result, (double *)p1.data, (long *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       }
       break;
@@ -178,19 +210,19 @@ static void executeNode(FGraphNode *node,
       switch (p2.type) {
       case INT32:
         binaryExpression(result, (long *)p1.data, (int *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       case FLOAT32:
         binaryExpression(result, (long *)p1.data, (float *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       case FLOAT64:
         binaryExpression(result, (long *)p1.data, (double *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       case INT64:
         binaryExpression(result, (long *)p1.data, (long *)p2.data,
-                         node->operation->op_type, from, size, im1, im2);
+                         node->operation->op_type, from, size, im1, im2, node);
         break;
       }
       break;

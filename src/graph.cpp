@@ -20,7 +20,23 @@
 #include <stdlib.h>
 #include <unordered_set>
 #include <vector>
-
+// INTERFACE METHODS
+FGraphNode *executeGraph(FGraphNode *node) {
+  // TODO
+  return executeGraph_cpu(node);
+}
+void flintCleanup() {
+  flintCleanup_cpu();
+  flintCleanup_gpu();
+}
+void flintInit(int cpu, int gpu) {
+  log(VERBOSE, "Initializing Flint");
+  if (cpu)
+    flintInit_cpu();
+  if (gpu)
+    flintInit_gpu();
+}
+// GRAPH METHODS
 FGraphNode *createGraph(void *data, int num_entries, FType data_type,
                         int *shape, int dimensions) {
   FGraphNode *gn = new FGraphNode();

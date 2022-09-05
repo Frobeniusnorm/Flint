@@ -34,13 +34,7 @@ static void openclCallback(const char *errinfo, const void *privateinfo,
                            size_t cb, void *user_data) {
   log(WARNING, "{OpenCL} " + std::string(errinfo));
 }
-void flintInit(int cpu, int gpu) {
-  log(VERBOSE, "Initializing Flint");
-  if (cpu)
-    flintInit_cpu();
-  if (gpu)
-    flintInit_gpu();
-}
+
 static bool initialized = false;
 // opencl vars
 static cl_context context;
@@ -121,10 +115,7 @@ void flintInit_gpu() {
   initialized = true;
   log(VERBOSE, "Flint GPU backend was initialized!");
 }
-void flintCleanup() {
-  flintCleanup_cpu();
-  flintCleanup_gpu();
-}
+
 void flintCleanup_gpu() {
   if (initialized) {
     initialized = false;
@@ -307,10 +298,7 @@ generateCode(FGraphNode *node,
   }
   return code;
 }
-FGraphNode *executeGraph(FGraphNode *node) {
-  // TODO
-  return executeGraph_gpu(node);
-}
+
 #include <chrono>
 #include <unordered_map>
 static std::unordered_map<std::string, std::pair<cl_program, cl_kernel>>
