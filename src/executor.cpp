@@ -199,6 +199,8 @@ generateCode(FGraphNode *node,
       case MUL:
         op = '*';
         break;
+      default:
+        break;
       }
       code = type + " " + name + " = v" + to_string(variable_index + 1) + " " +
              op + " v" + to_string(variable_index + 2) + ";\n" + code;
@@ -208,7 +210,7 @@ generateCode(FGraphNode *node,
       FOperation *x = node->predecessors[0]->operation;
       FOperation *y = node->predecessors[1]->operation;
       if ((x->data_type == FLOAT32 || x->data_type == FLOAT64) &&
-          (y->data_type == FLOAT32 && y->data_type == FLOAT64))
+          (y->data_type == FLOAT32 || y->data_type == FLOAT64))
         code = type + " " + name + " = pow(v" + to_string(variable_index + 1) +
                ", v" + to_string(variable_index + 2) + ");\n" + code;
       else if (x->data_type == INT64 &&
@@ -289,6 +291,8 @@ generateCode(FGraphNode *node,
       code = type + " " + name + " = v" + to_string(variable_index + 1) +
              ";\n" + code;
     } break;
+    default:
+      break;
     }
     // push predecessors
     if (push_pred)

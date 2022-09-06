@@ -23,7 +23,7 @@
 // INTERFACE METHODS
 FGraphNode *executeGraph(FGraphNode *node) {
   // TODO
-  return executeGraph_cpu(node);
+  return executeGraph_gpu(node);
 }
 void flintCleanup() {
   flintCleanup_cpu();
@@ -155,7 +155,7 @@ FGraphNode *copyGraph(const FGraphNode *node) {
   foo->num_predecessor = node->num_predecessor;
   if (foo->num_predecessor) {
     foo->predecessors = safe_mal<FGraphNode *>(foo->num_predecessor);
-    for (size_t i = 0; i < foo->num_predecessor; i++) {
+    for (int i = 0; i < foo->num_predecessor; i++) {
       foo->predecessors[i] = node->predecessors[i];
       node->predecessors[i]->reference_counter++;
     }

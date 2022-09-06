@@ -237,7 +237,7 @@ void flintCleanup_cpu() {
   if (initialized) {
     log(DEBUG, "Sending kill signal and poisson pills");
     initialized = false;
-    for (int i = 0; i < threads.size(); i++)
+    for (size_t i = 0; i < threads.size(); i++)
       thread_queue.push_front({nullptr, {}, nullptr, 0, 0, nullptr});
     for (std::thread *t : threads) {
       t->join();
@@ -269,7 +269,7 @@ static void threadRoutine() {
     sem->release();
   }
 }
-#define PARALLEL_EXECUTION_SIZE 500
+#define PARALLEL_EXECUTION_SIZE 1 // for debugging
 template <typename T>
 inline void chooseExecutionMethod(FGraphNode *node,
                                   std::vector<CPUResultData> pred_data,
