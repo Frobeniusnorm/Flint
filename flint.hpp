@@ -25,7 +25,7 @@ namespace FLINT_HPP_HELPER {
 template <typename T>
 static inline std::string vectorString(const std::vector<T> &vec) {
   std::string res = "[";
-  for (int i = 0; i < vec.size(); i++) {
+  for (size_t i = 0; i < vec.size(); i++) {
     res += std::to_string(vec[i]);
     if (i != vec.size() - 1)
       res += ", ";
@@ -35,7 +35,7 @@ static inline std::string vectorString(const std::vector<T> &vec) {
 template <typename T>
 static inline std::string vectorString(const std::vector<std::vector<T>> &vec) {
   std::string res = "[";
-  for (int i = 0; i < vec.size(); i++) {
+  for (size_t i = 0; i < vec.size(); i++) {
     res += vectorString(vec[i]);
     if (i != vec.size() - 1)
       res += ",\n";
@@ -45,7 +45,7 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec) {
 template <typename T, long unsigned int n>
 static inline std::string vectorString(const std::array<T, n> &vec) {
   std::string res = "[";
-  for (int i = 0; i < n; i++) {
+  for (size_t i = 0; i < n; i++) {
     res += std::to_string(vec[i]);
     if (i != vec.size() - 1)
       res += ", ";
@@ -56,7 +56,7 @@ template <typename T, long unsigned int n, long unsigned int k>
 static inline std::string
 vectorString(const std::array<std::array<T, k>, n> &vec) {
   std::string res = "[";
-  for (int i = 0; i < n; i++) {
+  for (size_t i = 0; i < n; i++) {
     res += vectorString(vec[i]);
     if (i != n - 1)
       res += ",\n";
@@ -532,7 +532,7 @@ template <typename T, int n> struct Tensor {
     int x = shape[shape.size() - 2];
     int z = other.shape[other.shape.size() - 1];
     std::array<size_t, k >= n ? k : n> ns;
-    for (int i = 0; i < ns.size() - 2; i++) {
+    for (size_t i = 0; i < ns.size() - 2; i++) {
       ns[i] = k >= n ? other.shape[i] : shape[i];
     }
     ns[ns.size() - 2] = x;
@@ -570,7 +570,7 @@ protected:
   template <typename K>
   void bringIntoShape(std::vector<K> &dest, const std::vector<K> &src, int off,
                       int dim, size_t element_size) {
-    for (int i = 0; i < shape[dim]; i++) {
+    for (size_t i = 0; i < shape[dim]; i++) {
       dest[i] = src[off + i];
     }
   }
@@ -579,7 +579,7 @@ protected:
                       const std::vector<V> &src, int off, int dim,
                       size_t element_size) {
     int nes = element_size / shape[dim];
-    for (int i = 0; i < shape[dim]; i++) {
+    for (size_t i = 0; i < shape[dim]; i++) {
       dest[i] = std::vector<K>(shape[dim + 1]);
       bringIntoShape(dest[i], src, off + i * nes, dim + 1, nes);
     }

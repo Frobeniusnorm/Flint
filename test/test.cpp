@@ -93,7 +93,7 @@ TEST_SUITE("Execution") {
     FGraphNode *result = executeGraph(gn1);
     FResultData *rd = (FResultData *)result->operation->additional_data;
     CHECK_EQ(rd->num_entries, 10);
-    for (int i = 0; i < rd->num_entries; i++)
+    for (size_t i = 0; i < rd->num_entries; i++)
       CHECK_EQ(((double *)rd->data)[i], 44);
     // construct graph 2 (first not-tree)
     vector<float> v3(10);
@@ -318,7 +318,7 @@ TEST_SUITE("Execution") {
     r2 = executeGraph(mm2);
     FResultData *rd3 = (FResultData *)r2->operation->additional_data;
     double *d3 = (double *)rd3->data;
-    for (int i = 0; i < rd3->num_entries; i++)
+    for (size_t i = 0; i < rd3->num_entries; i++)
       CHECK_EQ(fe3[i], d3[i]);
     freeGraph(r2);
   }
