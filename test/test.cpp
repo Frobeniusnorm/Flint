@@ -374,17 +374,17 @@ TEST_SUITE("C++ Bindings") {
         {{1, 2, 3}, {3, 8, 13}, {5, 14, 23}},
         {{3, 4, 5}, {13, 18, 23}, {23, 32, 41}}};
     vector<vector<vector<double>>> res4 = *t8;
-    // CHECK_EQ(exp4, res4);
-    // CHECK_EQ(exp4.size(), res4.size());
-    // for (int i = 0; i < 2; i++) {
-    //   CHECK_EQ(exp4[i].size(), res4[i].size());
-    //   for (int j = 0; j < 3; j++) {
-    //     CHECK_EQ(exp4[i][j].size(), res4[i][j].size());
-    //     for (int k = 0; k < 3; k++) {
-    //       CHECK_EQ(exp4[i][j][k], res4[i][j][k]);
-    //     }
-    //   }
-    // }
+    CHECK_EQ(exp4, res4);
+    CHECK_EQ(exp4.size(), res4.size());
+    for (int i = 0; i < 2; i++) {
+      CHECK_EQ(exp4[i].size(), res4[i].size());
+      for (int j = 0; j < 3; j++) {
+        CHECK_EQ(exp4[i][j].size(), res4[i][j].size());
+        for (int k = 0; k < 3; k++) {
+          CHECK_EQ(exp4[i][j][k], res4[i][j][k]);
+        }
+      }
+    }
   }
 }
 

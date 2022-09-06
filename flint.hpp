@@ -16,6 +16,7 @@
 #define FLINT_HPP
 
 #include "flint.h"
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <vector>
@@ -96,11 +97,13 @@ static inline FGraphNode *matmul_wrapper(FGraphNode **a, FGraphNode **b) {
 // TODO for everything the c interface allows only one operand order, write
 // general header functions or rewrite
 // TODO efficient tensor indexing (no need to write everything to a vector)
+// checks if the given type is one of the allowed tensor types
 template <typename T> static constexpr void isTensorType() {
   static_assert(std::is_same<T, int>() || std::is_same<T, float>() ||
                     std::is_same<T, long>() || std::is_same<T, double>(),
                 "Only integer and floating-point Tensor types are allowed");
 }
+// converts c++ type to flint type
 template <typename T> static constexpr FType toFlintType() {
   if (std::is_same<T, int>())
     return INT32;
@@ -111,6 +114,7 @@ template <typename T> static constexpr FType toFlintType() {
   if (std::is_same<T, double>())
     return FLOAT64;
 }
+// checks which of both types the flint backend will choose
 template <typename K, typename V> static constexpr bool isStronger() {
   const int a = std::is_same<K, int>()     ? 0
                 : std::is_same<K, long>()  ? 1
@@ -280,11 +284,12 @@ template <typename T> struct Tensor<T, 1> {
   }
 
   template <typename K>
-  Tensor<stronger_return<K>, 1> pow(const Tensor<stronger_return<K>, 1> other) {
+  Tensor<stronger_return<K>, 1>
+  pow(const Tensor<stronger_return<K>, 1> other) const {
     return Tensor<stronger_return<K>, 1>(
         FLINT_HPP_HELPER::pow_wrapper(node, other.node), shape);
   }
-  template <typename K> Tensor<stronger_return<K>, 1> pow(const K other) {
+  template <typename K> Tensor<stronger_return<K>, 1> pow(const K other) const {
     return Tensor<stronger_return<K>, 1>(
         FLINT_HPP_HELPER::pow_wrapper(node, other), shape);
   }
@@ -352,6 +357,10 @@ template <typename T, int n> struct Tensor {
       freeGraph(node);
     }
   }
+  // retrieves the data of the current node and converts it into a possible
+  // multidimensional vector, executes the node if necessary. The conversion has
+  // to copy the complete data, because of that we recommend the builtin index
+  // access of the Tensor.
   storage_type operator*() {
     switch (node->operation->op_type) {
     case STORE: {

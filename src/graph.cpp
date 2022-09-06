@@ -23,7 +23,7 @@
 // INTERFACE METHODS
 FGraphNode *executeGraph(FGraphNode *node) {
   // TODO
-  return executeGraph_gpu(node);
+  return executeGraph_cpu(node);
 }
 void flintCleanup() {
   flintCleanup_cpu();
@@ -440,10 +440,11 @@ FGraphNode *matmul(FGraphNode **a, FGraphNode **b) {
             " and " +
             vectorString(std::vector(bo->shape, bo->shape + bo->dimensions)));
   FOperation *res = new FOperation();
-  res->dimensions = ao->dimensions;
+  res->dimensions = std::max(ao->dimensions, bo->dimensions);
   res->shape = safe_mal<size_t>(res->dimensions);
   if (res->dimensions > 2)
-    memcpy(res->shape, ao->shape, sizeof(size_t) * (res->dimensions - 2));
+    memcpy(res->shape, (ao->dimensions >= bo->dimensions ? ao : bo)->shape,
+           sizeof(size_t) * (res->dimensions - 2));
   res->shape[res->dimensions - 2] = l;
   res->shape[res->dimensions - 1] = n;
   res->data_type =
