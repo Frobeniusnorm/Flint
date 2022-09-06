@@ -23,7 +23,7 @@
 // INTERFACE METHODS
 FGraphNode *executeGraph(FGraphNode *node) {
   // TODO
-  return executeGraph_cpu(node);
+  return executeGraph_gpu(node);
 }
 void flintCleanup() {
   flintCleanup_cpu();
@@ -38,14 +38,14 @@ void flintInit(int cpu, int gpu) {
 }
 // GRAPH METHODS
 FGraphNode *createGraph(void *data, int num_entries, FType data_type,
-                        int *shape, int dimensions) {
+                        size_t *shape, int dimensions) {
   FGraphNode *gn = new FGraphNode();
   gn->reference_counter = 0;
   FOperation *op = new FOperation();
   FStore *store = new FStore();
   op->dimensions = dimensions;
-  op->shape = (int *)malloc(sizeof(int) * dimensions);
-  std::memcpy((void *)op->shape, (void *)shape, dimensions * sizeof(int));
+  op->shape = safe_mal<size_t>(dimensions);
+  std::memcpy((void *)op->shape, (void *)shape, dimensions * sizeof(size_t));
   op->additional_data = (void *)store;
   op->op_type = STORE;
   size_t byte_size = num_entries;
@@ -64,7 +64,7 @@ FGraphNode *createGraph(void *data, int num_entries, FType data_type,
     break;
   case FLOAT64:
     store->data = safe_mal<long>(num_entries);
-    byte_size *= sizeof(long);
+    byte_size *= sizeof(double);
     break;
   }
   memcpy(store->data, data, byte_size);
@@ -143,7 +143,7 @@ static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
   foo->num_predecessor = pre.size();
   foo->predecessors =
       pre.size() == 0 ? NULL : safe_mal<FGraphNode *>(pre.size());
-  for (int i = 0; i < pre.size(); i++) {
+  for (size_t i = 0; i < pre.size(); i++) {
     foo->predecessors[i] = pre[i];
     pre[i]->reference_counter++;
   }
@@ -155,7 +155,7 @@ FGraphNode *copyGraph(const FGraphNode *node) {
   foo->num_predecessor = node->num_predecessor;
   if (foo->num_predecessor) {
     foo->predecessors = safe_mal<FGraphNode *>(foo->num_predecessor);
-    for (int i = 0; i < foo->num_predecessor; i++) {
+    for (size_t i = 0; i < foo->num_predecessor; i++) {
       foo->predecessors[i] = node->predecessors[i];
       node->predecessors[i]->reference_counter++;
     }
@@ -170,15 +170,15 @@ FGraphNode *copyGraph(const FGraphNode *node) {
   op->dimensions = node->operation->dimensions;
   // shape
   if (op->dimensions) {
-    op->shape = safe_mal<int>(op->dimensions);
+    op->shape = safe_mal<size_t>(op->dimensions);
     std::memcpy(op->shape, node->operation->shape,
-                op->dimensions * sizeof(int));
+                op->dimensions * sizeof(size_t));
   }
   // additional data
   if (node->operation->additional_data) {
     void **data = nullptr;
     void *src = nullptr;
-    int num_entries = 0;
+    size_t num_entries = 0;
     switch (op->op_type) {
     case RESULTDATA: {
       FResultData *ord = (FResultData *)node->operation->additional_data;
@@ -238,7 +238,7 @@ FGraphNode *copyGraph(const FGraphNode *node) {
 }
 static inline void initShape_keep(FOperation *op, FOperation *a,
                                   FOperation *b) {
-  int *src = nullptr;
+  size_t *src = nullptr;
   if (!b || a->dimensions >= b->dimensions) {
     op->dimensions = a->dimensions;
     src = a->shape;
@@ -246,8 +246,8 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
     op->dimensions = b->dimensions;
     src = b->shape;
   }
-  op->shape = (int *)malloc(sizeof(int) * op->dimensions);
-  memcpy((void *)op->shape, src, sizeof(int) * op->dimensions);
+  op->shape = (size_t *)malloc(sizeof(size_t) * op->dimensions);
+  memcpy((void *)op->shape, src, sizeof(size_t) * op->dimensions);
   // determine type
   FType highest = INT32;
   if (a->data_type == FLOAT64 || (b && b->data_type == FLOAT64))
@@ -380,7 +380,7 @@ FGraphNode *flatten(FGraphNode *a) {
   op->additional_data = nullptr;
   op->op_type = FLATTEN;
   op->dimensions = 1;
-  op->shape = safe_mal<int>(1);
+  op->shape = safe_mal<size_t>(1);
   const FOperation *prev_op = a->operation;
   size_t total_size = 1;
   for (int i = 0; i < prev_op->dimensions; i++)
@@ -395,17 +395,17 @@ FGraphNode *flatten_dimension(FGraphNode *a, const int dimension) {
     log(ERROR, "Flattening the first dimension of a tensor is not possible!");
 
   FOperation *prev_op = a->operation;
-  int new_prevdim_size =
+  size_t new_prevdim_size =
       prev_op->shape[dimension - 1] * prev_op->shape[dimension];
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = FLATTEN;
   op->dimensions = prev_op->dimensions - 1;
-  op->shape = safe_mal<int>(prev_op->dimensions - 1);
+  op->shape = safe_mal<size_t>(prev_op->dimensions - 1);
   // copy into shape
-  memcpy(op->shape, prev_op->shape, sizeof(int) * dimension);
+  memcpy(op->shape, prev_op->shape, sizeof(size_t) * dimension);
   memcpy(op->shape + dimension, prev_op->shape + (dimension + 1),
-         sizeof(int) * (prev_op->dimensions - dimension - 1));
+         sizeof(size_t) * (prev_op->dimensions - dimension - 1));
   op->shape[dimension - 1] = new_prevdim_size;
 
   op->additional_data = prev_op->additional_data;
@@ -429,10 +429,10 @@ FGraphNode *matmul(FGraphNode **a, FGraphNode **b) {
   if (ao->dimensions < 2 || bo->dimensions < 2)
     log(ERROR,
         "Dimensions of operands of matrix multiplications must be at least 2!");
-  int l = ao->shape[ao->dimensions - 2];
-  int m = ao->shape[ao->dimensions - 1];
-  int mb = bo->shape[bo->dimensions - 2];
-  int n = bo->shape[bo->dimensions - 1];
+  size_t l = ao->shape[ao->dimensions - 2];
+  size_t m = ao->shape[ao->dimensions - 1];
+  size_t mb = bo->shape[bo->dimensions - 2];
+  size_t n = bo->shape[bo->dimensions - 1];
   if (m != mb)
     log(ERROR,
         "Incompatible Shapes for matrix multiplications: " +
@@ -441,9 +441,9 @@ FGraphNode *matmul(FGraphNode **a, FGraphNode **b) {
             vectorString(std::vector(bo->shape, bo->shape + bo->dimensions)));
   FOperation *res = new FOperation();
   res->dimensions = ao->dimensions;
-  res->shape = safe_mal<int>(res->dimensions);
+  res->shape = safe_mal<size_t>(res->dimensions);
   if (res->dimensions > 2)
-    memcpy(res->shape, ao->shape, sizeof(int) * (res->dimensions - 2));
+    memcpy(res->shape, ao->shape, sizeof(size_t) * (res->dimensions - 2));
   res->shape[res->dimensions - 2] = l;
   res->shape[res->dimensions - 1] = n;
   res->data_type =

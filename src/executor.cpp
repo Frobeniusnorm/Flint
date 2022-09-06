@@ -257,9 +257,9 @@ generateCode(FGraphNode *node,
         par2 = "P" + to_string(parameters.size());
         parameters.push_back({gnp2->operation, ""});
       }
-      int l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
-      int m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
-      int n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
+      size_t l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
+      size_t m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
+      size_t n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
       // we need to compute $name
       // indices j and k of $name
       string j = "((index % " + to_string(l * n) + ")/" + to_string(n) + ")";
@@ -345,22 +345,19 @@ FGraphNode *executeGraph_gpu(FGraphNode *node) {
       if (op->dimensions < node->operation->dimensions) {
         // we take the remainder of the division of the product of the sizes of
         // the dimensions that are not shared by op
-        int factor = 1;
-        // for (int i = 0; i < node->operation->dimensions - op->dimensions;
-        // i++)
-        //   factor *= node->operation->shape[i];
+        size_t factor = 1;
         for (int i = 0; i < op->dimensions; i++) {
           if (node->operation
                   ->shape[i + (node->operation->dimensions - op->dimensions)] !=
               op->shape[i])
             log(ERROR,
                 "incompatible shapes of operands: " +
-                    vectorString(vector<int>(node->operation->shape,
-                                             node->operation->shape +
-                                                 node->operation->dimensions)) +
+                    vectorString(vector<size_t>(
+                        node->operation->shape,
+                        node->operation->shape + node->operation->dimensions)) +
                     " and " +
                     vectorString(
-                        vector<int>(op->shape, op->shape + op->dimensions)));
+                        vector<size_t>(op->shape, op->shape + op->dimensions)));
           factor *= op->shape[i];
         }
         indx_mod = "%" + to_string(factor);
@@ -468,16 +465,16 @@ FGraphNode *executeGraph_gpu(FGraphNode *node) {
       void *data = op->op_type == STORE
                        ? ((FStore *)op->additional_data)->data
                        : ((FResultData *)op->additional_data)->data;
-      string buffer_data = "";
-      for (int i = 0; i < total_size; i++)
-        if (op->data_type == FLOAT32)
-          buffer_data += to_string(((float *)data)[i]) + " ";
-        else if (op->data_type == FLOAT64)
-          buffer_data += to_string(((double *)data)[i]) + " ";
-        else if (op->data_type == INT32)
-          buffer_data += to_string(((int *)data)[i]) + " ";
-        else
-          buffer_data += to_string(((long *)data)[i]) + " ";
+      // string buffer_data = "";
+      // for (int i = 0; i < total_size; i++)
+      //   if (op->data_type == FLOAT32)
+      //     buffer_data += to_string(((float *)data)[i]) + " ";
+      //   else if (op->data_type == FLOAT64)
+      //     buffer_data += to_string(((double *)data)[i]) + " ";
+      //   else if (op->data_type == INT32)
+      //     buffer_data += to_string(((int *)data)[i]) + " ";
+      //   else
+      //     buffer_data += to_string(((long *)data)[i]) + " ";
       writeEvents.emplace_back();
       err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_TRUE, 0,
                                       total_size * type_size, data, 0, nullptr,
@@ -519,9 +516,9 @@ FGraphNode *executeGraph_gpu(FGraphNode *node) {
   }
   // size for result
   result->dimensions = node_op->dimensions;
-  result->shape = safe_mal<int>(result->dimensions);
+  result->shape = safe_mal<size_t>(result->dimensions);
   memcpy((void *)result->shape, (void *)node_op->shape,
-         result->dimensions * sizeof(int));
+         result->dimensions * sizeof(size_t));
   resultData->data = malloc(total_size_node * type_size_node);
   resultData->num_entries = total_size_node;
   if (!resultData->data)

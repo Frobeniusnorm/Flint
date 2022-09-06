@@ -52,57 +52,57 @@ void flintInit_cpu() {
 struct CPUResultData {
   void *data;
   FType type;
-  int num_entries;
-  std::vector<int> shape;
+  size_t num_entries;
+  std::vector<size_t> shape;
 };
 template <typename T, typename A, typename B>
 static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
-                             int from, int size, int index_man_1,
+                             size_t from, size_t size, int index_man_1,
                              int index_man_2, FGraphNode *curr) {
   switch (op) {
   case ADD:
-    for (int i = from; i < from + size; i++)
+    for (size_t i = from; i < from + size; i++)
       result[i] = data1[i % index_man_1] + data2[i % index_man_2];
     break;
   case SUB:
-    for (int i = from; i < from + size; i++)
+    for (size_t i = from; i < from + size; i++)
       result[i] = data1[i % index_man_1] - data2[i % index_man_2];
     break;
   case MUL:
-    for (int i = from; i < from + size; i++)
+    for (size_t i = from; i < from + size; i++)
       result[i] = data1[i % index_man_1] * data2[i % index_man_2];
     break;
   case DIV:
-    for (int i = from; i < from + size; i++)
+    for (size_t i = from; i < from + size; i++)
       result[i] = data1[i % index_man_1] / data2[i % index_man_2];
     break;
   case POW:
-    for (int i = from; i < from + size; i++)
+    for (size_t i = from; i < from + size; i++)
       result[i] = pow(data1[i % index_man_1], data2[i % index_man_2]);
     break;
   case MATMUL: {
     FGraphNode *gnp1 = curr->predecessors[0], *gnp2 = curr->predecessors[1];
-    int l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
-    int m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
-    int n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
-    for (int index = from; index < from + size; index++) {
+    size_t l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
+    size_t m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
+    size_t n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
+    for (size_t index = from; index < from + size; index++) {
       result[index] = 0;
       // indices in node matrix
-      int j = (index % (l * n)) / n;
-      int k = (index % (l * n)) % n;
+      size_t j = (index % (l * n)) / n;
+      size_t k = (index % (l * n)) % n;
 
       // matrix number of predecessors
-      int base_p1 = 0;
+      size_t base_p1 = 0;
       if (gnp1->operation->dimensions > 2) {
         // get matrix number of index and then reproject
         base_p1 = (index / (l * n)) * (l * m);
       }
-      int base_p2 = 0;
+      size_t base_p2 = 0;
       if (gnp2->operation->dimensions > 2) {
         // get matrix number of index and then reproject
         base_p2 = (index / (l * n)) * (m * n);
       }
-      for (int i = 0; i < m; i++) {
+      for (size_t i = 0; i < m; i++) {
         result[index] +=
             data1[base_p1 + j * m + i] * data2[base_p2 + i * n + k];
       }
@@ -116,16 +116,16 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
 template <typename T>
 static void executeNode(FGraphNode *node,
                         std::vector<CPUResultData> predecessor_data, T *result,
-                        int from, int size) {
+                        size_t from, size_t size) {
   switch (node->operation->op_type) {
   case STORE: {
     FStore *store = (FStore *)node->operation->additional_data;
-    for (int i = from; i < from + size; i++)
+    for (size_t i = from; i < from + size; i++)
       result[i] = ((T *)store->data)[i];
   } break;
   case RESULTDATA: {
     FResultData *store = (FResultData *)node->operation->additional_data;
-    for (int i = from; i < from + size; i++)
+    for (size_t i = from; i < from + size; i++)
       result[i] = ((T *)store->data)[i];
   } break;
   case CONST: {
@@ -134,12 +134,12 @@ static void executeNode(FGraphNode *node,
   } break;
   case FLATTEN: {
     CPUResultData pred = predecessor_data[0];
-    for (int i = from; i < from + size; i++)
+    for (size_t i = from; i < from + size; i++)
       result[i] = ((T *)pred.data)[i];
   } break;
   default: { // binary operations
     CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];
-    int im1 = p1.num_entries, im2 = p2.num_entries;
+    size_t im1 = p1.num_entries, im2 = p2.num_entries;
 
     switch (p1.type) {
     case INT32:
@@ -229,7 +229,7 @@ static void executeNode(FGraphNode *node,
 }
 
 static blocking_queue<
-    std::tuple<FGraphNode *, std::vector<CPUResultData>, void *, int, int,
+    std::tuple<FGraphNode *, std::vector<CPUResultData>, void *, size_t, size_t,
                std::counting_semaphore<MAX_PARALLELITY> *>>
     thread_queue;
 
@@ -238,7 +238,7 @@ void flintCleanup_cpu() {
     log(DEBUG, "Sending kill signal and poisson pills");
     initialized = false;
     for (int i = 0; i < threads.size(); i++)
-      thread_queue.push_front({nullptr, {}, nullptr, -1, -1, nullptr});
+      thread_queue.push_front({nullptr, {}, nullptr, 0, 0, nullptr});
     for (std::thread *t : threads) {
       t->join();
       delete t;
@@ -273,19 +273,19 @@ static void threadRoutine() {
 template <typename T>
 inline void chooseExecutionMethod(FGraphNode *node,
                                   std::vector<CPUResultData> pred_data,
-                                  T *result, int size) {
+                                  T *result, size_t size) {
   auto start = std::chrono::high_resolution_clock::now();
   if (size >= PARALLEL_EXECUTION_SIZE) {
-    int exeUnits = std::min(size, (int)threads.size());
-    int workSize = size / exeUnits;
+    size_t exeUnits = std::min(size, threads.size());
+    size_t workSize = size / exeUnits;
     std::counting_semaphore<MAX_PARALLELITY> *sem =
         new std::counting_semaphore<MAX_PARALLELITY>(0);
-    for (int i = 0; i < exeUnits; i++) {
-      const int to = i == exeUnits - 1 ? size : (i + 1) * workSize;
+    for (size_t i = 0; i < exeUnits; i++) {
+      const size_t to = i == exeUnits - 1 ? size : (i + 1) * workSize;
       thread_queue.push_front(
           {node, pred_data, result, i * workSize, to - i * workSize, sem});
     }
-    for (int i = 0; i < exeUnits; i++)
+    for (size_t i = 0; i < exeUnits; i++)
       sem->acquire();
     delete sem;
   } else {
@@ -328,54 +328,58 @@ FGraphNode *executeGraph_cpu(FGraphNode *node) {
       predData[i] = results[curr->predecessors[i]];
     }
     // calculate total size
-    int size = 1;
+    size_t size = 1;
     for (int j = 0; j < curr->operation->dimensions; j++)
       size *= curr->operation->shape[j];
     // allocate result data and execute
     switch (curr->operation->data_type) {
     case INT32: {
-      int *result = (int *)malloc(size * sizeof(int));
+      int *result = safe_mal<int>(size);
       chooseExecutionMethod(curr, predData, result, size);
-      results.insert({curr,
-                      {.data = (void *)result,
-                       .type = INT32,
-                       .num_entries = size,
-                       .shape = vector<int>(curr->operation->shape,
-                                            curr->operation->shape +
-                                                curr->operation->dimensions)}});
+      results.insert(
+          {curr,
+           {.data = (void *)result,
+            .type = INT32,
+            .num_entries = size,
+            .shape = vector<size_t>(curr->operation->shape,
+                                    curr->operation->shape +
+                                        curr->operation->dimensions)}});
     } break;
     case INT64: {
-      long *result = (long *)malloc(size * sizeof(long));
+      long *result = safe_mal<long>(size);
       chooseExecutionMethod(curr, predData, result, size);
-      results.insert({curr,
-                      {.data = (void *)result,
-                       .type = INT64,
-                       .num_entries = size,
-                       .shape = vector<int>(curr->operation->shape,
-                                            curr->operation->shape +
-                                                curr->operation->dimensions)}});
+      results.insert(
+          {curr,
+           {.data = (void *)result,
+            .type = INT64,
+            .num_entries = size,
+            .shape = vector<size_t>(curr->operation->shape,
+                                    curr->operation->shape +
+                                        curr->operation->dimensions)}});
     } break;
     case FLOAT32: {
-      float *result = (float *)malloc(size * sizeof(float));
+      float *result = safe_mal<float>(size);
       chooseExecutionMethod(curr, predData, result, size);
-      results.insert({curr,
-                      {.data = (void *)result,
-                       .type = FLOAT32,
-                       .num_entries = size,
-                       .shape = vector<int>(curr->operation->shape,
-                                            curr->operation->shape +
-                                                curr->operation->dimensions)}});
+      results.insert(
+          {curr,
+           {.data = (void *)result,
+            .type = FLOAT32,
+            .num_entries = size,
+            .shape = vector<size_t>(curr->operation->shape,
+                                    curr->operation->shape +
+                                        curr->operation->dimensions)}});
     } break;
     case FLOAT64: {
-      double *result = (double *)malloc(size * sizeof(double));
+      double *result = safe_mal<double>(size);
       chooseExecutionMethod(curr, predData, result, size);
-      results.insert({curr,
-                      {.data = (void *)result,
-                       .type = FLOAT64,
-                       .num_entries = size,
-                       .shape = vector<int>(curr->operation->shape,
-                                            curr->operation->shape +
-                                                curr->operation->dimensions)}});
+      results.insert(
+          {curr,
+           {.data = (void *)result,
+            .type = FLOAT64,
+            .num_entries = size,
+            .shape = vector<size_t>(curr->operation->shape,
+                                    curr->operation->shape +
+                                        curr->operation->dimensions)}});
     } break;
     }
   }
@@ -392,8 +396,8 @@ FGraphNode *executeGraph_cpu(FGraphNode *node) {
   rd->mem_id = nullptr;
   FOperation *op = new FOperation();
   op->dimensions = node->operation->dimensions;
-  op->shape = safe_mal<int>(final.shape.size() * sizeof(int));
-  memcpy(op->shape, final.shape.data(), final.shape.size() * sizeof(int));
+  op->shape = safe_mal<size_t>(final.shape.size());
+  memcpy(op->shape, final.shape.data(), final.shape.size() * sizeof(size_t));
   op->data_type = node->operation->data_type;
   op->additional_data = (void *)rd;
   op->op_type = RESULTDATA;

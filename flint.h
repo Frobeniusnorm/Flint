@@ -61,7 +61,7 @@ enum FOperationType {
 struct FOperation {
   // shape of the data after execution
   int dimensions;
-  int *shape;
+  size_t *shape;
   // type of operation, to enable switch cases and avoid v-table lookups
   FOperationType op_type;
   // datatype of result
@@ -82,13 +82,13 @@ struct FStore {
   // link to gpu data
   cl_mem mem_id = nullptr;
   void *data;
-  int num_entries;
+  size_t num_entries;
 };
 struct FResultData {
   // link to gpu data
   cl_mem mem_id = nullptr;
   void *data;
-  int num_entries;
+  size_t num_entries;
 };
 // A single-value constant (does not have to be loaded as a tensor)
 struct FConst {
@@ -103,7 +103,7 @@ struct FConst {
 // and shape contains the size on each dimension as an array with length
 // dimensions.
 FGraphNode *createGraph(void *data, int num_entries, FType data_type,
-                        int *shape, int dimensions);
+                        size_t *shape, int dimensions);
 // frees all allocated data from the graph and the nodes that are reachable
 void freeGraph(FGraphNode *graph);
 

@@ -16,6 +16,7 @@
 #define FLINT_HPP
 
 #include "flint.h"
+#include <array>
 #include <cstring>
 #include <vector>
 
@@ -36,6 +37,27 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec) {
   for (int i = 0; i < vec.size(); i++) {
     res += vectorString(vec[i]);
     if (i != vec.size() - 1)
+      res += ",\n";
+  }
+  return res + "]";
+}
+template <typename T, long unsigned int n>
+static inline std::string vectorString(const std::array<T, n> &vec) {
+  std::string res = "[";
+  for (int i = 0; i < n; i++) {
+    res += std::to_string(vec[i]);
+    if (i != vec.size() - 1)
+      res += ", ";
+  }
+  return res + "]";
+}
+template <typename T, long unsigned int n, long unsigned int k>
+static inline std::string
+vectorString(const std::array<std::array<T, k>, n> &vec) {
+  std::string res = "[";
+  for (int i = 0; i < n; i++) {
+    res += vectorString(vec[i]);
+    if (i != n - 1)
       res += ",\n";
   }
   return res + "]";
@@ -272,11 +294,11 @@ template <typename T> struct Tensor<T, 1> {
   }
 
 protected:
-  Tensor(FGraphNode *node, int shape) : node(node), shape(shape) {
+  Tensor(FGraphNode *node, size_t shape) : node(node), shape(shape) {
     node->reference_counter++;
   }
   FGraphNode *node;
-  int shape;
+  size_t shape;
 };
 
 // multi dimensional
@@ -287,7 +309,7 @@ template <typename T, int n> struct Tensor {
   Tensor(storage_type data) {
     isTensorType<T>();
     static_assert(n > 1, "Dimension must be at least 1");
-    initShape(data);
+    initShape(data, 0);
     std::vector<T> flat = FLINT_HPP_HELPER::flattened(data);
     node = createGraph(flat.data(), flat.size(), toFlintType<T>(), shape.data(),
                        shape.size());
@@ -479,10 +501,10 @@ template <typename T, int n> struct Tensor {
   }
   Tensor<T, n - 1> flattened(const int dimension) const {
     FGraphNode *foo = flatten_dimension(node, dimension);
-    return Tensor<T, n - 1>(
-        foo,
-        std::vector<int>(foo->operation->shape,
-                         foo->operation->shape + foo->operation->dimensions));
+    std::array<size_t, n - 1> ns;
+    std::copy_n(foo->operation->shape, (size_t)foo->operation->dimensions,
+                ns.begin());
+    return Tensor<T, n - 1>(foo, ns);
   }
   template <typename K, int k>
   Tensor<stronger_return<K>, n> pow(const Tensor<stronger_return<K>, k> other) {
@@ -500,7 +522,10 @@ template <typename T, int n> struct Tensor {
   Tensor<stronger_return<K>, k >= n ? k : n> matmul(Tensor<K, k> other) {
     int x = shape[shape.size() - 2];
     int z = other.shape[other.shape.size() - 1];
-    std::vector<int> ns(shape);
+    std::array<size_t, k >= n ? k : n> ns;
+    for (int i = 0; i < ns.size() - 2; i++) {
+      ns[i] = k >= n ? other.shape[i] : shape[i];
+    }
     ns[ns.size() - 2] = x;
     ns[ns.size() - 1] = z;
     return Tensor < stronger_return<K>,
@@ -510,7 +535,8 @@ template <typename T, int n> struct Tensor {
   }
 
 protected:
-  Tensor(FGraphNode *node, std::vector<int> shape) : node(node), shape(shape) {
+  Tensor(FGraphNode *node, std::array<size_t, n> shape)
+      : node(node), shape(shape) {
     // here data is still fine
     total_size = 1;
     for (int ds : shape)
@@ -518,17 +544,18 @@ protected:
     node->reference_counter++;
   }
   FGraphNode *node;
-  std::vector<int> shape;
+  std::array<size_t, n> shape;
   size_t total_size;
-  template <typename K> void initShape(const std::vector<std::vector<K>> &vec) {
-    shape.push_back(vec.size());
+  template <typename K>
+  void initShape(const std::vector<std::vector<K>> &vec, int i) {
+    shape[i] = vec.size();
     if (vec.size() <= 0)
       log(ERROR, "No dimension of the Tensor may have size 0!");
-    initShape(vec[0]);
+    initShape(vec[0], i + 1);
     total_size *= vec.size();
   }
-  template <typename K> void initShape(const std::vector<K> &vec) {
-    shape.push_back(vec.size());
+  template <typename K> void initShape(const std::vector<K> &vec, int i) {
+    shape[i] = vec.size();
     total_size = vec.size();
   }
   template <typename K>

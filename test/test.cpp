@@ -25,7 +25,7 @@ TEST_SUITE("Graph implementation") {
       vector<double> v1(100);
       vector<float> v2(100);
       // construct graph 1
-      vector<int> shape{100};
+      vector<size_t> shape{100};
       FGraphNode *gn1 =
           createGraph(v1.data(), v1.size(), FLOAT64, shape.data(), 1);
       gn1 = add(gn1, 7.0);
@@ -50,7 +50,7 @@ TEST_SUITE("Graph implementation") {
       vector<long> v1(100);
       vector<int> v2(100);
       // construct graph 2
-      vector<int> shape = {10, 10};
+      vector<size_t> shape = {10, 10};
       FGraphNode *gn2 =
           createGraph(v1.data(), v1.size(), INT64, shape.data(), 2);
       gn2 = sub(gn2, 7.0);
@@ -82,7 +82,7 @@ TEST_SUITE("Execution") {
     vector<double> v1(10, 4.0);
     vector<float> v2(10, 4.0f);
     // construct graph 1
-    vector<int> shape{10};
+    vector<size_t> shape{10};
     FGraphNode *gn1 =
         createGraph(v1.data(), v1.size(), FLOAT64, shape.data(), 1);
     gn1 = add(gn1, 7.0);
@@ -120,7 +120,7 @@ TEST_SUITE("Execution") {
         {2.0, 1.0, 0.0}, {0.0, -1.0, -2.0}, {2.0, 1.0, 2.0}};
     vector<double> f1 = flattened(v1);
     vector<double> f2 = flattened(v2);
-    vector<int> shape{3, 3};
+    vector<size_t> shape{3, 3};
     FGraphNode *gn1 =
         createGraph(f1.data(), f1.size(), FLOAT64, shape.data(), 2);
     FGraphNode *gn2 =
@@ -143,7 +143,7 @@ TEST_SUITE("Execution") {
                                    {{-3, -2, 4}, {-1, -2, 3}, {11, 1, 0}}};
 
     vector<int> f3 = flattened(v3);
-    vector<int> shape_f3{4, 3, 3};
+    vector<size_t> shape_f3{4, 3, 3};
     FGraphNode *gn4 =
         createGraph(f3.data(), f3.size(), INT32, shape_f3.data(), 3);
     FGraphNode *gn5 = add(gn4, result);
@@ -163,8 +163,8 @@ TEST_SUITE("Execution") {
   }
   TEST_CASE("pow") {
     using namespace std;
-    vector<int> s1{3, 2};
-    int s2 = 2;
+    vector<size_t> s1{3, 2};
+    size_t s2 = 2;
     vector<vector<int>> d1{{1, 3}, {0, 8}, {-3, -3}};
     vector<int> f1 = flattened(d1);
     vector<long> d2{2, 1};
@@ -213,8 +213,8 @@ TEST_SUITE("Execution") {
     vector<int> f1 = flattened(d1);
     vector<int> d2{3, 3, 4, 4, 5, 5};
     vector<int> e1{4, 6, 4, 12, 2, 2};
-    vector<int> s1{3, 2};
-    int s2 = 6;
+    vector<size_t> s1{3, 2};
+    size_t s2 = 6;
     FGraphNode *g = createGraph(f1.data(), f1.size(), INT32, s1.data(), 2);
     FGraphNode *gi = createGraph(d2.data(), d2.size(), INT32, &s2, 1);
     g = add(flatten(g), gi);
@@ -229,13 +229,13 @@ TEST_SUITE("Execution") {
     vector<vector<vector<int>>> d3{{{0, 1}, {2, 3}, {4, 5}},
                                    {{6, 7}, {8, 9}, {10, 11}}};
     vector<int> f3 = flattened(d3);
-    vector<int> s3{2, 3, 2};
+    vector<size_t> s3{2, 3, 2};
     vector<vector<int>> d4{{3, 3, 4, 4, 5, 5}, {5, 5, 4, 4, 3, 3}};
     vector<int> f4 = flattened(d4);
-    vector<int> s4{2, 6};
+    vector<size_t> s4{2, 6};
     vector<vector<int>> d5{{3, 3}, {4, 4}, {5, 5}, {5, 5}, {4, 4}, {3, 3}};
     vector<int> f5 = flattened(d5);
-    vector<int> s5{6, 2};
+    vector<size_t> s5{6, 2};
     g = createGraph(f3.data(), f3.size(), INT32, s3.data(), 3);
     FGraphNode *g1 = flatten(g, 2);
     FGraphNode *g2 = flatten(g, 1);
@@ -261,7 +261,7 @@ TEST_SUITE("Execution") {
     using namespace std;
     vector<float> data1{1, 2, 3, 4};
     vector<float> data2{4, 3, 2, 1};
-    vector<int> s1{2, 2};
+    vector<size_t> s1{2, 2};
     FGraphNode *g1 =
         createGraph(data1.data(), data1.size(), FLOAT32, s1.data(), 2);
     FGraphNode *g2 =
@@ -280,9 +280,9 @@ TEST_SUITE("Execution") {
     vector<int> data3{1, 2, 3, 4, 5, 6};
     vector<int> exp2{1 * 6 + 2 * 4 + 3 * 2, 1 * 5 + 2 * 3 + 3 * 1,
                      4 * 6 + 5 * 4 + 6 * 2, 4 * 5 + 5 * 3 + 6 * 1};
-    s1 = vector<int>{2, 3};
-    vector<int> s2{3, 2};
-    vector<int> s3{2, 2};
+    s1 = vector<size_t>{2, 3};
+    vector<size_t> s2{3, 2};
+    vector<size_t> s3{2, 2};
     g1 = createGraph(data3.data(), data3.size(), INT32, s1.data(), 2);
     g2 = createGraph(data4.data(), data4.size(), INT32, s2.data(), 2);
     FGraphNode *mm2 = matmul(&g1, &g2);
@@ -298,11 +298,11 @@ TEST_SUITE("Execution") {
     // multidim test
     vector<vector<vector<double>>> data5{{{0, 1, 2}, {1, 2, 3}},
                                          {{2, 3, 4}, {3, 4, 5}}};
-    vector<int> s5{2, 2, 3};
+    vector<size_t> s5{2, 2, 3};
     vector<double> f5 = flattened(data5);
 
     vector<vector<float>> data6{{0, 1}, {2, 3}, {4, 5}};
-    vector<int> s6{3, 2};
+    vector<size_t> s6{3, 2};
     vector<float> f6 = flattened(data6);
 
     vector<vector<vector<double>>> exp3{{{10, 13}, {16, 22}},
