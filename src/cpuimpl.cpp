@@ -298,7 +298,7 @@ inline void chooseExecutionMethod(FGraphNode *node,
                   : std::string("Sequential Execution on CPU ")) +
                  "took " + std::to_string(elapsed.count()) + "ms");
 }
-FGraphNode *executeGraph_cpu(FGraphNode *node) {
+FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   if (!initialized)
     flintInit_cpu();
   // TODO parallel execution

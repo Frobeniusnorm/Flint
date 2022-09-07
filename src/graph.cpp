@@ -21,9 +21,9 @@
 #include <unordered_set>
 #include <vector>
 // INTERFACE METHODS
-FGraphNode *executeGraph(FGraphNode *node) {
+FGraphNode *fExecuteGraph(FGraphNode *node) {
   // TODO
-  return executeGraph_gpu(node);
+  return fExecuteGraph_cpu(node);
 }
 void flintCleanup() {
   flintCleanup_cpu();
@@ -37,8 +37,8 @@ void flintInit(int cpu, int gpu) {
     flintInit_gpu();
 }
 // GRAPH METHODS
-FGraphNode *createGraph(void *data, int num_entries, FType data_type,
-                        size_t *shape, int dimensions) {
+FGraphNode *fCreateGraph(void *data, int num_entries, FType data_type,
+                         size_t *shape, int dimensions) {
   FGraphNode *gn = new FGraphNode();
   gn->reference_counter = 0;
   FOperation *op = new FOperation();
@@ -76,7 +76,7 @@ FGraphNode *createGraph(void *data, int num_entries, FType data_type,
   return gn;
 }
 // frees all allocated data from the graph and the nodes that are reachable
-void freeGraph(FGraphNode *graph) {
+void fFreeGraph(FGraphNode *graph) {
   std::unordered_set<FGraphNode *>
       all; // all which are in the queue and were visited
   std::list<FGraphNode *> wq;
@@ -149,7 +149,7 @@ static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
   }
   return foo;
 }
-FGraphNode *copyGraph(const FGraphNode *node) {
+FGraphNode *fCopyGraph(const FGraphNode *node) {
   FGraphNode *foo = new FGraphNode();
   // predecessors
   foo->num_predecessor = node->num_predecessor;
@@ -258,35 +258,35 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
     highest = INT64;
   op->data_type = highest;
 }
-FGraphNode *add_g(FGraphNode *a, FGraphNode *b) {
+FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = ADD;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
-FGraphNode *sub_g(FGraphNode *a, FGraphNode *b) {
+FGraphNode *fsub_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = SUB;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
-FGraphNode *div_g(FGraphNode *a, FGraphNode *b) {
+FGraphNode *fdiv_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = DIV;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
-FGraphNode *mul_g(FGraphNode *a, FGraphNode *b) {
+FGraphNode *fmul_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = MUL;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
-FGraphNode *pow_g(FGraphNode *a, FGraphNode *b) {
+FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b) {
   if (!(a->operation->dimensions >= b->operation->dimensions))
     log(ERROR, "pow(a, b) must fulfill a->dimensions >= b->dimensions");
   FOperation *op = new FOperation();
@@ -322,10 +322,10 @@ template <typename T> FGraphNode *add(FGraphNode *a, const T b) {
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
-FGraphNode *add_cd(FGraphNode *a, const double b) { return add<double>(a, b); }
-FGraphNode *add_cf(FGraphNode *a, const float b) { return add<float>(a, b); }
-FGraphNode *add_ci(FGraphNode *a, const int b) { return add<int>(a, b); }
-FGraphNode *add_cl(FGraphNode *a, const long b) { return add<long>(a, b); }
+FGraphNode *fadd_cd(FGraphNode *a, const double b) { return add<double>(a, b); }
+FGraphNode *fadd_cf(FGraphNode *a, const float b) { return add<float>(a, b); }
+FGraphNode *fadd_ci(FGraphNode *a, const int b) { return add<int>(a, b); }
+FGraphNode *fadd_cl(FGraphNode *a, const long b) { return add<long>(a, b); }
 // subtracts the constant value from each entry in a
 template <typename T> FGraphNode *sub(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
@@ -334,10 +334,10 @@ template <typename T> FGraphNode *sub(FGraphNode *a, const T b) {
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
-FGraphNode *sub_cd(FGraphNode *a, const double b) { return sub<double>(a, b); }
-FGraphNode *sub_cf(FGraphNode *a, const float b) { return sub<float>(a, b); }
-FGraphNode *sub_ci(FGraphNode *a, const int b) { return sub<int>(a, b); }
-FGraphNode *sub_cl(FGraphNode *a, const long b) { return sub<long>(a, b); }
+FGraphNode *fsub_cd(FGraphNode *a, const double b) { return sub<double>(a, b); }
+FGraphNode *fsub_cf(FGraphNode *a, const float b) { return sub<float>(a, b); }
+FGraphNode *fsub_ci(FGraphNode *a, const int b) { return sub<int>(a, b); }
+FGraphNode *fsub_cl(FGraphNode *a, const long b) { return sub<long>(a, b); }
 // divides each entry in a by the constant value
 template <typename T> FGraphNode *div(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
@@ -346,10 +346,10 @@ template <typename T> FGraphNode *div(FGraphNode *a, const T b) {
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
-FGraphNode *div_cd(FGraphNode *a, const double b) { return div<double>(a, b); }
-FGraphNode *div_cf(FGraphNode *a, const float b) { return div<float>(a, b); }
-FGraphNode *div_ci(FGraphNode *a, const int b) { return div<int>(a, b); }
-FGraphNode *div_cl(FGraphNode *a, const long b) { return div<long>(a, b); }
+FGraphNode *fdiv_cd(FGraphNode *a, const double b) { return div<double>(a, b); }
+FGraphNode *fdiv_cf(FGraphNode *a, const float b) { return div<float>(a, b); }
+FGraphNode *fdiv_ci(FGraphNode *a, const int b) { return div<int>(a, b); }
+FGraphNode *fdiv_cl(FGraphNode *a, const long b) { return div<long>(a, b); }
 // multiplicates the constant value with each entry in a
 template <typename T> FGraphNode *mul(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
@@ -358,10 +358,10 @@ template <typename T> FGraphNode *mul(FGraphNode *a, const T b) {
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
-FGraphNode *mul_cd(FGraphNode *a, const double b) { return mul<double>(a, b); }
-FGraphNode *mul_cf(FGraphNode *a, const float b) { return mul<float>(a, b); }
-FGraphNode *mul_ci(FGraphNode *a, const int b) { return mul<int>(a, b); }
-FGraphNode *mul_cl(FGraphNode *a, const long b) { return mul<long>(a, b); }
+FGraphNode *fmul_cd(FGraphNode *a, const double b) { return mul<double>(a, b); }
+FGraphNode *fmul_cf(FGraphNode *a, const float b) { return mul<float>(a, b); }
+FGraphNode *fmul_ci(FGraphNode *a, const int b) { return mul<int>(a, b); }
+FGraphNode *fmul_cl(FGraphNode *a, const long b) { return mul<long>(a, b); }
 // takes the power of each element in a to b
 template <typename T> FGraphNode *pow(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
@@ -370,12 +370,12 @@ template <typename T> FGraphNode *pow(FGraphNode *a, const T b) {
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
-FGraphNode *pow_cd(FGraphNode *a, const double b) { return pow<double>(a, b); }
-FGraphNode *pow_cf(FGraphNode *a, const float b) { return pow<float>(a, b); }
-FGraphNode *pow_ci(FGraphNode *a, const int b) { return pow<int>(a, b); }
-FGraphNode *pow_cl(FGraphNode *a, const long b) { return pow<long>(a, b); }
+FGraphNode *fpow_cd(FGraphNode *a, const double b) { return pow<double>(a, b); }
+FGraphNode *fpow_cf(FGraphNode *a, const float b) { return pow<float>(a, b); }
+FGraphNode *fpow_ci(FGraphNode *a, const int b) { return pow<int>(a, b); }
+FGraphNode *fpow_cl(FGraphNode *a, const long b) { return pow<long>(a, b); }
 
-FGraphNode *flatten(FGraphNode *a) {
+FGraphNode *fflatten(FGraphNode *a) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = FLATTEN;
@@ -390,7 +390,7 @@ FGraphNode *flatten(FGraphNode *a) {
   op->data_type = prev_op->data_type;
   return addNode(op, {a});
 }
-FGraphNode *flatten_dimension(FGraphNode *a, const int dimension) {
+FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
   if (dimension == 0)
     log(ERROR, "Flattening the first dimension of a tensor is not possible!");
 
@@ -412,15 +412,15 @@ FGraphNode *flatten_dimension(FGraphNode *a, const int dimension) {
   op->data_type = prev_op->data_type;
   return addNode(op, {a});
 }
-FGraphNode *matmul(FGraphNode **a, FGraphNode **b) {
+FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
   FGraphNode *x = *a;
   FGraphNode *y = *b;
   if (x->operation->op_type != STORE && x->operation->op_type != RESULTDATA) {
-    x = executeGraph(x);
+    x = fExecuteGraph(x);
     *a = x;
   }
   if (y->operation->op_type != STORE && y->operation->op_type != RESULTDATA) {
-    y = executeGraph(y);
+    y = fExecuteGraph(y);
     *b = y;
   }
   FOperation *ao = x->operation;

@@ -91,7 +91,7 @@ static inline FGraphNode *pow_wrapper(FGraphNode *node, const K c) {
   return pow(node, c);
 }
 static inline FGraphNode *matmul_wrapper(FGraphNode **a, FGraphNode **b) {
-  return matmul(a, b);
+  return fmatmul(a, b);
 }
 }; // namespace FLINT_HPP_HELPER
 // TODO for everything the c interface allows only one operand order, write
@@ -134,22 +134,22 @@ template <typename T> struct Tensor<T, 1> {
   typedef std::vector<T> storage_type;
   Tensor(storage_type data) : shape(data.size()) {
     isTensorType<T>();
-    node = createGraph(data.data(), data.size(), toFlintType<T>(), &shape, 1);
+    node = fCreateGraph(data.data(), data.size(), toFlintType<T>(), &shape, 1);
     node->reference_counter = 1;
   }
   // copy
   Tensor(const Tensor &other) {
     shape = other.shape;
-    node = copyGraph(other.node);
+    node = fCopyGraph(other.node);
     node->reference_counter++;
   }
   void operator=(const Tensor<T, 1> &other) {
     if (node) {
       node->reference_counter--;
-      freeGraph(node);
+      fFreeGraph(node);
     }
     shape = other.shape;
-    node = copyGraph(other.node);
+    node = fCopyGraph(other.node);
     node->reference_counter++;
   }
   // move
@@ -162,7 +162,7 @@ template <typename T> struct Tensor<T, 1> {
   void operator=(Tensor &&other) {
     if (node) {
       node->reference_counter--;
-      freeGraph(node);
+      fFreeGraph(node);
     }
     shape = other.shape;
     node = other.node;
@@ -172,7 +172,7 @@ template <typename T> struct Tensor<T, 1> {
   ~Tensor() {
     if (node) {
       node->reference_counter--;
-      freeGraph(node);
+      fFreeGraph(node);
     }
   }
   std::vector<T> operator*() {
@@ -204,7 +204,7 @@ template <typename T> struct Tensor<T, 1> {
     if (op->op_type != STORE && op->op_type != RESULTDATA &&
         op->op_type != CONST) {
       node->reference_counter--;
-      node = executeGraph(node);
+      node = fExecuteGraph(node);
       node->reference_counter++;
     }
   }
@@ -312,24 +312,24 @@ template <typename T, int n> struct Tensor {
     static_assert(n > 1, "Dimension must be at least 1");
     initShape(data, 0);
     std::vector<T> flat = FLINT_HPP_HELPER::flattened(data);
-    node = createGraph(flat.data(), flat.size(), toFlintType<T>(), shape.data(),
-                       shape.size());
+    node = fCreateGraph(flat.data(), flat.size(), toFlintType<T>(),
+                        shape.data(), shape.size());
     // the node which is currently hold is always referenced
     node->reference_counter = 1;
   }
   // copy
   Tensor(const Tensor &other) {
     shape = other.shape;
-    node = copyGraph(other.node);
+    node = fCopyGraph(other.node);
     node->reference_counter++;
   }
   void operator=(const Tensor &other) {
     if (node) {
       node->reference_counter--;
-      freeGraph(node);
+      fFreeGraph(node);
     }
     shape = other.shape;
-    node = copyGraph(other.node);
+    node = fCopyGraph(other.node);
     node->reference_counter++;
   }
   // move
@@ -341,7 +341,7 @@ template <typename T, int n> struct Tensor {
   void operator=(Tensor &&other) {
     if (node) {
       node->reference_counter--;
-      freeGraph(node);
+      fFreeGraph(node);
     }
     shape = other.shape;
     node = other.node;
@@ -350,7 +350,7 @@ template <typename T, int n> struct Tensor {
   ~Tensor() {
     if (node) {
       node->reference_counter--;
-      freeGraph(node);
+      fFreeGraph(node);
     }
   }
   // retrieves the data of the current node and converts it into a possible
@@ -392,7 +392,7 @@ template <typename T, int n> struct Tensor {
         op->op_type != CONST) {
       // no longer held by this tensor
       node->reference_counter--;
-      node = executeGraph(node);
+      node = fExecuteGraph(node);
       node->reference_counter++;
     }
   }
@@ -402,7 +402,7 @@ template <typename T, int n> struct Tensor {
         op->op_type != CONST) {
       // no longer held by this tensor
       node->reference_counter--;
-      node = executeGraph_cpu(node);
+      node = fExecuteGraph_cpu(node);
       node->reference_counter++;
     }
   }
@@ -412,7 +412,7 @@ template <typename T, int n> struct Tensor {
         op->op_type != CONST) {
       // no longer held by this tensor
       node->reference_counter--;
-      node = executeGraph_gpu(node);
+      node = fExecuteGraph_gpu(node);
       node->reference_counter++;
     }
   }
@@ -497,6 +497,7 @@ template <typename T, int n> struct Tensor {
   Tensor<stronger_return<K>, n> operator*(const K other) const {
     return Tensor<stronger_return<K>, n>(mul(node, other), shape);
   }
+  Tensor<T, n> operator-() const { return Tensor<T, n>(mul(node, -1), shape); }
   template <typename K, int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator/(const Tensor<K, k> other) const {
@@ -510,11 +511,11 @@ template <typename T, int n> struct Tensor {
     return Tensor<stronger_return<K>, n>(div(node, other), shape);
   }
   Tensor<T, 1> flattened() const {
-    FGraphNode *foo = flatten(node);
+    FGraphNode *foo = fflatten(node);
     return Tensor<T, 1>(foo, total_size);
   }
   Tensor<T, n - 1> flattened(const int dimension) const {
-    FGraphNode *foo = flatten_dimension(node, dimension);
+    FGraphNode *foo = fflatten_dimension(node, dimension);
     std::array<size_t, n - 1> ns;
     std::copy_n(foo->operation->shape, (size_t)foo->operation->dimensions,
                 ns.begin());
