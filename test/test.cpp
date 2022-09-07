@@ -388,7 +388,7 @@ TEST_SUITE("C++ Bindings") {
   }
   TEST_CASE("Parameter Communitivity") {
     using namespace std;
-    Tensor<int, 3> t1({{{0, 1}, {1, 2}, {2, 3}}, {{1, 2}, {2, 3}, {3, 4}}});
+    Tensor<int, 3> t1({{{7, 1}, {1, 2}, {2, 3}}, {{1, 2}, {2, 3}, {3, 4}}});
     Tensor<int, 2> t2(vector<vector<int>>{{2, 9}, {3, 5}, {4, 3}});
     Tensor<int, 3> t3 = t1 + t2;
     Tensor<int, 3> t4 = t2 + t1;
@@ -398,9 +398,18 @@ TEST_SUITE("C++ Bindings") {
       for (int j = 0; j < 3; j++)
         for (int k = 0; k < 2; k++)
           CHECK_EQ(r3[i][j][k], r4[i][j][k]);
-    // x = y - z,
+    // subtraction
     t3 = (-t1) + t2;
     t4 = t2 - t1;
+    r3 = *t3;
+    r4 = *t4;
+    for (int i = 0; i < 2; i++)
+      for (int j = 0; j < 3; j++)
+        for (int k = 0; k < 2; k++)
+          CHECK_EQ(r3[i][j][k], r4[i][j][k]);
+    // multiplication
+    t3 = t1 * t2;
+    t4 = t2 * t1;
     r3 = *t3;
     r4 = *t4;
     for (int i = 0; i < 2; i++)

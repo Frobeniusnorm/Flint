@@ -43,7 +43,7 @@ void flintCleanup_gpu();
 // 0 no logging, 1 only errors, 2 errors and warnings, 3 error, warnings and
 // info, 4 verbose
 void setLoggingLevel(int);
-
+// TODO conversions
 enum FType { INT32, INT64, FLOAT32, FLOAT64 };
 enum FOperationType {
   STORE,
