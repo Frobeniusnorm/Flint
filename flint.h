@@ -43,7 +43,6 @@ void flintCleanup_gpu();
 // 0 no logging, 1 only errors, 2 errors and warnings, 3 error, warnings and
 // info, 4 verbose
 void setLoggingLevel(int);
-// TODO conversions
 enum FType { INT32, INT64, FLOAT32, FLOAT64 };
 enum FOperationType {
   STORE,
@@ -57,6 +56,7 @@ enum FOperationType {
   NEG,
   FLATTEN,
   MATMUL,
+  CONVERSION,
   Length
 };
 struct FOperation {
@@ -159,42 +159,44 @@ FGraphNode *fflatten(FGraphNode *a);
 // flattens a specific dimension of the tensor, no additional data is allocated
 // besides the new node
 FGraphNode *fflatten_dimension(FGraphNode *a, int dimension);
+
+// Converts the type
+FGraphNode *fconvert(FGraphNode *a, FType newtype);
 #ifdef __cplusplus
 }
 // no c++ bindings, but function overloading for c++ header
-inline FGraphNode *add(FGraphNode *a, FGraphNode *b) { return fadd_g(a, b); }
-inline FGraphNode *add(FGraphNode *a, const int b) { return fadd_ci(a, b); }
-inline FGraphNode *add(FGraphNode *a, const long b) { return fadd_cl(a, b); }
-inline FGraphNode *add(FGraphNode *a, const float b) { return fadd_cf(a, b); }
-inline FGraphNode *add(FGraphNode *a, const double b) { return fadd_cd(a, b); }
+inline FGraphNode *fadd(FGraphNode *a, FGraphNode *b) { return fadd_g(a, b); }
+inline FGraphNode *fadd(FGraphNode *a, const int b) { return fadd_ci(a, b); }
+inline FGraphNode *fadd(FGraphNode *a, const long b) { return fadd_cl(a, b); }
+inline FGraphNode *fadd(FGraphNode *a, const float b) { return fadd_cf(a, b); }
+inline FGraphNode *fadd(FGraphNode *a, const double b) { return fadd_cd(a, b); }
 
-inline FGraphNode *sub(FGraphNode *a, FGraphNode *b) { return fsub_g(a, b); }
-inline FGraphNode *sub(FGraphNode *a, const int b) { return fsub_ci(a, b); }
-inline FGraphNode *sub(FGraphNode *a, const long b) { return fsub_cl(a, b); }
-inline FGraphNode *sub(FGraphNode *a, const float b) { return fsub_cf(a, b); }
-inline FGraphNode *sub(FGraphNode *a, const double b) { return fsub_cd(a, b); }
+inline FGraphNode *fsub(FGraphNode *a, FGraphNode *b) { return fsub_g(a, b); }
+inline FGraphNode *fsub(FGraphNode *a, const int b) { return fsub_ci(a, b); }
+inline FGraphNode *fsub(FGraphNode *a, const long b) { return fsub_cl(a, b); }
+inline FGraphNode *fsub(FGraphNode *a, const float b) { return fsub_cf(a, b); }
+inline FGraphNode *fsub(FGraphNode *a, const double b) { return fsub_cd(a, b); }
 
-inline FGraphNode *mul(FGraphNode *a, FGraphNode *b) { return fmul_g(a, b); }
-inline FGraphNode *mul(FGraphNode *a, const int b) { return fmul_ci(a, b); }
-inline FGraphNode *mul(FGraphNode *a, const long b) { return fmul_cl(a, b); }
-inline FGraphNode *mul(FGraphNode *a, const float b) { return fmul_cf(a, b); }
-inline FGraphNode *mul(FGraphNode *a, const double b) { return fmul_cd(a, b); }
+inline FGraphNode *fmul(FGraphNode *a, FGraphNode *b) { return fmul_g(a, b); }
+inline FGraphNode *fmul(FGraphNode *a, const int b) { return fmul_ci(a, b); }
+inline FGraphNode *fmul(FGraphNode *a, const long b) { return fmul_cl(a, b); }
+inline FGraphNode *fmul(FGraphNode *a, const float b) { return fmul_cf(a, b); }
+inline FGraphNode *fmul(FGraphNode *a, const double b) { return fmul_cd(a, b); }
 
-inline FGraphNode *div(FGraphNode *a, FGraphNode *b) { return fdiv_g(a, b); }
-inline FGraphNode *div(FGraphNode *a, const int b) { return fdiv_ci(a, b); }
-inline FGraphNode *div(FGraphNode *a, const long b) { return fdiv_cl(a, b); }
-inline FGraphNode *div(FGraphNode *a, const float b) { return fdiv_cf(a, b); }
-inline FGraphNode *div(FGraphNode *a, const double b) { return fdiv_cd(a, b); }
+inline FGraphNode *fdiv(FGraphNode *a, FGraphNode *b) { return fdiv_g(a, b); }
+inline FGraphNode *fdiv(FGraphNode *a, const int b) { return fdiv_ci(a, b); }
+inline FGraphNode *fdiv(FGraphNode *a, const long b) { return fdiv_cl(a, b); }
+inline FGraphNode *fdiv(FGraphNode *a, const float b) { return fdiv_cf(a, b); }
+inline FGraphNode *fdiv(FGraphNode *a, const double b) { return fdiv_cd(a, b); }
 
-inline FGraphNode *pow(FGraphNode *a, FGraphNode *b) { return fpow_g(a, b); }
-inline FGraphNode *pow(FGraphNode *a, const int b) { return fpow_ci(a, b); }
-inline FGraphNode *pow(FGraphNode *a, const long b) { return fpow_cl(a, b); }
-inline FGraphNode *pow(FGraphNode *a, const float b) { return fpow_cf(a, b); }
-inline FGraphNode *pow(FGraphNode *a, const double b) { return fpow_cd(a, b); }
+inline FGraphNode *fpow(FGraphNode *a, FGraphNode *b) { return fpow_g(a, b); }
+inline FGraphNode *fpow(FGraphNode *a, const int b) { return fpow_ci(a, b); }
+inline FGraphNode *fpow(FGraphNode *a, const long b) { return fpow_cl(a, b); }
+inline FGraphNode *fpow(FGraphNode *a, const float b) { return fpow_cf(a, b); }
+inline FGraphNode *fpow(FGraphNode *a, const double b) { return fpow_cd(a, b); }
 
-inline FGraphNode *flatten(FGraphNode *a, int dimension) {
+inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
   return fflatten_dimension(a, dimension);
 }
-inline FGraphNode *flatten(FGraphNode *a) { return fflatten(a); }
 #endif
 #endif

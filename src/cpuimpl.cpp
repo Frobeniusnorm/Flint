@@ -132,6 +132,29 @@ static void executeNode(FGraphNode *node,
     FConst *cons = (FConst *)node->operation->additional_data;
     result[from] = ((T *)cons->value)[0];
   } break;
+  case CONVERSION: {
+    CPUResultData pred = predecessor_data[0];
+
+    switch (pred.type) {
+    case INT32:
+      for (size_t i = from; i < from + size; i++)
+        result[i] = (T)((int *)pred.data)[i];
+      break;
+    case INT64:
+      for (size_t i = from; i < from + size; i++)
+        result[i] = (T)((long *)pred.data)[i];
+      break;
+    case FLOAT32:
+      for (size_t i = from; i < from + size; i++)
+        result[i] = (T)((float *)pred.data)[i];
+      break;
+    case FLOAT64:
+      for (size_t i = from; i < from + size; i++)
+        result[i] = (T)((double *)pred.data)[i];
+      break;
+    }
+
+  } break;
   case FLATTEN: {
     CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)

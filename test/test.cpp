@@ -28,10 +28,10 @@ TEST_SUITE("Graph implementation") {
       vector<size_t> shape{100};
       FGraphNode *gn1 =
           fCreateGraph(v1.data(), v1.size(), FLOAT64, shape.data(), 1);
-      gn1 = add(gn1, 7.0);
+      gn1 = fadd(gn1, 7.0);
       FGraphNode *gn12 =
           fCreateGraph(v2.data(), v2.size(), FLOAT32, shape.data(), 1);
-      gn1 = mul(gn1, gn12);
+      gn1 = fmul(gn1, gn12);
       fFreeGraph(gn12);
       // test
       REQUIRE_EQ(gn1->num_predecessor, 2);
@@ -53,10 +53,10 @@ TEST_SUITE("Graph implementation") {
       vector<size_t> shape = {10, 10};
       FGraphNode *gn2 =
           fCreateGraph(v1.data(), v1.size(), INT64, shape.data(), 2);
-      gn2 = sub(gn2, 7.0);
+      gn2 = fsub(gn2, 7.0);
       FGraphNode *gn21 =
           fCreateGraph(v2.data(), v2.size(), INT32, shape.data(), 2);
-      gn2 = div(gn2, gn21);
+      gn2 = fdiv(gn2, gn21);
       // test
       REQUIRE_EQ(gn2->num_predecessor, 2);
       REQUIRE(gn2->operation);
@@ -85,10 +85,10 @@ TEST_SUITE("Execution") {
     vector<size_t> shape{10};
     FGraphNode *gn1 =
         fCreateGraph(v1.data(), v1.size(), FLOAT64, shape.data(), 1);
-    gn1 = add(gn1, 7.0);
+    gn1 = fadd(gn1, 7.0);
     FGraphNode *gn11 =
         fCreateGraph(v2.data(), v2.size(), FLOAT32, shape.data(), 1);
-    gn1 = mul(gn1, gn11);
+    gn1 = fmul(gn1, gn11);
     fFreeGraph(gn11); // delete handle
     FGraphNode *result = fExecuteGraph(gn1);
     FResultData *rd = (FResultData *)result->operation->additional_data;
@@ -101,10 +101,10 @@ TEST_SUITE("Execution") {
       v3[i] = i + 1;
     FGraphNode *gn2 =
         fCreateGraph(v3.data(), v3.size(), FLOAT32, shape.data(), 1);
-    FGraphNode *gn3 = add(gn2, result);
-    gn3 = add(gn3, result);
-    gn3 = sub(gn3, 80);
-    gn3 = add(gn3, gn2);
+    FGraphNode *gn3 = fadd(gn2, result);
+    gn3 = fadd(gn3, result);
+    gn3 = fsub(gn3, 80);
+    gn3 = fadd(gn3, gn2);
     result = fExecuteGraph(gn3);
     rd = (FResultData *)result->operation->additional_data;
     CHECK_EQ(rd->num_entries, 10);
@@ -125,7 +125,7 @@ TEST_SUITE("Execution") {
         fCreateGraph(f1.data(), f1.size(), FLOAT64, shape.data(), 2);
     FGraphNode *gn2 =
         fCreateGraph(f2.data(), f2.size(), FLOAT64, shape.data(), 2);
-    FGraphNode *gn3 = add(gn1, gn2);
+    FGraphNode *gn3 = fadd(gn1, gn2);
     FGraphNode *result = fExecuteGraph(gn3);
     FResultData *rd = (FResultData *)result->operation->additional_data;
     CHECK_EQ(rd->num_entries, 9);
@@ -146,7 +146,7 @@ TEST_SUITE("Execution") {
     vector<size_t> shape_f3{4, 3, 3};
     FGraphNode *gn4 =
         fCreateGraph(f3.data(), f3.size(), INT32, shape_f3.data(), 3);
-    FGraphNode *gn5 = add(gn4, result);
+    FGraphNode *gn5 = fadd(gn4, result);
     FGraphNode *newResult[2] = {nullptr, nullptr};
     for (int i = 0; i < 2; i++) {
       newResult[i] = fExecuteGraph(gn5);
@@ -172,12 +172,12 @@ TEST_SUITE("Execution") {
     vector<float> f3 = flattened(d3);
     FGraphNode *g1 = fCreateGraph(f1.data(), f1.size(), INT32, s1.data(), 2);
     FGraphNode *g12 = fCreateGraph(d2.data(), d2.size(), INT64, &s2, 1);
-    FGraphNode *g2 = pow(g1, g12);
+    FGraphNode *g2 = fpow(g1, g12);
     FGraphNode *g13 = fCreateGraph(f3.data(), f3.size(), FLOAT32, s1.data(), 2);
-    FGraphNode *g3 = pow(g1, g13);
+    FGraphNode *g3 = fpow(g1, g13);
     fFreeGraph(g13); // delete handles
     fFreeGraph(g12);
-    FGraphNode *g4 = pow(g1, 2);
+    FGraphNode *g4 = fpow(g1, 2);
     vector<vector<long>> e1{{1, 3}, {0, 8}, {9, -3}};
     vector<vector<float>> e2{{1, 9}, {0, 1}, {-0.3333333333333333, 9}};
     vector<vector<int>> e3{{1, 9}, {0, 64}, {9, 9}};
@@ -217,7 +217,7 @@ TEST_SUITE("Execution") {
     size_t s2 = 6;
     FGraphNode *g = fCreateGraph(f1.data(), f1.size(), INT32, s1.data(), 2);
     FGraphNode *gi = fCreateGraph(d2.data(), d2.size(), INT32, &s2, 1);
-    g = add(fflatten(g), gi);
+    g = fadd(fflatten(g), gi);
     fFreeGraph(gi);
     g = fExecuteGraph(g);
     FResultData *res = (FResultData *)g->operation->additional_data;
@@ -237,12 +237,12 @@ TEST_SUITE("Execution") {
     vector<int> f5 = flattened(d5);
     vector<size_t> s5{6, 2};
     g = fCreateGraph(f3.data(), f3.size(), INT32, s3.data(), 3);
-    FGraphNode *g1 = flatten(g, 2);
-    FGraphNode *g2 = flatten(g, 1);
+    FGraphNode *g1 = fflatten(g, 2);
+    FGraphNode *g2 = fflatten(g, 1);
     FGraphNode *g11 = fCreateGraph(f4.data(), f4.size(), INT32, s4.data(), 2);
     FGraphNode *g21 = fCreateGraph(f5.data(), f5.size(), INT32, s5.data(), 2);
-    g1 = fflatten(add(g1, g11));
-    g2 = fflatten(add(g2, g21));
+    g1 = fflatten(fadd(g1, g11));
+    g2 = fflatten(fadd(g2, g21));
     fFreeGraph(g11);
     fFreeGraph(g21);
     vector<int> exp{3, 4, 6, 7, 9, 10, 11, 12, 12, 13, 13, 14};
@@ -416,6 +416,16 @@ TEST_SUITE("C++ Bindings") {
       for (int j = 0; j < 3; j++)
         for (int k = 0; k < 2; k++)
           CHECK_EQ(r3[i][j][k], r4[i][j][k]);
+    // division with convert
+    Tensor<double, 3> t5 = t1.convert<double>().pow(-1) * t2;
+    Tensor<double, 3> t6 = t2 / t1.convert<double>();
+    vector<vector<vector<double>>> r5 = *t5;
+    vector<vector<vector<double>>> r6 = *t6;
+    for (int i = 0; i < 2; i++)
+      for (int j = 0; j < 3; j++)
+        for (int k = 0; k < 2; k++)
+          CHECK_EQ(r5[i][j][k],
+                   doctest::Approx(r6[i][j][k]).epsilon(0.000000001));
   }
 }
 

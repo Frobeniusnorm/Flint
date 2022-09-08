@@ -84,15 +84,6 @@ flattened(const std::vector<std::vector<std::vector<T>>> vec) {
   }
   return result;
 }
-// operation wrapper because C++ namespaces dont't see overloaded global
-// functions
-template <typename K>
-static inline FGraphNode *pow_wrapper(FGraphNode *node, const K c) {
-  return pow(node, c);
-}
-static inline FGraphNode *matmul_wrapper(FGraphNode **a, FGraphNode **b) {
-  return fmatmul(a, b);
-}
 }; // namespace FLINT_HPP_HELPER
 // TODO for everything the c interface allows only one operand order, write
 // general header functions or rewrite
@@ -252,46 +243,47 @@ template <typename T> struct Tensor<T, 1> {
   // OPERATIONS
   template <typename K, int k>
   Tensor<stronger_return<K>, 1> operator+(const Tensor<K, k> other) const {
-    return Tensor<stronger_return<K>, 1>(add(node, other.node), other.shape);
+    return Tensor<stronger_return<K>, 1>(fadd(node, other.node), other.shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, 1> operator+(const K con) const {
-    return Tensor<stronger_return<K>, 1>(add(node, con), shape);
+    return Tensor<stronger_return<K>, 1>(fadd(node, con), shape);
   }
   template <typename K, int k>
   Tensor<stronger_return<K>, 1> operator-(const Tensor<K, k> other) const {
-    return Tensor<stronger_return<K>, 1>(sub(node, other.node), other.shape);
+    return Tensor<stronger_return<K>, 1>(fsub(node, other.node), other.shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, 1> operator-(const K con) const {
-    return Tensor<stronger_return<K>, 1>(sub(node, con), shape);
+    return Tensor<stronger_return<K>, 1>(fsub(node, con), shape);
   }
   template <typename K, int k>
   Tensor<stronger_return<K>, 1> operator*(const Tensor<K, k> other) const {
-    return Tensor<stronger_return<K>, 1>(mul(node, other.node), other.shape);
+    return Tensor<stronger_return<K>, 1>(fmul(node, other.node), other.shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, 1> operator*(const K con) const {
-    return Tensor<stronger_return<K>, 1>(mul(node, con), shape);
+    return Tensor<stronger_return<K>, 1>(fmul(node, con), shape);
   }
   template <typename K, int k>
   Tensor<stronger_return<K>, 1> operator/(const Tensor<K, k> other) const {
-    return Tensor<stronger_return<K>, 1>(div(node, other.node), other.shape);
+    return Tensor<stronger_return<K>, 1>(fdiv(node, other.node), other.shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, 1> operator/(const K con) const {
-    return Tensor<stronger_return<K>, 1>(div(node, con), shape);
+    return Tensor<stronger_return<K>, 1>(fdiv(node, con), shape);
   }
 
   template <typename K>
   Tensor<stronger_return<K>, 1>
   pow(const Tensor<stronger_return<K>, 1> other) const {
-    return Tensor<stronger_return<K>, 1>(
-        FLINT_HPP_HELPER::pow_wrapper(node, other.node), shape);
+    return Tensor<stronger_return<K>, 1>(fpow(node, other.node), shape);
   }
   template <typename K> Tensor<stronger_return<K>, 1> pow(const K other) const {
-    return Tensor<stronger_return<K>, 1>(
-        FLINT_HPP_HELPER::pow_wrapper(node, other), shape);
+    return Tensor<stronger_return<K>, 1>(fpow(node, other), shape);
+  }
+  template <typename K> Tensor<K, 1> convert() const {
+    return Tensor<K, 1>(fconvert(node, toFlintType<K>()), shape);
   }
 
 protected:
@@ -465,50 +457,50 @@ template <typename T, int n> struct Tensor {
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator+(const Tensor<K, k> other) const {
     if constexpr (k >= n)
-      return Tensor<stronger_return<K>, k>(add(node, other.node), other.shape);
+      return Tensor<stronger_return<K>, k>(fadd(node, other.node), other.shape);
     else
-      return Tensor<stronger_return<K>, n>(add(node, other.node), shape);
+      return Tensor<stronger_return<K>, n>(fadd(node, other.node), shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, n> operator+(const K other) const {
-    return Tensor<stronger_return<K>, n>(add(node, other), shape);
+    return Tensor<stronger_return<K>, n>(fadd(node, other), shape);
   }
   template <typename K, int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator-(const Tensor<K, k> other) const {
     if constexpr (k >= n)
-      return Tensor<stronger_return<K>, k>(sub(node, other.node), other.shape);
+      return Tensor<stronger_return<K>, k>(fsub(node, other.node), other.shape);
     else
-      return Tensor<stronger_return<K>, n>(sub(node, other.node), shape);
+      return Tensor<stronger_return<K>, n>(fsub(node, other.node), shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, n> operator-(const K other) const {
-    return Tensor<stronger_return<K>, n>(sub(node, other), shape);
+    return Tensor<stronger_return<K>, n>(fsub(node, other), shape);
   }
   template <typename K, int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator*(const Tensor<K, k> other) const {
     if constexpr (k >= n)
-      return Tensor<stronger_return<K>, k>(mul(node, other.node), other.shape);
+      return Tensor<stronger_return<K>, k>(fmul(node, other.node), other.shape);
     else
-      return Tensor<stronger_return<K>, n>(mul(node, other.node), shape);
+      return Tensor<stronger_return<K>, n>(fmul(node, other.node), shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, n> operator*(const K other) const {
-    return Tensor<stronger_return<K>, n>(mul(node, other), shape);
+    return Tensor<stronger_return<K>, n>(fmul(node, other), shape);
   }
-  Tensor<T, n> operator-() const { return Tensor<T, n>(mul(node, -1), shape); }
+  Tensor<T, n> operator-() const { return Tensor<T, n>(fmul(node, -1), shape); }
   template <typename K, int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator/(const Tensor<K, k> other) const {
     if constexpr (k >= n)
-      return Tensor<stronger_return<K>, k>(div(node, other.node), other.shape);
+      return Tensor<stronger_return<K>, k>(fdiv(node, other.node), other.shape);
     else
-      return Tensor<stronger_return<K>, n>(div(node, other.node), shape);
+      return Tensor<stronger_return<K>, n>(fdiv(node, other.node), shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, n> operator/(const K other) const {
-    return Tensor<stronger_return<K>, n>(div(node, other), shape);
+    return Tensor<stronger_return<K>, n>(fdiv(node, other), shape);
   }
   Tensor<T, 1> flattened() const {
     FGraphNode *foo = fflatten(node);
@@ -526,12 +518,10 @@ template <typename T, int n> struct Tensor {
     static_assert(
         k <= n,
         "Can't take the power of a tensor to a tensor with higher dimension!");
-    return Tensor<stronger_return<K>, n>(
-        FLINT_HPP_HELPER::pow_wrapper(node, other.node), shape);
+    return Tensor<stronger_return<K>, n>(fpow(node, other.node), shape);
   }
   template <typename K> Tensor<stronger_return<K>, n> pow(const K other) {
-    return Tensor<stronger_return<K>, n>(
-        FLINT_HPP_HELPER::pow_wrapper(node, other), shape);
+    return Tensor<stronger_return<K>, n>(fpow(node, other), shape);
   }
   template <typename K, int k>
   Tensor<stronger_return<K>, k >= n ? k : n> matmul(Tensor<K, k> other) {
@@ -544,9 +534,10 @@ template <typename T, int n> struct Tensor {
     ns[ns.size() - 2] = x;
     ns[ns.size() - 1] = z;
     return Tensor < stronger_return<K>,
-           k >= n
-               ? k
-               : n > (FLINT_HPP_HELPER::matmul_wrapper(&node, &other.node), ns);
+           k >= n ? k : n > (fmatmul(&node, &other.node), ns);
+  }
+  template <typename K> Tensor<K, n> convert() const {
+    return Tensor<K, n>(fconvert(node, toFlintType<K>()), shape);
   }
 
 protected:

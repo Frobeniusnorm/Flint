@@ -23,7 +23,7 @@
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
   // TODO
-  return fExecuteGraph_gpu(node);
+  return fExecuteGraph_cpu(node);
 }
 void flintCleanup() {
   flintCleanup_cpu();
@@ -461,4 +461,20 @@ FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
   y->reference_counter++;
   node->reference_counter = 0;
   return node;
+}
+FGraphNode *fconvert(FGraphNode *a, FType newtype) {
+  FGraphNode *foo = new FGraphNode();
+  foo->reference_counter = 0;
+  foo->num_predecessor = 1;
+  foo->predecessors = safe_mal<FGraphNode *>(1);
+  foo->predecessors[0] = a;
+  a->reference_counter++;
+  foo->operation = new FOperation();
+  foo->operation->data_type = newtype;
+  foo->operation->dimensions = a->operation->dimensions;
+  foo->operation->shape = safe_mal<size_t>(a->operation->dimensions);
+  memcpy(foo->operation->shape, a->operation->shape,
+         sizeof(size_t) * a->operation->dimensions);
+  foo->operation->op_type = CONVERSION;
+  return foo;
 }

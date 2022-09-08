@@ -291,6 +291,10 @@ generateCode(FGraphNode *node,
       code = type + " " + name + " = v" + to_string(variable_index + 1) +
              ";\n" + code;
     } break;
+    case CONVERSION: {
+      code = type + " " + name + " = (" + type + ")v" +
+             to_string(variable_index + 1) + ";\n" + code;
+    };
     default:
       break;
     }
