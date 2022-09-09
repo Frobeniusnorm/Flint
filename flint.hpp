@@ -92,6 +92,39 @@ template <typename K, typename V> static constexpr bool isStronger() {
                                            : 3;
   return a >= b;
 }
+// FOR INDEXING
+template <typename T, int dimensions> class TensorView;
+template <typename T> class TensorView<T, 1> {
+  T *data;
+  const size_t already_indexed;
+  const size_t shape;
+
+public:
+  TensorView(T *data, const std::vector<size_t> shape,
+             const size_t already_indexed)
+      : data(data), already_indexed(already_indexed), shape(shape[0]) {}
+  T &operator[](size_t index) { return data[already_indexed + index]; }
+  size_t size() const { return shape; }
+};
+template <typename T, int n> class TensorView {
+  T *data;
+  const size_t already_indexed;
+  const std::vector<size_t> shape;
+
+public:
+  TensorView(T *data, const std::vector<size_t> shape,
+             const size_t already_indexed)
+      : data(data), shape(shape), already_indexed(already_indexed) {}
+  TensorView<T, n - 1> operator[](size_t index) {
+    std::vector<size_t> ns(shape.size() - 1);
+    for (int i = 0; i < shape.size() - 1; i++) {
+      ns[i] = shape[i + 1];
+      index *= shape[i + 1];
+    }
+    return TensorView<T, n - 1>(data, ns, already_indexed + index);
+  }
+};
+
 template <typename T, int dimensions> struct Tensor;
 
 // one dimensional
@@ -117,6 +150,23 @@ template <typename T> struct Tensor<T, 1> {
     shape = other.shape;
     node = copyGraph(other.node);
     node->reference_counter++;
+  }
+  T &operator[](const size_t index) const {
+    switch (node->operation->op_type) {
+    case STORE: {
+      FStore *store = (FStore *)node->operation->additional_data;
+      return ((T *)store->data)[index];
+    }
+    case RESULTDATA: {
+      FResultData *store = (FResultData *)node->operation->additional_data;
+      return ((T *)store->data)[index];
+    }
+    default: {
+      execute();
+      FResultData *store = (FResultData *)node->operation->additional_data;
+      return ((T *)store->data)[index];
+    }
+    }
   }
   // move
   Tensor(Tensor &&other) {
@@ -377,7 +427,41 @@ template <typename T, int n> struct Tensor {
       node->reference_counter++;
     }
   }
-
+  TensorView<T, n - 1> operator[](const size_t index) {
+    switch (node->operation->op_type) {
+    case STORE: {
+      FStore *store = (FStore *)node->operation->additional_data;
+      size_t alrdindx = index;
+      std::vector<size_t> ns(shape.size() - 1);
+      for (int i = 1; i < shape.size(); i++) {
+        ns[i - 1] = shape[i];
+        alrdindx *= shape[i];
+      }
+      return TensorView<T, n - 1>((T *)store->data, ns, alrdindx);
+    }
+    case RESULTDATA: {
+      FResultData *store = (FResultData *)node->operation->additional_data;
+      size_t alrdindx = index;
+      std::vector<size_t> ns(shape.size() - 1);
+      for (int i = 1; i < shape.size(); i++) {
+        ns[i - 1] = shape[i];
+        alrdindx *= shape[i];
+      }
+      return TensorView<T, n - 1>((T *)store->data, ns, alrdindx);
+    }
+    default: {
+      execute();
+      FResultData *store = (FResultData *)node->operation->additional_data;
+      size_t alrdindx = index;
+      std::vector<size_t> ns(shape.size() - 1);
+      for (int i = 1; i < shape.size(); i++) {
+        ns[i - 1] = shape[i];
+        alrdindx *= shape[i];
+      }
+      return TensorView<T, n - 1>((T *)store->data, ns, alrdindx);
+    }
+    }
+  }
   operator std::string() const {
     FOperation *op = node->operation;
     std::string foo = "Tensor<" +

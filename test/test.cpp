@@ -354,10 +354,9 @@ TEST_SUITE("C++ Bindings") {
         CHECK_EQ(pow(i * 2 + j + 3 + 7, 3), bar[i * 2 + j]);
 
     Tensor<float, 2> t4 = t1.flattened(1);
-    vector<vector<float>> foobar = *t4;
     for (int i = 0; i < 2; i++) {
       for (int j = 0; j < 2; j++)
-        CHECK_EQ(i * 2 + j, foobar[i * 2 + j][0]);
+        CHECK_EQ(i * 2 + j, t4[i * 2 + j][0]);
     }
   }
 }
