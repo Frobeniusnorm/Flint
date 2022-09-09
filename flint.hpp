@@ -16,6 +16,8 @@
 #define FLINT_HPP
 
 #include "flint.h"
+#include <algorithm>
+#include <array>
 #include <cstring>
 #include <vector>
 
@@ -23,7 +25,7 @@ namespace FLINT_HPP_HELPER {
 template <typename T>
 static inline std::string vectorString(const std::vector<T> &vec) {
   std::string res = "[";
-  for (int i = 0; i < vec.size(); i++) {
+  for (size_t i = 0; i < vec.size(); i++) {
     res += std::to_string(vec[i]);
     if (i != vec.size() - 1)
       res += ", ";
@@ -33,9 +35,30 @@ static inline std::string vectorString(const std::vector<T> &vec) {
 template <typename T>
 static inline std::string vectorString(const std::vector<std::vector<T>> &vec) {
   std::string res = "[";
-  for (int i = 0; i < vec.size(); i++) {
+  for (size_t i = 0; i < vec.size(); i++) {
     res += vectorString(vec[i]);
     if (i != vec.size() - 1)
+      res += ",\n";
+  }
+  return res + "]";
+}
+template <typename T, long unsigned int n>
+static inline std::string vectorString(const std::array<T, n> &vec) {
+  std::string res = "[";
+  for (size_t i = 0; i < n; i++) {
+    res += std::to_string(vec[i]);
+    if (i != vec.size() - 1)
+      res += ", ";
+  }
+  return res + "]";
+}
+template <typename T, long unsigned int n, long unsigned int k>
+static inline std::string
+vectorString(const std::array<std::array<T, k>, n> &vec) {
+  std::string res = "[";
+  for (size_t i = 0; i < n; i++) {
+    res += vectorString(vec[i]);
+    if (i != n - 1)
       res += ",\n";
   }
   return res + "]";
@@ -61,16 +84,17 @@ flattened(const std::vector<std::vector<std::vector<T>>> vec) {
   }
   return result;
 }
-template <typename K>
-static inline FGraphNode *pow_wrapper(FGraphNode *node, const K c) {
-  return pow(node, c);
-}
 }; // namespace FLINT_HPP_HELPER
+// TODO for everything the c interface allows only one operand order, write
+// general header functions or rewrite
+// TODO efficient tensor indexing (no need to write everything to a vector)
+// checks if the given type is one of the allowed tensor types
 template <typename T> static constexpr void isTensorType() {
   static_assert(std::is_same<T, int>() || std::is_same<T, float>() ||
                     std::is_same<T, long>() || std::is_same<T, double>(),
                 "Only integer and floating-point Tensor types are allowed");
 }
+// converts c++ type to flint type
 template <typename T> static constexpr FType toFlintType() {
   if (std::is_same<T, int>())
     return INT32;
@@ -81,6 +105,7 @@ template <typename T> static constexpr FType toFlintType() {
   if (std::is_same<T, double>())
     return FLOAT64;
 }
+// checks which of both types the flint backend will choose
 template <typename K, typename V> static constexpr bool isStronger() {
   const int a = std::is_same<K, int>()     ? 0
                 : std::is_same<K, long>()  ? 1
@@ -114,10 +139,10 @@ template <typename T, int n> class TensorView {
 public:
   TensorView(T *data, const std::vector<size_t> shape,
              const size_t already_indexed)
-      : data(data), shape(shape), already_indexed(already_indexed) {}
+      : data(data), already_indexed(already_indexed), shape(shape) {}
   TensorView<T, n - 1> operator[](size_t index) {
     std::vector<size_t> ns(shape.size() - 1);
-    for (int i = 0; i < shape.size() - 1; i++) {
+    for (size_t i = 0; i < shape.size() - 1; i++) {
       ns[i] = shape[i + 1];
       index *= shape[i + 1];
     }
@@ -133,22 +158,22 @@ template <typename T> struct Tensor<T, 1> {
   typedef std::vector<T> storage_type;
   Tensor(storage_type data) : shape(data.size()) {
     isTensorType<T>();
-    node = createGraph(data.data(), data.size(), toFlintType<T>(), &shape, 1);
+    node = fCreateGraph(data.data(), data.size(), toFlintType<T>(), &shape, 1);
     node->reference_counter = 1;
   }
   // copy
   Tensor(const Tensor &other) {
     shape = other.shape;
-    node = copyGraph(other.node);
+    node = fCopyGraph(other.node);
     node->reference_counter++;
   }
   void operator=(const Tensor<T, 1> &other) {
     if (node) {
       node->reference_counter--;
-      freeGraph(node);
+      fFreeGraph(node);
     }
     shape = other.shape;
-    node = copyGraph(other.node);
+    node = fCopyGraph(other.node);
     node->reference_counter++;
   }
   T &operator[](const size_t index) const {
@@ -178,7 +203,7 @@ template <typename T> struct Tensor<T, 1> {
   void operator=(Tensor &&other) {
     if (node) {
       node->reference_counter--;
-      freeGraph(node);
+      fFreeGraph(node);
     }
     shape = other.shape;
     node = other.node;
@@ -188,7 +213,7 @@ template <typename T> struct Tensor<T, 1> {
   ~Tensor() {
     if (node) {
       node->reference_counter--;
-      freeGraph(node);
+      fFreeGraph(node);
     }
   }
   std::vector<T> operator*() {
@@ -220,7 +245,7 @@ template <typename T> struct Tensor<T, 1> {
     if (op->op_type != STORE && op->op_type != RESULTDATA &&
         op->op_type != CONST) {
       node->reference_counter--;
-      node = executeGraph(node);
+      node = fExecuteGraph(node);
       node->reference_counter++;
     }
   }
@@ -266,55 +291,57 @@ template <typename T> struct Tensor<T, 1> {
   using stronger_return =
       typename std::conditional<isStronger<K, T>(), K, T>::type;
   // OPERATIONS
-  template <typename K>
-  Tensor<stronger_return<K>, 1> operator+(const Tensor<K, 1> other) const {
-    return Tensor<stronger_return<K>, 1>(add(node, other.node), shape);
+  template <typename K, int k>
+  Tensor<stronger_return<K>, 1> operator+(const Tensor<K, k> other) const {
+    return Tensor<stronger_return<K>, 1>(fadd(node, other.node), other.shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, 1> operator+(const K con) const {
-    return Tensor<stronger_return<K>, 1>(add(node, con), shape);
+    return Tensor<stronger_return<K>, 1>(fadd(node, con), shape);
   }
-  template <typename K>
-  Tensor<stronger_return<K>, 1> operator-(const Tensor<K, 1> other) const {
-    return Tensor<stronger_return<K>, 1>(sub(node, other.node), shape);
+  template <typename K, int k>
+  Tensor<stronger_return<K>, 1> operator-(const Tensor<K, k> other) const {
+    return Tensor<stronger_return<K>, 1>(fsub(node, other.node), other.shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, 1> operator-(const K con) const {
-    return Tensor<stronger_return<K>, 1>(sub(node, con), shape);
+    return Tensor<stronger_return<K>, 1>(fsub(node, con), shape);
   }
-  template <typename K>
-  Tensor<stronger_return<K>, 1> operator*(const Tensor<K, 1> other) const {
-    return Tensor<stronger_return<K>, 1>(mul(node, other.node), shape);
+  template <typename K, int k>
+  Tensor<stronger_return<K>, 1> operator*(const Tensor<K, k> other) const {
+    return Tensor<stronger_return<K>, 1>(fmul(node, other.node), other.shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, 1> operator*(const K con) const {
-    return Tensor<stronger_return<K>, 1>(mul(node, con), shape);
+    return Tensor<stronger_return<K>, 1>(fmul(node, con), shape);
   }
-  template <typename K>
-  Tensor<stronger_return<K>, 1> operator/(const Tensor<K, 1> other) const {
-    return Tensor<stronger_return<K>, 1>(div(node, other.node), shape);
+  template <typename K, int k>
+  Tensor<stronger_return<K>, 1> operator/(const Tensor<K, k> other) const {
+    return Tensor<stronger_return<K>, 1>(fdiv(node, other.node), other.shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, 1> operator/(const K con) const {
-    return Tensor<stronger_return<K>, 1>(div(node, con), shape);
+    return Tensor<stronger_return<K>, 1>(fdiv(node, con), shape);
   }
 
   template <typename K>
-  Tensor<stronger_return<K>, 1> pow(const Tensor<stronger_return<K>, 1> other) {
-    return Tensor<stronger_return<K>, 1>(
-        FLINT_HPP_HELPER::pow_wrapper(node, other.node), shape);
+  Tensor<stronger_return<K>, 1>
+  pow(const Tensor<stronger_return<K>, 1> other) const {
+    return Tensor<stronger_return<K>, 1>(fpow(node, other.node), shape);
   }
-  template <typename K> Tensor<stronger_return<K>, 1> pow(const K other) {
-    return Tensor<stronger_return<K>, 1>(
-        FLINT_HPP_HELPER::pow_wrapper(node, other), shape);
+  template <typename K> Tensor<stronger_return<K>, 1> pow(const K other) const {
+    return Tensor<stronger_return<K>, 1>(fpow(node, other), shape);
+  }
+  template <typename K> Tensor<K, 1> convert() const {
+    return Tensor<K, 1>(fconvert(node, toFlintType<K>()), shape);
   }
 
 protected:
-  Tensor(FGraphNode *node, int shape) : node(node), shape(shape) {
+  Tensor(FGraphNode *node, size_t shape) : node(node), shape(shape) {
     node->reference_counter++;
   }
   FGraphNode *node;
-  int shape;
+  size_t shape;
 };
 
 // multi dimensional
@@ -325,26 +352,26 @@ template <typename T, int n> struct Tensor {
   Tensor(storage_type data) {
     isTensorType<T>();
     static_assert(n > 1, "Dimension must be at least 1");
-    initShape(data);
+    initShape(data, 0);
     std::vector<T> flat = FLINT_HPP_HELPER::flattened(data);
-    node = createGraph(flat.data(), flat.size(), toFlintType<T>(), shape.data(),
-                       shape.size());
+    node = fCreateGraph(flat.data(), flat.size(), toFlintType<T>(),
+                        shape.data(), shape.size());
     // the node which is currently hold is always referenced
     node->reference_counter = 1;
   }
   // copy
   Tensor(const Tensor &other) {
     shape = other.shape;
-    node = copyGraph(other.node);
+    node = fCopyGraph(other.node);
     node->reference_counter++;
   }
   void operator=(const Tensor &other) {
     if (node) {
       node->reference_counter--;
-      freeGraph(node);
+      fFreeGraph(node);
     }
     shape = other.shape;
-    node = copyGraph(other.node);
+    node = fCopyGraph(other.node);
     node->reference_counter++;
   }
   // move
@@ -356,7 +383,7 @@ template <typename T, int n> struct Tensor {
   void operator=(Tensor &&other) {
     if (node) {
       node->reference_counter--;
-      freeGraph(node);
+      fFreeGraph(node);
     }
     shape = other.shape;
     node = other.node;
@@ -365,9 +392,13 @@ template <typename T, int n> struct Tensor {
   ~Tensor() {
     if (node) {
       node->reference_counter--;
-      freeGraph(node);
+      fFreeGraph(node);
     }
   }
+  // retrieves the data of the current node and converts it into a possible
+  // multidimensional vector, executes the node if necessary. The conversion has
+  // to copy the complete data, because of that we recommend the builtin index
+  // access of the Tensor.
   storage_type operator*() {
     switch (node->operation->op_type) {
     case STORE: {
@@ -403,7 +434,7 @@ template <typename T, int n> struct Tensor {
         op->op_type != CONST) {
       // no longer held by this tensor
       node->reference_counter--;
-      node = executeGraph(node);
+      node = fExecuteGraph(node);
       node->reference_counter++;
     }
   }
@@ -413,7 +444,7 @@ template <typename T, int n> struct Tensor {
         op->op_type != CONST) {
       // no longer held by this tensor
       node->reference_counter--;
-      node = executeGraph_cpu(node);
+      node = fExecuteGraph_cpu(node);
       node->reference_counter++;
     }
   }
@@ -423,7 +454,7 @@ template <typename T, int n> struct Tensor {
         op->op_type != CONST) {
       // no longer held by this tensor
       node->reference_counter--;
-      node = executeGraph_gpu(node);
+      node = fExecuteGraph_gpu(node);
       node->reference_counter++;
     }
   }
@@ -433,7 +464,7 @@ template <typename T, int n> struct Tensor {
       FStore *store = (FStore *)node->operation->additional_data;
       size_t alrdindx = index;
       std::vector<size_t> ns(shape.size() - 1);
-      for (int i = 1; i < shape.size(); i++) {
+      for (size_t i = 1; i < shape.size(); i++) {
         ns[i - 1] = shape[i];
         alrdindx *= shape[i];
       }
@@ -443,7 +474,7 @@ template <typename T, int n> struct Tensor {
       FResultData *store = (FResultData *)node->operation->additional_data;
       size_t alrdindx = index;
       std::vector<size_t> ns(shape.size() - 1);
-      for (int i = 1; i < shape.size(); i++) {
+      for (size_t i = 1; i < shape.size(); i++) {
         ns[i - 1] = shape[i];
         alrdindx *= shape[i];
       }
@@ -454,7 +485,7 @@ template <typename T, int n> struct Tensor {
       FResultData *store = (FResultData *)node->operation->additional_data;
       size_t alrdindx = index;
       std::vector<size_t> ns(shape.size() - 1);
-      for (int i = 1; i < shape.size(); i++) {
+      for (size_t i = 1; i < shape.size(); i++) {
         ns[i - 1] = shape[i];
         alrdindx *= shape[i];
       }
@@ -504,73 +535,98 @@ template <typename T, int n> struct Tensor {
   template <typename K>
   using stronger_return =
       typename std::conditional<isStronger<K, T>(), K, T>::type;
+
   // OPERATIONS
   template <typename K, int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator+(const Tensor<K, k> other) const {
-    return Tensor < stronger_return<K>,
-           k >= n ? k : n > (add(node, other.node), shape);
+    if constexpr (k >= n)
+      return Tensor<stronger_return<K>, k>(fadd(node, other.node), other.shape);
+    else
+      return Tensor<stronger_return<K>, n>(fadd(node, other.node), shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, n> operator+(const K other) const {
-    return Tensor<stronger_return<K>, n>(add(node, other), shape);
+    return Tensor<stronger_return<K>, n>(fadd(node, other), shape);
   }
   template <typename K, int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator-(const Tensor<K, k> other) const {
-    return Tensor < stronger_return<K>,
-           k >= n ? k : n > (sub(node, other.node), shape);
+    if constexpr (k >= n)
+      return Tensor<stronger_return<K>, k>(fsub(node, other.node), other.shape);
+    else
+      return Tensor<stronger_return<K>, n>(fsub(node, other.node), shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, n> operator-(const K other) const {
-    return Tensor<stronger_return<K>, n>(sub(node, other), shape);
+    return Tensor<stronger_return<K>, n>(fsub(node, other), shape);
   }
   template <typename K, int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator*(const Tensor<K, k> other) const {
-    return Tensor < stronger_return<K>,
-           k >= n ? k : n > (mul(node, other.node), shape);
+    if constexpr (k >= n)
+      return Tensor<stronger_return<K>, k>(fmul(node, other.node), other.shape);
+    else
+      return Tensor<stronger_return<K>, n>(fmul(node, other.node), shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, n> operator*(const K other) const {
-    return Tensor<stronger_return<K>, n>(mul(node, other), shape);
+    return Tensor<stronger_return<K>, n>(fmul(node, other), shape);
   }
+  Tensor<T, n> operator-() const { return Tensor<T, n>(fmul(node, -1), shape); }
   template <typename K, int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator/(const Tensor<K, k> other) const {
-    return Tensor < stronger_return<K>,
-           k >= n ? k : n > (div(node, other.node), shape);
+    if constexpr (k >= n)
+      return Tensor<stronger_return<K>, k>(fdiv(node, other.node), other.shape);
+    else
+      return Tensor<stronger_return<K>, n>(fdiv(node, other.node), shape);
   }
   template <typename K>
   Tensor<stronger_return<K>, n> operator/(const K other) const {
-    return Tensor<stronger_return<K>, n>(div(node, other), shape);
+    return Tensor<stronger_return<K>, n>(fdiv(node, other), shape);
   }
   Tensor<T, 1> flattened() const {
-    FGraphNode *foo = flatten(node);
+    FGraphNode *foo = fflatten(node);
     return Tensor<T, 1>(foo, total_size);
   }
   Tensor<T, n - 1> flattened(const int dimension) const {
-    FGraphNode *foo = flatten_dimension(node, dimension);
-    return Tensor<T, n - 1>(
-        foo,
-        std::vector<int>(foo->operation->shape,
-                         foo->operation->shape + foo->operation->dimensions));
+    FGraphNode *foo = fflatten_dimension(node, dimension);
+    std::array<size_t, n - 1> ns;
+    std::copy_n(foo->operation->shape, (size_t)foo->operation->dimensions,
+                ns.begin());
+    return Tensor<T, n - 1>(foo, ns);
   }
   template <typename K, int k>
   Tensor<stronger_return<K>, n> pow(const Tensor<stronger_return<K>, k> other) {
     static_assert(
         k <= n,
         "Can't take the power of a tensor to a tensor with higher dimension!");
-    return Tensor<stronger_return<K>, n>(
-        FLINT_HPP_HELPER::pow_wrapper(node, other.node), shape);
+    return Tensor<stronger_return<K>, n>(fpow(node, other.node), shape);
   }
   template <typename K> Tensor<stronger_return<K>, n> pow(const K other) {
-    return Tensor<stronger_return<K>, n>(
-        FLINT_HPP_HELPER::pow_wrapper(node, other), shape);
+    return Tensor<stronger_return<K>, n>(fpow(node, other), shape);
+  }
+  template <typename K, int k>
+  Tensor<stronger_return<K>, k >= n ? k : n> matmul(Tensor<K, k> other) {
+    int x = shape[shape.size() - 2];
+    int z = other.shape[other.shape.size() - 1];
+    std::array<size_t, k >= n ? k : n> ns;
+    for (size_t i = 0; i < ns.size() - 2; i++) {
+      ns[i] = k >= n ? other.shape[i] : shape[i];
+    }
+    ns[ns.size() - 2] = x;
+    ns[ns.size() - 1] = z;
+    return Tensor < stronger_return<K>,
+           k >= n ? k : n > (fmatmul(&node, &other.node), ns);
+  }
+  template <typename K> Tensor<K, n> convert() const {
+    return Tensor<K, n>(fconvert(node, toFlintType<K>()), shape);
   }
 
 protected:
-  Tensor(FGraphNode *node, std::vector<int> shape) : node(node), shape(shape) {
+  Tensor(FGraphNode *node, std::array<size_t, n> shape)
+      : node(node), shape(shape) {
     // here data is still fine
     total_size = 1;
     for (int ds : shape)
@@ -578,23 +634,24 @@ protected:
     node->reference_counter++;
   }
   FGraphNode *node;
-  std::vector<int> shape;
+  std::array<size_t, n> shape;
   size_t total_size;
-  template <typename K> void initShape(const std::vector<std::vector<K>> &vec) {
-    shape.push_back(vec.size());
+  template <typename K>
+  void initShape(const std::vector<std::vector<K>> &vec, int i) {
+    shape[i] = vec.size();
     if (vec.size() <= 0)
       log(ERROR, "No dimension of the Tensor may have size 0!");
-    initShape(vec[0]);
+    initShape(vec[0], i + 1);
     total_size *= vec.size();
   }
-  template <typename K> void initShape(const std::vector<K> &vec) {
-    shape.push_back(vec.size());
+  template <typename K> void initShape(const std::vector<K> &vec, int i) {
+    shape[i] = vec.size();
     total_size = vec.size();
   }
   template <typename K>
   void bringIntoShape(std::vector<K> &dest, const std::vector<K> &src, int off,
                       int dim, size_t element_size) {
-    for (int i = 0; i < shape[dim]; i++) {
+    for (size_t i = 0; i < shape[dim]; i++) {
       dest[i] = src[off + i];
     }
   }
@@ -603,7 +660,7 @@ protected:
                       const std::vector<V> &src, int off, int dim,
                       size_t element_size) {
     int nes = element_size / shape[dim];
-    for (int i = 0; i < shape[dim]; i++) {
+    for (size_t i = 0; i < shape[dim]; i++) {
       dest[i] = std::vector<K>(shape[dim + 1]);
       bringIntoShape(dest[i], src, off + i * nes, dim + 1, nes);
     }
