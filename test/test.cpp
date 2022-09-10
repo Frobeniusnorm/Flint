@@ -422,12 +422,16 @@ TEST_SUITE("C++ Bindings") {
       for (int j = 0; j < 3; j++)
         for (int k = 0; k < 2; k++)
           CHECK_EQ(t5[i][j][k],
-                   doctest::Approx(r6[i][j][k]).epsilon(0.000000001));
+                   doctest::Approx(r6[i][j][k]).epsilon(.000000000001));
     // power where exponent is higher dimensional
     Tensor<double, 1> t7{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     Tensor<long, 2> t8{{3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
                        {2, 2, 2, 2, 2, 2, 2, 2, 2, 2}};
     Tensor<double, 2> t9 = t7.pow(t8);
+    for (int i = 0; i < 2; i++)
+      for (int j = 0; j < 10; j++)
+        CHECK_EQ(t9[i][j],
+                 doctest::Approx(std::pow(j, 3 - i)).epsilon(.000000000001));
   }
 }
 
