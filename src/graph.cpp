@@ -37,8 +37,9 @@ void flintInit(int cpu, int gpu) {
     flintInit_gpu();
 }
 // GRAPH METHODS
-FGraphNode *fCreateGraph(void *data, int num_entries, FType data_type,
-                         size_t *shape, int dimensions) {
+FGraphNode *fCreateGraph(const void *data, const int num_entries,
+                         const FType data_type, const size_t *shape,
+                         const int dimensions) {
   FGraphNode *gn = new FGraphNode();
   gn->reference_counter = 0;
   FOperation *op = new FOperation();
@@ -287,8 +288,8 @@ FGraphNode *fmul_g(FGraphNode *a, FGraphNode *b) {
   return addNode(op, {a, b});
 }
 FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b) {
-  if (!(a->operation->dimensions >= b->operation->dimensions))
-    log(ERROR, "pow(a, b) must fulfill a->dimensions >= b->dimensions");
+  // if (!(a->operation->dimensions >= b->operation->dimensions))
+  //   log(ERROR, "pow(a, b) must fulfill a->dimensions >= b->dimensions");
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = POW;

@@ -103,8 +103,9 @@ struct FConst {
 // instantly copied. Data contains the flattened data array from type data_type
 // and shape contains the size on each dimension as an array with length
 // dimensions.
-FGraphNode *fCreateGraph(void *data, int num_entries, FType data_type,
-                         size_t *shape, int dimensions);
+FGraphNode *fCreateGraph(const void *data, const int num_entries,
+                         const FType data_type, const size_t *shape,
+                         const int dimensions);
 // frees all allocated data from the graph and the nodes that are reachable
 void fFreeGraph(FGraphNode *graph);
 

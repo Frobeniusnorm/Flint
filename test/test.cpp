@@ -387,8 +387,8 @@ TEST_SUITE("C++ Bindings") {
   }
   TEST_CASE("Parameter Communitivity") {
     using namespace std;
-    Tensor<int, 3> t1({{{7, 1}, {1, 2}, {2, 3}}, {{1, 2}, {2, 3}, {3, 4}}});
-    Tensor<int, 2> t2(vector<vector<int>>{{2, 9}, {3, 5}, {4, 3}});
+    Tensor<int, 3> t1{{{7, 1}, {1, 2}, {2, 3}}, {{1, 2}, {2, 3}, {3, 4}}};
+    Tensor<int, 2> t2{{2, 9}, {3, 5}, {4, 3}};
     Tensor<int, 3> t3 = t1 + t2;
     Tensor<int, 3> t4 = t2 + t1;
     vector<vector<vector<int>>> r3 = *t3;
@@ -423,6 +423,11 @@ TEST_SUITE("C++ Bindings") {
         for (int k = 0; k < 2; k++)
           CHECK_EQ(t5[i][j][k],
                    doctest::Approx(r6[i][j][k]).epsilon(0.000000001));
+    // power where exponent is higher dimensional
+    Tensor<double, 1> t7{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    Tensor<long, 2> t8{{3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
+                       {2, 2, 2, 2, 2, 2, 2, 2, 2, 2}};
+    Tensor<double, 2> t9 = t7.pow(t8);
   }
 }
 
