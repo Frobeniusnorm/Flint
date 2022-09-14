@@ -57,6 +57,7 @@ enum FOperationType {
   FLATTEN,
   MATMUL,
   CONVERSION,
+  RESHAPE,
   Length
 };
 struct FOperation {
@@ -163,6 +164,8 @@ FGraphNode *fflatten_dimension(FGraphNode *a, int dimension);
 
 // Converts the type
 FGraphNode *fconvert(FGraphNode *a, FType newtype);
+// reshapes the Tensor, requires execution of predecessor
+FGraphNode *freshape(FGraphNode **a, size_t *newshape, int dimensions);
 #ifdef __cplusplus
 }
 // no c++ bindings, but function overloading for c++ header
