@@ -130,7 +130,7 @@ static std::string
 generateCode(FGraphNode *node,
              std::list<std::pair<FOperation *, std::string>> &parameters) {
   using namespace std;
-  list<pair<FGraphNode *, string>> todo;
+  list<tuple<FGraphNode *, string>> todo;
   unordered_map<FOperation *, std::string> assigned_params;
   int variable_index = 0;
   string code = "";
@@ -287,6 +287,7 @@ generateCode(FGraphNode *node,
              to_string(n) + " + " + k + "];\n}\n" + code;
       code = type + " " + name + " = 0;\n" + code;
     } break;
+    case RESHAPE:
     case FLATTEN: {
       code = type + " " + name + " = v" + to_string(variable_index + 1) +
              ";\n" + code;
@@ -369,6 +370,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
           factor *= op->shape[i];
         }
         indx_mod = "%" + to_string(factor);
+      } else if (op->dimensions > node->operation->dimensions) {
+        // TODO
       }
       code += "P" + to_string(par_idx) + "[index" + indx_mod + "];\n";
     }

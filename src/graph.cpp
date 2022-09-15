@@ -23,7 +23,7 @@
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
   // TODO
-  return fExecuteGraph_gpu(node);
+  return fExecuteGraph_cpu(node);
 }
 void flintCleanup() {
   flintCleanup_cpu();
@@ -465,10 +465,11 @@ FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
 }
 FGraphNode *freshape(FGraphNode **a, size_t *newshape, int dimensions) {
   FGraphNode *x = *a;
-  if (x->operation->op_type != STORE && x->operation->op_type != RESULTDATA) {
-    x = fExecuteGraph(x);
-    *a = x;
-  }
+  // if (x->operation->op_type != STORE && x->operation->op_type != RESULTDATA)
+  // {
+  //   x = fExecuteGraph(x);
+  //   *a = x;
+  // }
   FGraphNode *node = new FGraphNode();
   node->operation = new FOperation();
   node->operation->shape = safe_mal<size_t>(dimensions);
@@ -476,7 +477,7 @@ FGraphNode *freshape(FGraphNode **a, size_t *newshape, int dimensions) {
   node->operation->data_type = x->operation->data_type;
   node->operation->op_type = RESHAPE;
   node->num_predecessor = 1;
-  node->predecessors = safe_mal<FGraphNode *>(2);
+  node->predecessors = safe_mal<FGraphNode *>(1);
   node->predecessors[0] = x;
   x->num_predecessor++;
   return node;

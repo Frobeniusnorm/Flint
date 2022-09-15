@@ -155,6 +155,7 @@ static void executeNode(FGraphNode *node,
     }
 
   } break;
+  case RESHAPE:
   case FLATTEN: {
     CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)
