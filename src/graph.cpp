@@ -23,7 +23,7 @@
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
   // TODO
-  return fExecuteGraph_cpu(node);
+  return fExecuteGraph_gpu(node);
 }
 void flintCleanup() {
   flintCleanup_cpu();
@@ -240,12 +240,30 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
 static inline void initShape_keep(FOperation *op, FOperation *a,
                                   FOperation *b) {
   size_t *src = nullptr;
+  size_t *lower = nullptr;
+  int lower_dim = -1;
   if (!b || a->dimensions >= b->dimensions) {
     op->dimensions = a->dimensions;
     src = a->shape;
+    if (b) {
+      lower = b->shape;
+      lower_dim = b->dimensions;
+    }
   } else {
     op->dimensions = b->dimensions;
     src = b->shape;
+    lower = a->shape;
+    lower_dim = a->dimensions;
+  }
+  // check shape if both are defined
+  if (lower) {
+    for (int i = 0; i < lower_dim; i++)
+      if (src[i + (op->dimensions - lower_dim)] != lower[i])
+        log(ERROR,
+            "incompatible shapes of operands: " +
+                vectorString(std::vector<size_t>(src, src + op->dimensions)) +
+                " and " +
+                vectorString(std::vector<size_t>(lower, lower + lower_dim)));
   }
   op->shape = (size_t *)malloc(sizeof(size_t) * op->dimensions);
   memcpy((void *)op->shape, src, sizeof(size_t) * op->dimensions);

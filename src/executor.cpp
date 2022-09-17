@@ -329,6 +329,10 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   newsucc->predecessors[0] = node;
   node->reference_counter++;
   newsucc->operation = result;
+  FOperation *node_op = node->operation;
+  size_t total_size_node = 1;
+  for (int i = 0; i < node_op->dimensions; i++)
+    total_size_node *= node_op->shape[i];
   // calculate Code and Parameters
   using namespace std;
   list<pair<FOperation *, string>> parameters;
@@ -351,27 +355,12 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       string type = typeString(op->data_type);
       code += type + " " + name + " = ";
       string indx_mod = "";
-      if (op->dimensions < node->operation->dimensions) {
-        // we take the remainder of the division of the product of the sizes of
-        // the dimensions that are not shared by op
-        size_t factor = 1;
-        for (int i = 0; i < op->dimensions; i++) {
-          if (node->operation
-                  ->shape[i + (node->operation->dimensions - op->dimensions)] !=
-              op->shape[i])
-            log(ERROR,
-                "incompatible shapes of operands: " +
-                    vectorString(vector<size_t>(
-                        node->operation->shape,
-                        node->operation->shape + node->operation->dimensions)) +
-                    " and " +
-                    vectorString(
-                        vector<size_t>(op->shape, op->shape + op->dimensions)));
-          factor *= op->shape[i];
-        }
+      size_t factor = 1;
+      for (int i = 0; i < op->dimensions; i++)
+        factor *= op->shape[i];
+      if (factor != total_size_node) {
+        // all shapes multiplied to get total size
         indx_mod = "%" + to_string(factor);
-      } else if (op->dimensions > node->operation->dimensions) {
-        // TODO
       }
       code += "P" + to_string(par_idx) + "[index" + indx_mod + "];\n";
     }
@@ -432,10 +421,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       chrono::high_resolution_clock::now() - start;
   start = std::chrono::high_resolution_clock::now();
   // result buffer
-  FOperation *node_op = node->operation;
-  size_t total_size_node = 1;
-  for (int i = 0; i < node_op->dimensions; i++)
-    total_size_node *= node_op->shape[i];
   size_t type_size_node = typeSize(node_op->data_type);
   cl_mem result_mem =
       clCreateBuffer(context, CL_MEM_READ_WRITE,
