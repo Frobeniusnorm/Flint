@@ -268,6 +268,11 @@ TEST_SUITE("Execution") {
         CHECK_EQ(i * 2 + j + 1 + (11 - i * 2 - j), t5[i][j]);
       }
     }
+    Tensor<int, 4> t6 = t1.reshape(std::array<size_t, 4>{2, 3, 2, 1});
+    for (int i = 0; i < 2; i++)
+      for (int j = 0; j < 3; j++)
+        for (int k = 0; k < 2; k++)
+          CHECK_EQ(i * 6 + j * 2 + k, t6[i][j][k][0]);
   }
   TEST_CASE("matmul") {
     using namespace std;

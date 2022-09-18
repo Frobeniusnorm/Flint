@@ -648,6 +648,11 @@ template <typename T, int n> struct Tensor {
   template <typename K> Tensor<K, n> convert() const {
     return Tensor<K, n>(fconvert(node, toFlintType<K>()), shape);
   }
+  template <size_t newdim>
+  Tensor<T, newdim> reshape(std::array<size_t, newdim> new_shape) {
+    return Tensor<T, newdim>(freshape(node, new_shape.data(), newdim),
+                             new_shape);
+  }
 
 protected:
   Tensor(FGraphNode *node, std::array<size_t, n> shape)

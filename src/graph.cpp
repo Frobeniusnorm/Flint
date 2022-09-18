@@ -481,23 +481,19 @@ FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
   node->reference_counter = 0;
   return node;
 }
-FGraphNode *freshape(FGraphNode **a, size_t *newshape, int dimensions) {
-  FGraphNode *x = *a;
-  // if (x->operation->op_type != STORE && x->operation->op_type != RESULTDATA)
-  // {
-  //   x = fExecuteGraph(x);
-  //   *a = x;
-  // }
+FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions) {
   FGraphNode *node = new FGraphNode();
   node->operation = new FOperation();
   node->operation->shape = safe_mal<size_t>(dimensions);
   std::memcpy(node->operation->shape, newshape, dimensions * sizeof(size_t));
-  node->operation->data_type = x->operation->data_type;
+  node->operation->data_type = a->operation->data_type;
   node->operation->op_type = RESHAPE;
+  node->operation->dimensions = dimensions;
   node->num_predecessor = 1;
   node->predecessors = safe_mal<FGraphNode *>(1);
-  node->predecessors[0] = x;
-  x->num_predecessor++;
+  node->predecessors[0] = a;
+  node->reference_counter = 0;
+  a->reference_counter++;
   return node;
 }
 FGraphNode *fconvert(FGraphNode *a, FType newtype) {
