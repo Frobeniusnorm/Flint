@@ -314,6 +314,20 @@ FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b) {
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
+FGraphNode *fmin_g(FGraphNode *a, FGraphNode *b) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = MIN;
+  initShape_keep(op, a->operation, b->operation);
+  return addNode(op, {a, b});
+}
+FGraphNode *fmax_g(FGraphNode *a, FGraphNode *b) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = MAX;
+  initShape_keep(op, a->operation, b->operation);
+  return addNode(op, {a, b});
+}
 template <typename T>
 static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, const T b) {
   FConst *cons = new FConst();
@@ -393,6 +407,30 @@ FGraphNode *fpow_cd(FGraphNode *a, const double b) { return pow<double>(a, b); }
 FGraphNode *fpow_cf(FGraphNode *a, const float b) { return pow<float>(a, b); }
 FGraphNode *fpow_ci(FGraphNode *a, const int b) { return pow<int>(a, b); }
 FGraphNode *fpow_cl(FGraphNode *a, const long b) { return pow<long>(a, b); }
+
+template <typename T> FGraphNode *min(FGraphNode *a, const T b) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = MIN;
+  initShape_keep(op, a->operation, nullptr);
+  return addNodeWithConst(op, a, b);
+}
+FGraphNode *fmin_ci(FGraphNode *a, const int b) { return min(a, b); }
+FGraphNode *fmin_cl(FGraphNode *a, const long b) { return min(a, b); }
+FGraphNode *fmin_cf(FGraphNode *a, const float b) { return min(a, b); }
+FGraphNode *fmin_cd(FGraphNode *a, const double b) { return min(a, b); }
+
+template <typename T> FGraphNode *max(FGraphNode *a, const T b) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = MAX;
+  initShape_keep(op, a->operation, nullptr);
+  return addNodeWithConst(op, a, b);
+}
+FGraphNode *fmax_ci(FGraphNode *a, const int b) { return max(a, b); }
+FGraphNode *fmax_cl(FGraphNode *a, const long b) { return max(a, b); }
+FGraphNode *fmax_cf(FGraphNode *a, const float b) { return max(a, b); }
+FGraphNode *fmax_cd(FGraphNode *a, const double b) { return max(a, b); }
 
 FGraphNode *fflatten(FGraphNode *a) {
   FOperation *op = new FOperation();

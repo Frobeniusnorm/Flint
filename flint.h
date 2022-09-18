@@ -58,6 +58,10 @@ enum FOperationType {
   MATMUL,
   CONVERSION,
   RESHAPE,
+  MIN,
+  MAX,
+  REDUCE_SUM, // TODO
+  REDUCE_MUL, // TODO
   Length
 };
 struct FOperation {
@@ -166,6 +170,18 @@ FGraphNode *fflatten_dimension(FGraphNode *a, int dimension);
 FGraphNode *fconvert(FGraphNode *a, FType newtype);
 // reshapes the Tensor, requires execution of predecessor
 FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions);
+// takes the minimum of two tensors element wise
+FGraphNode *fmin_g(FGraphNode *a, FGraphNode *b);
+FGraphNode *fmin_ci(FGraphNode *a, const int b);
+FGraphNode *fmin_cl(FGraphNode *a, const long b);
+FGraphNode *fmin_cf(FGraphNode *a, const float b);
+FGraphNode *fmin_cd(FGraphNode *a, const double b);
+// takes the maximum of two tensors element wise
+FGraphNode *fmax_g(FGraphNode *a, FGraphNode *b);
+FGraphNode *fmax_ci(FGraphNode *a, const int b);
+FGraphNode *fmax_cl(FGraphNode *a, const long b);
+FGraphNode *fmax_cf(FGraphNode *a, const float b);
+FGraphNode *fmax_cd(FGraphNode *a, const double b);
 #ifdef __cplusplus
 }
 // no c++ bindings, but function overloading for c++ header
