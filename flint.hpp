@@ -356,6 +356,20 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K> Tensor<stronger_return<K>, 1> pow(const K other) const {
     return Tensor<stronger_return<K>, 1>(fpow(node, other), shape);
   }
+  template <typename K, int k>
+  Tensor<stronger_return<K>, k> min(const Tensor<K, k> other) const {
+    return Tensor<stronger_return<K>, k>(fmin(node, other.node));
+  }
+  template <typename K> Tensor<stronger_return<K>, 1> min(const K other) const {
+    return Tensor<stronger_return<K>, 1>(fmin(node, other));
+  }
+  template <typename K, int k>
+  Tensor<stronger_return<K>, k> max(const Tensor<K, k> other) const {
+    return Tensor<stronger_return<K>, k>(fmax(node, other.node));
+  }
+  template <typename K> Tensor<stronger_return<K>, 1> max(const K other) const {
+    return Tensor<stronger_return<K>, 1>(fmax(node, other));
+  }
   template <typename K> Tensor<K, 1> convert() const {
     return Tensor<K, 1>(fconvert(node, toFlintType<K>()), shape);
   }
@@ -652,6 +666,29 @@ template <typename T, int n> struct Tensor {
   Tensor<T, newdim> reshape(std::array<size_t, newdim> new_shape) {
     return Tensor<T, newdim>(freshape(node, new_shape.data(), newdim),
                              new_shape);
+  }
+
+  template <typename K, int k>
+  Tensor<stronger_return<K>, k >= n ? k : n>
+  min(const Tensor<K, k> other) const {
+    if constexpr (k >= n)
+      return Tensor<stronger_return<K>, k>(fmin(node, other.node), other.shape);
+    else
+      return Tensor<stronger_return<K>, n>(fmin(node, other.node), shape);
+  }
+  template <typename K> Tensor<stronger_return<K>, n> min(const K other) const {
+    return Tensor<stronger_return<K>, n>(fmin(node, other));
+  }
+  template <typename K, int k>
+  Tensor<stronger_return<K>, k >= n ? k : n>
+  max(const Tensor<K, k> other) const {
+    if constexpr (k >= n)
+      return Tensor<stronger_return<K>, k>(fmax(node, other.node), other.shape);
+    else
+      return Tensor<stronger_return<K>, n>(fmax(node, other.node), shape);
+  }
+  template <typename K> Tensor<stronger_return<K>, n> max(const K other) const {
+    return Tensor<stronger_return<K>, n>(fmax(node, other));
   }
 
 protected:

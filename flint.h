@@ -215,6 +215,18 @@ inline FGraphNode *fpow(FGraphNode *a, const long b) { return fpow_cl(a, b); }
 inline FGraphNode *fpow(FGraphNode *a, const float b) { return fpow_cf(a, b); }
 inline FGraphNode *fpow(FGraphNode *a, const double b) { return fpow_cd(a, b); }
 
+inline FGraphNode *fmin(FGraphNode *a, FGraphNode *b) { return fmin_g(a, b); }
+inline FGraphNode *fmin(FGraphNode *a, const int b) { return fmin_ci(a, b); }
+inline FGraphNode *fmin(FGraphNode *a, const long b) { return fmin_cl(a, b); }
+inline FGraphNode *fmin(FGraphNode *a, const float b) { return fmin_cf(a, b); }
+inline FGraphNode *fmin(FGraphNode *a, const double b) { return fmin_cd(a, b); }
+
+inline FGraphNode *fmax(FGraphNode *a, FGraphNode *b) { return fmax_g(a, b); }
+inline FGraphNode *fmax(FGraphNode *a, const int b) { return fmax_ci(a, b); }
+inline FGraphNode *fmax(FGraphNode *a, const long b) { return fmax_cl(a, b); }
+inline FGraphNode *fmax(FGraphNode *a, const float b) { return fmax_cf(a, b); }
+inline FGraphNode *fmax(FGraphNode *a, const double b) { return fmax_cd(a, b); }
+
 inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
   return fflatten_dimension(a, dimension);
 }

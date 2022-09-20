@@ -32,7 +32,8 @@
 #include <unordered_set>
 // virtual maximum number of threads
 #define MAX_PARALLELITY 4096
-
+#define MIN_VAL(x, y) x < y ? x : y
+#define MAX_VAL(x, y) x < y ? y : x
 static bool initialized = false;
 static std::vector<std::thread *> threads;
 
@@ -108,6 +109,14 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
       }
     }
   } break;
+  case MIN:
+    for (size_t i = from; i < from + size; i++)
+      result[i] = MIN_VAL(data1[i % index_man_1], data2[i % index_man_2]);
+    break;
+  case MAX:
+    for (size_t i = from; i < from + size; i++)
+      result[i] = MAX_VAL(data1[i % index_man_1], data2[i % index_man_2]);
+    break;
   default:
     break;
   }

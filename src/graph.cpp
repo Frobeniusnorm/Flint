@@ -23,7 +23,7 @@
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
   // TODO
-  return fExecuteGraph_gpu(node);
+  return fExecuteGraph_cpu(node);
 }
 void flintCleanup() {
   flintCleanup_cpu();

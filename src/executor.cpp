@@ -228,6 +228,16 @@ generateCode(FGraphNode *node,
                to_string(variable_index + 1) + ", (double)v" +
                to_string(variable_index + 2) + ");\n" + code;
     } break;
+    case MIN: {
+      code = type + " " + name + " = min(v" + to_string(variable_index + 1) +
+             ", v" + to_string(variable_index + 2) + ");\n" + code;
+
+    } break;
+    case MAX: {
+      code = type + " " + name + " = max(v" + to_string(variable_index + 1) +
+             ", v" + to_string(variable_index + 2) + ");\n" + code;
+
+    } break;
     case MATMUL: {
       push_pred = false;
       string par1, par2;

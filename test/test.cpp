@@ -449,6 +449,17 @@ TEST_SUITE("C++ Bindings") {
         CHECK_EQ(t9[i][j],
                  doctest::Approx(std::pow(j, 3 - i)).epsilon(.000000000001));
   }
+  TEST_CASE("MIN, MAX") {
+    Tensor<double, 2> t1{{1, 5}, {-3, 7}, {2, 3}};
+    Tensor<double, 2> t2{{3, 1}, {2, -5}, {7, -9}};
+    Tensor<double, 2> t3 = t1.min(t2);
+    Tensor<double, 2> t4 = t2.max(t1);
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 2; j++) {
+        CHECK_EQ(t1[i][j] < t2[i][j] ? t1[i][j] : t2[i][j], t3[i][j]);
+        CHECK_EQ(t1[i][j] > t2[i][j] ? t1[i][j] : t2[i][j], t4[i][j]);
+      }
+  }
 }
 
 int main(int argc, char **argv) {
