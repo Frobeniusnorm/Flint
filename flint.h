@@ -182,6 +182,10 @@ FGraphNode *fmax_ci(FGraphNode *a, const int b);
 FGraphNode *fmax_cl(FGraphNode *a, const long b);
 FGraphNode *fmax_cf(FGraphNode *a, const float b);
 FGraphNode *fmax_cd(FGraphNode *a, const double b);
+// reduces one dimension of the tensor by additive folding e.g.
+// freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
+// freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
+FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
 #ifdef __cplusplus
 }
 // no c++ bindings, but function overloading for c++ header

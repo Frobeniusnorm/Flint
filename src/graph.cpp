@@ -23,7 +23,7 @@
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
   // TODO
-  return fExecuteGraph_cpu(node);
+  return fExecuteGraph_gpu(node);
 }
 void flintCleanup() {
   flintCleanup_cpu();
@@ -468,6 +468,9 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
   op->additional_data = prev_op->additional_data;
   op->data_type = prev_op->data_type;
   return addNode(op, {a});
+}
+FGraphNode *freduce_sum(FGraphNode *a, const int dimension) {
+  // TODO
 }
 FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
   FGraphNode *x = *a;
