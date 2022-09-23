@@ -124,6 +124,9 @@ void fFreeGraph(FGraphNode *graph) {
           free(c->value);
           delete c;
         } break;
+        case REDUCE_SUM:
+        case REDUCE_MUL:
+          free(gn->operation->additional_data);
         default:
           break;
         }
@@ -469,9 +472,7 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
   op->data_type = prev_op->data_type;
   return addNode(op, {a});
 }
-FGraphNode *freduce_sum(FGraphNode *a, const int dimension) {
-  // TODO
-}
+
 FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
   FGraphNode *x = *a;
   FGraphNode *y = *b;
@@ -552,4 +553,35 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
          sizeof(size_t) * a->operation->dimensions);
   foo->operation->op_type = CONVERSION;
   return foo;
+}
+
+inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
+                                    FOperationType type) {
+  FGraphNode *foo = new FGraphNode();
+  foo->reference_counter = 0;
+  foo->num_predecessor = 1;
+  foo->predecessors = safe_mal<FGraphNode *>(1);
+  foo->predecessors[0] = a;
+  a->reference_counter++;
+  FOperation *op = new FOperation();
+  FOperation *other = a->operation;
+  foo->operation = op;
+  op->data_type = other->data_type;
+  op->op_type = type;
+  op->dimensions = other->dimensions - 1;
+  op->shape = safe_mal<size_t>(op->dimensions);
+  memcpy(op->shape, other->shape, sizeof(size_t) * dimension);
+  memcpy(op->shape + dimension, other->shape + (dimension + 1),
+         sizeof(size_t) * (other->dimensions - dimension - 1));
+  op->additional_data = safe_mal<int>(1);
+  *(int *)op->additional_data = dimension;
+  return foo;
+}
+// freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
+// freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
+FGraphNode *freduce_sum(FGraphNode *a, const int dimension) {
+  return reduce_operation(a, dimension, REDUCE_SUM);
+}
+FGraphNode *freduce_mul(FGraphNode *a, const int dimension) {
+  return reduce_operation(a, dimension, REDUCE_MUL);
 }
