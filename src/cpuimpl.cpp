@@ -164,6 +164,30 @@ static void executeNode(FGraphNode *node,
     }
 
   } break;
+  case REDUCE_SUM:
+  case REDUCE_MUL: {
+    CPUResultData pred = predecessor_data[0];
+    int dim = ((int *)node->operation->additional_data)[0];
+    size_t it_dim = 1; // iteration size <=> product of all dimensions along dim
+    for (size_t d = dim + 1; d < pred.shape.size(); d++)
+      it_dim *= pred.shape[d];
+
+    for (size_t i = from; i < from + size; i++) {
+      // iterate through to-reduce dimension
+      result[i] = node->operation->op_type == REDUCE_SUM
+                      ? 0
+                      : 1; // init with neutral element
+      for (size_t j = 0; j < pred.shape[dim]; j++) {
+        const T curr =
+            ((T *)pred.data)[(i / it_dim) * it_dim * pred.shape[dim] +
+                             i % it_dim + j * it_dim];
+        if (node->operation->op_type == REDUCE_SUM)
+          result[i] += curr;
+        else
+          result[i] *= curr;
+      }
+    }
+  } break;
   case RESHAPE:
   case FLATTEN: {
     CPUResultData pred = predecessor_data[0];

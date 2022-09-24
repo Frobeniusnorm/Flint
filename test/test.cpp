@@ -460,6 +460,25 @@ TEST_SUITE("C++ Bindings") {
         CHECK_EQ(t1[i][j] > t2[i][j] ? t1[i][j] : t2[i][j], t4[i][j]);
       }
   }
+  TEST_CASE("REDUCE OPERATIONS") {
+    Tensor<double, 3> t1{{{1, 7}, {8, 8}, {2, 1}}, {{9, 3}, {2, 1}, {8, 9}}};
+    Tensor<double, 2> t2 = t1.reduce_sum(0);
+    CHECK_EQ(10, t2[0][0]);
+    CHECK_EQ(10, t2[0][1]);
+    CHECK_EQ(10, t2[2][1]);
+    CHECK_EQ(10, t2[1][0]);
+    CHECK_EQ(9, t2[1][1]);
+    t2 = t1.reduce_sum(1);
+    CHECK_EQ(11, t2[0][0]);
+    CHECK_EQ(16, t2[0][1]);
+    CHECK_EQ(19, t2[1][0]);
+    CHECK_EQ(13, t2[1][1]);
+    t2 = t1.reduce_sum(2);
+    CHECK_EQ(8, t2[0][0]);
+    CHECK_EQ(16, t2[0][1]);
+    CHECK_EQ(12, t2[1][0]);
+    CHECK_EQ(17, t2[1][2]);
+  }
 }
 
 int main(int argc, char **argv) {

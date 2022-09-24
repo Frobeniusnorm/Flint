@@ -348,7 +348,6 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<stronger_return<K>, 1> operator/(const K con) const {
     return Tensor<stronger_return<K>, 1>(fdiv(node, con), shape);
   }
-
   template <typename K, int k>
   Tensor<stronger_return<K>, k> pow(const Tensor<K, k> other) const {
     return Tensor<stronger_return<K>, k>(fpow(node, other.node), other.shape);
@@ -689,6 +688,14 @@ template <typename T, int n> struct Tensor {
   }
   template <typename K> Tensor<stronger_return<K>, n> max(const K other) const {
     return Tensor<stronger_return<K>, n>(fmax(node, other));
+  }
+  Tensor<T, n - 1> reduce_sum(const int dimension) const {
+    std::array<size_t, n - 1> ns;
+    for (int i = 0; i < dimension; i++)
+      ns[i] = shape[i];
+    for (size_t i = dimension; i < ns.size(); i++)
+      ns[i] = shape[i + 1];
+    return Tensor<T, n - 1>(freduce_sum(node, dimension), ns);
   }
 
 protected:
