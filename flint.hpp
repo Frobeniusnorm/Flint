@@ -697,6 +697,14 @@ template <typename T, int n> struct Tensor {
       ns[i] = shape[i + 1];
     return Tensor<T, n - 1>(freduce_sum(node, dimension), ns);
   }
+  Tensor<T, n - 1> reduce_mul(const int dimension) const {
+    std::array<size_t, n - 1> ns;
+    for (int i = 0; i < dimension; i++)
+      ns[i] = shape[i];
+    for (size_t i = dimension; i < ns.size(); i++)
+      ns[i] = shape[i + 1];
+    return Tensor<T, n - 1>(freduce_mul(node, dimension), ns);
+  }
 
 protected:
   Tensor(FGraphNode *node, std::array<size_t, n> shape)

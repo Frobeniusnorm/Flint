@@ -478,6 +478,18 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(16, t2[0][1]);
     CHECK_EQ(12, t2[1][0]);
     CHECK_EQ(17, t2[1][2]);
+    t2 = t1.reduce_mul(0);
+    CHECK_EQ(9, t2[0][0]);
+    CHECK_EQ(8, t2[1][1]);
+    CHECK_EQ(16, t2[2][0]);
+    t2 = t1.reduce_mul(1);
+    CHECK_EQ(16, t2[0][0]);
+    CHECK_EQ(27, t2[1][1]);
+    CHECK_EQ(56, t2[0][1]);
+    t2 = t1.reduce_mul(2);
+    CHECK_EQ(7, t2[0][0]);
+    CHECK_EQ(64, t2[0][1]);
+    CHECK_EQ(2, t2[1][1]);
   }
 }
 
