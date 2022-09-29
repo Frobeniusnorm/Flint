@@ -60,8 +60,9 @@ enum FOperationType {
   RESHAPE,
   MIN,
   MAX,
-  REDUCE_SUM, // TODO
-  REDUCE_MUL, // TODO
+  REDUCE_SUM,
+  REDUCE_MUL,
+  SLICE,
   Length
 };
 struct FOperation {
@@ -190,6 +191,17 @@ FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [4,10,18],
 // freduce_sum([[1,2,3], [4,5,6]], 1) = [6, 120]
 FGraphNode *freduce_mul(FGraphNode *a, const int dimension);
+/* Selects a slice of the tensor with a start and end range.
+ * @param start and @param size have to contain a index and size per dimension
+ * of the target tensor. */
+FGraphNode *fslice(FGraphNode *a, const size_t *start, const size_t *size);
+/* Selects a slice of the tensor with a start and end range by a per dimension
+ * step size.
+ * @param start, @param size and @param step have to contain a index, size and
+ * step size per dimension of the target tensor. */
+FGraphNode *fslice_step(FGraphNode *a, const size_t *start, const size_t *size,
+                        const size_t *step);
+
 #ifdef __cplusplus
 }
 // no c++ bindings, but function overloading for c++ header
