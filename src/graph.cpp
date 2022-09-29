@@ -555,8 +555,13 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   return foo;
 }
 
-inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
+inline FGraphNode *reduce_operation(FGraphNode **x, const int dimension,
                                     FOperationType type) {
+  FGraphNode *a = *x;
+  if (a->operation->op_type != STORE && a->operation->op_type != RESULTDATA) {
+    a = fExecuteGraph(a);
+    *x = a;
+  }
   FGraphNode *foo = new FGraphNode();
   foo->reference_counter = 0;
   foo->num_predecessor = 1;
@@ -579,9 +584,9 @@ inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 }
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
 // freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
-FGraphNode *freduce_sum(FGraphNode *a, const int dimension) {
+FGraphNode *freduce_sum(FGraphNode **a, const int dimension) {
   return reduce_operation(a, dimension, REDUCE_SUM);
 }
-FGraphNode *freduce_mul(FGraphNode *a, const int dimension) {
+FGraphNode *freduce_mul(FGraphNode **a, const int dimension) {
   return reduce_operation(a, dimension, REDUCE_MUL);
 }

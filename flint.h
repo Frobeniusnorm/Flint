@@ -186,11 +186,17 @@ FGraphNode *fmax_cd(FGraphNode *a, const double b);
 // reduces one dimension of the tensor by additive folding e.g.
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
 // freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
-FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
+// The results of the predecessor node must be available; to
+// ensure that the method may execute the parameter node. The corresponding
+// result node is then stored in the memory pointed to by a.
+FGraphNode *freduce_sum(FGraphNode **a, const int dimension);
 // reduces one dimension of the tensor by additive multiplication e.g.
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [4,10,18],
 // freduce_sum([[1,2,3], [4,5,6]], 1) = [6, 120]
-FGraphNode *freduce_mul(FGraphNode *a, const int dimension);
+// The results of the predecessor node must be available; to
+// ensure that the method may execute the parameter node. The corresponding
+// result node is then stored in the memory pointed to by a.
+FGraphNode *freduce_mul(FGraphNode **a, const int dimension);
 /* Selects a slice of the tensor with a start and end range.
  * @param start and @param size have to contain a index and size per dimension
  * of the target tensor. */

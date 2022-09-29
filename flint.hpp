@@ -689,21 +689,21 @@ template <typename T, int n> struct Tensor {
   template <typename K> Tensor<stronger_return<K>, n> max(const K other) const {
     return Tensor<stronger_return<K>, n>(fmax(node, other));
   }
-  Tensor<T, n - 1> reduce_sum(const int dimension) const {
+  Tensor<T, n - 1> reduce_sum(const int dimension) {
     std::array<size_t, n - 1> ns;
     for (int i = 0; i < dimension; i++)
       ns[i] = shape[i];
     for (size_t i = dimension; i < ns.size(); i++)
       ns[i] = shape[i + 1];
-    return Tensor<T, n - 1>(freduce_sum(node, dimension), ns);
+    return Tensor<T, n - 1>(freduce_sum(&node, dimension), ns);
   }
-  Tensor<T, n - 1> reduce_mul(const int dimension) const {
+  Tensor<T, n - 1> reduce_mul(const int dimension) {
     std::array<size_t, n - 1> ns;
     for (int i = 0; i < dimension; i++)
       ns[i] = shape[i];
     for (size_t i = dimension; i < ns.size(); i++)
       ns[i] = shape[i + 1];
-    return Tensor<T, n - 1>(freduce_mul(node, dimension), ns);
+    return Tensor<T, n - 1>(freduce_mul(&node, dimension), ns);
   }
 
 protected:
