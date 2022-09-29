@@ -305,7 +305,43 @@ generateCode(FGraphNode *node,
     case CONVERSION: {
       code = type + " " + name + " = (" + type + ")v" +
              to_string(variable_index + 1) + ";\n" + code;
-    };
+    }; break;
+    case REDUCE_SUM:
+    case REDUCE_MUL: {
+      FGraphNode *prev = node->predecessors[0];
+      int red_dim = ((int *)node->operation->additional_data)[0];
+      size_t it_dim =
+          1; // iteration size <=> product of all dimensions along dim
+      for (size_t d = red_dim + 1; d < prev->operation->dimensions; d++)
+        it_dim *= prev->operation->shape[d];
+      std::string reduce_code = type + " " + name + " = 0;\n";
+      reduce_code += "for(long i = 0; i < " +
+                     std::to_string(prev->operation->shape[red_dim]) +
+                     "; i++){\n";
+      // we ignore the value assignment of the parameters since we have to
+      // access the arrays directly parameter 1
+      std::string par1 = "";
+      if (assigned_params.find(prev->operation) != assigned_params.end()) {
+        int index = 0;
+        for (auto &[pnode, pname] : parameters) {
+          if (pnode == prev->operation)
+            break;
+          index++;
+        }
+        par1 = "P" + to_string(index);
+      } else {
+        par1 = "P" + to_string(parameters.size());
+        parameters.push_back({prev->operation, ""});
+      }
+      reduce_code = " " + name +
+                    (node->operation->op_type == REDUCE_SUM ? " += " : " *= ") +
+                    par1 + "[(index / " + std::to_string(it_dim) + ") * " +
+                    std::to_string(it_dim) + " * " +
+                    std::to_string(prev->operation->shape[red_dim]) +
+                    " + index % " + std::to_string(it_dim) + " + i * " +
+                    std::to_string(it_dim) + "];\n}\n";
+      code = reduce_code + code;
+    } break;
     default:
       break;
     }
@@ -471,16 +507,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       void *data = op->op_type == STORE
                        ? ((FStore *)op->additional_data)->data
                        : ((FResultData *)op->additional_data)->data;
-      // string buffer_data = "";
-      // for (int i = 0; i < total_size; i++)
-      //   if (op->data_type == FLOAT32)
-      //     buffer_data += to_string(((float *)data)[i]) + " ";
-      //   else if (op->data_type == FLOAT64)
-      //     buffer_data += to_string(((double *)data)[i]) + " ";
-      //   else if (op->data_type == INT32)
-      //     buffer_data += to_string(((int *)data)[i]) + " ";
-      //   else
-      //     buffer_data += to_string(((long *)data)[i]) + " ";
       writeEvents.emplace_back();
       err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_TRUE, 0,
                                       total_size * type_size, data, 0, nullptr,
