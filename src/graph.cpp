@@ -124,6 +124,13 @@ void fFreeGraph(FGraphNode *graph) {
           free(c->value);
           delete c;
         } break;
+        case SLICE: {
+          FSlice *s = (FSlice *)gn->operation->additional_data;
+          free(s->size);
+          free(s->start);
+          free(s->step);
+          delete s;
+        } break;
         case REDUCE_SUM:
         case REDUCE_MUL:
           free(gn->operation->additional_data);
@@ -589,4 +596,34 @@ FGraphNode *freduce_sum(FGraphNode **a, const int dimension) {
 }
 FGraphNode *freduce_mul(FGraphNode **a, const int dimension) {
   return reduce_operation(a, dimension, REDUCE_MUL);
+}
+
+FGraphNode *fslice_step(FGraphNode *a, const size_t *start, const size_t *size,
+                        const size_t *step) {
+  FGraphNode *foo = new FGraphNode();
+  foo->num_predecessor = 1;
+  foo->predecessors = safe_mal<FGraphNode *>(1);
+  foo->predecessors[0] = a;
+  foo->reference_counter = 0;
+  a->num_predecessor++;
+  FOperation *op = new FOperation();
+  op->op_type = SLICE;
+  op->data_type = a->operation->data_type;
+  op->dimensions = a->operation->dimensions;
+  op->shape = safe_mal<size_t>(op->dimensions);
+  for (size_t i = 0; i < op->dimensions; i++) {
+    op->shape[i] = size[i] / step[i];
+    if (op->shape[i] < a->operation->shape[i])
+      log(ERROR, "Invalid slice: dimensions " + std::to_string(i) +
+                     " larger then target tensor!");
+  }
+  FSlice *slice = new FSlice();
+  op->additional_data = (void *)slice;
+  slice->step = safe_mal<size_t>(op->dimensions);
+  slice->start = safe_mal<size_t>(op->dimensions);
+  slice->size = safe_mal<size_t>(op->dimensions);
+  memcpy(slice->start, start, op->dimensions * sizeof(size_t));
+  memcpy(slice->size, size, op->dimensions * sizeof(size_t));
+  memcpy(slice->step, step, op->dimensions * sizeof(size_t));
+  return foo;
 }

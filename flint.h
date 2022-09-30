@@ -101,7 +101,12 @@ struct FResultData {
 struct FConst {
   void *value; // has to be one of Type
 };
-
+// range instructions
+struct FSlice {
+  size_t *start;
+  size_t *size;
+  size_t *step;
+};
 // functions
 
 // creates a Graph with a single store instruction, data is copied to intern
