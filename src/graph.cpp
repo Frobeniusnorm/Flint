@@ -627,3 +627,8 @@ FGraphNode *fslice_step(FGraphNode *a, const size_t *start, const size_t *size,
   memcpy(slice->step, step, op->dimensions * sizeof(size_t));
   return foo;
 }
+FGraphNode *fslice(FGraphNode *a, const size_t *start, const size_t *size) {
+  size_t step = 1;
+  FGraphNode *foo = fslice_step(a, start, size, &step);
+  return foo;
+}
