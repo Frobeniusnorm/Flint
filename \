@@ -315,10 +315,7 @@ generateCode(FGraphNode *node,
           1; // iteration size <=> product of all dimensions along dim
       for (size_t d = red_dim + 1; d < prev->operation->dimensions; d++)
         it_dim *= prev->operation->shape[d];
-      std::string reduce_code = type + " " + name + " = ";
-      reduce_code +=
-          std::to_string(node->operation->op_type == REDUCE_SUM ? 0 : 1) +
-          ";\n";
+      std::string reduce_code = type + " " + name + " = 0;\n";
       reduce_code += "for(long i = 0; i < " +
                      std::to_string(prev->operation->shape[red_dim]) +
                      "; i++){\n";
