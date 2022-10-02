@@ -194,6 +194,29 @@ static void executeNode(FGraphNode *node,
     for (size_t i = from; i < from + size; i++)
       result[i] = ((T *)pred.data)[i];
   } break;
+  case SLICE: {
+    CPUResultData pred = predecessor_data[0];
+    FSlice *slice = (FSlice *)node->operation->additional_data;
+    // flattened shape data
+    std::vector<size_t> acc_sizes(node->operation->dimensions);
+    for (size_t d = node->operation->dimensions - 1; d >= 0; d--) {
+      if (d == node->operation->dimensions - 1) {
+        acc_sizes[d] = 1;
+      } else
+        acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
+    }
+    // calculate start and step size in flattened array
+    size_t start = 0;
+    size_t step = 1;
+    for (size_t d = 0; d < node->operation->dimensions; d++) {
+      start += slice->start[d] * acc_sizes[d];
+      step += slice->step[d] * acc_sizes[d];
+    }
+    for (size_t i = from; i < from + size; i++) {
+      size_t j = i * step + start;
+      result[i] = ((T *)pred.data)[j];
+    }
+  } break;
   default: { // binary operations
     CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];
     size_t im1 = p1.num_entries, im2 = p2.num_entries;
