@@ -169,7 +169,14 @@ public:
     return TensorView<T, n - 1>(data, ns, already_indexed + index);
   }
 };
-
+// FOR SLICING
+// slice through one dimension
+struct TensorSlice {
+  static const size_t TO_END = -1;
+  size_t start = 0;
+  size_t end = TO_END;
+  size_t step = 1;
+};
 template <typename T, int dimensions> struct Tensor;
 
 // one dimensional
@@ -708,6 +715,12 @@ template <typename T, int n> struct Tensor {
     for (size_t i = dimension; i < ns.size(); i++)
       ns[i] = shape[i + 1];
     return Tensor<T, n - 1>(freduce_mul(&node, dimension), ns);
+  }
+
+  template <typename... args> Tensor<T, n> slice(const args... ranges) const {
+    size_t num = sizeof...(args);
+    static_assert(num <= n,
+                  "Slicing with more ranges than dimensions is not possible!");
   }
 
 protected:
