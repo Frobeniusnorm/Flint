@@ -108,8 +108,6 @@ static std::vector<T> flattened(
   return result;
 }
 }; // namespace FLINT_HPP_HELPER
-// TODO for everything the c interface allows only one operand order, write
-// general header functions or rewrite
 // checks if the given type is one of the allowed tensor types
 template <typename T> static constexpr void isTensorType() {
   static_assert(std::is_same<T, int>() || std::is_same<T, float>() ||
@@ -371,6 +369,10 @@ template <typename T> struct Tensor<T, 1> {
   }
   template <typename K> Tensor<K, 1> convert() const {
     return Tensor<K, 1>(fconvert(node, toFlintType<K>()), shape);
+  }
+  Tensor<T, 1> slice(size_t start = 0, size_t size = -1,
+                     size_t step = 1) const {
+    return Tensor<T, 1>(fslice_step(node, &start, &size, &step));
   }
 
 protected:
@@ -661,8 +663,10 @@ template <typename T, int n> struct Tensor {
   template <typename K> Tensor<K, n> convert() const {
     return Tensor<K, n>(fconvert(node, toFlintType<K>()), shape);
   }
-  template <size_t newdim>
-  Tensor<T, newdim> reshape(std::array<size_t, newdim> new_shape) {
+  template <typename... args>
+  Tensor<T, sizeof...(args)> reshape(args... shape) {
+    constexpr size_t newdim = sizeof...(args);
+    std::array<size_t, newdim> new_shape{static_cast<size_t>(shape)...};
     return Tensor<T, newdim>(freshape(node, new_shape.data(), newdim),
                              new_shape);
   }
