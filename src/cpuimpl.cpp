@@ -199,21 +199,31 @@ static void executeNode(FGraphNode *node,
     FSlice *slice = (FSlice *)node->operation->additional_data;
     // flattened shape data
     std::vector<size_t> acc_sizes(node->operation->dimensions);
-    for (size_t d = node->operation->dimensions - 1; d >= 0; d--) {
+    std::vector<size_t> acc_sizes_pred(acc_sizes.size());
+    for (long d = node->operation->dimensions - 1; d >= 0; d--) {
       if (d == node->operation->dimensions - 1) {
         acc_sizes[d] = 1;
-      } else
+        acc_sizes_pred[d] = 1;
+      } else {
+        acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
         acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
+      }
     }
     // calculate start and step size in flattened array
     size_t start = 0;
-    size_t step = 1;
-    for (size_t d = 0; d < node->operation->dimensions; d++) {
-      start += slice->start[d] * acc_sizes[d];
-      step += slice->step[d] * acc_sizes[d];
+    std::vector<size_t> step(node->operation->dimensions);
+    for (long d = 0; d < step.size(); d++) {
+      start += slice->start[d] * acc_sizes_pred[d];
     }
+    // calculate for each entry corresponding element
     for (size_t i = from; i < from + size; i++) {
-      size_t j = i * step + start;
+      size_t j = start;
+      for (size_t d = 0; d < step.size(); d++) {
+        // get dimension index
+        size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
+        // reproject
+        j += di * slice->step[d] * acc_sizes_pred[d];
+      }
       result[i] = ((T *)pred.data)[j];
     }
   } break;
@@ -349,7 +359,7 @@ static void threadRoutine() {
     sem->release();
   }
 }
-#define PARALLEL_EXECUTION_SIZE 1 // for debugging
+#define PARALLEL_EXECUTION_SIZE 1000 // for debugging
 template <typename T>
 inline void chooseExecutionMethod(FGraphNode *node,
                                   std::vector<CPUResultData> pred_data,
