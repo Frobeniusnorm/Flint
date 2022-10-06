@@ -20,8 +20,8 @@
 #include <array>
 #include <cstring>
 #include <sys/types.h>
+#include <tuple>
 #include <vector>
-
 namespace FLINT_HPP_HELPER {
 template <typename T>
 static inline std::string vectorString(const std::vector<T> &vec) {
@@ -178,6 +178,17 @@ struct TensorRange {
   size_t end = MAX_SIZE;
   size_t step = 1;
   TensorRange() = default;
+  TensorRange(std::tuple<size_t, size_t, size_t> range_vals)
+      : start(std::get<0>(range_vals)), end(std::get<1>(range_vals)),
+        step(std::get<2>(range_vals)) {}
+  TensorRange(std::initializer_list<size_t> range_vals) {
+    if (range_vals.size() > 0)
+      start = *range_vals.begin();
+    if (range_vals.size() > 1)
+      end = *(range_vals.begin() + 1);
+    if (range_vals.size() > 2)
+      step = *(range_vals.begin() + 2);
+  }
   TensorRange(size_t start, size_t end = MAX_SIZE, size_t step = 1)
       : start(start), end(end), step(step) {}
 };
