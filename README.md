@@ -1,4 +1,4 @@
-![Flint Logo](https://github.com/Frobeniusnorm/Flint/blob/main/flint.png)
+![Flint Logo](https://github.com/Frobeniusnorm/Flint/blob/main/flint.png | width=200)
 # Flint
 Flint is a Tensor math framework based on OpenCL, allowing you to write Tensor operations, which are 
 semi-lazily computed by the library.
