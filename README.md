@@ -1,4 +1,4 @@
-<div class="center">
+<div align="center">
 <img src="https://github.com/Frobeniusnorm/Flint/blob/main/flint.png" width="300">
 </div>
 
