@@ -491,7 +491,18 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(64, t2[0][1]);
     CHECK_EQ(2, t2[1][1]);
   }
-  TEST_CASE("SLICE") {}
+  TEST_CASE("SLICE") {
+    Tensor<long, 3> t1{{{1, 7}, {8, 8}, {2, 1}}, {{9, 3}, {2, 1}, {8, 9}}};
+    Tensor<long, 3> s1 =
+        t1.slice(TensorRange(), TensorRange(0, TensorRange::MAX_SIZE, 2),
+                 TensorRange(1, 2));
+    Tensor<long, 3> s2 = s1.slice(TensorRange(0, 1));
+    CHECK_EQ(1, s2.get_shape()[0]);
+    CHECK_EQ(2, s2.get_shape()[1]);
+    CHECK_EQ(1, s2.get_shape()[2]);
+    CHECK_EQ(7, s2[0][0][0]);
+    CHECK_EQ(1, s2[0][1][0]);
+  }
 }
 
 int main(int argc, char **argv) {

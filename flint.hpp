@@ -19,8 +19,9 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <sys/types.h>
+#include <tuple>
 #include <vector>
-
 namespace FLINT_HPP_HELPER {
 template <typename T>
 static inline std::string vectorString(const std::vector<T> &vec) {
@@ -170,13 +171,27 @@ public:
   }
 };
 // FOR SLICING
-// slice through one dimension
-struct TensorSlice {
-  static const size_t TO_END = -1;
+struct TensorRange {
+  static const size_t MAX_SIZE = -1;
   size_t start = 0;
-  size_t end = TO_END;
+  size_t end = MAX_SIZE;
   size_t step = 1;
+  TensorRange() = default;
+  TensorRange(std::tuple<size_t, size_t, size_t> range_vals)
+      : start(std::get<0>(range_vals)), end(std::get<1>(range_vals)),
+        step(std::get<2>(range_vals)) {}
+  TensorRange(std::initializer_list<size_t> range_vals) {
+    if (range_vals.size() > 0)
+      start = *range_vals.begin();
+    if (range_vals.size() > 1)
+      end = *(range_vals.begin() + 1);
+    if (range_vals.size() > 2)
+      step = *(range_vals.begin() + 2);
+  }
+  TensorRange(size_t start, size_t end = MAX_SIZE, size_t step = 1)
+      : start(start), end(end), step(step) {}
 };
+
 template <typename T, int dimensions> struct Tensor;
 
 // one dimensional
@@ -427,6 +442,7 @@ template <typename T, int n> struct Tensor {
     node = other.node; // was held by previous tensor -> no increment necessary
     other.node = nullptr;
   }
+  std::array<size_t, n> get_shape() const { return shape; }
   void operator=(Tensor &&other) {
     if (node) {
       node->reference_counter--;
@@ -677,7 +693,6 @@ template <typename T, int n> struct Tensor {
     return Tensor<T, newdim>(freshape(node, new_shape.data(), newdim),
                              new_shape);
   }
-
   template <typename K, int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   min(const Tensor<K, k> other) const {
@@ -715,6 +730,51 @@ template <typename T, int n> struct Tensor {
     for (size_t i = dimension; i < ns.size(); i++)
       ns[i] = shape[i + 1];
     return Tensor<T, n - 1>(freduce_mul(&node, dimension), ns);
+  }
+  template <typename... args> Tensor<T, n> slice(args... dim_ranges) {
+    constexpr size_t num_ranges = sizeof...(args);
+    static_assert(num_ranges <= n,
+                  "A slice operation may only contain as many indexing ranges "
+                  "as the tensor has dimensions!");
+    std::array<TensorRange, num_ranges> ranges{
+        static_cast<TensorRange>(dim_ranges)...};
+    size_t starts[n], ends[n], steps[n];
+    std::array<size_t, n> new_shape;
+    for (uint i = 0; i < n; i++) {
+      if (i < num_ranges) {
+        starts[i] = ranges[i].start;
+        ends[i] =
+            ranges[i].end == TensorRange::MAX_SIZE ? shape[i] : ranges[i].end;
+        steps[i] = ranges[i].step;
+        new_shape[i] = ends[i] - starts[i];
+        if (new_shape[i] % steps[i] == 0)
+          new_shape[i] /= steps[i];
+        else
+          new_shape[i] = new_shape[i] / steps[i] + 1;
+        // check if indexing is allowed
+        if (starts[i] < 0)
+          log(WARNING,
+              "negative indexing leads to undefined behaviour! (start value: " +
+                  std::to_string(starts[i]) + " in slice for dimension " +
+                  std::to_string(i) + ")");
+        if (starts[i] > ends[i])
+          log(WARNING, "start index > end index yields no values for slice in "
+                       "dimension " +
+                           std::to_string(i) + "!");
+        if (steps[i] < 1) // TODO
+          log(WARNING, "currently only step sizes > 1 are supported!");
+        if (ends[i] - (ends[i] % steps[i]) > shape[i])
+          log(WARNING, "end index " + std::to_string(ends[i]) +
+                           " in dimension " + std::to_string(i) +
+                           " exceeds size of that dimension!");
+      } else {
+        starts[i] = 0;
+        ends[i] = shape[i];
+        steps[i] = 1;
+        new_shape[i] = shape[i];
+      }
+    }
+    return Tensor<T, n>(fslice_step(node, starts, ends, steps), new_shape);
   }
 
   template <typename... args> Tensor<T, n> slice(const args... ranges) const {

@@ -23,7 +23,7 @@
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
   // TODO
-  return fExecuteGraph_gpu(node);
+  return fExecuteGraph_cpu(node);
 }
 void flintCleanup() {
   flintCleanup_cpu();
@@ -126,7 +126,7 @@ void fFreeGraph(FGraphNode *graph) {
         } break;
         case SLICE: {
           FSlice *s = (FSlice *)gn->operation->additional_data;
-          free(s->size);
+          free(s->end);
           free(s->start);
           free(s->step);
           delete s;
@@ -598,37 +598,45 @@ FGraphNode *freduce_mul(FGraphNode **a, const int dimension) {
   return reduce_operation(a, dimension, REDUCE_MUL);
 }
 
-FGraphNode *fslice_step(FGraphNode *a, const size_t *start, const size_t *size,
+FGraphNode *fslice_step(FGraphNode *a, const size_t *start, const size_t *end,
                         const size_t *step) {
   FGraphNode *foo = new FGraphNode();
   foo->num_predecessor = 1;
   foo->predecessors = safe_mal<FGraphNode *>(1);
   foo->predecessors[0] = a;
   foo->reference_counter = 0;
-  a->num_predecessor++;
+  a->reference_counter++;
   FOperation *op = new FOperation();
+  foo->operation = op;
   op->op_type = SLICE;
   op->data_type = a->operation->data_type;
   op->dimensions = a->operation->dimensions;
   op->shape = safe_mal<size_t>(op->dimensions);
   for (size_t i = 0; i < op->dimensions; i++) {
-    op->shape[i] = size[i] / step[i];
-    if (op->shape[i] < a->operation->shape[i])
-      log(ERROR, "Invalid slice: dimensions " + std::to_string(i) +
-                     " larger then target tensor!");
+    op->shape[i] = (end[i] - start[i]);
+    // start element is always present
+    if (op->shape[i] % step[i] == 0)
+      op->shape[i] = op->shape[i] / step[i];
+    else
+      op->shape[i] = op->shape[i] / step[i] + 1;
+    if (op->shape[i] > a->operation->shape[i])
+      log(ERROR, "Invalid slice: dimension " + std::to_string(i) +
+                     " larger then target tensor! (" +
+                     std::to_string(op->shape[i]) + " > " +
+                     std::to_string(a->operation->shape[i]) + ")");
   }
   FSlice *slice = new FSlice();
   op->additional_data = (void *)slice;
   slice->step = safe_mal<size_t>(op->dimensions);
   slice->start = safe_mal<size_t>(op->dimensions);
-  slice->size = safe_mal<size_t>(op->dimensions);
+  slice->end = safe_mal<size_t>(op->dimensions);
   memcpy(slice->start, start, op->dimensions * sizeof(size_t));
-  memcpy(slice->size, size, op->dimensions * sizeof(size_t));
+  memcpy(slice->end, end, op->dimensions * sizeof(size_t));
   memcpy(slice->step, step, op->dimensions * sizeof(size_t));
   return foo;
 }
-FGraphNode *fslice(FGraphNode *a, const size_t *start, const size_t *size) {
+FGraphNode *fslice(FGraphNode *a, const size_t *start, const size_t *end) {
   size_t step = 1;
-  FGraphNode *foo = fslice_step(a, start, size, &step);
+  FGraphNode *foo = fslice_step(a, start, end, &step);
   return foo;
 }
