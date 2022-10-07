@@ -65,6 +65,12 @@ enum FOperationType {
   SLICE,
   Length
 };
+/** Describes one operation. An operation always has a shape, described by
+ * :member:`FOperation.shape` which is an array of size
+ * :member:`FOperation.dimensions` with each entry denoting the size of the
+ * corresponding dimension. :member:`FOperation.op_type` denotes the type of
+ * operation, :member:`FOperation.data_type` the type of the underlying data,
+ *  :member:`FOperation.additional_data` is operation specific.*/
 struct FOperation {
   // shape of the data after execution
   int dimensions;
@@ -75,22 +81,42 @@ struct FOperation {
   FType data_type;
   void *additional_data;
 };
-// each Graph Node represents one Operation with multiple ingoing edges and one
-// out going edge
+/** Describes one node in the Graph. Stores the corresponding operation in
+ * :member:`FGraphNode.operation`, an array of predecessors (the arguments of
+ * the operation) in :member:`FGraphNode.predecessors`, its size in
+ * :member:`FGraphNode.num_predecessor` and the reference counter in
+ * `FGraphNode.reference_counter`. Do not modify any parameter by yourself,
+ * since the framework manages them, but you can read the data and structure
+ * from them. The nodes are allocated by the operation functions, they and their
+ * members should neither be manually created, edited or freed except by the
+ * corresponding flint methods. */
 struct FGraphNode {
   int num_predecessor;
   FGraphNode **predecessors;
   FOperation *operation;    // the operation represented by this graph node
   size_t reference_counter; // for garbage collection in free graph
 };
-// Operations
-// Store data in the tensor, always an Entry (source) of the graph
+/** Result of an call to :func:`fCreateGraph`, see :struct:`FResultData`.
+ * Data of this Operation may always be changed, since the framework assumes
+ * this. */
 struct FStore {
   // link to gpu data
   cl_mem mem_id = nullptr;
   void *data;
   size_t num_entries;
 };
+// TODO dirty bit to may keep store data
+
+/** Stores the resulting data after an execution of :func:`fExecuteGraph`.
+ *  The data can be found in :c:member:`FResultData.data`, the datatype in
+ * :c:member:`FOperation.data_type` of the corresponding :struct:`FGraphNode`.
+ *  The number of entries (**not** number of bytes) is stored in
+ * :member:`FResultData.num_entries`. The data may be consistently modified
+ * if...
+ *  - ...when the data size is changed, num_entries is equivalently updated and
+ *        c:func:`realloc` is used
+ *  - ...the data was not already loaded to the gpu (i.e. the result must be the
+ *        return value of :func:`fExecuteGraph_cpu`) */
 struct FResultData {
   // link to gpu data
   cl_mem mem_id = nullptr;
