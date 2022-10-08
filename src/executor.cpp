@@ -145,12 +145,19 @@ generateCode(FGraphNode *node,
     case FRESULTDATA:
     case FSTORE: {
       push_pred = false;
+      size_t num_entries =
+          node->operation->op_type == FSTORE
+              ? ((FStore *)node->operation->additional_data)->num_entries
+              : ((FResultData *)node->operation->additional_data)->num_entries;
       if (assigned_params.find(node->operation) != assigned_params.end()) {
         code = type + " " + name + " = " + assigned_params[node->operation] +
-               ";\n" + code;
+               "[index%" + to_string(num_entries) + "];\n" + code;
       } else {
-        assigned_params.insert({node->operation, name});
-        parameters.push_back({node->operation, name});
+        size_t pid = assigned_params.size();
+        assigned_params.insert({node->operation, "P" + to_string(pid)});
+        parameters.push_back({node->operation, "P" + to_string(pid)});
+        code = type + " " + name + " = P" + to_string(pid) + "[index%" +
+               to_string(num_entries) + "];\n" + code;
       }
     } break;
     case FCONST:
@@ -238,35 +245,25 @@ generateCode(FGraphNode *node,
 
     } break;
     case FMATMUL: {
-      push_pred = false;
       string par1, par2;
+      push_pred = false;
       FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
       // we ignore the value assignment of the parameters since we have to
       // access the arrays directly parameter 1
       if (assigned_params.find(gnp1->operation) != assigned_params.end()) {
-        int index = 0;
-        for (auto &[pnode, pname] : parameters) {
-          if (pnode == gnp1->operation)
-            break;
-          index++;
-        }
-        par1 = "P" + to_string(index);
+        par1 = assigned_params[gnp1->operation];
       } else {
-        par1 = "P" + to_string(parameters.size());
-        parameters.push_back({gnp1->operation, ""});
+        par1 = "P" + to_string(assigned_params.size());
+        assigned_params.insert({gnp1->operation, par1});
+        parameters.push_back({gnp1->operation, par1});
       }
       // parameter 2
       if (assigned_params.find(gnp2->operation) != assigned_params.end()) {
-        int index = 0;
-        for (auto &[pnode, pname] : parameters) {
-          if (pnode == gnp2->operation)
-            break;
-          index++;
-        }
-        par2 = "P" + to_string(index);
+        par2 = assigned_params[gnp2->operation];
       } else {
-        par2 = "P" + to_string(parameters.size());
-        parameters.push_back({gnp2->operation, ""});
+        par2 = "P" + to_string(assigned_params.size());
+        assigned_params.insert({gnp2->operation, par2});
+        parameters.push_back({gnp2->operation, par2});
       }
       size_t l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
       size_t m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
@@ -325,16 +322,11 @@ generateCode(FGraphNode *node,
       // access the arrays directly parameter 1
       std::string par1 = "";
       if (assigned_params.find(prev->operation) != assigned_params.end()) {
-        int index = 0;
-        for (auto &[pnode, pname] : parameters) {
-          if (pnode == prev->operation)
-            break;
-          index++;
-        }
-        par1 = "P" + to_string(index);
+        par1 = assigned_params[prev->operation];
       } else {
-        par1 = "P" + to_string(parameters.size());
-        parameters.push_back({prev->operation, ""});
+        par1 = "P" + to_string(assigned_params.size());
+        parameters.push_back({prev->operation, par1});
+        assigned_params.insert({prev->operation, par1});
       }
       reduce_code +=
           " " + name +
@@ -349,12 +341,13 @@ generateCode(FGraphNode *node,
     default:
       break;
     }
-    // push predecessors
+    // push predecessors dfs
     if (push_pred)
       for (int i = 0; i < node->num_predecessor; i++)
         todo.push_front(
             {node->predecessors[i], "v" + to_string(++variable_index)});
   }
+  code = "int index = get_global_id(0);\n" + code;
   return code;
 }
 
@@ -391,31 +384,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   code += typeString(node->operation->data_type);
   code += " *R";
   // insert parameters
-  int par_idx = 0;
   for (auto &[op, name] : parameters)
-    code += ", __global const " + typeString(op->data_type) + " *P" +
-            to_string(par_idx++);
+    code += ", __global const " + typeString(op->data_type) + " *" + name;
   code += "){\n";
-  // bind parameters to variables
-  // currently we only work on flat arrays
-  code += "int index = get_global_id(0);\n";
-  par_idx = 0;
-  for (auto &[op, name] : parameters) {
-    if (!name.empty()) {
-      string type = typeString(op->data_type);
-      code += type + " " + name + " = ";
-      string indx_mod = "";
-      size_t factor = 1;
-      for (int i = 0; i < op->dimensions; i++)
-        factor *= op->shape[i];
-      if (factor != total_size_node) {
-        // all shapes multiplied to get total size
-        indx_mod = "%" + to_string(factor);
-      }
-      code += "P" + to_string(par_idx) + "[index" + indx_mod + "];\n";
-    }
-    par_idx++;
-  }
   // add the execution code
   code += graph_code;
   // store result

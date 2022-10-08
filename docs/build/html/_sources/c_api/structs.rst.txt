@@ -62,8 +62,8 @@ FType
 """""
 .. c:enum:: FType
 
-The 4 allowed data types: :var:`INT32` (integer, 32bit), :var:`INT64` (integer, 64bit), :var:`FLOAT32` (floating point, 32bit), 
-:var:`FLOAT64` (floating point, 64bit)
+The 4 allowed data types: :var:`F_INT32` (integer, 32bit), :var:`F_INT64` (integer, 64bit), :var:`F_FLOAT32` (floating point, 32bit), 
+:var:`F_FLOAT64` (floating point, 64bit)
 
 Additional Operation Data 
 ^^^^^^^^^^^^^^^^^^^^^^^^^
