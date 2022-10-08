@@ -14,7 +14,7 @@ BUILDDIR=build
 # creates and executes test target if set to "debug", change to enable production mode 
 MODE=debug
 
-COMPILER = g++ -std=c++2a  -l OpenCL
+COMPILER = clang++ -std=c++2a  -l OpenCL
 ifeq ($(MODE),debug)
 	COMPILER += -g -Og -Wall
 	.DEFAULT_GOAL :=test/test

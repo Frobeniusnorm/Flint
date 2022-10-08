@@ -56,7 +56,7 @@ FOperationType
 """"""""""""""
 .. c:enum:: FOperationType
 
-Containting each operation type.
+Containing each operation type.
 
 FType 
 """""
