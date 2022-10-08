@@ -133,6 +133,11 @@ generateCode(FGraphNode *node,
   unordered_map<FOperation *, std::string> assigned_params;
   int variable_index = 0;
   string code = "";
+
+  // indexing logic
+  string index_defs = "int index = get_global_id(0);\n";
+  unsigned int num_indices = 0;
+
   todo.push_front({node, "v0"});
   while (!todo.empty()) {
     // take from queue
@@ -338,6 +343,43 @@ generateCode(FGraphNode *node,
           "];\n}\n";
       code = reduce_code + code;
     } break;
+    case FSLICE: {
+      FOperation *pred = node->predecessors[0]->operation;
+      FSlice *slice = (FSlice *)node->operation->additional_data;
+      unsigned int old_idx = num_indices++;
+      index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
+      // flattened shape data
+      std::vector<size_t> acc_sizes(node->operation->dimensions);
+      std::vector<size_t> acc_sizes_pred(acc_sizes.size());
+      for (long d = node->operation->dimensions - 1; d >= 0; d--) {
+        if (d == node->operation->dimensions - 1) {
+          acc_sizes[d] = 1;
+          acc_sizes_pred[d] = 1;
+        } else {
+          acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred->shape[d + 1];
+          acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
+        }
+      }
+      // calculate start
+      size_t start = 0;
+      std::vector<size_t> step(node->operation->dimensions);
+      for (long d = 0; d < step.size(); d++) {
+        start += slice->start[d] * acc_sizes_pred[d];
+      }
+      index_defs += "index = " + to_string(start);
+      // accumulate index
+      for (long d = 0; d < node->operation->dimensions; d++) {
+        index_defs +=
+            " + (" +
+            (d == 0 ? string("index")
+                    : string("index %" + to_string(acc_sizes[d - 1]))) +
+            ") / " + to_string(acc_sizes[d]) + " * " +
+            to_string(slice->step[d] * acc_sizes_pred[d]);
+      }
+      index_defs += ";\n";
+      code = "index = old_index" + to_string(old_idx) + ";\n" + code;
+      variable_index--;
+    } break;
     default:
       break;
     }
@@ -347,7 +389,7 @@ generateCode(FGraphNode *node,
         todo.push_front(
             {node->predecessors[i], "v" + to_string(++variable_index)});
   }
-  code = "int index = get_global_id(0);\n" + code;
+  code = index_defs + code;
   return code;
 }
 
