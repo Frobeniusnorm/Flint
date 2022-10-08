@@ -43,8 +43,8 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec) {
   }
   return res + "]";
 }
-template <typename T, long unsigned int n>
-static inline std::string vectorString(const std::array<T, n> &vec) {
+template <typename T,  size_t n>
+static inline std::string arrayString(const std::array<T, n> &vec) {
   std::string res = "[";
   for (size_t i = 0; i < n; i++) {
     res += std::to_string(vec[i]);
@@ -53,12 +53,12 @@ static inline std::string vectorString(const std::array<T, n> &vec) {
   }
   return res + "]";
 }
-template <typename T, long unsigned int n, long unsigned int k>
+template <typename T, size_t n, size_t k>
 static inline std::string
-vectorString(const std::array<std::array<T, k>, n> &vec) {
+arrayString(const std::array<std::array<T, k>, n> &vec) {
   std::string res = "[";
   for (size_t i = 0; i < n; i++) {
-    res += vectorString(vec[i]);
+    res += arrayString(vec[i]);
     if (i != n - 1)
       res += ",\n";
   }
@@ -139,7 +139,7 @@ template <typename K, typename V> static constexpr bool isStronger() {
   return a >= b;
 }
 // FOR INDEXING
-template <typename T, int dimensions> class TensorView;
+template <typename T, unsigned int dimensions> class TensorView;
 template <typename T> class TensorView<T, 1> {
   T *data;
   const size_t already_indexed;
@@ -152,7 +152,7 @@ public:
   T &operator[](size_t index) { return data[already_indexed + index]; }
   size_t size() const { return shape; }
 };
-template <typename T, int n> class TensorView {
+template <typename T, unsigned int n> class TensorView {
   T *data;
   const size_t already_indexed;
   const std::vector<size_t> shape;
@@ -192,11 +192,11 @@ struct TensorRange {
       : start(start), end(end), step(step) {}
 };
 
-template <typename T, int dimensions> struct Tensor;
+template <typename T, unsigned int dimensions> struct Tensor;
 
 // one dimensional
 template <typename T> struct Tensor<T, 1> {
-  template <typename K, int k> friend struct Tensor;
+  template <typename K, unsigned int k> friend struct Tensor;
   typedef std::vector<T> storage_type;
   typedef std::initializer_list<T> init_type;
   Tensor(init_type data) : shape(data.size()) {
@@ -336,7 +336,7 @@ template <typename T> struct Tensor<T, 1> {
   using stronger_return =
       typename std::conditional<isStronger<K, T>(), K, T>::type;
   // OPERATIONS
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k> operator+(const Tensor<K, k> other) const {
     return Tensor<stronger_return<K>, k>(fadd(node, other.node), other.shape);
   }
@@ -344,7 +344,7 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<stronger_return<K>, 1> operator+(const K con) const {
     return Tensor<stronger_return<K>, 1>(fadd(node, con), shape);
   }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k> operator-(const Tensor<K, k> other) const {
     return Tensor<stronger_return<K>, k>(fsub(node, other.node), other.shape);
   }
@@ -352,7 +352,7 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<stronger_return<K>, 1> operator-(const K con) const {
     return Tensor<stronger_return<K>, 1>(fsub(node, con), shape);
   }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k> operator*(const Tensor<K, k> other) const {
     return Tensor<stronger_return<K>, k>(fmul(node, other.node), other.shape);
   }
@@ -360,7 +360,7 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<stronger_return<K>, 1> operator*(const K con) const {
     return Tensor<stronger_return<K>, 1>(fmul(node, con), shape);
   }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k> operator/(const Tensor<K, k> other) const {
     return Tensor<stronger_return<K>, k>(fdiv(node, other.node), other.shape);
   }
@@ -368,21 +368,21 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<stronger_return<K>, 1> operator/(const K con) const {
     return Tensor<stronger_return<K>, 1>(fdiv(node, con), shape);
   }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k> pow(const Tensor<K, k> other) const {
     return Tensor<stronger_return<K>, k>(fpow(node, other.node), other.shape);
   }
   template <typename K> Tensor<stronger_return<K>, 1> pow(const K other) const {
     return Tensor<stronger_return<K>, 1>(fpow(node, other), shape);
   }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k> min(const Tensor<K, k> other) const {
     return Tensor<stronger_return<K>, k>(fmin(node, other.node));
   }
   template <typename K> Tensor<stronger_return<K>, 1> min(const K other) const {
     return Tensor<stronger_return<K>, 1>(fmin(node, other));
   }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k> max(const Tensor<K, k> other) const {
     return Tensor<stronger_return<K>, k>(fmax(node, other.node));
   }
@@ -406,8 +406,8 @@ protected:
 };
 
 // multi dimensional
-template <typename T, int n> struct Tensor {
-  template <typename K, int k> friend struct Tensor;
+template <typename T, unsigned int n> struct Tensor {
+  template <typename K, unsigned int k> friend struct Tensor;
   // storage type is the vector of the recursive type
   typedef std::vector<typename Tensor<T, n - 1>::storage_type> storage_type;
   typedef std::initializer_list<typename Tensor<T, n - 1>::init_type> init_type;
@@ -563,7 +563,7 @@ template <typename T, int n> struct Tensor {
                        : op->data_type == F_INT64   ? std::string("INT64")
                        : op->data_type == F_FLOAT32 ? std::string("FLOAT32")
                                                     : std::string("FLOAT64")) +
-                      ", shape: " + FLINT_HPP_HELPER::vectorString(shape) +
+                      ", shape: " + FLINT_HPP_HELPER::arrayString(shape) +
                       ">(";
     if (op->op_type != FSTORE && op->op_type != FRESULTDATA &&
         op->op_type != FCONST)
@@ -600,7 +600,7 @@ template <typename T, int n> struct Tensor {
       typename std::conditional<isStronger<K, T>(), K, T>::type;
 
   // OPERATIONS
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator+(const Tensor<K, k> other) const {
     if constexpr (k >= n)
@@ -612,7 +612,7 @@ template <typename T, int n> struct Tensor {
   Tensor<stronger_return<K>, n> operator+(const K other) const {
     return Tensor<stronger_return<K>, n>(fadd(node, other), shape);
   }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator-(const Tensor<K, k> other) const {
     if constexpr (k >= n)
@@ -624,7 +624,7 @@ template <typename T, int n> struct Tensor {
   Tensor<stronger_return<K>, n> operator-(const K other) const {
     return Tensor<stronger_return<K>, n>(fsub(node, other), shape);
   }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator*(const Tensor<K, k> other) const {
     if constexpr (k >= n)
@@ -637,7 +637,7 @@ template <typename T, int n> struct Tensor {
     return Tensor<stronger_return<K>, n>(fmul(node, other), shape);
   }
   Tensor<T, n> operator-() const { return Tensor<T, n>(fmul(node, -1), shape); }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator/(const Tensor<K, k> other) const {
     if constexpr (k >= n)
@@ -660,7 +660,7 @@ template <typename T, int n> struct Tensor {
                 ns.begin());
     return Tensor<T, n - 1>(foo, ns);
   }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, n> pow(const Tensor<stronger_return<K>, k> other) {
     static_assert(
         k <= n,
@@ -670,7 +670,7 @@ template <typename T, int n> struct Tensor {
   template <typename K> Tensor<stronger_return<K>, n> pow(const K other) {
     return Tensor<stronger_return<K>, n>(fpow(node, other), shape);
   }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n> matmul(Tensor<K, k> other) {
     int x = shape[shape.size() - 2];
     int z = other.shape[other.shape.size() - 1];
@@ -693,7 +693,7 @@ template <typename T, int n> struct Tensor {
     return Tensor<T, newdim>(freshape(node, new_shape.data(), newdim),
                              new_shape);
   }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   min(const Tensor<K, k> other) const {
     if constexpr (k >= n)
@@ -704,7 +704,7 @@ template <typename T, int n> struct Tensor {
   template <typename K> Tensor<stronger_return<K>, n> min(const K other) const {
     return Tensor<stronger_return<K>, n>(fmin(node, other));
   }
-  template <typename K, int k>
+  template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   max(const Tensor<K, k> other) const {
     if constexpr (k >= n)
@@ -740,7 +740,7 @@ template <typename T, int n> struct Tensor {
         static_cast<TensorRange>(dim_ranges)...};
     size_t starts[n], ends[n], steps[n];
     std::array<size_t, n> new_shape;
-    for (uint i = 0; i < n; i++) {
+    for (unsigned int i = 0; i < n; i++) {
       if (i < num_ranges) {
         starts[i] = ranges[i].start;
         ends[i] =
