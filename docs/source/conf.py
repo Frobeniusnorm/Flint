@@ -26,6 +26,9 @@ exclude_patterns = []
 
 html_theme = 'furo'
 html_static_path = ['./']
-# html_logo = "../../flint.png"
+html_logo = "../../flint.png"
+html_theme_options = {
+    "sidebar_hide_name": True,
+}
 html_show_sphinx = False
 # html_css_files = ['flint.css']
