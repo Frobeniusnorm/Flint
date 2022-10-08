@@ -28,22 +28,22 @@ TEST_SUITE("Graph implementation") {
       // construct graph 1
       vector<size_t> shape{100};
       FGraphNode *gn1 =
-          fCreateGraph(v1.data(), v1.size(), FLOAT64, shape.data(), 1);
+          fCreateGraph(v1.data(), v1.size(), F_FLOAT64, shape.data(), 1);
       gn1 = fadd(gn1, 7.0);
       FGraphNode *gn12 =
-          fCreateGraph(v2.data(), v2.size(), FLOAT32, shape.data(), 1);
+          fCreateGraph(v2.data(), v2.size(), F_FLOAT32, shape.data(), 1);
       gn1 = fmul(gn1, gn12);
       fFreeGraph(gn12);
       // test
       REQUIRE_EQ(gn1->num_predecessor, 2);
       REQUIRE(gn1->operation);
-      CHECK_EQ(gn1->operation->data_type, FLOAT64);
+      CHECK_EQ(gn1->operation->data_type, F_FLOAT64);
       FGraphNode *right1 = gn1->predecessors[1];
       CHECK_EQ(right1->num_predecessor, 0);
       CHECK(right1->predecessors == nullptr);
       REQUIRE(right1->operation);
       FStore *store1 = (FStore *)right1->operation->additional_data;
-      CHECK_EQ(right1->operation->data_type, FLOAT32);
+      CHECK_EQ(right1->operation->data_type, F_FLOAT32);
       CHECK_EQ(store1->num_entries, 100);
       fFreeGraph(gn1);
     }
@@ -53,22 +53,22 @@ TEST_SUITE("Graph implementation") {
       // construct graph 2
       vector<size_t> shape = {10, 10};
       FGraphNode *gn2 =
-          fCreateGraph(v1.data(), v1.size(), INT64, shape.data(), 2);
+          fCreateGraph(v1.data(), v1.size(), F_INT64, shape.data(), 2);
       gn2 = fsub(gn2, 7.0);
       FGraphNode *gn21 =
-          fCreateGraph(v2.data(), v2.size(), INT32, shape.data(), 2);
+          fCreateGraph(v2.data(), v2.size(), F_INT32, shape.data(), 2);
       gn2 = fdiv(gn2, gn21);
       // test
       REQUIRE_EQ(gn2->num_predecessor, 2);
       REQUIRE(gn2->operation);
       CHECK_EQ(gn2->operation->op_type, DIV);
-      CHECK_EQ(gn2->operation->data_type, INT64);
+      CHECK_EQ(gn2->operation->data_type, F_INT64);
       FGraphNode *right2 = gn2->predecessors[1];
       CHECK_EQ(right2->num_predecessor, 0);
       CHECK(right2->predecessors == nullptr);
       REQUIRE(gn2->operation);
       FStore *store2 = (FStore *)right2->operation->additional_data;
-      CHECK_EQ(right2->operation->data_type, INT32);
+      CHECK_EQ(right2->operation->data_type, F_INT32);
       CHECK_EQ(store2->num_entries, 100);
       FGraphNode *left1 = gn2->predecessors[0];
       FGraphNode *const1 = left1->predecessors[1];
@@ -85,10 +85,10 @@ TEST_SUITE("Execution") {
     // construct graph 1
     vector<size_t> shape{10};
     FGraphNode *gn1 =
-        fCreateGraph(v1.data(), v1.size(), FLOAT64, shape.data(), 1);
+        fCreateGraph(v1.data(), v1.size(), F_FLOAT64, shape.data(), 1);
     gn1 = fadd(gn1, 7.0);
     FGraphNode *gn11 =
-        fCreateGraph(v2.data(), v2.size(), FLOAT32, shape.data(), 1);
+        fCreateGraph(v2.data(), v2.size(), F_FLOAT32, shape.data(), 1);
     gn1 = fmul(gn1, gn11);
     fFreeGraph(gn11); // delete handle
     FGraphNode *result = fExecuteGraph(gn1);
@@ -101,7 +101,7 @@ TEST_SUITE("Execution") {
     for (int i = 0; i < 10; i++)
       v3[i] = i + 1;
     FGraphNode *gn2 =
-        fCreateGraph(v3.data(), v3.size(), FLOAT32, shape.data(), 1);
+        fCreateGraph(v3.data(), v3.size(), F_FLOAT32, shape.data(), 1);
     FGraphNode *gn3 = fadd(gn2, result);
     gn3 = fadd(gn3, result);
     gn3 = fsub(gn3, 80);
@@ -123,9 +123,9 @@ TEST_SUITE("Execution") {
     vector<double> f2 = flattened(v2);
     vector<size_t> shape{3, 3};
     FGraphNode *gn1 =
-        fCreateGraph(f1.data(), f1.size(), FLOAT64, shape.data(), 2);
+        fCreateGraph(f1.data(), f1.size(), F_FLOAT64, shape.data(), 2);
     FGraphNode *gn2 =
-        fCreateGraph(f2.data(), f2.size(), FLOAT64, shape.data(), 2);
+        fCreateGraph(f2.data(), f2.size(), F_FLOAT64, shape.data(), 2);
     FGraphNode *gn3 = fadd(gn1, gn2);
     FGraphNode *result = fExecuteGraph(gn3);
     FResultData *rd = (FResultData *)result->operation->additional_data;
@@ -133,7 +133,7 @@ TEST_SUITE("Execution") {
     REQUIRE_EQ(result->operation->dimensions, 2);
     CHECK_EQ(result->operation->shape[0], 3);
     CHECK_EQ(result->operation->shape[1], 3);
-    CHECK_EQ(result->operation->data_type, FLOAT64);
+    CHECK_EQ(result->operation->data_type, F_FLOAT64);
     for (int i = 0; i < 3; i++)
       for (int j = 0; j < 3; j++)
         CHECK_EQ(((double *)rd->data)[i * 3 + j], v1[i][j] + v2[i][j]);
@@ -146,7 +146,7 @@ TEST_SUITE("Execution") {
     vector<int> f3 = flattened(v3);
     vector<size_t> shape_f3{4, 3, 3};
     FGraphNode *gn4 =
-        fCreateGraph(f3.data(), f3.size(), INT32, shape_f3.data(), 3);
+        fCreateGraph(f3.data(), f3.size(), F_INT32, shape_f3.data(), 3);
     FGraphNode *gn5 = fadd(gn4, result);
     FGraphNode *newResult[2] = {nullptr, nullptr};
     for (int i = 0; i < 2; i++) {
@@ -171,10 +171,11 @@ TEST_SUITE("Execution") {
     vector<long> d2{2, 1};
     vector<vector<float>> d3{{0, 2}, {1, 0}, {-1, 2}};
     vector<float> f3 = flattened(d3);
-    FGraphNode *g1 = fCreateGraph(f1.data(), f1.size(), INT32, s1.data(), 2);
-    FGraphNode *g12 = fCreateGraph(d2.data(), d2.size(), INT64, &s2, 1);
+    FGraphNode *g1 = fCreateGraph(f1.data(), f1.size(), F_INT32, s1.data(), 2);
+    FGraphNode *g12 = fCreateGraph(d2.data(), d2.size(), F_INT64, &s2, 1);
     FGraphNode *g2 = fpow(g1, g12);
-    FGraphNode *g13 = fCreateGraph(f3.data(), f3.size(), FLOAT32, s1.data(), 2);
+    FGraphNode *g13 =
+        fCreateGraph(f3.data(), f3.size(), F_FLOAT32, s1.data(), 2);
     FGraphNode *g3 = fpow(g1, g13);
     fFreeGraph(g13); // delete handles
     fFreeGraph(g12);
@@ -216,8 +217,8 @@ TEST_SUITE("Execution") {
     vector<int> e1{4, 6, 4, 12, 2, 2};
     vector<size_t> s1{3, 2};
     size_t s2 = 6;
-    FGraphNode *g = fCreateGraph(f1.data(), f1.size(), INT32, s1.data(), 2);
-    FGraphNode *gi = fCreateGraph(d2.data(), d2.size(), INT32, &s2, 1);
+    FGraphNode *g = fCreateGraph(f1.data(), f1.size(), F_INT32, s1.data(), 2);
+    FGraphNode *gi = fCreateGraph(d2.data(), d2.size(), F_INT32, &s2, 1);
     g = fadd(fflatten(g), gi);
     fFreeGraph(gi);
     g = fExecuteGraph(g);
@@ -237,11 +238,11 @@ TEST_SUITE("Execution") {
     vector<vector<int>> d5{{3, 3}, {4, 4}, {5, 5}, {5, 5}, {4, 4}, {3, 3}};
     vector<int> f5 = flattened(d5);
     vector<size_t> s5{6, 2};
-    g = fCreateGraph(f3.data(), f3.size(), INT32, s3.data(), 3);
+    g = fCreateGraph(f3.data(), f3.size(), F_INT32, s3.data(), 3);
     FGraphNode *g1 = fflatten(g, 2);
     FGraphNode *g2 = fflatten(g, 1);
-    FGraphNode *g11 = fCreateGraph(f4.data(), f4.size(), INT32, s4.data(), 2);
-    FGraphNode *g21 = fCreateGraph(f5.data(), f5.size(), INT32, s5.data(), 2);
+    FGraphNode *g11 = fCreateGraph(f4.data(), f4.size(), F_INT32, s4.data(), 2);
+    FGraphNode *g21 = fCreateGraph(f5.data(), f5.size(), F_INT32, s5.data(), 2);
     g1 = fflatten(fadd(g1, g11));
     g2 = fflatten(fadd(g2, g21));
     fFreeGraph(g11);
@@ -280,9 +281,9 @@ TEST_SUITE("Execution") {
     vector<float> data2{4, 3, 2, 1};
     vector<size_t> s1{2, 2};
     FGraphNode *g1 =
-        fCreateGraph(data1.data(), data1.size(), FLOAT32, s1.data(), 2);
+        fCreateGraph(data1.data(), data1.size(), F_FLOAT32, s1.data(), 2);
     FGraphNode *g2 =
-        fCreateGraph(data2.data(), data2.size(), FLOAT32, s1.data(), 2);
+        fCreateGraph(data2.data(), data2.size(), F_FLOAT32, s1.data(), 2);
     FGraphNode *mm1 = fmatmul(&g1, &g2);
     FGraphNode *r1 = fExecuteGraph(mm1);
     FResultData *rd1 = (FResultData *)r1->operation->additional_data;
@@ -300,8 +301,8 @@ TEST_SUITE("Execution") {
     s1 = vector<size_t>{2, 3};
     vector<size_t> s2{3, 2};
     vector<size_t> s3{2, 2};
-    g1 = fCreateGraph(data3.data(), data3.size(), INT32, s1.data(), 2);
-    g2 = fCreateGraph(data4.data(), data4.size(), INT32, s2.data(), 2);
+    g1 = fCreateGraph(data3.data(), data3.size(), F_INT32, s1.data(), 2);
+    g2 = fCreateGraph(data4.data(), data4.size(), F_INT32, s2.data(), 2);
     FGraphNode *mm2 = fmatmul(&g1, &g2);
     REQUIRE_EQ(mm2->operation->shape[0], s3[0]);
     REQUIRE_EQ(mm2->operation->shape[1], s3[1]);
@@ -326,8 +327,8 @@ TEST_SUITE("Execution") {
                                         {{22, 31}, {28, 40}}};
     vector<double> fe3 = flattened(exp3);
 
-    g1 = fCreateGraph(f5.data(), f5.size(), FLOAT64, s5.data(), s5.size());
-    g2 = fCreateGraph(f6.data(), f6.size(), FLOAT32, s6.data(), s6.size());
+    g1 = fCreateGraph(f5.data(), f5.size(), F_FLOAT64, s5.data(), s5.size());
+    g2 = fCreateGraph(f6.data(), f6.size(), F_FLOAT32, s6.data(), s6.size());
     mm2 = fmatmul(&g1, &g2);
     REQUIRE_EQ(mm2->operation->shape[0], 2);
     REQUIRE_EQ(mm2->operation->shape[1], 2);

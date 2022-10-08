@@ -156,22 +156,22 @@ generateCode(FGraphNode *node,
     } break;
     case CONST:
       switch (node->operation->data_type) {
-      case INT32: {
+      case F_INT32: {
         FConst *actcst = (FConst *)node->operation->additional_data;
         code = type + " " + name + " = " + to_string(*((int *)actcst->value)) +
                ";\n" + code;
       } break;
-      case INT64: {
+      case F_INT64: {
         FConst *actcst = (FConst *)node->operation->additional_data;
         code = type + " " + name + " = " + to_string(*((long *)actcst->value)) +
                ";\n" + code;
       } break;
-      case FLOAT64: {
+      case F_FLOAT64: {
         FConst *actcst = (FConst *)node->operation->additional_data;
         code = type + " " + name + " = " +
                to_string(*((double *)actcst->value)) + ";\n" + code;
       } break;
-      case FLOAT32: {
+      case F_FLOAT32: {
         FConst *actcst = (FConst *)node->operation->additional_data;
         code = type + " " + name + " = " +
                to_string(*((float *)actcst->value)) + ";\n" + code;
@@ -209,17 +209,17 @@ generateCode(FGraphNode *node,
     case POW: {
       FOperation *x = node->predecessors[0]->operation;
       FOperation *y = node->predecessors[1]->operation;
-      if ((x->data_type == FLOAT32 || x->data_type == FLOAT64) &&
-          (y->data_type == FLOAT32 || y->data_type == FLOAT64))
+      if ((x->data_type == F_FLOAT32 || x->data_type == F_FLOAT64) &&
+          (y->data_type == F_FLOAT32 || y->data_type == F_FLOAT64))
         code = type + " " + name + " = pow(v" + to_string(variable_index + 1) +
                ", v" + to_string(variable_index + 2) + ");\n" + code;
-      else if (x->data_type == INT64 &&
-               (y->data_type == INT32 || y->data_type == INT64))
+      else if (x->data_type == F_INT64 &&
+               (y->data_type == F_INT32 || y->data_type == F_INT64))
         code = type + " " + name + " = (long)pown((double)v" +
                to_string(variable_index + 1) + ", (int)v" +
                to_string(variable_index + 2) + ");\n" + code;
-      else if (x->data_type == INT32 &&
-               (y->data_type == INT32 || y->data_type == INT64))
+      else if (x->data_type == F_INT32 &&
+               (y->data_type == F_INT32 || y->data_type == F_INT64))
         code = type + " " + name + " = (int)pown((float)v" +
                to_string(variable_index + 1) + ", (int)v" +
                to_string(variable_index + 2) + ");\n" + code;

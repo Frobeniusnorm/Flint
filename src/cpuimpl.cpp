@@ -145,19 +145,19 @@ static void executeNode(FGraphNode *node,
     CPUResultData pred = predecessor_data[0];
 
     switch (pred.type) {
-    case INT32:
+    case F_INT32:
       for (size_t i = from; i < from + size; i++)
         result[i] = (T)((int *)pred.data)[i];
       break;
-    case INT64:
+    case F_INT64:
       for (size_t i = from; i < from + size; i++)
         result[i] = (T)((long *)pred.data)[i];
       break;
-    case FLOAT32:
+    case F_FLOAT32:
       for (size_t i = from; i < from + size; i++)
         result[i] = (T)((float *)pred.data)[i];
       break;
-    case FLOAT64:
+    case F_FLOAT64:
       for (size_t i = from; i < from + size; i++)
         result[i] = (T)((double *)pred.data)[i];
       break;
@@ -232,81 +232,81 @@ static void executeNode(FGraphNode *node,
     size_t im1 = p1.num_entries, im2 = p2.num_entries;
 
     switch (p1.type) {
-    case INT32:
+    case F_INT32:
       switch (p2.type) {
-      case INT32:
+      case F_INT32:
         binaryExpression(result, (int *)p1.data, (int *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
-      case FLOAT32:
+      case F_FLOAT32:
         binaryExpression(result, (int *)p1.data, (float *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
-      case FLOAT64:
+      case F_FLOAT64:
         binaryExpression(result, (int *)p1.data, (double *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
-      case INT64:
+      case F_INT64:
         binaryExpression(result, (int *)p1.data, (long *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
       }
       break;
-    case FLOAT32:
+    case F_FLOAT32:
       switch (p2.type) {
-      case INT32:
+      case F_INT32:
         binaryExpression(result, (float *)p1.data, (int *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
-      case FLOAT32:
+      case F_FLOAT32:
         binaryExpression(result, (float *)p1.data, (float *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
-      case FLOAT64:
+      case F_FLOAT64:
         binaryExpression(result, (float *)p1.data, (double *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
-      case INT64:
+      case F_INT64:
         binaryExpression(result, (float *)p1.data, (long *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
       }
       break;
-    case FLOAT64:
+    case F_FLOAT64:
       switch (p2.type) {
-      case INT32:
+      case F_INT32:
         binaryExpression(result, (double *)p1.data, (int *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
-      case FLOAT32:
+      case F_FLOAT32:
         binaryExpression(result, (double *)p1.data, (float *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
-      case FLOAT64:
+      case F_FLOAT64:
         binaryExpression(result, (double *)p1.data, (double *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
-      case INT64:
+      case F_INT64:
         binaryExpression(result, (double *)p1.data, (long *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
       }
       break;
-    case INT64:
+    case F_INT64:
       switch (p2.type) {
-      case INT32:
+      case F_INT32:
         binaryExpression(result, (long *)p1.data, (int *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
-      case FLOAT32:
+      case F_FLOAT32:
         binaryExpression(result, (long *)p1.data, (float *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
-      case FLOAT64:
+      case F_FLOAT64:
         binaryExpression(result, (long *)p1.data, (double *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
-      case INT64:
+      case F_INT64:
         binaryExpression(result, (long *)p1.data, (long *)p2.data,
                          node->operation->op_type, from, size, im1, im2, node);
         break;
@@ -343,16 +343,16 @@ static void threadRoutine() {
       break;
 
     switch (node->operation->data_type) {
-    case FLOAT32:
+    case F_FLOAT32:
       executeNode(node, pred_data, (float *)result, from, to);
       break;
-    case FLOAT64:
+    case F_FLOAT64:
       executeNode(node, pred_data, (double *)result, from, to);
       break;
-    case INT32:
+    case F_INT32:
       executeNode(node, pred_data, (int *)result, from, to);
       break;
-    case INT64:
+    case F_INT64:
       executeNode(node, pred_data, (long *)result, from, to);
       break;
     }
@@ -423,49 +423,49 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
       size *= curr->operation->shape[j];
     // allocate result data and execute
     switch (curr->operation->data_type) {
-    case INT32: {
+    case F_INT32: {
       int *result = safe_mal<int>(size);
       chooseExecutionMethod(curr, predData, result, size);
       results.insert(
           {curr,
            {.data = (void *)result,
-            .type = INT32,
+            .type = F_INT32,
             .num_entries = size,
             .shape = vector<size_t>(curr->operation->shape,
                                     curr->operation->shape +
                                         curr->operation->dimensions)}});
     } break;
-    case INT64: {
+    case F_INT64: {
       long *result = safe_mal<long>(size);
       chooseExecutionMethod(curr, predData, result, size);
       results.insert(
           {curr,
            {.data = (void *)result,
-            .type = INT64,
+            .type = F_INT64,
             .num_entries = size,
             .shape = vector<size_t>(curr->operation->shape,
                                     curr->operation->shape +
                                         curr->operation->dimensions)}});
     } break;
-    case FLOAT32: {
+    case F_FLOAT32: {
       float *result = safe_mal<float>(size);
       chooseExecutionMethod(curr, predData, result, size);
       results.insert(
           {curr,
            {.data = (void *)result,
-            .type = FLOAT32,
+            .type = F_FLOAT32,
             .num_entries = size,
             .shape = vector<size_t>(curr->operation->shape,
                                     curr->operation->shape +
                                         curr->operation->dimensions)}});
     } break;
-    case FLOAT64: {
+    case F_FLOAT64: {
       double *result = safe_mal<double>(size);
       chooseExecutionMethod(curr, predData, result, size);
       results.insert(
           {curr,
            {.data = (void *)result,
-            .type = FLOAT64,
+            .type = F_FLOAT64,
             .num_entries = size,
             .shape = vector<size_t>(curr->operation->shape,
                                     curr->operation->shape +

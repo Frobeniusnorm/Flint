@@ -118,13 +118,13 @@ template <typename T> static constexpr void isTensorType() {
 // converts c++ type to flint type
 template <typename T> static constexpr FType toFlintType() {
   if (std::is_same<T, int>())
-    return INT32;
+    return F_INT32;
   if (std::is_same<T, long>())
-    return INT64;
+    return F_INT64;
   if (std::is_same<T, float>())
-    return FLOAT32;
+    return F_FLOAT32;
   if (std::is_same<T, double>())
-    return FLOAT64;
+    return F_FLOAT64;
 }
 // checks which of both types the flint backend will choose
 template <typename K, typename V> static constexpr bool isStronger() {
@@ -297,10 +297,10 @@ template <typename T> struct Tensor<T, 1> {
   operator std::string() const {
     FOperation *op = node->operation;
     std::string foo = "Tensor<" +
-                      (op->data_type == INT32     ? std::string("INT32")
-                       : op->data_type == INT64   ? std::string("INT64")
-                       : op->data_type == FLOAT32 ? std::string("FLOAT32")
-                                                  : std::string("FLOAT64")) +
+                      (op->data_type == F_INT32     ? std::string("INT32")
+                       : op->data_type == F_INT64   ? std::string("INT64")
+                       : op->data_type == F_FLOAT32 ? std::string("FLOAT32")
+                                                    : std::string("FLOAT64")) +
                       ", shape: " + std::to_string(shape) + ">(";
     if (op->op_type != STORE && op->op_type != RESULTDATA &&
         op->op_type != CONST)
@@ -559,10 +559,10 @@ template <typename T, int n> struct Tensor {
   operator std::string() const {
     FOperation *op = node->operation;
     std::string foo = "Tensor<" +
-                      (op->data_type == INT32     ? std::string("INT32")
-                       : op->data_type == INT64   ? std::string("INT64")
-                       : op->data_type == FLOAT32 ? std::string("FLOAT32")
-                                                  : std::string("FLOAT64")) +
+                      (op->data_type == F_INT32     ? std::string("INT32")
+                       : op->data_type == F_INT64   ? std::string("INT64")
+                       : op->data_type == F_FLOAT32 ? std::string("FLOAT32")
+                                                    : std::string("FLOAT64")) +
                       ", shape: " + FLINT_HPP_HELPER::vectorString(shape) +
                       ">(";
     if (op->op_type != STORE && op->op_type != RESULTDATA &&

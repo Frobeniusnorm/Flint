@@ -18,6 +18,7 @@
 #include <cstring>
 #include <list>
 #include <stdlib.h>
+#include <string>
 #include <unordered_set>
 #include <vector>
 // INTERFACE METHODS
@@ -51,19 +52,19 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
   op->op_type = STORE;
   size_t byte_size = num_entries;
   switch (data_type) {
-  case INT32:
+  case F_INT32:
     store->data = safe_mal<int>(num_entries);
     byte_size *= sizeof(int);
     break;
-  case INT64:
+  case F_INT64:
     store->data = safe_mal<long>(num_entries);
     byte_size *= sizeof(long);
     break;
-  case FLOAT32:
+  case F_FLOAT32:
     store->data = safe_mal<float>(num_entries);
     byte_size *= sizeof(float);
     break;
-  case FLOAT64:
+  case F_FLOAT64:
     store->data = safe_mal<long>(num_entries);
     byte_size *= sizeof(double);
     break;
@@ -225,19 +226,19 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
     if (data) {
       size_t byte_size = num_entries;
       switch (op->data_type) {
-      case INT32:
+      case F_INT32:
         *data = safe_mal<int>(num_entries);
         byte_size *= sizeof(int);
         break;
-      case INT64:
+      case F_INT64:
         *data = safe_mal<long>(num_entries);
         byte_size *= sizeof(long);
         break;
-      case FLOAT32:
+      case F_FLOAT32:
         *data = safe_mal<float>(num_entries);
         byte_size *= sizeof(float);
         break;
-      case FLOAT64:
+      case F_FLOAT64:
         *data = safe_mal<double>(num_entries);
         byte_size *= sizeof(double);
         break;
@@ -278,13 +279,13 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
   op->shape = (size_t *)malloc(sizeof(size_t) * op->dimensions);
   memcpy((void *)op->shape, src, sizeof(size_t) * op->dimensions);
   // determine type
-  FType highest = INT32;
-  if (a->data_type == FLOAT64 || (b && b->data_type == FLOAT64))
-    highest = FLOAT64;
-  else if (a->data_type == FLOAT32 || (b && b->data_type == FLOAT32))
-    highest = FLOAT32;
-  else if (a->data_type == INT64 || (b && b->data_type == INT64))
-    highest = INT64;
+  FType highest = F_INT32;
+  if (a->data_type == F_FLOAT64 || (b && b->data_type == F_FLOAT64))
+    highest = F_FLOAT64;
+  else if (a->data_type == F_FLOAT32 || (b && b->data_type == F_FLOAT32))
+    highest = F_FLOAT32;
+  else if (a->data_type == F_INT64 || (b && b->data_type == F_INT64))
+    highest = F_INT64;
   op->data_type = highest;
 }
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b) {
@@ -348,13 +349,13 @@ static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, const T b) {
   cop->op_type = CONST;
   cop->additional_data = (void *)cons;
   if (typeid(T) == typeid(int))
-    cop->data_type = INT32;
+    cop->data_type = F_INT32;
   else if (typeid(T) == typeid(long))
-    cop->data_type = INT64;
+    cop->data_type = F_INT64;
   else if (typeid(T) == typeid(float))
-    cop->data_type = FLOAT32;
+    cop->data_type = F_FLOAT32;
   else if (typeid(T) == typeid(double))
-    cop->data_type = FLOAT64;
+    cop->data_type = F_FLOAT64;
   return addNode(op, {a, addNode(cop, {})});
 }
 // adds the constant value to each entry in a
