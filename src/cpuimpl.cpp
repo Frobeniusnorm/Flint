@@ -16,7 +16,6 @@
 */
 
 #include "../flint.h"
-#include "logger.hpp"
 #include "utils.hpp"
 #include <algorithm>
 #include <atomic>
@@ -44,7 +43,7 @@ void flintInit_cpu() {
     int cores = std::thread::hardware_concurrency();
     if (!cores)
       cores = 8;
-    log(INFO, "Using " + std::to_string(cores) + " threads for CPU-backend");
+    flog(F_INFO, "Using " + std::to_string(cores) + " threads for CPU-backend");
     threads = std::vector<std::thread *>(cores);
     for (int i = 0; i < cores; i++)
       threads[i] = new std::thread(threadRoutine);
@@ -325,7 +324,7 @@ static blocking_queue<
 
 void flintCleanup_cpu() {
   if (initialized) {
-    log(DEBUG, "Sending kill signal and poisson pills");
+    flog(F_DEBUG, "Sending kill signal and poisson pills");
     initialized = false;
     for (size_t i = 0; i < threads.size(); i++)
       thread_queue.push_front({nullptr, {}, nullptr, 0, 0, nullptr});
@@ -383,10 +382,10 @@ inline void chooseExecutionMethod(FGraphNode *node,
   }
   std::chrono::duration<double, std::milli> elapsed =
       std::chrono::high_resolution_clock::now() - start;
-  log(DEBUG, (size >= PARALLEL_EXECUTION_SIZE
-                  ? std::string("Parallel Execution on CPU ")
-                  : std::string("Sequential Execution on CPU ")) +
-                 "took " + std::to_string(elapsed.count()) + "ms");
+  flog(F_DEBUG, (size >= PARALLEL_EXECUTION_SIZE
+                     ? std::string("Parallel Execution on CPU ")
+                     : std::string("Sequential Execution on CPU ")) +
+                    "took " + std::to_string(elapsed.count()) + "ms");
 }
 FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   if (!initialized)

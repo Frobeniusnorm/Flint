@@ -14,7 +14,6 @@
 
 #ifndef FLINT_H
 #define FLINT_H
-#include "src/logger.hpp"
 #define CL_TARGET_OPENCL_VERSION 200
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -42,7 +41,9 @@ void flintCleanup_cpu();
 void flintCleanup_gpu();
 // 0 no logging, 1 only errors, 2 errors and warnings, 3 error, warnings and
 // info, 4 verbose
-void setLoggingLevel(int);
+void fSetLoggingLevel(int);
+enum FLogType { F_DEBUG, F_VERBOSE, F_INFO, F_ERROR, F_WARNING };
+void flog(FLogType type, const char *msg);
 enum FType { F_INT32, F_INT64, F_FLOAT32, F_FLOAT64 };
 enum FOperationType {
   STORE,
@@ -288,5 +289,7 @@ inline FGraphNode *fmax(FGraphNode *a, const double b) { return fmax_cd(a, b); }
 inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
   return fflatten_dimension(a, dimension);
 }
+#include <string>
+inline void flog(FLogType type, std::string msg) { flog(type, msg.c_str()); }
 #endif
 #endif

@@ -41,7 +41,7 @@ libflint.a: $(C_OBJS) | $(BUILDDIR)
 	ar -rc $@ $(C_OBJS)
 
 # THE OBJECT FILES
-$(BUILDDIR)/%.o: src/%.cpp $(H_SRCS)
+$(BUILDDIR)/%.o: src/%.cpp $(H_SRCS) | $(BUILDDIR)
 	$(COMPILER) -c -o $@ $<
 
 # OTHER TARGETS

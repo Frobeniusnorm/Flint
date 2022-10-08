@@ -753,20 +753,22 @@ template <typename T, int n> struct Tensor {
           new_shape[i] = new_shape[i] / steps[i] + 1;
         // check if indexing is allowed
         if (starts[i] < 0)
-          log(WARNING,
+          flog(
+              F_WARNING,
               "negative indexing leads to undefined behaviour! (start value: " +
                   std::to_string(starts[i]) + " in slice for dimension " +
                   std::to_string(i) + ")");
         if (starts[i] > ends[i])
-          log(WARNING, "start index > end index yields no values for slice in "
-                       "dimension " +
-                           std::to_string(i) + "!");
+          flog(F_WARNING,
+               "start index > end index yields no values for slice in "
+               "dimension " +
+                   std::to_string(i) + "!");
         if (steps[i] < 1) // TODO
-          log(WARNING, "currently only step sizes > 1 are supported!");
+          flog(F_WARNING, "currently only step sizes > 1 are supported!");
         if (ends[i] - (ends[i] % steps[i]) > shape[i])
-          log(WARNING, "end index " + std::to_string(ends[i]) +
-                           " in dimension " + std::to_string(i) +
-                           " exceeds size of that dimension!");
+          flog(F_WARNING, "end index " + std::to_string(ends[i]) +
+                              " in dimension " + std::to_string(i) +
+                              " exceeds size of that dimension!");
       } else {
         starts[i] = 0;
         ends[i] = shape[i];
@@ -800,7 +802,7 @@ protected:
                  int i) {
     shape[i] = vec.size();
     if (vec.size() <= 0)
-      log(ERROR, "No dimension of the Tensor may have size 0!");
+      flog(F_ERROR, "No dimension of the Tensor may have size 0!");
     initShape(*vec.begin(), i + 1);
     total_size *= vec.size();
   }

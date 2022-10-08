@@ -13,7 +13,6 @@
    limitations under the License. */
 
 #include "../flint.h"
-#include "logger.hpp"
 #include "utils.hpp"
 #include <cstring>
 #include <list>
@@ -31,7 +30,7 @@ void flintCleanup() {
   flintCleanup_gpu();
 }
 void flintInit(int cpu, int gpu) {
-  log(VERBOSE, "Initializing Flint");
+  flog(F_VERBOSE, "Initializing Flint");
   if (cpu)
     flintInit_cpu();
   if (gpu)
@@ -146,8 +145,8 @@ void fFreeGraph(FGraphNode *graph) {
 // function to add nodes to the graph i.e. operations
 static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
   if (!op) {
-    log(WARNING, "You are adding a node with a NULL operation, this is not "
-                 "correct behaviour!");
+    flog(F_WARNING, "You are adding a node with a NULL operation, this is not "
+                    "correct behaviour!");
   }
   FGraphNode *foo = new FGraphNode();
   foo->reference_counter = 0;
@@ -270,11 +269,11 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
   if (lower) {
     for (int i = 0; i < lower_dim; i++)
       if (src[i + (op->dimensions - lower_dim)] != lower[i])
-        log(ERROR,
-            "incompatible shapes of operands: " +
-                vectorString(std::vector<size_t>(src, src + op->dimensions)) +
-                " and " +
-                vectorString(std::vector<size_t>(lower, lower + lower_dim)));
+        flog(F_ERROR,
+             "incompatible shapes of operands: " +
+                 vectorString(std::vector<size_t>(src, src + op->dimensions)) +
+                 " and " +
+                 vectorString(std::vector<size_t>(lower, lower + lower_dim)));
   }
   op->shape = (size_t *)malloc(sizeof(size_t) * op->dimensions);
   memcpy((void *)op->shape, src, sizeof(size_t) * op->dimensions);
@@ -460,7 +459,8 @@ FGraphNode *fflatten(FGraphNode *a) {
 }
 FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
   if (dimension == 0)
-    log(ERROR, "Flattening the first dimension of a tensor is not possible!");
+    flog(F_ERROR,
+         "Flattening the first dimension of a tensor is not possible!");
 
   FOperation *prev_op = a->operation;
   size_t new_prevdim_size =
@@ -496,18 +496,19 @@ FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
   FOperation *bo = y->operation;
 
   if (ao->dimensions < 2 || bo->dimensions < 2)
-    log(ERROR,
+    flog(
+        F_ERROR,
         "Dimensions of operands of matrix multiplications must be at least 2!");
   size_t l = ao->shape[ao->dimensions - 2];
   size_t m = ao->shape[ao->dimensions - 1];
   size_t mb = bo->shape[bo->dimensions - 2];
   size_t n = bo->shape[bo->dimensions - 1];
   if (m != mb)
-    log(ERROR,
-        "Incompatible Shapes for matrix multiplications: " +
-            vectorString(std::vector(ao->shape, ao->shape + ao->dimensions)) +
-            " and " +
-            vectorString(std::vector(bo->shape, bo->shape + bo->dimensions)));
+    flog(F_ERROR,
+         "Incompatible Shapes for matrix multiplications: " +
+             vectorString(std::vector(ao->shape, ao->shape + ao->dimensions)) +
+             " and " +
+             vectorString(std::vector(bo->shape, bo->shape + bo->dimensions)));
   FOperation *res = new FOperation();
   res->dimensions = std::max(ao->dimensions, bo->dimensions);
   res->shape = safe_mal<size_t>(res->dimensions);
@@ -621,10 +622,10 @@ FGraphNode *fslice_step(FGraphNode *a, const size_t *start, const size_t *end,
     else
       op->shape[i] = op->shape[i] / step[i] + 1;
     if (op->shape[i] > a->operation->shape[i])
-      log(ERROR, "Invalid slice: dimension " + std::to_string(i) +
-                     " larger then target tensor! (" +
-                     std::to_string(op->shape[i]) + " > " +
-                     std::to_string(a->operation->shape[i]) + ")");
+      flog(F_ERROR, "Invalid slice: dimension " + std::to_string(i) +
+                        " larger then target tensor! (" +
+                        std::to_string(op->shape[i]) + " > " +
+                        std::to_string(a->operation->shape[i]) + ")");
   }
   FSlice *slice = new FSlice();
   op->additional_data = (void *)slice;

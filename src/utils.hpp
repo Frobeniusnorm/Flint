@@ -15,7 +15,6 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 #include "../flint.h"
-#include "logger.hpp"
 #include <condition_variable>
 #include <list>
 #include <mutex>
@@ -24,8 +23,8 @@
 template <typename T> inline T *safe_mal(unsigned int count) {
   T *data = (T *)malloc(sizeof(T) * count);
   if (!data) {
-    log(ERROR,
-        "Could not malloc '" + std::to_string(sizeof(T) * count) + "' bytes!");
+    flog(F_ERROR,
+         "Could not malloc '" + std::to_string(sizeof(T) * count) + "' bytes!");
   }
   return data;
 }
