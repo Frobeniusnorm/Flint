@@ -503,6 +503,21 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(1, s2.get_shape()[2]);
     CHECK_EQ(7, s2[0][0][0]);
     CHECK_EQ(1, s2[0][1][0]);
+    // check flat data
+    Tensor<double, 3> t2{{{-0.1}, {0.0}},
+                         {{0.1}, {0.2}},
+                         {{0.3}, {0.4}},
+                         {{0.5}, {0.6}},
+                         {{0.7}, {0.8}}};
+    Tensor<double, 2> f1 = t2.flattened(2);
+    // slice only positive to 0.6
+    Tensor<double, 2> s3 = f1.slice(TensorRange(1, 4));
+    Tensor<int, 1> f2 =
+        (s3.flattened() * 10).slice(1, TensorRange::MAX_SIZE, 2).convert<int>();
+    CHECK_EQ(2, f2[0]);
+    CHECK_EQ(4, f2[1]);
+    CHECK_EQ(6, f2[2]);
+    CHECK_EQ(3, f2.get_shape());
   }
 }
 

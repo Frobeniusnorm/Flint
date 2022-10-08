@@ -43,7 +43,7 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec) {
   }
   return res + "]";
 }
-template <typename T,  size_t n>
+template <typename T, size_t n>
 static inline std::string arrayString(const std::array<T, n> &vec) {
   std::string res = "[";
   for (size_t i = 0; i < n; i++) {
@@ -221,7 +221,7 @@ template <typename T> struct Tensor<T, 1> {
     node = fCopyGraph(other.node);
     node->reference_counter++;
   }
-  T &operator[](const size_t index) const {
+  T &operator[](const size_t index) {
     switch (node->operation->op_type) {
     case FSTORE: {
       FStore *store = (FStore *)node->operation->additional_data;
@@ -261,6 +261,7 @@ template <typename T> struct Tensor<T, 1> {
       fFreeGraph(node);
     }
   }
+  const size_t get_shape() const { return shape; }
   std::vector<T> operator*() {
     switch (node->operation->op_type) {
     case FSTORE: {
@@ -392,9 +393,15 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K> Tensor<K, 1> convert() const {
     return Tensor<K, 1>(fconvert(node, toFlintType<K>()), shape);
   }
-  Tensor<T, 1> slice(size_t start = 0, size_t size = -1,
+  Tensor<T, 1> slice(size_t start = 0, size_t end = TensorRange::MAX_SIZE,
                      size_t step = 1) const {
-    return Tensor<T, 1>(fslice_step(node, &start, &size, &step));
+    end = end == TensorRange::MAX_SIZE ? shape : end;
+    size_t new_shape = end - start;
+    if (new_shape % shape == 0)
+      new_shape /= step;
+    else
+      new_shape = new_shape / step + 1;
+    return Tensor<T, 1>(fslice_step(node, &start, &end, &step), new_shape);
   }
 
 protected:
@@ -563,8 +570,7 @@ template <typename T, unsigned int n> struct Tensor {
                        : op->data_type == F_INT64   ? std::string("INT64")
                        : op->data_type == F_FLOAT32 ? std::string("FLOAT32")
                                                     : std::string("FLOAT64")) +
-                      ", shape: " + FLINT_HPP_HELPER::arrayString(shape) +
-                      ">(";
+                      ", shape: " + FLINT_HPP_HELPER::arrayString(shape) + ">(";
     if (op->op_type != FSTORE && op->op_type != FRESULTDATA &&
         op->op_type != FCONST)
       foo += "<not yet executed>";
