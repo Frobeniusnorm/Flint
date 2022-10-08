@@ -61,7 +61,7 @@ TEST_SUITE("Graph implementation") {
       // test
       REQUIRE_EQ(gn2->num_predecessor, 2);
       REQUIRE(gn2->operation);
-      CHECK_EQ(gn2->operation->op_type, DIV);
+      CHECK_EQ(gn2->operation->op_type, FDIV);
       CHECK_EQ(gn2->operation->data_type, F_INT64);
       FGraphNode *right2 = gn2->predecessors[1];
       CHECK_EQ(right2->num_predecessor, 0);
@@ -72,7 +72,7 @@ TEST_SUITE("Graph implementation") {
       CHECK_EQ(store2->num_entries, 100);
       FGraphNode *left1 = gn2->predecessors[0];
       FGraphNode *const1 = left1->predecessors[1];
-      CHECK_EQ(const1->operation->op_type, CONST);
+      CHECK_EQ(const1->operation->op_type, FCONST);
       fFreeGraph(gn2);
     }
   }

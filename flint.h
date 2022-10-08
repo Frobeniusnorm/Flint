@@ -46,25 +46,25 @@ enum FLogType { F_DEBUG, F_VERBOSE, F_INFO, F_ERROR, F_WARNING };
 void flog(FLogType type, const char *msg);
 enum FType { F_INT32, F_INT64, F_FLOAT32, F_FLOAT64 };
 enum FOperationType {
-  STORE,
-  RESULTDATA,
-  CONST,
-  ADD,
-  SUB,
-  MUL,
-  DIV,
-  POW,
-  NEG,
+  FSTORE,
+  FRESULTDATA,
+  FCONST,
+  FADD,
+  FSUB,
+  FMUL,
+  FDIV,
+  FPOW,
+  FNEG,
   FLATTEN,
-  MATMUL,
-  CONVERSION,
-  RESHAPE,
-  MIN,
-  MAX,
-  REDUCE_SUM,
-  REDUCE_MUL,
-  SLICE,
-  Length
+  FMATMUL,
+  FCONVERSION,
+  FRESHAPE,
+  FMIN,
+  FMAX,
+  FREDUCE_SUM,
+  FREDUCE_MUL,
+  FSLICE,
+  FNUM_OPERATION_TYPES
 };
 /** Describes one operation. An operation always has a shape, described by
  * :member:`FOperation.shape` which is an array of size

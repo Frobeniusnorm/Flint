@@ -142,8 +142,8 @@ generateCode(FGraphNode *node,
     // write code
     string type = typeString(node->operation->data_type);
     switch (node->operation->op_type) {
-    case RESULTDATA:
-    case STORE: {
+    case FRESULTDATA:
+    case FSTORE: {
       push_pred = false;
       if (assigned_params.find(node->operation) != assigned_params.end()) {
         code = type + " " + name + " = " + assigned_params[node->operation] +
@@ -153,7 +153,7 @@ generateCode(FGraphNode *node,
         parameters.push_back({node->operation, name});
       }
     } break;
-    case CONST:
+    case FCONST:
       switch (node->operation->data_type) {
       case F_INT32: {
         FConst *actcst = (FConst *)node->operation->additional_data;
@@ -178,24 +178,24 @@ generateCode(FGraphNode *node,
       }
       break;
     // Binary Operators
-    case ADD:
-    case SUB:
-    case DIV:
-    case MUL: {
+    case FADD:
+    case FSUB:
+    case FDIV:
+    case FMUL: {
       // size of current variable has to be equal to the size of one opperand,
       // the other one is at least smaller but not larger
       char op = '\0';
       switch (node->operation->op_type) {
-      case ADD:
+      case FADD:
         op = '+';
         break;
-      case SUB:
+      case FSUB:
         op = '-';
         break;
-      case DIV:
+      case FDIV:
         op = '/';
         break;
-      case MUL:
+      case FMUL:
         op = '*';
         break;
       default:
@@ -205,7 +205,7 @@ generateCode(FGraphNode *node,
              op + " v" + to_string(variable_index + 2) + ";\n" + code;
       break;
     }
-    case POW: {
+    case FPOW: {
       FOperation *x = node->predecessors[0]->operation;
       FOperation *y = node->predecessors[1]->operation;
       if ((x->data_type == F_FLOAT32 || x->data_type == F_FLOAT64) &&
@@ -227,17 +227,17 @@ generateCode(FGraphNode *node,
                to_string(variable_index + 1) + ", (double)v" +
                to_string(variable_index + 2) + ");\n" + code;
     } break;
-    case MIN: {
+    case FMIN: {
       code = type + " " + name + " = min(v" + to_string(variable_index + 1) +
              ", v" + to_string(variable_index + 2) + ");\n" + code;
 
     } break;
-    case MAX: {
+    case FMAX: {
       code = type + " " + name + " = max(v" + to_string(variable_index + 1) +
              ", v" + to_string(variable_index + 2) + ");\n" + code;
 
     } break;
-    case MATMUL: {
+    case FMATMUL: {
       push_pred = false;
       string par1, par2;
       FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
@@ -296,17 +296,17 @@ generateCode(FGraphNode *node,
              to_string(n) + " + " + k + "];\n}\n" + code;
       code = type + " " + name + " = 0;\n" + code;
     } break;
-    case RESHAPE:
+    case FRESHAPE:
     case FLATTEN: {
       code = type + " " + name + " = v" + to_string(variable_index + 1) +
              ";\n" + code;
     } break;
-    case CONVERSION: {
+    case FCONVERSION: {
       code = type + " " + name + " = (" + type + ")v" +
              to_string(variable_index + 1) + ";\n" + code;
     }; break;
-    case REDUCE_SUM:
-    case REDUCE_MUL: {
+    case FREDUCE_SUM:
+    case FREDUCE_MUL: {
       push_pred = false;
       FGraphNode *prev = node->predecessors[0];
       int red_dim = ((int *)node->operation->additional_data)[0];
@@ -316,7 +316,7 @@ generateCode(FGraphNode *node,
         it_dim *= prev->operation->shape[d];
       std::string reduce_code = type + " " + name + " = ";
       reduce_code +=
-          std::to_string(node->operation->op_type == REDUCE_SUM ? 0 : 1) +
+          std::to_string(node->operation->op_type == FREDUCE_SUM ? 0 : 1) +
           ";\n";
       reduce_code += "for(long i = 0; i < " +
                      std::to_string(prev->operation->shape[red_dim]) +
@@ -338,7 +338,7 @@ generateCode(FGraphNode *node,
       }
       reduce_code +=
           " " + name +
-          (node->operation->op_type == REDUCE_SUM ? " += " : " *= ") + par1 +
+          (node->operation->op_type == FREDUCE_SUM ? " += " : " *= ") + par1 +
           "[(index / " + std::to_string(it_dim) + ") * " +
           std::to_string(it_dim) + " * " +
           std::to_string(prev->operation->shape[red_dim]) + " + index % " +
@@ -369,7 +369,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   auto start = std::chrono::high_resolution_clock::now();
   FOperation *result = new FOperation();
   FResultData *resultData = new FResultData();
-  result->op_type = RESULTDATA;
+  result->op_type = FRESULTDATA;
   result->data_type = node->operation->data_type;
   result->additional_data = resultData;
   FGraphNode *newsucc = new FGraphNode();
@@ -485,12 +485,12 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     cl_mem mem_obj = nullptr;
     bool doWrite =
         op->op_type ==
-        STORE; // can always be changed, ResultData only changes with gpu data
+        FSTORE; // can always be changed, ResultData only changes with gpu data
     size_t type_size = typeSize(op->data_type);
-    size_t total_size = op->op_type == STORE
+    size_t total_size = op->op_type == FSTORE
                             ? ((FStore *)op->additional_data)->num_entries
                             : ((FResultData *)op->additional_data)->num_entries;
-    cl_mem mem_id = op->op_type == STORE
+    cl_mem mem_id = op->op_type == FSTORE
                         ? ((FStore *)op->additional_data)->mem_id
                         : ((FResultData *)op->additional_data)->mem_id;
     if (mem_id) {
@@ -500,7 +500,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
                                total_size * type_size, nullptr, &err_code);
       if (err_code == CL_OUT_OF_HOST_MEMORY)
         flog(F_ERROR, "Not enough memory to create buffer!");
-      if (op->op_type == STORE)
+      if (op->op_type == FSTORE)
         ((FStore *)op->additional_data)->mem_id = mem_obj;
       else
         ((FResultData *)op->additional_data)->mem_id = mem_obj;
@@ -508,7 +508,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     }
     // actually write the buffer
     if (doWrite) {
-      void *data = op->op_type == STORE
+      void *data = op->op_type == FSTORE
                        ? ((FStore *)op->additional_data)->data
                        : ((FResultData *)op->additional_data)->data;
       writeEvents.emplace_back();

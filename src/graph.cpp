@@ -48,7 +48,7 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
   op->shape = safe_mal<size_t>(dimensions);
   std::memcpy((void *)op->shape, (void *)shape, dimensions * sizeof(size_t));
   op->additional_data = (void *)store;
-  op->op_type = STORE;
+  op->op_type = FSTORE;
   size_t byte_size = num_entries;
   switch (data_type) {
   case F_INT32:
@@ -104,7 +104,7 @@ void fFreeGraph(FGraphNode *graph) {
         free(gn->operation->shape);
       if (gn->operation->additional_data)
         switch (gn->operation->op_type) {
-        case RESULTDATA: {
+        case FRESULTDATA: {
           FResultData *rd = (FResultData *)gn->operation->additional_data;
           if (rd->data)
             free(rd->data);
@@ -112,27 +112,27 @@ void fFreeGraph(FGraphNode *graph) {
             clReleaseMemObject(rd->mem_id);
           delete rd;
         } break;
-        case STORE: {
+        case FSTORE: {
           FStore *st = (FStore *)gn->operation->additional_data;
           free(st->data);
           if (st->mem_id)
             clReleaseMemObject(st->mem_id);
           delete st;
         } break;
-        case CONST: {
+        case FCONST: {
           FConst *c = (FConst *)gn->operation->additional_data;
           free(c->value);
           delete c;
         } break;
-        case SLICE: {
+        case FSLICE: {
           FSlice *s = (FSlice *)gn->operation->additional_data;
           free(s->end);
           free(s->start);
           free(s->step);
           delete s;
         } break;
-        case REDUCE_SUM:
-        case REDUCE_MUL:
+        case FREDUCE_SUM:
+        case FREDUCE_MUL:
           free(gn->operation->additional_data);
         default:
           break;
@@ -191,7 +191,7 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
     void *src = nullptr;
     size_t num_entries = 0;
     switch (op->op_type) {
-    case RESULTDATA: {
+    case FRESULTDATA: {
       FResultData *ord = (FResultData *)node->operation->additional_data;
       FResultData *crd = new FResultData();
       op->additional_data = (void *)crd;
@@ -201,7 +201,7 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
       src = ord->data;
       data = &crd->data;
     } break;
-    case STORE: {
+    case FSTORE: {
       FStore *ord = (FStore *)node->operation->additional_data;
       FStore *crd = new FStore();
       op->additional_data = (void *)crd;
@@ -211,7 +211,7 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
       src = ord->data;
       data = &crd->data;
     } break;
-    case CONST: {
+    case FCONST: {
       FConst *ord = (FConst *)node->operation->additional_data;
       FConst *crd = new FConst();
       op->additional_data = (void *)crd;
@@ -290,28 +290,28 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = ADD;
+  op->op_type = FADD;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
 FGraphNode *fsub_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = SUB;
+  op->op_type = FSUB;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
 FGraphNode *fdiv_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = DIV;
+  op->op_type = FDIV;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
 FGraphNode *fmul_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = MUL;
+  op->op_type = FMUL;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
@@ -320,21 +320,21 @@ FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b) {
   //   log(ERROR, "pow(a, b) must fulfill a->dimensions >= b->dimensions");
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = POW;
+  op->op_type = FPOW;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
 FGraphNode *fmin_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = MIN;
+  op->op_type = FMIN;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
 FGraphNode *fmax_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = MAX;
+  op->op_type = FMAX;
   initShape_keep(op, a->operation, b->operation);
   return addNode(op, {a, b});
 }
@@ -345,7 +345,7 @@ static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, const T b) {
   *cons_val = b;
   cons->value = (void *)cons_val;
   FOperation *cop = new FOperation();
-  cop->op_type = CONST;
+  cop->op_type = FCONST;
   cop->additional_data = (void *)cons;
   if (typeid(T) == typeid(int))
     cop->data_type = F_INT32;
@@ -361,7 +361,7 @@ static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, const T b) {
 template <typename T> FGraphNode *add(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = ADD;
+  op->op_type = FADD;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
@@ -372,7 +372,7 @@ FGraphNode *fadd_cl(FGraphNode *a, const long b) { return add<long>(a, b); }
 // subtracts the constant value from each entry in a
 template <typename T> FGraphNode *sub(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
-  op->op_type = SUB;
+  op->op_type = FSUB;
   op->additional_data = nullptr;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
@@ -385,7 +385,7 @@ FGraphNode *fsub_cl(FGraphNode *a, const long b) { return sub<long>(a, b); }
 template <typename T> FGraphNode *div(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = DIV;
+  op->op_type = FDIV;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
@@ -397,7 +397,7 @@ FGraphNode *fdiv_cl(FGraphNode *a, const long b) { return div<long>(a, b); }
 template <typename T> FGraphNode *mul(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = MUL;
+  op->op_type = FMUL;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
@@ -409,7 +409,7 @@ FGraphNode *fmul_cl(FGraphNode *a, const long b) { return mul<long>(a, b); }
 template <typename T> FGraphNode *pow(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = POW;
+  op->op_type = FPOW;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
@@ -421,7 +421,7 @@ FGraphNode *fpow_cl(FGraphNode *a, const long b) { return pow<long>(a, b); }
 template <typename T> FGraphNode *min(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = MIN;
+  op->op_type = FMIN;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
@@ -433,7 +433,7 @@ FGraphNode *fmin_cd(FGraphNode *a, const double b) { return min(a, b); }
 template <typename T> FGraphNode *max(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
-  op->op_type = MAX;
+  op->op_type = FMAX;
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
@@ -484,11 +484,11 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
 FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
   FGraphNode *x = *a;
   FGraphNode *y = *b;
-  if (x->operation->op_type != STORE && x->operation->op_type != RESULTDATA) {
+  if (x->operation->op_type != FSTORE && x->operation->op_type != FRESULTDATA) {
     x = fExecuteGraph(x);
     *a = x;
   }
-  if (y->operation->op_type != STORE && y->operation->op_type != RESULTDATA) {
+  if (y->operation->op_type != FSTORE && y->operation->op_type != FRESULTDATA) {
     y = fExecuteGraph(y);
     *b = y;
   }
@@ -519,7 +519,7 @@ FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
   res->shape[res->dimensions - 1] = n;
   res->data_type =
       ao->data_type > bo->data_type ? ao->data_type : bo->data_type;
-  res->op_type = MATMUL;
+  res->op_type = FMATMUL;
 
   FGraphNode *node = new FGraphNode();
   node->operation = res;
@@ -538,7 +538,7 @@ FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions) {
   node->operation->shape = safe_mal<size_t>(dimensions);
   std::memcpy(node->operation->shape, newshape, dimensions * sizeof(size_t));
   node->operation->data_type = a->operation->data_type;
-  node->operation->op_type = RESHAPE;
+  node->operation->op_type = FRESHAPE;
   node->operation->dimensions = dimensions;
   node->num_predecessor = 1;
   node->predecessors = safe_mal<FGraphNode *>(1);
@@ -560,14 +560,14 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   foo->operation->shape = safe_mal<size_t>(a->operation->dimensions);
   memcpy(foo->operation->shape, a->operation->shape,
          sizeof(size_t) * a->operation->dimensions);
-  foo->operation->op_type = CONVERSION;
+  foo->operation->op_type = FCONVERSION;
   return foo;
 }
 
 inline FGraphNode *reduce_operation(FGraphNode **x, const int dimension,
                                     FOperationType type) {
   FGraphNode *a = *x;
-  if (a->operation->op_type != STORE && a->operation->op_type != RESULTDATA) {
+  if (a->operation->op_type != FSTORE && a->operation->op_type != FRESULTDATA) {
     a = fExecuteGraph(a);
     *x = a;
   }
@@ -594,10 +594,10 @@ inline FGraphNode *reduce_operation(FGraphNode **x, const int dimension,
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
 // freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
 FGraphNode *freduce_sum(FGraphNode **a, const int dimension) {
-  return reduce_operation(a, dimension, REDUCE_SUM);
+  return reduce_operation(a, dimension, FREDUCE_SUM);
 }
 FGraphNode *freduce_mul(FGraphNode **a, const int dimension) {
-  return reduce_operation(a, dimension, REDUCE_MUL);
+  return reduce_operation(a, dimension, FREDUCE_MUL);
 }
 
 FGraphNode *fslice_step(FGraphNode *a, const size_t *start, const size_t *end,
@@ -610,7 +610,7 @@ FGraphNode *fslice_step(FGraphNode *a, const size_t *start, const size_t *end,
   a->reference_counter++;
   FOperation *op = new FOperation();
   foo->operation = op;
-  op->op_type = SLICE;
+  op->op_type = FSLICE;
   op->data_type = a->operation->data_type;
   op->dimensions = a->operation->dimensions;
   op->shape = safe_mal<size_t>(op->dimensions);

@@ -60,27 +60,27 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
                              size_t from, size_t size, int index_man_1,
                              int index_man_2, FGraphNode *curr) {
   switch (op) {
-  case ADD:
+  case FADD:
     for (size_t i = from; i < from + size; i++)
       result[i] = data1[i % index_man_1] + data2[i % index_man_2];
     break;
-  case SUB:
+  case FSUB:
     for (size_t i = from; i < from + size; i++)
       result[i] = data1[i % index_man_1] - data2[i % index_man_2];
     break;
-  case MUL:
+  case FMUL:
     for (size_t i = from; i < from + size; i++)
       result[i] = data1[i % index_man_1] * data2[i % index_man_2];
     break;
-  case DIV:
+  case FDIV:
     for (size_t i = from; i < from + size; i++)
       result[i] = data1[i % index_man_1] / data2[i % index_man_2];
     break;
-  case POW:
+  case FPOW:
     for (size_t i = from; i < from + size; i++)
       result[i] = pow(data1[i % index_man_1], data2[i % index_man_2]);
     break;
-  case MATMUL: {
+  case FMATMUL: {
     FGraphNode *gnp1 = curr->predecessors[0], *gnp2 = curr->predecessors[1];
     size_t l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
     size_t m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
@@ -108,11 +108,11 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
       }
     }
   } break;
-  case MIN:
+  case FMIN:
     for (size_t i = from; i < from + size; i++)
       result[i] = MIN_VAL(data1[i % index_man_1], data2[i % index_man_2]);
     break;
-  case MAX:
+  case FMAX:
     for (size_t i = from; i < from + size; i++)
       result[i] = MAX_VAL(data1[i % index_man_1], data2[i % index_man_2]);
     break;
@@ -126,21 +126,21 @@ static void executeNode(FGraphNode *node,
                         std::vector<CPUResultData> predecessor_data, T *result,
                         size_t from, size_t size) {
   switch (node->operation->op_type) {
-  case STORE: {
+  case FSTORE: {
     FStore *store = (FStore *)node->operation->additional_data;
     for (size_t i = from; i < from + size; i++)
       result[i] = ((T *)store->data)[i];
   } break;
-  case RESULTDATA: {
+  case FRESULTDATA: {
     FResultData *store = (FResultData *)node->operation->additional_data;
     for (size_t i = from; i < from + size; i++)
       result[i] = ((T *)store->data)[i];
   } break;
-  case CONST: {
+  case FCONST: {
     FConst *cons = (FConst *)node->operation->additional_data;
     result[from] = ((T *)cons->value)[0];
   } break;
-  case CONVERSION: {
+  case FCONVERSION: {
     CPUResultData pred = predecessor_data[0];
 
     switch (pred.type) {
@@ -163,8 +163,8 @@ static void executeNode(FGraphNode *node,
     }
 
   } break;
-  case REDUCE_SUM:
-  case REDUCE_MUL: {
+  case FREDUCE_SUM:
+  case FREDUCE_MUL: {
     CPUResultData pred = predecessor_data[0];
     int dim = ((int *)node->operation->additional_data)[0];
     size_t it_dim = 1; // iteration size <=> product of all dimensions along dim
@@ -173,27 +173,27 @@ static void executeNode(FGraphNode *node,
 
     for (size_t i = from; i < from + size; i++) {
       // iterate through to-reduce dimension
-      result[i] = node->operation->op_type == REDUCE_SUM
+      result[i] = node->operation->op_type == FREDUCE_SUM
                       ? 0
                       : 1; // init with neutral element
       for (size_t j = 0; j < pred.shape[dim]; j++) {
         const T curr =
             ((T *)pred.data)[(i / it_dim) * it_dim * pred.shape[dim] +
                              i % it_dim + j * it_dim];
-        if (node->operation->op_type == REDUCE_SUM)
+        if (node->operation->op_type == FREDUCE_SUM)
           result[i] += curr;
         else
           result[i] *= curr;
       }
     }
   } break;
-  case RESHAPE:
+  case FRESHAPE:
   case FLATTEN: {
     CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)
       result[i] = ((T *)pred.data)[i];
   } break;
-  case SLICE: {
+  case FSLICE: {
     CPUResultData pred = predecessor_data[0];
     FSlice *slice = (FSlice *)node->operation->additional_data;
     // flattened shape data
@@ -489,7 +489,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   memcpy(op->shape, final.shape.data(), final.shape.size() * sizeof(size_t));
   op->data_type = node->operation->data_type;
   op->additional_data = (void *)rd;
-  op->op_type = RESULTDATA;
+  op->op_type = FRESULTDATA;
   FGraphNode *rn = new FGraphNode();
   rn->operation = op;
   rn->predecessors = safe_mal<FGraphNode *>(1);
