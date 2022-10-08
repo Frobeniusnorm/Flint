@@ -1,10 +1,13 @@
-![Flint Logo](https://repository-images.githubusercontent.com/477020131/1fa8ae75-ce93-482d-a172-41b0db671d64)
+<div align="center">
+<img src="https://github.com/Frobeniusnorm/Flint/blob/main/flint.png" width="300">
+</div>
+
 # Flint
 Flint is a Tensor math framework based on OpenCL, allowing you to write Tensor operations, which are 
 semi-lazily computed by the library.
 
 ## Documentation ##
-You can build the spinx documentation yourself or access the prebuilt document here: https://frobeniusnorm.github.io/Flint/
+You can build the sphinx documentation yourself or access the prebuilt document here: https://frobeniusnorm.github.io/Flint/
 
 ## Motivation ##
 This library aims to become a suitable replacement for existing CUDA based tensor execution frameworks by using OpenCL instead.
