@@ -73,7 +73,7 @@ flog()
 
 fCreateGraph()
 """""""""""""""
-.. c:function:: FGraphNode* fCreateGraph(const void *data, const int num_entries, const FType data_type, const size_t *shape, const int dimensions)
+.. c:function:: FGraphNode* fCreateGraph(const void* data, const int num_entries, const FType data_type, const size_t* shape, const int dimensions)
 
   :param data: pointer to the flattened data array that should be loaded into the node 
   :param num_entries: the number of elements (NOT BYTES!) that should be loaded
@@ -87,7 +87,7 @@ fCreateGraph()
 
 fFreeGraph()
 """"""""""""
-.. c:function:: void fFreeGraph(FGraphNode *graph)
+.. c:function:: void fFreeGraph(FGraphNode* graph)
 
   :param graph: the graph data that should be released
 
@@ -98,15 +98,15 @@ fFreeGraph()
 
 fCopyGraph()
 """"""""""""
-.. c:function:: FGraphNode *fCopyGraph(const FGraphNode *graph);
+.. c:function:: FGraphNode *fCopyGraph(const FGraphNode* graph)
 
 Copies the graph node, the corresponding operation and additional data and the predecessors (their :member:`FGraphNode.reference_counter` is incremented)
 
 fExecuteGraph
 """"""""""""""
-.. c:function:: FGraphNode* fExecuteGraph(FGraphNode *node);
-.. c:function:: FGraphNode* fExecuteGraph_cpu(FGraphNode *node);
-.. c:function:: FGraphNode* fExecuteGraph_gpu(FGraphNode *node);
+.. c:function:: FGraphNode* fExecuteGraph(FGraphNode* node)
+.. c:function:: FGraphNode* fExecuteGraph_cpu(FGraphNode* node)
+.. c:function:: FGraphNode* fExecuteGraph_gpu(FGraphNode* node)
 
 Executes the graph node operations from all yet to be executed predecessors to :var:`node` and returns a node with a :struct:`FResultData` operation
 in which the resulting data is stored.
@@ -121,4 +121,12 @@ Although the CPU backend uses a thread pool, the method itself is called sequent
 
 Operations
 ^^^^^^^^^^
-TODO
+fadd
+""""
+.. c:function:: FGraphNode *fadd_g(FGraphNode* a, FGraphNode* b)
+.. c:function:: FGraphNode *fadd_ci(FGraphNode* a, const int b)
+.. c:function:: FGraphNode *fadd_cl(FGraphNode* a, const long b)
+.. c:function:: FGraphNode *fadd_cf(FGraphNode* a, const float b)
+.. c:function:: FGraphNode *fadd_cd(FGraphNode* a, const double b)
+
+Return elementwise addition of a and b.
