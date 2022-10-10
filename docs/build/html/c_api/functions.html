@@ -209,7 +209,184 @@
 <h1>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">#</a></h1>
 <section id="graph-and-execution-functions">
 <h2>Graph and Execution Functions<a class="headerlink" href="#graph-and-execution-functions" title="Permalink to this heading">#</a></h2>
-<p>TODO</p>
+<section id="flintinit">
+<h3>flintInit()<a class="headerlink" href="#flintinit" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.flintInit">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flintInit</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">cpu</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">gpu</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.flintInit" title="Permalink to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cpu</strong> – 1 if the cpu backend should be initialized, 0 if not</p></li>
+<li><p><strong>gpu</strong> – 1 if the gpu backend should be initialized, 0 if not.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.flintInit_cpu">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flintInit_cpu</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c.flintInit_cpu" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.flintInit_gpu">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flintInit_gpu</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c.flintInit_gpu" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<p>Initializes the cpu and the gpu backend. they are already implicitly called by the execution functions if necessary.
+the first method allows disabling of the gpu backend (by passing 0 to its gpu parameter), the cpu backend cannot be
+disabled (if a 0 is passed to the cpu backend in the first method, it may still be started by <a class="reference internal" href="#c.fExecuteGraph" title="fExecuteGraph"><code class="xref c c-func docutils literal notranslate"><span class="pre">fExecuteGraph()</span></code></a>, if it decides
+that the cpu backend should be chosen). only use those functions if you…</p>
+<ul class="simple">
+<li><p>…want to explicitly decide where and when the initialization should take place</p></li>
+<li><p>…want to only start one backend</p></li>
+</ul>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="flintcleanup">
+<h3>flintCleanup()<a class="headerlink" href="#flintcleanup" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.flintCleanup">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flintCleanup</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c.flintCleanup" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.flintCleanup_cpu">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flintCleanup_cpu</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c.flintCleanup_cpu" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.flintCleanup_gpu">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flintCleanup_gpu</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c.flintCleanup_gpu" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<p>Deallocates any resourced allocated by the corresponding backends.
+The first method calls the other two which are only executed if the framework was
+initialized, else they do nothing.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="fsetlogginglevel">
+<h3>fSetLoggingLevel()<a class="headerlink" href="#fsetlogginglevel" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fSetLoggingLevel">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">fSetLoggingLevel</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">level</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fSetLoggingLevel" title="Permalink to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>level</strong> – Logging level, between 0 and 4</p></li>
+</ul>
+</dd>
+</dl>
+<p>Sets the logging level of the framework. Adjust this for debugging purposes, or if you release software in which Flint is contained.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#c.flog" title="flog"><code class="xref c c-func docutils literal notranslate"><span class="pre">flog()</span></code></a>, <a class="reference internal" href="structs.html#c.FLogType" title="FLogType"><code class="xref c c-enum docutils literal notranslate"><span class="pre">FLogType</span></code></a></p>
+</div>
+<p>Levels:</p>
+<ul class="simple">
+<li><p>0: No logging</p></li>
+<li><p>1: Only <code class="xref c c-var docutils literal notranslate"><span class="pre">F_ERROR</span></code></p></li>
+<li><p>2: Logging level 1 + <code class="xref c c-var docutils literal notranslate"><span class="pre">F_WARNING</span></code> (should be used for production)</p></li>
+<li><p>3: Logging level 2 + <code class="xref c c-var docutils literal notranslate"><span class="pre">F_INFO</span></code> (for developement)</p></li>
+<li><p>4: Logging level 3 + <code class="xref c c-var docutils literal notranslate"><span class="pre">F_VERBOSE</span></code> (for library developement)</p></li>
+<li><p>5: Logging level 4 + <code class="xref c c-var docutils literal notranslate"><span class="pre">F_DEBUG</span></code> (when a bug in the library has been found)</p></li>
+</ul>
+</dd></dl>
+
+</section>
+<section id="flog">
+<h3>flog()<a class="headerlink" href="#flog" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.flog">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flog</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FLogType" title="FLogType"><span class="n"><span class="pre">FLogType</span></span></a><span class="w"> </span><span class="n"><span class="pre">type</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">msg</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.flog" title="Permalink to this definition">#</a><br /></dt>
+<dd><p>Logs a <code class="xref c c-var docutils literal notranslate"><span class="pre">NULL</span></code> terminated string with the given logging level</p>
+</dd></dl>
+
+</section>
+<section id="fcreategraph">
+<h3>fCreateGraph()<a class="headerlink" href="#fcreategraph" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fCreateGraph">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fCreateGraph</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">data</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">num_entries</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="structs.html#c.FType" title="FType"><span class="n"><span class="pre">FType</span></span></a><span class="w"> </span><span class="n"><span class="pre">data_type</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">shape</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">dimensions</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fCreateGraph" title="Permalink to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – pointer to the flattened data array that should be loaded into the node</p></li>
+<li><p><strong>num_entries</strong> – the number of elements (NOT BYTES!) that should be loaded</p></li>
+<li><p><strong>data_type</strong> – the datatype of <a class="reference internal" href="#c.fCreateGraph" title="data"><code class="xref c c-var docutils literal notranslate"><span class="pre">data</span></code></a></p></li>
+<li><p><strong>shape</strong> – an array of size <a class="reference internal" href="#c.fCreateGraph" title="dimensions"><code class="xref c c-var docutils literal notranslate"><span class="pre">dimensions</span></code></a>, each entry describing the size of the corresponding dimension. Make sure, <a class="reference internal" href="#c.fCreateGraph" title="data"><code class="xref c c-var docutils literal notranslate"><span class="pre">data</span></code></a>
+is at least as large as the product of all entries in <a class="reference internal" href="#c.fCreateGraph" title="shape"><code class="xref c c-var docutils literal notranslate"><span class="pre">shape</span></code></a></p></li>
+<li><p><strong>dimensions</strong> – the number of dimensions</p></li>
+</ul>
+</dd>
+</dl>
+<p>Creates a Graph with a single store instruction, the data is copied to intern
+memory, so after return of the function, <a class="reference internal" href="#c.fCreateGraph" title="data"><code class="xref c c-var docutils literal notranslate"><span class="pre">data</span></code></a> does not have to stay valid. <a class="reference internal" href="#c.fCreateGraph" title="shape"><code class="xref c c-var docutils literal notranslate"><span class="pre">shape</span></code></a> is copied as well.</p>
+</dd></dl>
+
+</section>
+<section id="ffreegraph">
+<h3>fFreeGraph()<a class="headerlink" href="#ffreegraph" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fFreeGraph">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">fFreeGraph</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">graph</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fFreeGraph" title="Permalink to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>graph</strong> – the graph data that should be released</p></li>
+</ul>
+</dd>
+</dl>
+<p>Decrements <a class="reference internal" href="structs.html#c.FGraphNode.reference_counter" title="FGraphNode.reference_counter"><code class="xref c c-member docutils literal notranslate"><span class="pre">FGraphNode.reference_counter</span></code></a> of <a class="reference internal" href="#c.fFreeGraph" title="graph"><code class="xref c c-var docutils literal notranslate"><span class="pre">graph</span></code></a> and deallocates the node and its corresponding data, if the counter becomes 0.
+If the node is deallocated, the same process is repeated with its predecessors.
+So you can safely connect nodes multiple times and have only to free the leaf nodes (i.e. the results), without caring about
+cross-reference, since thouse are handles by the reference counting system.</p>
+</dd></dl>
+
+</section>
+<section id="fcopygraph">
+<h3>fCopyGraph()<a class="headerlink" href="#fcopygraph" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fCopyGraph">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fCopyGraph</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">graph</span></span><span class="sig-paren">)</span><span class="p"><span class="pre">;</span></span><a class="headerlink" href="#c.fCopyGraph" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<p>Copies the graph node, the corresponding operation and additional data and the predecessors (their <a class="reference internal" href="structs.html#c.FGraphNode.reference_counter" title="FGraphNode.reference_counter"><code class="xref c c-member docutils literal notranslate"><span class="pre">FGraphNode.reference_counter</span></code></a> is incremented)</p>
+</section>
+<section id="fexecutegraph">
+<h3>fExecuteGraph<a class="headerlink" href="#fexecutegraph" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fExecuteGraph">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fExecuteGraph</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">node</span></span><span class="sig-paren">)</span><span class="p"><span class="pre">;</span></span><a class="headerlink" href="#c.fExecuteGraph" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fExecuteGraph_cpu">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fExecuteGraph_cpu</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">node</span></span><span class="sig-paren">)</span><span class="p"><span class="pre">;</span></span><a class="headerlink" href="#c.fExecuteGraph_cpu" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fExecuteGraph_gpu">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fExecuteGraph_gpu</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">node</span></span><span class="sig-paren">)</span><span class="p"><span class="pre">;</span></span><a class="headerlink" href="#c.fExecuteGraph_gpu" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<p>Executes the graph node operations from all yet to be executed predecessors to <code class="xref c c-var docutils literal notranslate"><span class="pre">node</span></code> and returns a node with a <a class="reference internal" href="structs.html#c.FResultData" title="FResultData"><code class="xref c c-struct docutils literal notranslate"><span class="pre">FResultData</span></code></a> operation
+in which the resulting data is stored.
+If the graph is executed by the GPU backend, a opencl kernel containing all selected operations is compiled and executed. The kernels are cashed, so it improves the performance
+of a program if the same graph-structures are reused (not necessary the same nodes, but the same combination of nodes), since then the backend can
+reuse already compiled kernels. If the CPU backend is chosen, it does not matter, since every operation is executed independently.
+The first method selects a backend by basic heuristics of the nodes (like operation types and number of entries), the other two execute the graph with the corresponding backend.
+Although the CPU backend uses a thread pool, the method itself is called sequential and waits until the result is computed, so you do not have to synchronize anything.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In the future eager execution may be implemented which may improve performance for the cpu backend everytime and of the gpu backend if one uses frequently changing graph structures</p>
+</div>
+</section>
 </section>
 <section id="operations">
 <h2>Operations<a class="headerlink" href="#operations" title="Permalink to this heading">#</a></h2>
@@ -274,7 +451,17 @@
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Functions</a><ul>
-<li><a class="reference internal" href="#graph-and-execution-functions">Graph and Execution Functions</a></li>
+<li><a class="reference internal" href="#graph-and-execution-functions">Graph and Execution Functions</a><ul>
+<li><a class="reference internal" href="#flintinit">flintInit()</a></li>
+<li><a class="reference internal" href="#flintcleanup">flintCleanup()</a></li>
+<li><a class="reference internal" href="#fsetlogginglevel">fSetLoggingLevel()</a></li>
+<li><a class="reference internal" href="#flog">flog()</a></li>
+<li><a class="reference internal" href="#fcreategraph">fCreateGraph()</a></li>
+<li><a class="reference internal" href="#ffreegraph">fFreeGraph()</a></li>
+<li><a class="reference internal" href="#fcopygraph">fCopyGraph()</a></li>
+<li><a class="reference internal" href="#fexecutegraph">fExecuteGraph</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#operations">Operations</a></li>
 </ul>
 </li>

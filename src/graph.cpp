@@ -219,6 +219,20 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
       src = ord->value;
       data = &crd->value;
     } break;
+    case FSLICE: {
+      FSlice *osl = (FSlice *)node->operation->additional_data;
+      FSlice *csl = new FSlice();
+      op->additional_data = (void *)csl;
+      csl->start = osl->start;
+      csl->end = osl->end;
+      csl->step = osl->step;
+    } break;
+    case FREDUCE_SUM:
+    case FREDUCE_MUL: {
+      op->additional_data = safe_mal<int>(1);
+      ((int *)op->additional_data)[0] =
+          ((int *)node->operation->additional_data)[0];
+    }
     default:
       break;
     }
@@ -453,7 +467,7 @@ FGraphNode *fflatten(FGraphNode *a) {
   for (int i = 0; i < prev_op->dimensions; i++)
     total_size *= prev_op->shape[i];
   op->shape[0] = total_size;
-  op->additional_data = prev_op->additional_data;
+  op->additional_data = nullptr;
   op->data_type = prev_op->data_type;
   return addNode(op, {a});
 }
@@ -476,7 +490,7 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
          sizeof(size_t) * (prev_op->dimensions - dimension - 1));
   op->shape[dimension - 1] = new_prevdim_size;
 
-  op->additional_data = prev_op->additional_data;
+  op->additional_data = nullptr;
   op->data_type = prev_op->data_type;
   return addNode(op, {a});
 }
