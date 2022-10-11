@@ -172,15 +172,15 @@ public:
 };
 // FOR SLICING
 struct TensorRange {
-  static const size_t MAX_SIZE = -1;
-  size_t start = 0;
-  size_t end = MAX_SIZE;
-  size_t step = 1;
+  static const long MAX_SIZE = 2147483647;
+  long start = 0;
+  long end = MAX_SIZE;
+  long step = 1;
   TensorRange() = default;
-  TensorRange(std::tuple<size_t, size_t, size_t> range_vals)
+  TensorRange(std::tuple<long, long, long> range_vals)
       : start(std::get<0>(range_vals)), end(std::get<1>(range_vals)),
         step(std::get<2>(range_vals)) {}
-  TensorRange(std::initializer_list<size_t> range_vals) {
+  TensorRange(std::initializer_list<long> range_vals) {
     if (range_vals.size() > 0)
       start = *range_vals.begin();
     if (range_vals.size() > 1)
@@ -188,7 +188,7 @@ struct TensorRange {
     if (range_vals.size() > 2)
       step = *(range_vals.begin() + 2);
   }
-  TensorRange(size_t start, size_t end = MAX_SIZE, size_t step = 1)
+  TensorRange(long start, long end = MAX_SIZE, long step = 1)
       : start(start), end(end), step(step) {}
 };
 
@@ -393,15 +393,14 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K> Tensor<K, 1> convert() const {
     return Tensor<K, 1>(fconvert(node, toFlintType<K>()), shape);
   }
-  Tensor<T, 1> slice(size_t start = 0, size_t end = TensorRange::MAX_SIZE,
-                     size_t step = 1) const {
-    end = end == TensorRange::MAX_SIZE ? shape : end;
-    size_t new_shape = end - start;
-    if (new_shape % shape == 0)
-      new_shape /= step;
-    else
-      new_shape = new_shape / step + 1;
-    return Tensor<T, 1>(fslice_step(node, &start, &end, &step), new_shape);
+  Tensor<T, 1> slice(long start = 0, long end = TensorRange::MAX_SIZE,
+                     long step = 1) const {
+    if (start == TensorRange::MAX_SIZE)
+      start = shape - 1;
+    if (end == TensorRange::MAX_SIZE)
+      end = shape;
+    FGraphNode *nn = fslice_step(node, &start, &end, &step);
+    return Tensor<T, 1>(nn, nn->operation->shape[0]);
   }
 
 protected:
@@ -737,58 +736,33 @@ template <typename T, unsigned int n> struct Tensor {
       ns[i] = shape[i + 1];
     return Tensor<T, n - 1>(freduce_mul(&node, dimension), ns);
   }
-  template <typename... args> Tensor<T, n> slice(args... dim_ranges) {
+  template <typename... args>
+  Tensor<T, n> slice(const args... dim_ranges) const {
     constexpr size_t num_ranges = sizeof...(args);
     static_assert(num_ranges <= n,
                   "A slice operation may only contain as many indexing ranges "
                   "as the tensor has dimensions!");
     std::array<TensorRange, num_ranges> ranges{
         static_cast<TensorRange>(dim_ranges)...};
-    size_t starts[n], ends[n], steps[n];
-    std::array<size_t, n> new_shape;
+    long starts[n], ends[n], steps[n];
     for (unsigned int i = 0; i < n; i++) {
       if (i < num_ranges) {
-        starts[i] = ranges[i].start;
+        starts[i] = ranges[i].start == TensorRange::MAX_SIZE ? shape[i] - 1
+                                                             : ranges[i].start;
         ends[i] =
             ranges[i].end == TensorRange::MAX_SIZE ? shape[i] : ranges[i].end;
         steps[i] = ranges[i].step;
-        new_shape[i] = ends[i] - starts[i];
-        if (new_shape[i] % steps[i] == 0)
-          new_shape[i] /= steps[i];
-        else
-          new_shape[i] = new_shape[i] / steps[i] + 1;
-        // check if indexing is allowed
-        if (starts[i] < 0)
-          flog(
-              F_WARNING,
-              "negative indexing leads to undefined behaviour! (start value: " +
-                  std::to_string(starts[i]) + " in slice for dimension " +
-                  std::to_string(i) + ")");
-        if (starts[i] > ends[i])
-          flog(F_WARNING,
-               "start index > end index yields no values for slice in "
-               "dimension " +
-                   std::to_string(i) + "!");
-        if (steps[i] < 1) // TODO
-          flog(F_WARNING, "currently only step sizes > 1 are supported!");
-        if (ends[i] - (ends[i] % steps[i]) > shape[i])
-          flog(F_WARNING, "end index " + std::to_string(ends[i]) +
-                              " in dimension " + std::to_string(i) +
-                              " exceeds size of that dimension!");
       } else {
         starts[i] = 0;
         ends[i] = shape[i];
         steps[i] = 1;
-        new_shape[i] = shape[i];
       }
     }
-    return Tensor<T, n>(fslice_step(node, starts, ends, steps), new_shape);
-  }
-
-  template <typename... args> Tensor<T, n> slice(const args... ranges) const {
-    size_t num = sizeof...(args);
-    static_assert(num <= n,
-                  "Slicing with more ranges than dimensions is not possible!");
+    FGraphNode *nn = fslice_step(node, starts, ends, steps);
+    std::array<size_t, n> new_shape;
+    for (size_t i = 0; i < n; i++)
+      new_shape[i] = nn->operation->shape[i];
+    return Tensor<T, n>(nn, new_shape);
   }
 
 protected:

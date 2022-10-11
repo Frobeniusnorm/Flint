@@ -15,6 +15,7 @@
 #include "../flint.h"
 #include "utils.hpp"
 #include <cstring>
+#include <iostream>
 #include <list>
 #include <stdlib.h>
 #include <string>
@@ -23,7 +24,7 @@
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
   // TODO
-  return fExecuteGraph_gpu(node);
+  return fExecuteGraph_cpu(node);
 }
 void flintCleanup() {
   flintCleanup_cpu();
@@ -614,8 +615,9 @@ FGraphNode *freduce_mul(FGraphNode **a, const int dimension) {
   return reduce_operation(a, dimension, FREDUCE_MUL);
 }
 
-FGraphNode *fslice_step(FGraphNode *a, const size_t *start, const size_t *end,
-                        const size_t *step) {
+FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
+                        const long *step) {
+  // construct nodes
   FGraphNode *foo = new FGraphNode();
   foo->num_predecessor = 1;
   foo->predecessors = safe_mal<FGraphNode *>(1);
@@ -628,31 +630,42 @@ FGraphNode *fslice_step(FGraphNode *a, const size_t *start, const size_t *end,
   op->data_type = a->operation->data_type;
   op->dimensions = a->operation->dimensions;
   op->shape = safe_mal<size_t>(op->dimensions);
+
+  FSlice *slice = new FSlice();
+  op->additional_data = (void *)slice;
+  slice->step = safe_mal<long>(op->dimensions);
+  slice->start = safe_mal<long>(op->dimensions);
+  slice->end = safe_mal<long>(op->dimensions);
   for (size_t i = 0; i < op->dimensions; i++) {
-    op->shape[i] = (end[i] - start[i]);
+    slice->start[i] =
+        (start[i] < 0) ? (long)a->operation->shape[i] + start[i] : start[i];
+    slice->end[i] =
+        (end[i] < 0) ? (long)a->operation->shape[i] + end[i] : end[i];
+    slice->step[i] = step[i];
+    op->shape[i] = abs(slice->end[i] - slice->start[i]);
+    long step_abs = abs(step[i]);
     // start element is always present
-    if (op->shape[i] % step[i] == 0)
-      op->shape[i] = op->shape[i] / step[i];
+    if (op->shape[i] % step_abs == 0)
+      op->shape[i] = op->shape[i] / step_abs;
     else
-      op->shape[i] = op->shape[i] / step[i] + 1;
+      op->shape[i] = op->shape[i] / step_abs + 1;
     if (op->shape[i] > a->operation->shape[i])
       flog(F_ERROR, "Invalid slice: dimension " + std::to_string(i) +
                         " larger then target tensor! (" +
                         std::to_string(op->shape[i]) + " > " +
                         std::to_string(a->operation->shape[i]) + ")");
+    if ((step[i] < 0 && (slice->end[i] > slice->start[i])) ||
+        (step[i] > 0 && (slice->end[i] < slice->start[i]))) {
+      flog(F_ERROR, "invalid slice: combination of step sign and start and end "
+                    "in dimension " +
+                        std::to_string(i) + " will yield empty tensor!");
+    }
   }
-  FSlice *slice = new FSlice();
-  op->additional_data = (void *)slice;
-  slice->step = safe_mal<size_t>(op->dimensions);
-  slice->start = safe_mal<size_t>(op->dimensions);
-  slice->end = safe_mal<size_t>(op->dimensions);
-  memcpy(slice->start, start, op->dimensions * sizeof(size_t));
-  memcpy(slice->end, end, op->dimensions * sizeof(size_t));
-  memcpy(slice->step, step, op->dimensions * sizeof(size_t));
+
   return foo;
 }
-FGraphNode *fslice(FGraphNode *a, const size_t *start, const size_t *end) {
-  size_t step = 1;
+FGraphNode *fslice(FGraphNode *a, const long *start, const long *end) {
+  long step = 1;
   FGraphNode *foo = fslice_step(a, start, end, &step);
   return foo;
 }

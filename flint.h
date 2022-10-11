@@ -167,9 +167,9 @@ struct FConst {
 };
 // range instructions
 struct FSlice {
-  size_t *start;
-  size_t *end;
-  size_t *step;
+  long *start;
+  long *end;
+  long *step;
 };
 // functions
 
@@ -291,13 +291,13 @@ FGraphNode *freduce_mul(FGraphNode **a, const int dimension);
  * Start is inclusive end is exclusive.
  * @param start and @param end have to contain a index and size per dimension
  * of the target tensor. */
-FGraphNode *fslice(FGraphNode *a, const size_t *start, const size_t *end);
+FGraphNode *fslice(FGraphNode *a, const long *start, const long *end);
 /* Selects a slice of the tensor with a start and end range by a per dimension
  * step size. Start is inclusive end is exclusive.
  * @param start, @param end and @param step have to contain a index, size and
  * step size per dimension of the target tensor. */
-FGraphNode *fslice_step(FGraphNode *a, const size_t *start, const size_t *end,
-                        const size_t *step);
+FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
+                        const long *step);
 
 #ifdef __cplusplus
 }

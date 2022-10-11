@@ -362,7 +362,7 @@ generateCode(FGraphNode *node,
       }
       // calculate start
       size_t start = 0;
-      std::vector<size_t> step(node->operation->dimensions);
+      std::vector<long> step(node->operation->dimensions);
       for (long d = 0; d < step.size(); d++) {
         start += slice->start[d] * acc_sizes_pred[d];
       }

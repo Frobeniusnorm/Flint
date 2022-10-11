@@ -518,6 +518,14 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(4, f2[1]);
     CHECK_EQ(6, f2[2]);
     CHECK_EQ(3, f2.get_shape());
+    // with negative indices
+    Tensor<long, 1> t3 =
+        t1.slice(TensorRange(-1, -3, -1), TensorRange(-1, -4, -2))
+            .flattened()
+            .slice(-2, 0, -3); //[[8, 9], [9,3]], [[2,1], [1,7]] //1, 3
+    CHECK_EQ(2, t3.get_shape());
+    CHECK_EQ(1, t3[0]);
+    CHECK_EQ(3, t3[1]);
   }
 }
 
