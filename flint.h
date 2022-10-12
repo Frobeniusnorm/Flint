@@ -216,32 +216,38 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node);
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node);
 // TODO: eager execution
 //  operations
+/** Elementwise addition of a and b :math:`a+b`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
 FGraphNode *fsub_g(FGraphNode *a, FGraphNode *b);
 FGraphNode *fdiv_g(FGraphNode *a, FGraphNode *b);
 FGraphNode *fmul_g(FGraphNode *a, FGraphNode *b);
 FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b);
-// adds the constant value to each entry in a
+
+/** Elementwise addition of a and b :math:`a+b`. */
 FGraphNode *fadd_ci(FGraphNode *a, const int b);
 FGraphNode *fadd_cl(FGraphNode *a, const long b);
 FGraphNode *fadd_cf(FGraphNode *a, const float b);
 FGraphNode *fadd_cd(FGraphNode *a, const double b);
-// subtracts the constant value from each entry in a
+
+/** Elementwise subtraction of a and b :math:`a-b`. */
 FGraphNode *fsub_ci(FGraphNode *a, const int b);
 FGraphNode *fsub_cl(FGraphNode *a, const long b);
 FGraphNode *fsub_cf(FGraphNode *a, const float b);
 FGraphNode *fsub_cd(FGraphNode *a, const double b);
-// divides each entry in a by the constant value
+
+/** Elementwise division of a and b :math:`\frac{a}{b}`. */
 FGraphNode *fdiv_ci(FGraphNode *a, const int b);
 FGraphNode *fdiv_cl(FGraphNode *a, const long b);
 FGraphNode *fdiv_cf(FGraphNode *a, const float b);
 FGraphNode *fdiv_cd(FGraphNode *a, const double b);
-// multiplicates the constant value with each entry in a
+
+/** Elementwise multiplication of a and b :math:`a\cdot b`. */
 FGraphNode *fmul_ci(FGraphNode *a, const int b);
 FGraphNode *fmul_cl(FGraphNode *a, const long b);
 FGraphNode *fmul_cf(FGraphNode *a, const float b);
 FGraphNode *fmul_cd(FGraphNode *a, const double b);
-// computes the power of each entry to the constant
+
+/** Takes the elementwise power of a to b: :math:`a^b`.*/
 FGraphNode *fpow_ci(FGraphNode *a, const int b);
 FGraphNode *fpow_cl(FGraphNode *a, const long b);
 FGraphNode *fpow_cf(FGraphNode *a, const float b);

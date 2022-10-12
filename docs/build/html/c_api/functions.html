@@ -353,26 +353,26 @@ cross-reference, since thouse are handles by the reference counting system.</p>
 <h3>fCopyGraph()<a class="headerlink" href="#fcopygraph" title="Permalink to this heading">#</a></h3>
 <dl class="c function">
 <dt class="sig sig-object c" id="c.fCopyGraph">
-<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fCopyGraph</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">graph</span></span><span class="sig-paren">)</span><span class="p"><span class="pre">;</span></span><a class="headerlink" href="#c.fCopyGraph" title="Permalink to this definition">#</a><br /></dt>
-<dd></dd></dl>
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fCopyGraph</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">graph</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fCopyGraph" title="Permalink to this definition">#</a><br /></dt>
+<dd><p>Copies the graph node, the corresponding operation and additional data and the predecessors (their <a class="reference internal" href="structs.html#c.FGraphNode.reference_counter" title="FGraphNode.reference_counter"><code class="xref c c-member docutils literal notranslate"><span class="pre">FGraphNode.reference_counter</span></code></a> is incremented)</p>
+</dd></dl>
 
-<p>Copies the graph node, the corresponding operation and additional data and the predecessors (their <a class="reference internal" href="structs.html#c.FGraphNode.reference_counter" title="FGraphNode.reference_counter"><code class="xref c c-member docutils literal notranslate"><span class="pre">FGraphNode.reference_counter</span></code></a> is incremented)</p>
 </section>
 <section id="fexecutegraph">
 <h3>fExecuteGraph<a class="headerlink" href="#fexecutegraph" title="Permalink to this heading">#</a></h3>
 <dl class="c function">
 <dt class="sig sig-object c" id="c.fExecuteGraph">
-<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fExecuteGraph</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">node</span></span><span class="sig-paren">)</span><span class="p"><span class="pre">;</span></span><a class="headerlink" href="#c.fExecuteGraph" title="Permalink to this definition">#</a><br /></dt>
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fExecuteGraph</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">node</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fExecuteGraph" title="Permalink to this definition">#</a><br /></dt>
 <dd></dd></dl>
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.fExecuteGraph_cpu">
-<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fExecuteGraph_cpu</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">node</span></span><span class="sig-paren">)</span><span class="p"><span class="pre">;</span></span><a class="headerlink" href="#c.fExecuteGraph_cpu" title="Permalink to this definition">#</a><br /></dt>
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fExecuteGraph_cpu</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">node</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fExecuteGraph_cpu" title="Permalink to this definition">#</a><br /></dt>
 <dd></dd></dl>
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.fExecuteGraph_gpu">
-<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fExecuteGraph_gpu</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">node</span></span><span class="sig-paren">)</span><span class="p"><span class="pre">;</span></span><a class="headerlink" href="#c.fExecuteGraph_gpu" title="Permalink to this definition">#</a><br /></dt>
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fExecuteGraph_gpu</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">node</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fExecuteGraph_gpu" title="Permalink to this definition">#</a><br /></dt>
 <dd></dd></dl>
 
 <p>Executes the graph node operations from all yet to be executed predecessors to <code class="xref c c-var docutils literal notranslate"><span class="pre">node</span></code> and returns a node with a <a class="reference internal" href="structs.html#c.FResultData" title="FResultData"><code class="xref c c-struct docutils literal notranslate"><span class="pre">FResultData</span></code></a> operation
@@ -386,11 +386,170 @@ Although the CPU backend uses a thread pool, the method itself is called sequent
 <p class="admonition-title">Note</p>
 <p>In the future eager execution may be implemented which may improve performance for the cpu backend everytime and of the gpu backend if one uses frequently changing graph structures</p>
 </div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
 </section>
 </section>
 <section id="operations">
 <h2>Operations<a class="headerlink" href="#operations" title="Permalink to this heading">#</a></h2>
-<p>TODO</p>
+<section id="fadd">
+<h3>fadd<a class="headerlink" href="#fadd" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fadd_g">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fadd_g</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fadd_g" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fadd_ci">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fadd_ci</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fadd_ci" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fadd_cl">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fadd_cl</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fadd_cl" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fadd_cf">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fadd_cf</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">float</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fadd_cf" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fadd_cd">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fadd_cd</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fadd_cd" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<p>Elementwise addition of a and b <span class="math notranslate nohighlight">\(a+b\)</span>.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="fsub">
+<h3>fsub<a class="headerlink" href="#fsub" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fsub_g">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fsub_g</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fsub_g" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fsub_ci">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fsub_ci</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fsub_ci" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fsub_cl">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fsub_cl</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fsub_cl" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fsub_cf">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fsub_cf</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">float</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fsub_cf" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fsub_cd">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fsub_cd</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fsub_cd" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<p>Elementwise subtraction of a and b: <span class="math notranslate nohighlight">\(a-b\)</span>.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="fmul">
+<h3>fmul<a class="headerlink" href="#fmul" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmul_g">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmul_g</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmul_g" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmul_ci">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmul_ci</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmul_ci" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmul_cl">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmul_cl</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmul_cl" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmul_cf">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmul_cf</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">float</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmul_cf" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmul_cd">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmul_cd</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmul_cd" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<p>Elementwise multiplication of a and b: <span class="math notranslate nohighlight">\(a\cdot b\)</span>.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="fdiv">
+<h3>fdiv<a class="headerlink" href="#fdiv" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fdiv_g">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fdiv_g</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fdiv_g" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fdiv_ci">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fdiv_ci</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fdiv_ci" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fdiv_cl">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fdiv_cl</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fdiv_cl" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fdiv_cf">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fdiv_cf</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">float</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fdiv_cf" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fdiv_cd">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fdiv_cd</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fdiv_cd" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<p>Elementwise division of a and b: <span class="math notranslate nohighlight">\(\frac{a}{b}\)</span>.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="fpow">
+<h3>fpow<a class="headerlink" href="#fpow" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fpow_g">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fpow_g</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fpow_g" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fpow_ci">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fpow_ci</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fpow_ci" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fpow_cl">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fpow_cl</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fpow_cl" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fpow_cf">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fpow_cf</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">float</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fpow_cf" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fpow_cd">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fpow_cd</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fpow_cd" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<p>Takes the elementwise power of a to b: <span class="math notranslate nohighlight">\(a^b\)</span>.</p>
+</section>
 </section>
 </section>
 
@@ -462,7 +621,14 @@ Although the CPU backend uses a thread pool, the method itself is called sequent
 <li><a class="reference internal" href="#fexecutegraph">fExecuteGraph</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#operations">Operations</a></li>
+<li><a class="reference internal" href="#operations">Operations</a><ul>
+<li><a class="reference internal" href="#fadd">fadd</a></li>
+<li><a class="reference internal" href="#fsub">fsub</a></li>
+<li><a class="reference internal" href="#fmul">fmul</a></li>
+<li><a class="reference internal" href="#fdiv">fdiv</a></li>
+<li><a class="reference internal" href="#fpow">fpow</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -481,5 +647,6 @@ Although the CPU backend uses a thread pool, the method itself is called sequent
     <script src="../_static/doctools.js"></script>
     <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/scripts/furo.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     </body>
 </html>
