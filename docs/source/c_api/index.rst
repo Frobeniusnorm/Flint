@@ -1,6 +1,8 @@
 C API
 =====
 
+.. default-domain:: c
+
 Usage
 -----
 

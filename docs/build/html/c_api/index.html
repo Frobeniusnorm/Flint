@@ -217,10 +217,10 @@ The initial nodes are always either <a class="reference internal" href="structs.
 The input data is copied and the copied data as well as the result data is managed by Flint and freed when the node is freed.
 Do not allocate the nodes by yourself, they are allocated by the framework in the corresponding methods.
 All graph nodes have a reference counter to count by how many other nodes they are referenced.
-Nevertheless the nodes have to be freed by the function <code class="xref c c-func docutils literal notranslate"><span class="pre">fFreeGraph()</span></code> which decrements the reference counter by a node
+Nevertheless the nodes have to be freed by the function <a class="reference internal" href="functions.html#c.fFreeGraph" title="fFreeGraph"><code class="xref c c-func docutils literal notranslate"><span class="pre">fFreeGraph()</span></code></a> which decrements the reference counter by a node
 and frees it if the counter is zero. It recursively repeats this for its predecessors (so if a graph is only referenced by one single result node,
 the complete graph is freed with the node), this works only because the graph is azyclic.</p>
-<p>Once you have created your input data (<code class="xref c c-func docutils literal notranslate"><span class="pre">fCreateGraph()</span></code>) and connected it with the desired operations you may pass it to <code class="xref c c-func docutils literal notranslate"><span class="pre">fExecuteGraph()</span></code>, which returns a
+<p>Once you have created your input data (<a class="reference internal" href="functions.html#c.fCreateGraph" title="fCreateGraph"><code class="xref c c-func docutils literal notranslate"><span class="pre">fCreateGraph()</span></code></a>) and connected it with the desired operations you may pass it to <a class="reference internal" href="functions.html#c.fExecuteGraph" title="fExecuteGraph"><code class="xref c c-func docutils literal notranslate"><span class="pre">fExecuteGraph()</span></code></a>, which returns a
 graph node with <a class="reference internal" href="structs.html#c.FResultData" title="FResultData"><code class="xref c c-struct docutils literal notranslate"><span class="pre">FResultData</span></code></a>.</p>
 <div class="toctree-wrapper compound">
 <ul>
@@ -234,6 +234,7 @@ graph node with <a class="reference internal" href="structs.html#c.FResultData" 
 <li class="toctree-l3"><a class="reference internal" href="structs.html#enums">Enums</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="structs.html#foperationtype">FOperationType</a></li>
 <li class="toctree-l4"><a class="reference internal" href="structs.html#ftype">FType</a></li>
+<li class="toctree-l4"><a class="reference internal" href="structs.html#flogtype">FLogType</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="structs.html#additional-operation-data">Additional Operation Data</a><ul>
@@ -246,8 +247,25 @@ graph node with <a class="reference internal" href="structs.html#c.FResultData" 
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="functions.html">Functions</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="functions.html#graph-and-execution-functions">Graph and Execution Functions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="functions.html#operations">Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="functions.html#graph-and-execution-functions">Graph and Execution Functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#flintinit">flintInit()</a></li>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#flintcleanup">flintCleanup()</a></li>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#fsetlogginglevel">fSetLoggingLevel()</a></li>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#flog">flog()</a></li>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#fcreategraph">fCreateGraph()</a></li>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#ffreegraph">fFreeGraph()</a></li>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#fcopygraph">fCopyGraph()</a></li>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#fexecutegraph">fExecuteGraph</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="functions.html#operations">Operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#fadd">fadd</a></li>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#fsub">fsub</a></li>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#fmul">fmul</a></li>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#fdiv">fdiv</a></li>
+<li class="toctree-l4"><a class="reference internal" href="functions.html#fpow">fpow</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
