@@ -307,6 +307,10 @@ generateCode(FGraphNode *node,
       code = type + " " + name + " = (" + type + ")v" +
              to_string(variable_index + 1) + ";\n" + code;
     }; break;
+    case FABS: {
+      code = type + " " + name + " = abs(v" +
+             std::to_string(variable_index + 1) + ");\n" + code;
+    } break;
     case FREDUCE_SUM:
     case FREDUCE_MUL: {
       push_pred = false;
@@ -374,7 +378,7 @@ generateCode(FGraphNode *node,
             (d == 0 ? string("index")
                     : string("index %" + to_string(acc_sizes[d - 1]))) +
             ") / " + to_string(acc_sizes[d]) + " * " +
-            to_string(slice->step[d] * acc_sizes_pred[d]);
+            to_string(slice->step[d] * (long)acc_sizes_pred[d]);
       }
       index_defs += ";\n";
       code = "index = old_index" + to_string(old_idx) + ";\n" + code;

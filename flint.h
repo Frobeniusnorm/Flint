@@ -101,6 +101,7 @@ enum FOperationType {
   FREDUCE_SUM,
   FREDUCE_MUL,
   FSLICE,
+  FABS,
   FNUM_OPERATION_TYPES
 };
 /** Describes one operation. An operation always has a shape, described by
@@ -298,6 +299,8 @@ FGraphNode *fslice(FGraphNode *a, const long *start, const long *end);
  * step size per dimension of the target tensor. */
 FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
                         const long *step);
+
+FGraphNode *fabs_g(FGraphNode *a);
 
 #ifdef __cplusplus
 }

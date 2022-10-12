@@ -226,6 +226,11 @@ static void executeNode(FGraphNode *node,
       result[i] = ((T *)pred.data)[j];
     }
   } break;
+  case FABS: {
+    CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = abs(((T *)pred.data)[i]);
+  } break;
   default: { // binary operations
     CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];
     size_t im1 = p1.num_entries, im2 = p2.num_entries;

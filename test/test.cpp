@@ -522,17 +522,29 @@ TEST_SUITE("C++ Bindings") {
     Tensor<long, 1> t3 =
         t1.slice(TensorRange(-1, -3, -1), TensorRange(-1, -4, -2))
             .flattened()
-            .slice(-2, 0, -3); //[[8, 9], [9,3]], [[2,1], [1,7]] //1, 3
+            .slice(-2, 0, -3);
     CHECK_EQ(2, t3.get_shape());
     CHECK_EQ(1, t3[0]);
     CHECK_EQ(3, t3[1]);
+  }
+  TEST_CASE("FABS") {
+    Tensor<int, 2> t1{{-1, 3}, {-7, 9}};
+    Tensor<int, 1> t2 = t1.abs().flattened();
+    CHECK_EQ(1, t2[0]);
+    CHECK_EQ(3, t2[1]);
+    CHECK_EQ(7, t2[2]);
+    CHECK_EQ(9, t2[3]);
   }
 }
 
 int main(int argc, char **argv) {
   doctest::Context context;
   context.applyCommandLine(argc, argv);
+  flintInit(1, 0);
   int res = context.run();
+  flintCleanup();
+  flintInit(0, 1);
+  res = context.run();
   flintCleanup();
   if (context.shouldExit())
     return res;

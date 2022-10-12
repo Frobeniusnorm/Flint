@@ -21,10 +21,15 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+static bool use_cpu, use_gpu;
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
   // TODO
-  return fExecuteGraph_cpu(node);
+  if (use_gpu)
+    return fExecuteGraph_gpu(node);
+  if (use_cpu)
+    return fExecuteGraph_cpu(node);
+  return nullptr;
 }
 void flintCleanup() {
   flintCleanup_cpu();
@@ -32,6 +37,8 @@ void flintCleanup() {
 }
 void flintInit(int cpu, int gpu) {
   flog(F_VERBOSE, "Initializing Flint");
+  use_cpu = cpu;
+  use_gpu = gpu;
   if (cpu)
     flintInit_cpu();
   if (gpu)
@@ -668,4 +675,10 @@ FGraphNode *fslice(FGraphNode *a, const long *start, const long *end) {
   long step = 1;
   FGraphNode *foo = fslice_step(a, start, end, &step);
   return foo;
+}
+FGraphNode *fabs_g(FGraphNode *a) {
+  FOperation *op = new FOperation();
+  op->op_type = FABS;
+  initShape_keep(op, a->operation, nullptr);
+  return addNode(op, {a});
 }

@@ -393,6 +393,7 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K> Tensor<K, 1> convert() const {
     return Tensor<K, 1>(fconvert(node, toFlintType<K>()), shape);
   }
+  Tensor<T, 1> abs() const { return Tensor<T, 1>(fabs_g(node), shape); }
   Tensor<T, 1> slice(long start = 0, long end = TensorRange::MAX_SIZE,
                      long step = 1) const {
     if (start == TensorRange::MAX_SIZE)
@@ -736,6 +737,7 @@ template <typename T, unsigned int n> struct Tensor {
       ns[i] = shape[i + 1];
     return Tensor<T, n - 1>(freduce_mul(&node, dimension), ns);
   }
+  Tensor<T, n> abs() const { return Tensor<T, n>(fabs_g(node), shape); }
   template <typename... args>
   Tensor<T, n> slice(const args... dim_ranges) const {
     constexpr size_t num_ranges = sizeof...(args);
