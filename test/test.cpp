@@ -187,7 +187,8 @@ TEST_SUITE("Execution") {
     FGraphNode *r1 = fExecuteGraph(g2);
     FGraphNode *r3 = fExecuteGraph(g4);
     FGraphNode *r2 = fExecuteGraph(g3);
-
+    CHECK_EQ(2, r3->operation->dimensions);
+    CHECK_EQ(3, r3->operation->shape[0]);
     FResultData *res = (FResultData *)r1->operation->additional_data;
     long *ldata = (long *)res->data;
     for (int i = 0; i < 3; i++)
@@ -249,12 +250,12 @@ TEST_SUITE("Execution") {
     fFreeGraph(g21);
     vector<int> exp{3, 4, 6, 7, 9, 10, 11, 12, 12, 13, 13, 14};
     g1 = fExecuteGraph(g1);
-    // g2 = executeGraph(g2);
+    g2 = fExecuteGraph(g2);
     int *r1 = (int *)((FResultData *)g1->operation->additional_data)->data;
-    // int *r2 = (int *)((FResultData *)g2->operation->additional_data)->data;
+    int *r2 = (int *)((FResultData *)g2->operation->additional_data)->data;
     for (int i = 0; i < 12; i++) {
       CHECK_EQ(r1[i], exp[i]);
-      // CHECK_EQ(r2[i], exp[i]);
+      CHECK_EQ(r2[i], exp[i]);
     }
     fFreeGraph(g1);
     fFreeGraph(g2);
@@ -538,14 +539,36 @@ TEST_SUITE("C++ Bindings") {
 }
 
 int main(int argc, char **argv) {
+  bool doCPU = false, doGPU = false;
+  for (int i = 0; i < argc; i++) {
+    std::string arg(argv[i]);
+    if (arg == "cpu")
+      doCPU = true;
+    if (arg == "gpu")
+      doGPU = true;
+  }
+  if (!doCPU && !doGPU) {
+    std::cout
+        << "Usage: test [cpu] [gpu]" << std::endl
+        << "The presence of the cpu or gpu command line argument starts the "
+           "tests for the corresponding backend. Both may be selected."
+        << std::endl;
+    return 0;
+  }
   doctest::Context context;
   context.applyCommandLine(argc, argv);
-  flintInit(1, 0);
-  int res = context.run();
-  flintCleanup();
-  flintInit(0, 1);
-  res = context.run();
-  flintCleanup();
+  int res;
+  if (doCPU) {
+    flintInit(1, 0);
+    res = context.run();
+    flintCleanup();
+  }
+  if (doGPU) {
+    flintInit(0, 1);
+    res = context.run();
+    flintCleanup();
+  }
+
   if (context.shouldExit())
     return res;
   int client_stuff_return_code = 0;

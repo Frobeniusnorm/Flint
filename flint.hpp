@@ -152,6 +152,9 @@ public:
   T &operator[](size_t index) { return data[already_indexed + index]; }
   size_t size() const { return shape; }
 };
+namespace Flint {
+inline void setLoggingLevel(int level) { fSetLoggingLevel(level); }
+}; // namespace Flint
 template <typename T, unsigned int n> class TensorView {
   T *data;
   const size_t already_indexed;
@@ -199,6 +202,7 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K, unsigned int k> friend struct Tensor;
   typedef std::vector<T> storage_type;
   typedef std::initializer_list<T> init_type;
+  Tensor(storage_type data) { isTensorType<T>(); }
   Tensor(init_type data) : shape(data.size()) {
     isTensorType<T>();
 
@@ -419,6 +423,16 @@ template <typename T, unsigned int n> struct Tensor {
   typedef std::vector<typename Tensor<T, n - 1>::storage_type> storage_type;
   typedef std::initializer_list<typename Tensor<T, n - 1>::init_type> init_type;
   Tensor(init_type data) {
+    isTensorType<T>();
+    static_assert(n > 1, "Dimension must be at least 1");
+    initShape(data, 0);
+    std::vector<T> flat = FLINT_HPP_HELPER::flattened(data);
+    node = fCreateGraph(flat.data(), flat.size(), toFlintType<T>(),
+                        shape.data(), shape.size());
+    // the node which is currently hold is always referenced
+    node->reference_counter = 1;
+  }
+  Tensor(storage_type data) {
     isTensorType<T>();
     static_assert(n > 1, "Dimension must be at least 1");
     initShape(data, 0);
@@ -790,6 +804,18 @@ protected:
   }
   template <typename K>
   void initShape(const std::initializer_list<K> &vec, int i) {
+    shape[i] = vec.size();
+    total_size = vec.size();
+  }
+  template <typename K>
+  void initShape(const std::vector<std::vector<K>> &vec, int i) {
+    shape[i] = vec.size();
+    if (vec.size() <= 0)
+      flog(F_ERROR, "No dimension of the Tensor may have size 0!");
+    initShape(*vec.begin(), i + 1);
+    total_size *= vec.size();
+  }
+  template <typename K> void initShape(const std::vector<K> &vec, int i) {
     shape[i] = vec.size();
     total_size = vec.size();
   }

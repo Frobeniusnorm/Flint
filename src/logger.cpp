@@ -28,4 +28,4 @@ void flog(FLogType type, const char *msg) {
     throw std::runtime_error("error occured: " + std::string(msg));
   }
 }
-void setLoggerLevel(int level) { logging_level = level; }
+void fSetLoggingLevel(int level) { logging_level = level; }

@@ -368,6 +368,9 @@ static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, const T b) {
   cons->value = (void *)cons_val;
   FOperation *cop = new FOperation();
   cop->op_type = FCONST;
+  cop->dimensions = 1;
+  cop->shape = safe_mal<size_t>(1);
+  cop->shape[0] = 1;
   cop->additional_data = (void *)cons;
   if (typeid(T) == typeid(int))
     cop->data_type = F_INT32;
