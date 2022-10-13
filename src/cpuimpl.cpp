@@ -126,20 +126,6 @@ static void executeNode(FGraphNode *node,
                         std::vector<CPUResultData> predecessor_data, T *result,
                         size_t from, size_t size) {
   switch (node->operation->op_type) {
-  case FSTORE: {
-    FStore *store = (FStore *)node->operation->additional_data;
-    for (size_t i = from; i < from + size; i++)
-      result[i] = ((T *)store->data)[i];
-  } break;
-  case FRESULTDATA: {
-    FResultData *store = (FResultData *)node->operation->additional_data;
-    for (size_t i = from; i < from + size; i++)
-      result[i] = ((T *)store->data)[i];
-  } break;
-  case FCONST: {
-    FConst *cons = (FConst *)node->operation->additional_data;
-    result[from] = ((T *)cons->value)[0];
-  } break;
   case FCONVERSION: {
     CPUResultData pred = predecessor_data[0];
 
@@ -425,56 +411,85 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
     size_t size = 1;
     for (int j = 0; j < curr->operation->dimensions; j++)
       size *= curr->operation->shape[j];
-    // allocate result data and execute
-    switch (curr->operation->data_type) {
-    case F_INT32: {
-      int *result = safe_mal<int>(size);
-      chooseExecutionMethod(curr, predData, result, size);
-      results.insert(
-          {curr,
-           {.data = (void *)result,
-            .type = F_INT32,
-            .num_entries = size,
-            .shape = vector<size_t>(curr->operation->shape,
-                                    curr->operation->shape +
-                                        curr->operation->dimensions)}});
-    } break;
-    case F_INT64: {
-      long *result = safe_mal<long>(size);
-      chooseExecutionMethod(curr, predData, result, size);
-      results.insert(
-          {curr,
-           {.data = (void *)result,
-            .type = F_INT64,
-            .num_entries = size,
-            .shape = vector<size_t>(curr->operation->shape,
-                                    curr->operation->shape +
-                                        curr->operation->dimensions)}});
-    } break;
-    case F_FLOAT32: {
-      float *result = safe_mal<float>(size);
-      chooseExecutionMethod(curr, predData, result, size);
-      results.insert(
-          {curr,
-           {.data = (void *)result,
-            .type = F_FLOAT32,
-            .num_entries = size,
-            .shape = vector<size_t>(curr->operation->shape,
-                                    curr->operation->shape +
-                                        curr->operation->dimensions)}});
-    } break;
-    case F_FLOAT64: {
-      double *result = safe_mal<double>(size);
-      chooseExecutionMethod(curr, predData, result, size);
-      results.insert(
-          {curr,
-           {.data = (void *)result,
-            .type = F_FLOAT64,
-            .num_entries = size,
-            .shape = vector<size_t>(curr->operation->shape,
-                                    curr->operation->shape +
-                                        curr->operation->dimensions)}});
-    } break;
+    if (curr->operation->op_type == FSTORE ||
+        curr->operation->op_type == FRESULTDATA ||
+        curr->operation->op_type == FCONST) {
+      CPUResultData foo;
+      foo.shape =
+          vector<size_t>(curr->operation->shape,
+                         curr->operation->shape + curr->operation->dimensions);
+      foo.type = curr->operation->data_type;
+      switch (curr->operation->op_type) {
+      case FSTORE: {
+        FStore *store = (FStore *)curr->operation->additional_data;
+        foo.num_entries = store->num_entries;
+        foo.data = store->data;
+      } break;
+      case FRESULTDATA: {
+        FResultData *store = (FResultData *)curr->operation->additional_data;
+        foo.num_entries = store->num_entries;
+        foo.data = store->data;
+      } break;
+      case FCONST: {
+        FConst *cdata = (FConst *)curr->operation->additional_data;
+        foo.num_entries = 1;
+        foo.data = cdata->value;
+      } break;
+      default: // idc
+        break;
+      }
+    } else {
+      // allocate result data and execute
+      switch (curr->operation->data_type) {
+      case F_INT32: {
+        int *result = safe_mal<int>(size);
+        chooseExecutionMethod(curr, predData, result, size);
+        results.insert(
+            {curr,
+             {.data = (void *)result,
+              .type = F_INT32,
+              .num_entries = size,
+              .shape = vector<size_t>(curr->operation->shape,
+                                      curr->operation->shape +
+                                          curr->operation->dimensions)}});
+      } break;
+      case F_INT64: {
+        long *result = safe_mal<long>(size);
+        chooseExecutionMethod(curr, predData, result, size);
+        results.insert(
+            {curr,
+             {.data = (void *)result,
+              .type = F_INT64,
+              .num_entries = size,
+              .shape = vector<size_t>(curr->operation->shape,
+                                      curr->operation->shape +
+                                          curr->operation->dimensions)}});
+      } break;
+      case F_FLOAT32: {
+        float *result = safe_mal<float>(size);
+        chooseExecutionMethod(curr, predData, result, size);
+        results.insert(
+            {curr,
+             {.data = (void *)result,
+              .type = F_FLOAT32,
+              .num_entries = size,
+              .shape = vector<size_t>(curr->operation->shape,
+                                      curr->operation->shape +
+                                          curr->operation->dimensions)}});
+      } break;
+      case F_FLOAT64: {
+        double *result = safe_mal<double>(size);
+        chooseExecutionMethod(curr, predData, result, size);
+        results.insert(
+            {curr,
+             {.data = (void *)result,
+              .type = F_FLOAT64,
+              .num_entries = size,
+              .shape = vector<size_t>(curr->operation->shape,
+                                      curr->operation->shape +
+                                          curr->operation->dimensions)}});
+      } break;
+      }
     }
   }
   CPUResultData final = results[node];
