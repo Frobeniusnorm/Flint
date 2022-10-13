@@ -438,6 +438,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
       default: // idc
         break;
       }
+      results.insert({curr, foo});
     } else {
       // allocate result data and execute
       switch (curr->operation->data_type) {
@@ -495,7 +496,9 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   CPUResultData final = results[node];
   // free all other data
   for (auto &[gn, rd] : results) {
-    if (gn != node)
+    if (gn != node && gn->operation->op_type != FSTORE &&
+        gn->operation->op_type != FRESULTDATA &&
+        gn->operation->op_type != FCONST)
       free(rd.data);
   }
   // return data
