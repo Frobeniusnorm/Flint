@@ -33,6 +33,7 @@
 *.out
 *.app
 test/test
+test/benchmark
 libflint.a
 
 #vscode

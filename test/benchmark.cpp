@@ -34,7 +34,7 @@ double matrix_multiplication(bool backend) {
 void call_benchmarks() {
   unordered_map<string, pair<double, double>> times;
   flintInit(1, 1);
-  fSetLoggingLevel(5);
+  fSetLoggingLevel(1);
   times.insert({"matrix multiplication", pair{matrix_multiplication(false),
                                               matrix_multiplication(true)}});
   flintCleanup();
