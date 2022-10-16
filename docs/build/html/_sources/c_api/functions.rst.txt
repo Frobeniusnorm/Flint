@@ -201,4 +201,26 @@ fflatten()
 The first method flattens the complete tensor to a tensor with one dimension, the second method flattens the tensor with :math:`n` dimensions 
 along :c:var:`dimension`, resulting in a tensor with :math:`n-1` dimensions. Flattening a dimension will remove it from the shape of the tensor, therefor its 
 not possible to flatten the dimension 0.
-A Tensor :math:`[[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]` flattened along dimension 1 will result in :math:`[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]`.
+A Tensor :math:`[[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]` flattened along dimension 1 will 
+result in :math:`[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]`.
+
+|
+
+fconvert()
+""""""""""
+.. c:function:: FGraphNode* fconvert(FGraphNode* a, FType newtype)
+
+  Converts the data of :var:`a` to the type given by :var:`newtype`
+
+|
+
+freshape()
+""""""""""
+.. c:function:: FGraphNode* freshape(FGraphNode* a, size_t* newshape, int dimensions)
+
+  :param a: the operand 
+  :param newshape: array of length :var:`dimensions`, representing the new shape for each dimension
+  :param dimensions: number of dimensions 
+
+  Reshapes the underlying data of the tensor to the new shape. The product of each dimension of the new shape must be the same as the product 
+  of the dimensions of the previous shape (i.e. it must describe the same number of entries of the tensor).

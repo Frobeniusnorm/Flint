@@ -583,7 +583,42 @@ data is not allready present, the given pointers will be overwritten with the re
 <p>The first method flattens the complete tensor to a tensor with one dimension, the second method flattens the tensor with <span class="math notranslate nohighlight">\(n\)</span> dimensions
 along <code class="xref c c-var docutils literal notranslate"><span class="pre">dimension</span></code>, resulting in a tensor with <span class="math notranslate nohighlight">\(n-1\)</span> dimensions. Flattening a dimension will remove it from the shape of the tensor, therefor its
 not possible to flatten the dimension 0.
-A Tensor <span class="math notranslate nohighlight">\([[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]\)</span> flattened along dimension 1 will result in <span class="math notranslate nohighlight">\([[3,1,4], [2,1,5], [0,4,2], [4,7,9]]\)</span>.</p>
+A Tensor <span class="math notranslate nohighlight">\([[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]\)</span> flattened along dimension 1 will
+result in <span class="math notranslate nohighlight">\([[3,1,4], [2,1,5], [0,4,2], [4,7,9]]\)</span>.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="fconvert">
+<h3>fconvert()<a class="headerlink" href="#fconvert" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fconvert">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fconvert</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <a class="reference internal" href="structs.html#c.FType" title="FType"><span class="n"><span class="pre">FType</span></span></a><span class="w"> </span><span class="n"><span class="pre">newtype</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fconvert" title="Permalink to this definition">#</a><br /></dt>
+<dd><p>Converts the data of <a class="reference internal" href="#c.fconvert" title="a"><code class="xref c c-var docutils literal notranslate"><span class="pre">a</span></code></a> to the type given by <a class="reference internal" href="#c.fconvert" title="newtype"><code class="xref c c-var docutils literal notranslate"><span class="pre">newtype</span></code></a></p>
+</dd></dl>
+
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="freshape">
+<h3>freshape()<a class="headerlink" href="#freshape" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.freshape">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">freshape</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">newshape</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">dimensions</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.freshape" title="Permalink to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>a</strong> – the operand</p></li>
+<li><p><strong>newshape</strong> – array of length <a class="reference internal" href="#c.freshape" title="dimensions"><code class="xref c c-var docutils literal notranslate"><span class="pre">dimensions</span></code></a>, representing the new shape for each dimension</p></li>
+<li><p><strong>dimensions</strong> – number of dimensions</p></li>
+</ul>
+</dd>
+</dl>
+<p>Reshapes the underlying data of the tensor to the new shape. The product of each dimension of the new shape must be the same as the product
+of the dimensions of the previous shape (i.e. it must describe the same number of entries of the tensor).</p>
+</dd></dl>
+
 </section>
 </section>
 </section>
@@ -664,6 +699,8 @@ A Tensor <span class="math notranslate nohighlight">\([[[3, 1, 4], [2, 1, 5]], [
 <li><a class="reference internal" href="#fpow">fpow()</a></li>
 <li><a class="reference internal" href="#fmatmul">fmatmul()</a></li>
 <li><a class="reference internal" href="#fflatten">fflatten()</a></li>
+<li><a class="reference internal" href="#fconvert">fconvert()</a></li>
+<li><a class="reference internal" href="#freshape">freshape()</a></li>
 </ul>
 </li>
 </ul>
