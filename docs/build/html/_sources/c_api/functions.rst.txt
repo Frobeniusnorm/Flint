@@ -102,8 +102,8 @@ fCopyGraph()
 
   Copies the graph node, the corresponding operation and additional data and the predecessors (their :member:`FGraphNode.reference_counter` is incremented)
 
-fExecuteGraph
-""""""""""""""
+fExecuteGraph()
+""""""""""""""""
 .. c:function:: FGraphNode* fExecuteGraph(FGraphNode* node)
 .. c:function:: FGraphNode* fExecuteGraph_cpu(FGraphNode* node)
 .. c:function:: FGraphNode* fExecuteGraph_gpu(FGraphNode* node)
@@ -122,8 +122,8 @@ Although the CPU backend uses a thread pool, the method itself is called sequent
 
 Operations
 ^^^^^^^^^^
-fadd
-""""
+fadd()
+""""""
 .. c:function:: FGraphNode *fadd_g(FGraphNode* a, FGraphNode* b)
 .. c:function:: FGraphNode *fadd_ci(FGraphNode* a, const int b)
 .. c:function:: FGraphNode *fadd_cl(FGraphNode* a, const long b)
@@ -134,8 +134,8 @@ Elementwise addition of a and b :math:`a+b`.
 
 |
 
-fsub
-""""
+fsub()
+""""""
 .. c:function:: FGraphNode *fsub_g(FGraphNode* a, FGraphNode* b)
 .. c:function:: FGraphNode *fsub_ci(FGraphNode* a, const int b)
 .. c:function:: FGraphNode *fsub_cl(FGraphNode* a, const long b)
@@ -146,8 +146,8 @@ Elementwise subtraction of a and b: :math:`a-b`.
 
 |
 
-fmul
-""""
+fmul()
+""""""
 .. c:function:: FGraphNode *fmul_g(FGraphNode* a, FGraphNode* b)
 .. c:function:: FGraphNode *fmul_ci(FGraphNode* a, const int b)
 .. c:function:: FGraphNode *fmul_cl(FGraphNode* a, const long b)
@@ -158,8 +158,8 @@ Elementwise multiplication of a and b: :math:`a\cdot b`.
 
 |
 
-fdiv
-""""
+fdiv()
+""""""
 .. c:function:: FGraphNode *fdiv_g(FGraphNode* a, FGraphNode* b)
 .. c:function:: FGraphNode *fdiv_ci(FGraphNode* a, const int b)
 .. c:function:: FGraphNode *fdiv_cl(FGraphNode* a, const long b)
@@ -170,8 +170,8 @@ Elementwise division of a and b: :math:`\frac{a}{b}`.
 
 |
 
-fpow
-"""""
+fpow()
+""""""
 .. c:function:: FGraphNode *fpow_g(FGraphNode* a, FGraphNode* b)
 .. c:function:: FGraphNode *fpow_ci(FGraphNode* a, const int b)
 .. c:function:: FGraphNode *fpow_cl(FGraphNode* a, const long b)
@@ -179,3 +179,26 @@ fpow
 .. c:function:: FGraphNode *fpow_cd(FGraphNode* a, const double b)
 
 Takes the elementwise power of a to b: :math:`a^b`.
+
+|
+
+fmatmul()
+"""""""""
+.. c:function:: FGraphNode *fmatmul(FGraphNode** a, FGraphNode** b)
+
+  Carries out matrix multiplication on the last two dimensions of the tensors. E.g. a matrix multiplication of two tensors with shapes 
+  (64, 32, 16) and (16, 24) will yield a tensor with shape (64, 32, 24). Since for one entry of the tensor multiple other previous entries are 
+  needed, the operand tensors need to be executed first. Therefor the method will implicitly (or eagerly) execute the two parameter nodes if their
+  data is not allready present, the given pointers will be overwritten with the results. 
+
+|
+
+fflatten()
+""""""""""
+.. c:function:: FGraphNode* fflatten(FGraphNode* a)
+.. c:function:: FGraphNode* fflatten_dimension(FGraphNode* a, int dimension)
+
+The first method flattens the complete tensor to a tensor with one dimension, the second method flattens the tensor with :math:`n` dimensions 
+along :c:var:`dimension`, resulting in a tensor with :math:`n-1` dimensions. Flattening a dimension will remove it from the shape of the tensor, therefor its 
+not possible to flatten the dimension 0.
+A Tensor :math:`[[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]` flattened along dimension 1 will result in :math:`[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]`.

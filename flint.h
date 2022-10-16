@@ -252,10 +252,14 @@ FGraphNode *fpow_ci(FGraphNode *a, const int b);
 FGraphNode *fpow_cl(FGraphNode *a, const long b);
 FGraphNode *fpow_cf(FGraphNode *a, const float b);
 FGraphNode *fpow_cd(FGraphNode *a, const double b);
-// matrix multiplication, multiplication is carried out on the two inner most
-// dimensions. The results of the two predecessors nodes must be available; to
-// ensure that the method may execute the parameter nodes. The corresponding
-// result nodes are then stored in the memory pointed to by a and b.
+
+/** Carries out matrix multiplication on the last two dimensions of the tensors.
+E.g. a matrix multiplication of two tensors with shapes (64, 32, 16) and (16,
+24) will yield a tensor with shape (64, 32, 24). Since for one entry of the
+tensor multiple other previous entries are needed, the operand tensors need to
+be executed first. Therefor the method will implicitly (or eagerly) execute the
+two parameter nodes if their data is not allready present, the given pointers
+will be overwritten with the results. */
 FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b);
 // flattens the GraphNode data to a 1 dimensional tensor, no additional data is
 // allocated besides the new node
