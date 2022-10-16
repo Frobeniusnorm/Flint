@@ -725,6 +725,31 @@ result node is then stored in the memory pointed to by <a class="reference inter
 </dd></dl>
 
 </section>
+<section id="fslice">
+<h3>fslice()<a class="headerlink" href="#fslice" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fslice">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fslice</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">start</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">end</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fslice" title="Permalink to this definition">#</a><br /></dt>
+<dd><p>Selects a slice of the tensor with a dimension wise start and end index.
+<a class="reference internal" href="#c.fslice" title="start"><code class="xref c c-var docutils literal notranslate"><span class="pre">start</span></code></a> and <a class="reference internal" href="#c.fslice" title="end"><code class="xref c c-var docutils literal notranslate"><span class="pre">end</span></code></a> are arrays with as many entries
+as the tensor has dimensions. They may contain negative values, which are then subtracted from the end of the tensor (e.g. -1 means the last element).
+<a class="reference internal" href="#c.fslice" title="start"><code class="xref c c-var docutils literal notranslate"><span class="pre">start</span></code></a> is inclusive and describes the start index of the selection per dimension and <a class="reference internal" href="#c.fslice" title="end"><code class="xref c c-var docutils literal notranslate"><span class="pre">end</span></code></a> describes the end index per dimension and is inclusive as well.</p>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fslice_step">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fslice_step</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">start</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">end</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">step</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fslice_step" title="Permalink to this definition">#</a><br /></dt>
+<dd><p>Selects a slice of the tensor with a dimension wise start index, end index and step size.
+<a class="reference internal" href="#c.fslice_step" title="start"><code class="xref c c-var docutils literal notranslate"><span class="pre">start</span></code></a>, <a class="reference internal" href="#c.fslice_step" title="end"><code class="xref c c-var docutils literal notranslate"><span class="pre">end</span></code></a> and <a class="reference internal" href="#c.fslice_step" title="step"><code class="xref c c-var docutils literal notranslate"><span class="pre">step</span></code></a> are arrays with as many entries
+as the tensor has dimensions. <a class="reference internal" href="#c.fslice_step" title="start"><code class="xref c c-var docutils literal notranslate"><span class="pre">start</span></code></a> and <a class="reference internal" href="#c.fslice_step" title="end"><code class="xref c c-var docutils literal notranslate"><span class="pre">end</span></code></a> may contain negative values,
+which are then subtracted from the end of the tensor (e.g. -1 means the last element).
+<a class="reference internal" href="#c.fslice_step" title="start"><code class="xref c c-var docutils literal notranslate"><span class="pre">start</span></code></a> is inclusive and describes the start index of the selection per dimension and <a class="reference internal" href="#c.fslice_step" title="end"><code class="xref c c-var docutils literal notranslate"><span class="pre">end</span></code></a>
+describes the end index per dimension and is inclusive as well. <a class="reference internal" href="#c.fslice_step" title="step"><code class="xref c c-var docutils literal notranslate"><span class="pre">step</span></code></a> contains the per dimension step size (2 meaning every second element will be selected etc.)
+and may be negative as well, which reverses the traversal order (the first elements are selected as the last ones).
+For a negative step size, <a class="reference internal" href="#c.fslice_step" title="start"><code class="xref c c-var docutils literal notranslate"><span class="pre">start</span></code></a> &gt; <a class="reference internal" href="#c.fslice_step" title="end"><code class="xref c c-var docutils literal notranslate"><span class="pre">end</span></code></a> must hold (for a positive of course <a class="reference internal" href="#c.fslice_step" title="end"><code class="xref c c-var docutils literal notranslate"><span class="pre">end</span></code></a> &gt; <a class="reference internal" href="#c.fslice_step" title="start"><code class="xref c c-var docutils literal notranslate"><span class="pre">start</span></code></a>) for each dimension.</p>
+</dd></dl>
+
+</section>
 </section>
 </section>
 
@@ -810,6 +835,7 @@ result node is then stored in the memory pointed to by <a class="reference inter
 <li><a class="reference internal" href="#fmax">fmax()</a></li>
 <li><a class="reference internal" href="#freduce-sum">freduce_sum()</a></li>
 <li><a class="reference internal" href="#freduce-mul">freduce_mul()</a></li>
+<li><a class="reference internal" href="#fslice">fslice()</a></li>
 </ul>
 </li>
 </ul>
