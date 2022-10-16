@@ -200,9 +200,11 @@ fflatten()
 
 The first method flattens the complete tensor to a tensor with one dimension, the second method flattens the tensor with :math:`n` dimensions 
 along :c:var:`dimension`, resulting in a tensor with :math:`n-1` dimensions. Flattening a dimension will remove it from the shape of the tensor, therefor its 
-not possible to flatten the dimension 0.
-A Tensor :math:`[[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]` flattened along dimension 1 will 
-result in :math:`[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]`.
+not possible to flatten the dimension 0. E.g.
+
+.. code-block:: python
+
+  fflatten_dimension([[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]], 1) =  [[3,1,4], [2,1,5], [0,4,2], [4,7,9]]
 
 |
 
@@ -224,3 +226,64 @@ freshape()
 
   Reshapes the underlying data of the tensor to the new shape. The product of each dimension of the new shape must be the same as the product 
   of the dimensions of the previous shape (i.e. it must describe the same number of entries of the tensor).
+
+|
+
+fmin()
+""""""
+.. c:function:: FGraphNode* fmin_g(FGraphNode* a, FGraphNode* b)
+.. c:function:: FGraphNode* fmin_ci(FGraphNode* a, const int b)
+.. c:function:: FGraphNode* fmin_cl(FGraphNode* a, const long b)
+.. c:function:: FGraphNode* fmin_cf(FGraphNode* a, const float b)
+.. c:function:: FGraphNode* fmin_cd(FGraphNode* a, const double b)
+
+Takes the elementwise minimum of a and b along the last dimension of both.
+
+|
+
+fmax()
+""""""
+.. c:function:: FGraphNode* fmax_g(FGraphNode* a, FGraphNode* b)
+.. c:function:: FGraphNode* fmax_ci(FGraphNode* a, const int b)
+.. c:function:: FGraphNode* fmax_cl(FGraphNode* a, const long b)
+.. c:function:: FGraphNode* fmax_cf(FGraphNode* a, const float b)
+.. c:function:: FGraphNode* fmax_cd(FGraphNode* a, const double b)
+
+Takes the elementwise maximum of a and b along the last dimension of both.
+
+|
+
+freduce_sum()
+"""""""""""""
+.. c:function:: FGraphNode* freduce_sum(FGraphNode** a, const int dimension)
+
+  Reduces one dimension of the tensor by additive folding e.g.
+
+  .. code-block:: python
+
+    freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9]
+
+    freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
+
+  The results of the predecessor node must be available; to
+  ensure that the method may execute the parameter node. The corresponding
+  result node is then stored in the memory pointed to by :var:`a`.
+
+|
+
+freduce_mul()
+"""""""""""""
+
+.. c:function:: FGraphNode* freduce_mul(FGraphNode** a, const int dimension)
+
+  Reduces one dimension of the tensor by multiplicative folding e.g.
+
+  .. code-block:: python
+
+    freduce_mul([[1,2,3], [4,5,6]], 0) = [4,10,18]
+
+    freduce_mul([[1,2,3], [4,5,6]], 1) = [6, 120]
+
+  The results of the predecessor node must be available; to
+  ensure that the method may execute the parameter node. The corresponding
+  result node is then stored in the memory pointed to by :var:`a`.

@@ -582,9 +582,10 @@ data is not allready present, the given pointers will be overwritten with the re
 
 <p>The first method flattens the complete tensor to a tensor with one dimension, the second method flattens the tensor with <span class="math notranslate nohighlight">\(n\)</span> dimensions
 along <code class="xref c c-var docutils literal notranslate"><span class="pre">dimension</span></code>, resulting in a tensor with <span class="math notranslate nohighlight">\(n-1\)</span> dimensions. Flattening a dimension will remove it from the shape of the tensor, therefor its
-not possible to flatten the dimension 0.
-A Tensor <span class="math notranslate nohighlight">\([[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]\)</span> flattened along dimension 1 will
-result in <span class="math notranslate nohighlight">\([[3,1,4], [2,1,5], [0,4,2], [4,7,9]]\)</span>.</p>
+not possible to flatten the dimension 0. E.g.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fflatten_dimension</span><span class="p">([[[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">]],</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">9</span><span class="p">]]],</span> <span class="mi">1</span><span class="p">)</span> <span class="o">=</span>  <span class="p">[[</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">9</span><span class="p">]]</span>
+</pre></div>
+</div>
 <div class="line-block">
 <div class="line"><br /></div>
 </div>
@@ -617,6 +618,110 @@ result in <span class="math notranslate nohighlight">\([[3,1,4], [2,1,5], [0,4,2
 </dl>
 <p>Reshapes the underlying data of the tensor to the new shape. The product of each dimension of the new shape must be the same as the product
 of the dimensions of the previous shape (i.e. it must describe the same number of entries of the tensor).</p>
+</dd></dl>
+
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="fmin">
+<h3>fmin()<a class="headerlink" href="#fmin" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmin_g">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmin_g</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmin_g" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmin_ci">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmin_ci</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmin_ci" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmin_cl">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmin_cl</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmin_cl" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmin_cf">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmin_cf</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">float</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmin_cf" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmin_cd">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmin_cd</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmin_cd" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<p>Takes the elementwise minimum of a and b along the last dimension of both.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="fmax">
+<h3>fmax()<a class="headerlink" href="#fmax" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmax_g">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmax_g</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmax_g" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmax_ci">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmax_ci</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmax_ci" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmax_cl">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmax_cl</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmax_cl" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmax_cf">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmax_cf</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">float</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmax_cf" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.fmax_cd">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">fmax_cd</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">b</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.fmax_cd" title="Permalink to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<p>Takes the elementwise maximum of a and b along the last dimension of both.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="freduce-sum">
+<h3>freduce_sum()<a class="headerlink" href="#freduce-sum" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.freduce_sum">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">freduce_sum</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">dimension</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.freduce_sum" title="Permalink to this definition">#</a><br /></dt>
+<dd><p>Reduces one dimension of the tensor by additive folding e.g.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">freduce_sum</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="mi">0</span><span class="p">)</span> <span class="o">=</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">9</span><span class="p">]</span>
+
+<span class="n">freduce_sum</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="mi">1</span><span class="p">)</span> <span class="o">=</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span><span class="mi">15</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The results of the predecessor node must be available; to
+ensure that the method may execute the parameter node. The corresponding
+result node is then stored in the memory pointed to by <a class="reference internal" href="#c.freduce_sum" title="a"><code class="xref c c-var docutils literal notranslate"><span class="pre">a</span></code></a>.</p>
+</dd></dl>
+
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="freduce-mul">
+<h3>freduce_mul()<a class="headerlink" href="#freduce-mul" title="Permalink to this heading">#</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.freduce_mul">
+<a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">freduce_mul</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="structs.html#c.FGraphNode" title="FGraphNode"><span class="n"><span class="pre">FGraphNode</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">a</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">dimension</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.freduce_mul" title="Permalink to this definition">#</a><br /></dt>
+<dd><p>Reduces one dimension of the tensor by multiplicative folding e.g.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">freduce_mul</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="mi">0</span><span class="p">)</span> <span class="o">=</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">18</span><span class="p">]</span>
+
+<span class="n">freduce_mul</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="mi">1</span><span class="p">)</span> <span class="o">=</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">120</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The results of the predecessor node must be available; to
+ensure that the method may execute the parameter node. The corresponding
+result node is then stored in the memory pointed to by <a class="reference internal" href="#c.freduce_mul" title="a"><code class="xref c c-var docutils literal notranslate"><span class="pre">a</span></code></a>.</p>
 </dd></dl>
 
 </section>
@@ -701,6 +806,10 @@ of the dimensions of the previous shape (i.e. it must describe the same number o
 <li><a class="reference internal" href="#fflatten">fflatten()</a></li>
 <li><a class="reference internal" href="#fconvert">fconvert()</a></li>
 <li><a class="reference internal" href="#freshape">freshape()</a></li>
+<li><a class="reference internal" href="#fmin">fmin()</a></li>
+<li><a class="reference internal" href="#fmax">fmax()</a></li>
+<li><a class="reference internal" href="#freduce-sum">freduce_sum()</a></li>
+<li><a class="reference internal" href="#freduce-mul">freduce_mul()</a></li>
 </ul>
 </li>
 </ul>

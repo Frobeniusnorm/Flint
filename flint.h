@@ -261,42 +261,52 @@ be executed first. Therefor the method will implicitly (or eagerly) execute the
 two parameter nodes if their data is not allready present, the given pointers
 will be overwritten with the results. */
 FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b);
-// flattens the GraphNode data to a 1 dimensional tensor, no additional data is
-// allocated besides the new node
+
+/** The first method flattens the complete tensor to a tensor with one
+dimension, the second method flattens the tensor with :math:`n` dimensions along
+:c:var:`dimension`, resulting in a tensor with :math:`n-1` dimensions.
+Flattening a dimension will remove it from the shape of the tensor, therefor its
+not possible to flatten the dimension 0.
+A Tensor :math:`[[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]` flattened
+along dimension 1 will result in :math:`[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]`.
+*/
 FGraphNode *fflatten(FGraphNode *a);
-// flattens a specific dimension of the tensor, no additional data is allocated
-// besides the new node
 FGraphNode *fflatten_dimension(FGraphNode *a, int dimension);
 
-// Converts the type
+/** Converts the data of :var:`a` to the type given by :var:`newtype`*/
 FGraphNode *fconvert(FGraphNode *a, FType newtype);
-// reshapes the Tensor, requires execution of predecessor
+/** Reshapes the underlying data of the tensor to the new shape. The product of
+  each dimension of the new shape must be the same as the product of the
+  dimensions of the previous shape (i.e. it must describe the same number of
+  entries of the tensor).*/
 FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions);
-// takes the minimum of two tensors element wise
+// takes the minimum of two tensors element wise along the last dimension of
+// each
 FGraphNode *fmin_g(FGraphNode *a, FGraphNode *b);
 FGraphNode *fmin_ci(FGraphNode *a, const int b);
 FGraphNode *fmin_cl(FGraphNode *a, const long b);
 FGraphNode *fmin_cf(FGraphNode *a, const float b);
 FGraphNode *fmin_cd(FGraphNode *a, const double b);
-// takes the maximum of two tensors element wise
+// takes the maximum of two tensors element wise along the last dimension of
+// each
 FGraphNode *fmax_g(FGraphNode *a, FGraphNode *b);
 FGraphNode *fmax_ci(FGraphNode *a, const int b);
 FGraphNode *fmax_cl(FGraphNode *a, const long b);
 FGraphNode *fmax_cf(FGraphNode *a, const float b);
 FGraphNode *fmax_cd(FGraphNode *a, const double b);
-// reduces one dimension of the tensor by additive folding e.g.
-// freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
-// freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
-// The results of the predecessor node must be available; to
-// ensure that the method may execute the parameter node. The corresponding
-// result node is then stored in the memory pointed to by a.
+/** Reduces one dimension of the tensor by additive folding e.g.
+ * freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
+ * freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
+ * The results of the predecessor node must be available; to
+ * ensure that the method may execute the parameter node. The corresponding
+ * result node is then stored in the memory pointed to by a. */
 FGraphNode *freduce_sum(FGraphNode **a, const int dimension);
-// reduces one dimension of the tensor by additive multiplication e.g.
-// freduce_sum([[1,2,3], [4,5,6]], 0) = [4,10,18],
-// freduce_sum([[1,2,3], [4,5,6]], 1) = [6, 120]
-// The results of the predecessor node must be available; to
-// ensure that the method may execute the parameter node. The corresponding
-// result node is then stored in the memory pointed to by a.
+/** Reduces one dimension of the tensor by multiplicative folding e.g.
+ * freduce_mul([[1,2,3], [4,5,6]], 0) = [4,10,18],
+ * freduce_mul([[1,2,3], [4,5,6]], 1) = [6, 120]
+ * The results of the predecessor node must be available; to
+ * ensure that the method may execute the parameter node. The corresponding
+ * result node is then stored in the memory pointed to by a. */
 FGraphNode *freduce_mul(FGraphNode **a, const int dimension);
 /* Selects a slice of the tensor with a start and end range.
  * Start is inclusive end is exclusive.
