@@ -309,3 +309,10 @@ fslice()
   describes the end index per dimension and is inclusive as well. :var:`step` contains the per dimension step size (2 meaning every second element will be selected etc.)
   and may be negative as well, which reverses the traversal order (the first elements are selected as the last ones). 
   For a negative step size, :var:`start` > :var:`end` must hold (for a positive of course :var:`end` > :var:`start`) for each dimension.
+
+|
+
+fabs()
+""""""
+
+.. c:function:: FGraphNode* fabs_g(FGraphNode* a)

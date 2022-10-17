@@ -308,15 +308,28 @@ FGraphNode *freduce_sum(FGraphNode **a, const int dimension);
  * ensure that the method may execute the parameter node. The corresponding
  * result node is then stored in the memory pointed to by a. */
 FGraphNode *freduce_mul(FGraphNode **a, const int dimension);
-/* Selects a slice of the tensor with a start and end range.
- * Start is inclusive end is exclusive.
- * @param start and @param end have to contain a index and size per dimension
- * of the target tensor. */
+/** Selects a slice of the tensor with a dimension wise start and end index.
+ * :var:`start` and :var:`end` are arrays with as many entries
+ * as the tensor has dimensions. They may contain negative values,
+ * which are then subtracted from the end of the tensor (e.g. -1 means the last
+ * element). :var:`start` is inclusive and describes the start index of the
+ * selection per dimension and :var:`end` describes the end index per dimension
+ * and is inclusive as well.
+ */
 FGraphNode *fslice(FGraphNode *a, const long *start, const long *end);
-/* Selects a slice of the tensor with a start and end range by a per dimension
- * step size. Start is inclusive end is exclusive.
- * @param start, @param end and @param step have to contain a index, size and
- * step size per dimension of the target tensor. */
+/** Selects a slice of the tensor with a dimension wise start index, end index
+ * and step size. :var:`start`, :var:`end` and :var:`step` are arrays with as
+ * many entries as the tensor has dimensions. :var:`start` and :var:`end` may
+ * contain negative values, which are then subtracted from the end of the tensor
+ * (e.g. -1 means the last element). :var:`start` is inclusive and describes the
+ * start index of the selection per dimension and :var:`end` describes the end
+ * index per dimension and is inclusive as well. :var:`step` contains the per
+ * dimension step size (2 meaning every second element will be selected etc.)
+ * and may be negative as well, which reverses the traversal order (the first
+ * elements are selected as the last ones). For a negative step size,
+ * :var:`start` > :var:`end` must hold (for a positive of course :var:`end` >
+ * :var:`start`) for each dimension.
+ */
 FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
                         const long *step);
 
