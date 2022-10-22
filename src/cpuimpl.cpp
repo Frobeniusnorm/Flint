@@ -378,6 +378,72 @@ inline void chooseExecutionMethod(FGraphNode *node,
                      : std::string("Sequential Execution on CPU ")) +
                     "took " + std::to_string(elapsed.count()) + "ms");
 }
+FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
+  if (!initialized)
+    flintInit_cpu();
+
+  // build predecessor data
+  std::vector<CPUResultData> pred_data(node->num_predecessor);
+  for (int i = 0; i < node->num_predecessor; i++) {
+    FGraphNode *pred = node->predecessors[i];
+    if (pred->operation->op_type == FSTORE ||
+        pred->operation->op_type == FRESULTDATA) {
+      FStore *store = (FStore *)node->operation;
+      pred_data[i].data = store->data;
+      pred_data[i].num_entries = store->num_entries;
+    } else { // FConst
+      pred_data[i].num_entries = 1;
+      pred_data[i].data = ((FConst *)node->operation)->value;
+    }
+    pred_data[i].type = pred->operation->data_type;
+    pred_data[i].shape = std::vector<size_t>(pred->operation->shape,
+                                             pred->operation->shape +
+                                                 pred->operation->dimensions);
+  }
+  size_t total = 1;
+  for (int i = 0; i < node->operation->dimensions; i++)
+    total *= node->operation->shape[i];
+  void *data;
+  switch (node->operation->data_type) {
+  case F_INT32:
+    data = safe_mal<int>(total);
+    chooseExecutionMethod(node, pred_data, (int *)data, total);
+    break;
+  case F_INT64:
+    data = safe_mal<long>(total);
+    chooseExecutionMethod(node, pred_data, (long *)data, total);
+    break;
+  case F_FLOAT32:
+    data = safe_mal<float>(total);
+    chooseExecutionMethod(node, pred_data, (float *)data, total);
+    break;
+  case F_FLOAT64:
+    data = safe_mal<double>(total);
+    chooseExecutionMethod(node, pred_data, (double *)data, total);
+    break;
+  }
+  FResultData *rd = new FResultData();
+  rd->data = data;
+  rd->num_entries = total;
+  rd->mem_id = nullptr;
+  FOperation *op = new FOperation();
+  op->dimensions = node->operation->dimensions;
+  op->shape = safe_mal<size_t>(node->operation->dimensions);
+  memcpy(op->shape, node->operation->shape,
+         node->operation->dimensions * sizeof(size_t));
+  op->data_type = node->operation->data_type;
+  op->additional_data = (void *)rd;
+  op->op_type = FRESULTDATA;
+  FGraphNode *rn = new FGraphNode();
+  rn->operation = op;
+  rn->predecessors = safe_mal<FGraphNode *>(1);
+  rn->predecessors[0] = node;
+  node->reference_counter++;
+  rn->num_predecessor = 1;
+  rn->reference_counter = 0;
+  return rn;
+}
+
 FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   if (!initialized)
     flintInit_cpu();

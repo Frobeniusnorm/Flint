@@ -31,12 +31,17 @@ double matrix_multiplication(bool backend) {
   return timer.get_elapsed_ms();
 }
 
-void call_benchmarks() {
+// 0 = cpu, 1 = gpu, 2 = both
+void call_benchmarks(int benchmarks = 2) {
   unordered_map<string, pair<double, double>> times;
-  flintInit(1, 1);
-  fSetLoggingLevel(1);
-  times.insert({"matrix multiplication", pair{matrix_multiplication(false),
-                                              matrix_multiplication(true)}});
+  flintInit(benchmarks == 0 || benchmarks == 2, benchmarks > 0);
+  enable_eager_execution();
+  fSetLoggingLevel(4);
+  times.insert(
+      {"matrix multiplication",
+       pair{benchmarks == 0 || benchmarks == 2 ? matrix_multiplication(false)
+                                               : 0,
+            benchmarks > 0 ? matrix_multiplication(true) : 0}});
   flintCleanup();
   std::cout
       << "+------------------------+------------------+------------------+"
@@ -74,4 +79,24 @@ void call_benchmarks() {
   }
 }
 
-int main() { call_benchmarks(); }
+int main(int argc, char **argv) {
+  bool cpu = true, gpu = true;
+  if (argc > 1) {
+    cpu = gpu = false;
+    if (argc > 3)
+      flog(F_ERROR, "Invalid number of command line arguments! Call this "
+                    "program like this: benchmark [cpu] [gpu]");
+
+    for (int i = 1; i < argc; i++) {
+      if (strcmp(argv[i], "cpu") == 0)
+        cpu = true;
+      else if (strcmp(argv[i], "gpu") == 0)
+        gpu = true;
+      else
+        flog(F_ERROR,
+             "Invalid argument: " + std::string(argv[i]) +
+                 "! Call this program like this: benchmark [cpu] [gpu]");
+    }
+  }
+  call_benchmarks(cpu && gpu ? 2 : cpu ? 0 : 1);
+}

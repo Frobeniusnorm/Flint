@@ -401,6 +401,10 @@ generateCode(FGraphNode *node,
 #include <unordered_map>
 static std::unordered_map<std::string, std::pair<cl_program, cl_kernel>>
     kernel_cache;
+FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
+  // TODO
+  return node;
+}
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (!initialized) {
     flintInit_gpu();

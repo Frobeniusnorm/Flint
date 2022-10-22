@@ -31,7 +31,6 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
   const FOperation *fop = f->operation;
   bool all_calculated = true;
   for (int i = 0; i < f->num_predecessor; i++) {
-    const FGraphNode *pred = f->predecessors[i];
     if (fop->op_type != FSTORE && fop->op_type != FRESULTDATA &&
         fop->op_type != FCONST) {
       all_calculated = false;
