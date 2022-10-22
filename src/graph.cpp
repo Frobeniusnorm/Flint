@@ -21,7 +21,47 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
-static bool use_cpu, use_gpu;
+#define MAX(x, y) (x) > (y) ? (x) : (y)
+static bool use_cpu, use_gpu, eager_execution = false;
+// EAGER EXECUTION WITH HELPER
+void enable_eager_execution() { eager_execution = true; }
+void disable_eager_execution() { eager_execution = false; }
+int is_eager_execution() { return eager_execution; }
+static inline FGraphNode *execute_eagerly(FGraphNode *f) {
+  const FOperation *fop = f->operation;
+  bool all_calculated = true;
+  for (int i = 0; i < f->num_predecessor; i++) {
+    const FGraphNode *pred = f->predecessors[i];
+    if (fop->op_type != FSTORE && fop->op_type != FRESULTDATA &&
+        fop->op_type != FCONST) {
+      all_calculated = false;
+      break;
+    }
+  }
+  if (all_calculated) {
+    // since we only have one node the heuristics become constant
+    unsigned int gpu_score = 0;
+    if (fop->op_type == FMATMUL) {
+      FOperation *pred0 = f->predecessors[0]->operation;
+      FOperation *pred1 = f->predecessors[1]->operation;
+      size_t total = 0;
+      for (FOperation *predop :
+           {pred0, pred1}) // FStore and FResultData have the same alignment so
+                           // casting is ok
+        total = MAX(total, ((FStore *)predop->additional_data)->num_entries);
+      gpu_score += total * pred0->shape[pred0->dimensions - 1];
+    } else if (fop->op_type == FREDUCE_SUM || fop->op_type == FREDUCE_MUL) {
+      FOperation *pred0 = f->predecessors[0]->operation;
+      gpu_score += ((FStore *)pred0->additional_data)->num_entries *
+                   pred0->shape[((int *)fop->additional_data)[0]];
+    }
+    return gpu_score > 2048 ? fExecuteGraph_gpu_eagerly(f)
+                            : fExecuteGraph_cpu_eagerly(f);
+  } else {
+    return fExecuteGraph(f);
+  }
+}
+
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
   // TODO
@@ -166,7 +206,7 @@ static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
     foo->predecessors[i] = pre[i];
     pre[i]->reference_counter++;
   }
-  return foo;
+  return eager_execution ? execute_eagerly(foo) : foo;
 }
 FGraphNode *fCopyGraph(const FGraphNode *node) {
   FGraphNode *foo = new FGraphNode();
@@ -555,7 +595,7 @@ FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
   x->reference_counter++;
   y->reference_counter++;
   node->reference_counter = 0;
-  return node;
+  return eager_execution ? execute_eagerly(node) : node;
 }
 FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions) {
   FGraphNode *node = new FGraphNode();
@@ -570,7 +610,7 @@ FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions) {
   node->predecessors[0] = a;
   node->reference_counter = 0;
   a->reference_counter++;
-  return node;
+  return eager_execution ? execute_eagerly(node) : node;
 }
 FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   FGraphNode *foo = new FGraphNode();
@@ -586,7 +626,8 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   memcpy(foo->operation->shape, a->operation->shape,
          sizeof(size_t) * a->operation->dimensions);
   foo->operation->op_type = FCONVERSION;
-  return foo;
+  return eager_execution ? execute_eagerly(foo) : foo;
+  ;
 }
 
 inline FGraphNode *reduce_operation(FGraphNode **x, const int dimension,
@@ -614,7 +655,7 @@ inline FGraphNode *reduce_operation(FGraphNode **x, const int dimension,
          sizeof(size_t) * (other->dimensions - dimension - 1));
   op->additional_data = safe_mal<int>(1);
   *(int *)op->additional_data = dimension;
-  return foo;
+  return eager_execution ? execute_eagerly(foo) : foo;
 }
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
 // freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
@@ -671,8 +712,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
                         std::to_string(i) + " will yield empty tensor!");
     }
   }
-
-  return foo;
+  return eager_execution ? execute_eagerly(foo) : foo;
 }
 FGraphNode *fslice(FGraphNode *a, const long *start, const long *end) {
   long step = 1;

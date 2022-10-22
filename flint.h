@@ -78,6 +78,17 @@ enum FLogType { F_DEBUG, F_VERBOSE, F_INFO, F_ERROR, F_WARNING };
 
 /** Logs a :var:`NULL` terminated string with the given logging level. */
 void flog(FLogType type, const char *msg);
+// TODO the following three methods are neaded for gradient calculation (i
+// think)
+/** All graph nodes that represent actual operations are after this call
+ * executed eagerly, i.e. they are executed during graph construction. */
+void enable_eager_execution();
+/** Disable eager execution, i.e. the graph is constructed without execution of
+ * the nodes until a operation makes the execution of a parent graph necessary
+ * or the user calls :func:`fExecuteGraph`. */
+void disable_eager_execution();
+/** Returns 1 if eager execution has been enabled, else 0 */
+int is_eager_execution();
 /** The 4 allowed data types: :var:`F_INT32` (integer, 32bit), :var:`F_INT64`
  * (integer, 64bit), :var:`F_FLOAT32` (floating point, 32bit), :var:`F_FLOAT64`
  * (floating point, 64bit)*/
@@ -214,7 +225,8 @@ FGraphNode *fCopyGraph(const FGraphNode *graph);
 FGraphNode *fExecuteGraph(FGraphNode *node);
 FGraphNode *fExecuteGraph_cpu(FGraphNode *node);
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node);
-// TODO: eager execution
+FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node);
+FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
 //  operations
 /** Elementwise addition of a and b :math:`a+b`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
