@@ -548,18 +548,14 @@ int main(int argc, char **argv) {
       doGPU = true;
   }
   if (!doCPU && !doGPU) {
-    std::cout
-        << "Usage: test [cpu] [gpu]" << std::endl
-        << "The presence of the cpu or gpu command line argument starts the "
-           "tests for the corresponding backend. Both may be selected."
-        << std::endl;
-    return 0;
+    doCPU = true;
   }
   doctest::Context context;
   context.applyCommandLine(argc, argv);
   int res;
   if (doCPU) {
     flintInit(1, 0);
+    enable_eager_execution();
     res = context.run();
     flintCleanup();
   }

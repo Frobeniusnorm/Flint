@@ -381,46 +381,79 @@ inline void chooseExecutionMethod(FGraphNode *node,
 FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
   if (!initialized)
     flintInit_cpu();
+  bool is_data_node = node->operation->op_type == FSTORE ||
+                      node->operation->op_type == FRESULTDATA ||
+                      node->operation->op_type == FCONST;
 
-  // build predecessor data
   std::vector<CPUResultData> pred_data(node->num_predecessor);
-  for (int i = 0; i < node->num_predecessor; i++) {
-    FGraphNode *pred = node->predecessors[i];
-    if (pred->operation->op_type == FSTORE ||
-        pred->operation->op_type == FRESULTDATA) {
-      FStore *store = (FStore *)node->operation;
-      pred_data[i].data = store->data;
-      pred_data[i].num_entries = store->num_entries;
-    } else { // FConst
-      pred_data[i].num_entries = 1;
-      pred_data[i].data = ((FConst *)node->operation)->value;
-    }
-    pred_data[i].type = pred->operation->data_type;
-    pred_data[i].shape = std::vector<size_t>(pred->operation->shape,
-                                             pred->operation->shape +
-                                                 pred->operation->dimensions);
-  }
   size_t total = 1;
   for (int i = 0; i < node->operation->dimensions; i++)
     total *= node->operation->shape[i];
   void *data;
-  switch (node->operation->data_type) {
-  case F_INT32:
-    data = safe_mal<int>(total);
-    chooseExecutionMethod(node, pred_data, (int *)data, total);
-    break;
-  case F_INT64:
-    data = safe_mal<long>(total);
-    chooseExecutionMethod(node, pred_data, (long *)data, total);
-    break;
-  case F_FLOAT32:
-    data = safe_mal<float>(total);
-    chooseExecutionMethod(node, pred_data, (float *)data, total);
-    break;
-  case F_FLOAT64:
-    data = safe_mal<double>(total);
-    chooseExecutionMethod(node, pred_data, (double *)data, total);
-    break;
+
+  if (!is_data_node) {
+    // build predecessor data
+    for (int i = 0; i < node->num_predecessor; i++) {
+      FGraphNode *pred = node->predecessors[i];
+      if (pred->operation->op_type == FSTORE ||
+          pred->operation->op_type == FRESULTDATA) {
+        FStore *store = (FStore *)node->operation;
+        pred_data[i].data = store->data;
+        pred_data[i].num_entries = store->num_entries;
+      } else { // FConst
+        pred_data[i].num_entries = 1;
+        pred_data[i].data = ((FConst *)node->operation)->value;
+      }
+      pred_data[i].type = pred->operation->data_type;
+      pred_data[i].shape = std::vector<size_t>(pred->operation->shape,
+                                               pred->operation->shape +
+                                                   pred->operation->dimensions);
+    }
+    switch (node->operation->data_type) {
+    case F_INT32:
+      data = safe_mal<int>(total);
+      chooseExecutionMethod(node, pred_data, (int *)data, total);
+      break;
+    case F_INT64:
+      data = safe_mal<long>(total);
+      chooseExecutionMethod(node, pred_data, (long *)data, total);
+      break;
+    case F_FLOAT32:
+      data = safe_mal<float>(total);
+      chooseExecutionMethod(node, pred_data, (float *)data, total);
+      break;
+    case F_FLOAT64:
+      data = safe_mal<double>(total);
+      chooseExecutionMethod(node, pred_data, (double *)data, total);
+      break;
+    }
+  } else {
+    size_t byte_size = 1;
+    switch (node->operation->data_type) {
+    case F_INT32:
+      data = safe_mal<int>(total);
+      byte_size = sizeof(int) * total;
+      break;
+    case F_INT64:
+      data = safe_mal<long>(total);
+      byte_size = sizeof(long) * total;
+      break;
+    case F_FLOAT32:
+      data = safe_mal<float>(total);
+      byte_size = sizeof(float) * total;
+      break;
+    case F_FLOAT64:
+      data = safe_mal<double>(total);
+      byte_size = sizeof(double) * total;
+      break;
+    }
+    if (node->operation->op_type == FCONST)
+      memcpy(data, ((FConst *)node->operation->additional_data)->value,
+             byte_size);
+    else {
+      memcpy(data, ((FStore *)node->operation->additional_data)->data,
+             byte_size);
+    }
   }
   FResultData *rd = new FResultData();
   rd->data = data;

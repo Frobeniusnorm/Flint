@@ -12,7 +12,7 @@
 SRCDIR=src
 BUILDDIR=build
 # creates and executes test target if set to "debug", change to enable production mode 
-MODE=production
+MODE=debug
 
 .PHONY: debug-target production-target
 
