@@ -548,7 +548,7 @@ int main(int argc, char **argv) {
       doGPU = true;
   }
   if (!doCPU && !doGPU) {
-    doCPU = true;
+    doCPU = doGPU = true;
   }
   doctest::Context context;
   context.applyCommandLine(argc, argv);
