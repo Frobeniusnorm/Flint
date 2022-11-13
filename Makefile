@@ -30,8 +30,8 @@ H_SRCS := $(wildcard $(SRCDIR)/*.hpp)
 C_SRCS := $(wildcard $(SRCDIR)/*.cpp)
 C_OBJS := $(C_SRCS:$(SRCDIR)/%.cpp=$(BUILDDIR)/%.o)
 
-debug-target: test/test 
-production-target: test/benchmark
+debug-target: test/test test/benchmark
+production-target: libflint.a 
 # TEST
 test/test: libflint.a $(BUILDDIR)/test.o | $(BUILDDIR)
 	$(COMPILER) -o $@ $(BUILDDIR)/test.o -L. -lflint
