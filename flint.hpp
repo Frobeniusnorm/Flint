@@ -265,6 +265,10 @@ template <typename T> struct Tensor<T, 1> {
       fFreeGraph(node);
     }
   }
+  static Tensor<T, 1> constant(T value, size_t size) {
+    FGraphNode *node = fconstant(value, &size, 1);
+    return Tensor(node, size);
+  }
   const size_t get_shape() const { return shape; }
   std::vector<T> operator*() {
     switch (node->operation->op_type) {
@@ -478,6 +482,13 @@ template <typename T, unsigned int n> struct Tensor {
       node->reference_counter--;
       fFreeGraph(node);
     }
+  }
+  template <typename... args>
+  static Tensor<T, n> constant(T value, args... sizes) {
+    constexpr size_t dimensions = sizeof...(args);
+    std::array<size_t, dimensions> shape{static_cast<size_t>(sizes)...};
+    FGraphNode *node = fconstant(value, shape.data(), dimensions);
+    return Tensor(node, shape);
   }
   // retrieves the data of the current node and converts it into a possible
   // multidimensional vector, executes the node if necessary. The conversion has

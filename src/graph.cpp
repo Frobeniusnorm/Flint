@@ -23,6 +23,17 @@
 #include <vector>
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 static bool use_cpu, use_gpu, eager_execution = false;
+// converts c++ type to flint type
+template <typename T> static constexpr FType toFlintType() {
+  if (std::is_same<T, int>())
+    return F_INT32;
+  if (std::is_same<T, long>())
+    return F_INT64;
+  if (std::is_same<T, float>())
+    return F_FLOAT32;
+  if (std::is_same<T, double>())
+    return F_FLOAT64;
+}
 // EAGER EXECUTION WITH HELPER
 void enable_eager_execution() { eager_execution = true; }
 void disable_eager_execution() { eager_execution = false; }
@@ -421,8 +432,49 @@ static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, const T b) {
     cop->data_type = F_FLOAT64;
   return addNode(op, {a, addNode(cop, {})});
 }
+// creates tensor consisting of a single value
+template <typename T>
+static inline FGraphNode *constant(const T value, const size_t *shape,
+                                   const int dimensions) {
+  FOperation *op = new FOperation();
+  op->dimensions = dimensions;
+  op->shape = safe_mal<size_t>(dimensions);
+  memcpy(op->shape, shape, op->dimensions * sizeof(dimensions));
+  op->op_type = FSTORE;
+  op->data_type = toFlintType<T>();
+  FStore *store = new FStore();
+  op->additional_data = store;
+  size_t total_size = 1;
+  for (int i = 0; i < dimensions; i++)
+    total_size *= shape[i];
+  store->data = safe_mal<T>(total_size);
+  std::fill((T *)store->data, (T *)store->data + total_size, value);
+  store->num_entries = total_size;
+  store->mem_id = nullptr;
+  return addNode(op, {});
+}
+
+FGraphNode *fconstant_i(const int value, const size_t *shape,
+                        const int dimensions) {
+  return constant(value, shape, dimensions);
+}
+FGraphNode *fconstant_l(const long value, const size_t *shape,
+                        const int dimensions) {
+  return constant(value, shape, dimensions);
+}
+
+FGraphNode *fconstant_f(const float value, const size_t *shape,
+                        const int dimensions) {
+  return constant(value, shape, dimensions);
+}
+
+FGraphNode *fconstant_d(const double value, const size_t *shape,
+                        const int dimensions) {
+  return constant(value, shape, dimensions);
+}
+
 // adds the constant value to each entry in a
-template <typename T> FGraphNode *add(FGraphNode *a, const T b) {
+template <typename T> static inline FGraphNode *add(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = FADD;
@@ -434,7 +486,7 @@ FGraphNode *fadd_cf(FGraphNode *a, const float b) { return add<float>(a, b); }
 FGraphNode *fadd_ci(FGraphNode *a, const int b) { return add<int>(a, b); }
 FGraphNode *fadd_cl(FGraphNode *a, const long b) { return add<long>(a, b); }
 // subtracts the constant value from each entry in a
-template <typename T> FGraphNode *sub(FGraphNode *a, const T b) {
+template <typename T> static inline FGraphNode *sub(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->op_type = FSUB;
   op->additional_data = nullptr;
@@ -446,7 +498,7 @@ FGraphNode *fsub_cf(FGraphNode *a, const float b) { return sub<float>(a, b); }
 FGraphNode *fsub_ci(FGraphNode *a, const int b) { return sub<int>(a, b); }
 FGraphNode *fsub_cl(FGraphNode *a, const long b) { return sub<long>(a, b); }
 // divides each entry in a by the constant value
-template <typename T> FGraphNode *div(FGraphNode *a, const T b) {
+template <typename T> static inline FGraphNode *div(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = FDIV;
@@ -458,7 +510,7 @@ FGraphNode *fdiv_cf(FGraphNode *a, const float b) { return div<float>(a, b); }
 FGraphNode *fdiv_ci(FGraphNode *a, const int b) { return div<int>(a, b); }
 FGraphNode *fdiv_cl(FGraphNode *a, const long b) { return div<long>(a, b); }
 // multiplicates the constant value with each entry in a
-template <typename T> FGraphNode *mul(FGraphNode *a, const T b) {
+template <typename T> static inline FGraphNode *mul(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = FMUL;
@@ -470,7 +522,7 @@ FGraphNode *fmul_cf(FGraphNode *a, const float b) { return mul<float>(a, b); }
 FGraphNode *fmul_ci(FGraphNode *a, const int b) { return mul<int>(a, b); }
 FGraphNode *fmul_cl(FGraphNode *a, const long b) { return mul<long>(a, b); }
 // takes the power of each element in a to b
-template <typename T> FGraphNode *pow(FGraphNode *a, const T b) {
+template <typename T> static inline FGraphNode *pow(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = FPOW;
@@ -482,7 +534,7 @@ FGraphNode *fpow_cf(FGraphNode *a, const float b) { return pow<float>(a, b); }
 FGraphNode *fpow_ci(FGraphNode *a, const int b) { return pow<int>(a, b); }
 FGraphNode *fpow_cl(FGraphNode *a, const long b) { return pow<long>(a, b); }
 
-template <typename T> FGraphNode *min(FGraphNode *a, const T b) {
+template <typename T> static inline FGraphNode *min(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = FMIN;
@@ -494,7 +546,7 @@ FGraphNode *fmin_cl(FGraphNode *a, const long b) { return min(a, b); }
 FGraphNode *fmin_cf(FGraphNode *a, const float b) { return min(a, b); }
 FGraphNode *fmin_cd(FGraphNode *a, const double b) { return min(a, b); }
 
-template <typename T> FGraphNode *max(FGraphNode *a, const T b) {
+template <typename T> static inline FGraphNode *max(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = FMAX;
@@ -629,8 +681,8 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   ;
 }
 
-inline FGraphNode *reduce_operation(FGraphNode **x, const int dimension,
-                                    FOperationType type) {
+static inline FGraphNode *reduce_operation(FGraphNode **x, const int dimension,
+                                           FOperationType type) {
   FGraphNode *a = *x;
   if (a->operation->op_type != FSTORE && a->operation->op_type != FRESULTDATA) {
     a = fExecuteGraph(a);

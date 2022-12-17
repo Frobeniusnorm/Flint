@@ -201,6 +201,23 @@ struct FSlice {
 FGraphNode *fCreateGraph(const void *data, const int num_entries,
                          const FType data_type, const size_t *shape,
                          const int dimensions);
+
+/** Creates a tensor that contains the single given values in all entries
+ *
+ * @param value the value this tensor should consist of
+ * @param shape an array of size \p dimensions, each entry describing the size
+ * of the corresponding dimension.
+ * @param dimensions the number of dimensions
+ */
+FGraphNode *fconstant_i(const int value, const size_t *shape,
+                        const int dimensions);
+FGraphNode *fconstant_l(const long value, const size_t *shape,
+                        const int dimensions);
+FGraphNode *fconstant_f(const float value, const size_t *shape,
+                        const int dimensions);
+FGraphNode *fconstant_d(const double value, const size_t *shape,
+                        const int dimensions);
+
 /** Decrements :member:`FGraphNode.reference_counter` of :var:`graph` and
  * deallocates the node and its corresponding data, if the counter becomes 0. If
  * the node is deallocated, the same process is repeated with its predecessors.
@@ -213,6 +230,7 @@ void fFreeGraph(FGraphNode *graph);
  * the predecessors (their :member:`FGraphNode.reference_counter` is
  * incremented) */
 FGraphNode *fCopyGraph(const FGraphNode *graph);
+
 /* Executes the graph node operations from all yet to be executed predecessors
  * to :var:`node` and returns a node with a :struct:`FResultData` operation in
  * which the resulting data is stored. If the graph is executed by the GPU
@@ -264,6 +282,9 @@ FGraphNode *fpow_ci(FGraphNode *a, const int b);
 FGraphNode *fpow_cl(FGraphNode *a, const long b);
 FGraphNode *fpow_cf(FGraphNode *a, const float b);
 FGraphNode *fpow_cd(FGraphNode *a, const double b);
+
+FGraphNode *fgradient_add_g(const FGraphNode *a, const FGraphNode *b,
+                            const FGraphNode *dx);
 
 /** Carries out matrix multiplication on the last two dimensions of the tensors.
 E.g. a matrix multiplication of two tensors with shapes (64, 32, 16) and (16,
@@ -350,6 +371,23 @@ FGraphNode *fabs_g(FGraphNode *a);
 #ifdef __cplusplus
 }
 // no c++ bindings, but function overloading for c++ header
+inline FGraphNode *fconstant(const int value, const size_t *shape,
+                             const int dimensions) {
+  return fconstant_i(value, shape, dimensions);
+}
+inline FGraphNode *fconstant(const long value, const size_t *shape,
+                             const int dimensions) {
+  return fconstant_l(value, shape, dimensions);
+}
+inline FGraphNode *fconstant(const float value, const size_t *shape,
+                             const int dimensions) {
+  return fconstant_f(value, shape, dimensions);
+}
+inline FGraphNode *fconstant(const double value, const size_t *shape,
+                             const int dimensions) {
+  return fconstant_d(value, shape, dimensions);
+}
+
 inline FGraphNode *fadd(FGraphNode *a, FGraphNode *b) { return fadd_g(a, b); }
 inline FGraphNode *fadd(FGraphNode *a, const int b) { return fadd_ci(a, b); }
 inline FGraphNode *fadd(FGraphNode *a, const long b) { return fadd_cl(a, b); }

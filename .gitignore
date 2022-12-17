@@ -8,6 +8,7 @@
 *.obj
 ./build/
 .clangd/
+experiment/
 
 # Precompiled Headers
 *.gch
