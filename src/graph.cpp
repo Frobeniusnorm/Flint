@@ -24,16 +24,7 @@
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 static bool use_cpu, use_gpu, eager_execution = false;
 // converts c++ type to flint type
-template <typename T> static constexpr FType toFlintType() {
-  if (std::is_same<T, int>())
-    return F_INT32;
-  if (std::is_same<T, long>())
-    return F_INT64;
-  if (std::is_same<T, float>())
-    return F_FLOAT32;
-  if (std::is_same<T, double>())
-    return F_FLOAT64;
-}
+
 // EAGER EXECUTION WITH HELPER
 void enable_eager_execution() { eager_execution = true; }
 void disable_eager_execution() { eager_execution = false; }

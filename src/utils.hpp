@@ -73,6 +73,16 @@ inline size_t typeSize(FType t) {
   }
   return 1;
 }
+template <typename T> static constexpr FType toFlintType() {
+  if (std::is_same<T, int>())
+    return F_INT32;
+  if (std::is_same<T, long>())
+    return F_INT64;
+  if (std::is_same<T, float>())
+    return F_FLOAT32;
+  if (std::is_same<T, double>())
+    return F_FLOAT64;
+}
 template <typename T> class blocking_queue {
 private:
   std::mutex mutex;
