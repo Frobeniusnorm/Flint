@@ -537,6 +537,18 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(9, t2[3]);
   }
 }
+TEST_CASE("Eager Execution") {
+  enable_eager_execution();
+  Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
+  t1 = t1 + 3.0f;
+  Tensor<double, 3> t2{{{0.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
+  Tensor<double, 3> t3 = t2.matmul(t1);
+  Tensor<double, 3> t4 =
+      t3.slice(TensorRange(0, 1), TensorRange(0, 1), TensorRange(0, 2));
+  Tensor<double, 1> t5 = t4.reduce_mul(2).flattened();
+  CHECK_EQ(20, t5[0]);
+  disable_eager_execution();
+}
 TEST_CASE("Gradient Calculation") {
   Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
   Tensor<double, 3> t2{{{0.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};

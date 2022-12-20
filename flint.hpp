@@ -453,7 +453,7 @@ template <typename T, unsigned int n> struct Tensor {
     node = fCopyGraph(other.node);
     node->reference_counter++;
   }
-  void operator=(const Tensor &other) {
+  Tensor<T, n> &operator=(const Tensor &other) {
     if (node) {
       node->reference_counter--;
       fFreeGraph(node);
@@ -461,6 +461,7 @@ template <typename T, unsigned int n> struct Tensor {
     shape = other.shape;
     node = fCopyGraph(other.node);
     node->reference_counter++;
+    return *this;
   }
   // move
   Tensor(Tensor &&other) {
@@ -469,7 +470,7 @@ template <typename T, unsigned int n> struct Tensor {
     other.node = nullptr;
   }
   std::array<size_t, n> get_shape() const { return shape; }
-  void operator=(Tensor &&other) {
+  Tensor<T, n> &operator=(Tensor &&other) {
     if (node) {
       node->reference_counter--;
       fFreeGraph(node);
@@ -477,6 +478,7 @@ template <typename T, unsigned int n> struct Tensor {
     shape = other.shape;
     node = other.node;
     other.node = nullptr;
+    return *this;
   }
   ~Tensor() {
     if (node) {
@@ -747,16 +749,20 @@ template <typename T, unsigned int n> struct Tensor {
   template <typename K> Tensor<stronger_return<K>, n> max(const K other) const {
     return Tensor<stronger_return<K>, n>(fmax(node, other));
   }
-  Tensor<T, n - 1> reduce_sum(const int dimension) {
+  Tensor<T, n - 1> reduce_sum(int dimension) {
     std::array<size_t, n - 1> ns;
+    if (dimension < 0)
+      dimension = shape.size() + dimension;
     for (int i = 0; i < dimension; i++)
       ns[i] = shape[i];
     for (size_t i = dimension; i < ns.size(); i++)
       ns[i] = shape[i + 1];
     return Tensor<T, n - 1>(freduce_sum(&node, dimension), ns);
   }
-  Tensor<T, n - 1> reduce_mul(const int dimension) {
+  Tensor<T, n - 1> reduce_mul(int dimension) {
     std::array<size_t, n - 1> ns;
+    if (dimension < 0)
+      dimension = shape.size() + dimension;
     for (int i = 0; i < dimension; i++)
       ns[i] = shape[i];
     for (size_t i = dimension; i < ns.size(); i++)
