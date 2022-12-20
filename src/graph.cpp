@@ -430,7 +430,7 @@ static inline FGraphNode *constant(const T value, const size_t *shape,
   FOperation *op = new FOperation();
   op->dimensions = dimensions;
   op->shape = safe_mal<size_t>(dimensions);
-  memcpy(op->shape, shape, op->dimensions * sizeof(dimensions));
+  memcpy(op->shape, shape, op->dimensions * sizeof(size_t));
   op->op_type = FSTORE;
   op->data_type = toFlintType<T>();
   FStore *store = new FStore();

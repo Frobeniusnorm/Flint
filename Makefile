@@ -16,7 +16,7 @@ MODE=debug
 
 .PHONY: debug-target production-target
 
-COMPILER = clang++ -std=c++2a  -l OpenCL
+COMPILER = clang++ -std=c++2a -gdwarf-4 -l OpenCL
 ifeq ($(MODE),debug)
 	COMPILER += -g -Og -Wall
 	.DEFAULT_GOAL :=debug-target

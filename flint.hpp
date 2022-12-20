@@ -411,6 +411,7 @@ template <typename T> struct Tensor<T, 1> {
     FGraphNode *nn = fslice_step(node, &start, &end, &step);
     return Tensor<T, 1>(nn, nn->operation->shape[0]);
   }
+  FGraphNode *getGraphNode() const { return node; }
 
 protected:
   Tensor(FGraphNode *node, size_t shape) : node(node), shape(shape) {
@@ -791,6 +792,7 @@ template <typename T, unsigned int n> struct Tensor {
       new_shape[i] = nn->operation->shape[i];
     return Tensor<T, n>(nn, new_shape);
   }
+  FGraphNode *getGraphNode() const { return node; }
 
 protected:
   Tensor(FGraphNode *node, std::array<size_t, n> shape)

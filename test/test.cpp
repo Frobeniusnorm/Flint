@@ -34,7 +34,7 @@ TEST_SUITE("Graph implementation") {
           fCreateGraph(v2.data(), v2.size(), F_FLOAT32, shape.data(), 1);
       gn1 = fmul(gn1, gn12);
       fFreeGraph(gn12);
-      // test
+      //  test
       REQUIRE_EQ(gn1->num_predecessor, 2);
       REQUIRE(gn1->operation);
       CHECK_EQ(gn1->operation->data_type, F_FLOAT64);
@@ -537,7 +537,23 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(9, t2[3]);
   }
 }
-
+TEST_CASE("Gradient Calculation") {
+  Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
+  Tensor<double, 3> t2{{{0.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
+  FGraphNode *res =
+      fgradient_add_g(t1.getGraphNode(), t2.getGraphNode(), t1.getGraphNode());
+  FOperation *res_op = res->operation;
+  CHECK_EQ(F_FLOAT32, res_op->data_type);
+  CHECK_EQ(2, res_op->dimensions);
+  CHECK_EQ(2, res_op->shape[0]);
+  CHECK_EQ(2, res_op->shape[1]);
+  res = fExecuteGraph(res);
+  res_op = res->operation;
+  FStore *store = (FStore *)res_op->additional_data;
+  float *dataf = (float *)store->data;
+  for (int i = 0; i < 4; i++)
+    CHECK_EQ(2.f, dataf[i]);
+}
 int main(int argc, char **argv) {
   bool doCPU = false, doGPU = false;
   for (int i = 0; i < argc; i++) {
@@ -553,9 +569,9 @@ int main(int argc, char **argv) {
   doctest::Context context;
   context.applyCommandLine(argc, argv);
   int res;
+  disable_eager_execution();
   if (doCPU) {
     flintInit(1, 0);
-    enable_eager_execution();
     res = context.run();
     flintCleanup();
   }

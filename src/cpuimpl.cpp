@@ -480,6 +480,9 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   if (!initialized)
     flintInit_cpu();
+  if (node->operation->op_type == FSTORE ||
+      node->operation->op_type == FRESULTDATA)
+    return node;
   // TODO parallel execution
   using namespace std;
   unordered_map<FGraphNode *, CPUResultData> results;
