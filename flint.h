@@ -287,6 +287,8 @@ FGraphNode *fgradient_add_g(const FGraphNode *a, const FGraphNode *b,
                             const FGraphNode *dx);
 FGraphNode *fgradient_sub_g(const FGraphNode *a, const FGraphNode *b,
                             const FGraphNode *dx);
+FGraphNode *fgradient_mul_g(const FGraphNode *a, const FGraphNode *b,
+                            const FGraphNode *dx);
 
 /** Carries out matrix multiplication on the last two dimensions of the tensors.
 E.g. a matrix multiplication of two tensors with shapes (64, 32, 16) and (16,

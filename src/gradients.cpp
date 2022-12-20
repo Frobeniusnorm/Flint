@@ -81,4 +81,31 @@ FGraphNode *fgradient_sub_g(const FGraphNode *x, const FGraphNode *y,
     return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
                            dx->operation->dimensions);
 }
+FGraphNode *fgradient_mul_g(FGraphNode *x, FGraphNode *y,
+                            const FGraphNode *dx) {
+  // ao is the higher dimensional vector
+  FOperation *ao = x->operation;
+  FOperation *bo = y->operation;
+  FGraphNode *a = x, *b = y;
+  if (ao->dimensions < bo->dimensions) {
+    FOperation *tmp_op = ao;
+    ao = bo;
+    bo = tmp_op;
+    FGraphNode *tmp_gn = a;
+    a = b;
+    b = tmp_gn;
+  }
+  if (b == dx) {
+    // dx is the smaller one -> reduce_sum other one
+    FGraphNode *result = a;
+    for (int dim = ao->dimensions - 1; dim >= bo->dimensions; dim--)
+      result = freduce_sum(&result, dim);
+    return result;
+  } else {
+    // dx is the bigger one -> expand other one
+    //  TODO
+  }
+
+  return nullptr;
+}
 #endif
