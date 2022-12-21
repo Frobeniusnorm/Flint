@@ -113,6 +113,7 @@ enum FOperationType {
   FREDUCE_MUL,
   FSLICE,
   FABS,
+  FREPEAT,
   FNUM_OPERATION_TYPES
 };
 /** Describes one operation. An operation always has a shape, described by
@@ -371,7 +372,14 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
                         const long *step);
 
 FGraphNode *fabs_g(FGraphNode *a);
-
+/** Repeats dimensions of a tensor multiple times
+ *
+ * @param a the node in which dimensions are to be repeated
+ * @param repititions array with the same number of entries as the tensor has
+ * dimensions e.g. repeat([[0,1], [2,3]], [2, 3]) = [[0,1,0,1,0,1],
+ * [2,3,2,3,2,3], [0,1,0,1,0,1], [2,3,2,3,2,3]]
+ */
+FGraphNode *frepeat(FGraphNode *a, int *repititions);
 #ifdef __cplusplus
 }
 // no c++ bindings, but function overloading for c++ header

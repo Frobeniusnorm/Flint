@@ -311,6 +311,9 @@ generateCode(FGraphNode *node,
       code = type + " " + name + " = abs(v" +
              std::to_string(variable_index + 1) + ");\n" + code;
     } break;
+    case FREPEAT: {
+      // TODO
+    } break;
     case FREDUCE_SUM:
     case FREDUCE_MUL: {
       push_pred = false;

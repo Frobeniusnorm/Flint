@@ -180,6 +180,7 @@ void fFreeGraph(FGraphNode *graph) {
           free(s->step);
           delete s;
         } break;
+        case FREPEAT:
         case FREDUCE_SUM:
         case FREDUCE_MUL:
           free(gn->operation->additional_data);
@@ -765,5 +766,19 @@ FGraphNode *fabs_g(FGraphNode *a) {
   FOperation *op = new FOperation();
   op->op_type = FABS;
   initShape_keep(op, a->operation, nullptr);
+  return addNode(op, {a});
+}
+FGraphNode *frepeat(FGraphNode *a, int *repetitions) {
+  FOperation *op = new FOperation();
+  op->op_type = FREPEAT;
+  op->data_type = a->operation->data_type;
+  op->dimensions = a->operation->dimensions;
+  op->shape = safe_mal<size_t>(op->dimensions);
+  for (int dim = 0; dim < op->dimensions; dim++) {
+    op->shape[dim] = a->operation->shape[dim] * (repetitions[dim] + 1);
+  }
+  op->additional_data = safe_mal<int>(op->dimensions);
+  memcpy(op->additional_data, repetitions,
+         sizeof(int) * a->operation->dimensions);
   return addNode(op, {a});
 }

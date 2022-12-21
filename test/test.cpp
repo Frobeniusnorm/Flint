@@ -462,6 +462,20 @@ TEST_SUITE("C++ Bindings") {
         CHECK_EQ(t1[i][j] > t2[i][j] ? t1[i][j] : t2[i][j], t4[i][j]);
       }
   }
+  TEST_CASE("REPEAT") {
+    Tensor<int, 3> t1{{{0}, {1}}, {{2}, {3}}};
+    t1 = t1.repeat(1, 2);
+    CHECK_EQ(4, t1.get_shape()[0]);
+    CHECK_EQ(6, t1.get_shape()[1]);
+    CHECK_EQ(1, t1.get_shape()[2]);
+    using namespace std;
+    vector<vector<vector<int>>> res = *t1;
+    CHECK_EQ(0, res[0][0][0]);
+    CHECK_EQ(1, res[0][1][0]); // 0
+    CHECK_EQ(0, res[0][2][0]);
+    CHECK_EQ(1, res[0][5][0]); // 0
+    CHECK_EQ(2, res[3][4][0]); // 1
+  }
   TEST_CASE("REDUCE OPERATIONS") {
     Tensor<double, 3> t1{{{1, 7}, {8, 8}, {2, 1}}, {{9, 3}, {2, 1}, {8, 9}}};
     Tensor<double, 2> t2 = t1.reduce_sum(0);

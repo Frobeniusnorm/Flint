@@ -19,12 +19,15 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <iostream>
+#include <ostream>
 #include <sys/types.h>
 #include <tuple>
 #include <vector>
 namespace FLINT_HPP_HELPER {
 template <typename T>
-static inline std::string vectorString(const std::vector<T> &vec) {
+static inline std::string vectorString(const std::vector<T> &vec,
+                                       std::string indentation = "") {
   std::string res = "[";
   for (size_t i = 0; i < vec.size(); i++) {
     res += std::to_string(vec[i]);
@@ -34,12 +37,13 @@ static inline std::string vectorString(const std::vector<T> &vec) {
   return res + "]";
 }
 template <typename T>
-static inline std::string vectorString(const std::vector<std::vector<T>> &vec) {
+static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
+                                       std::string indentation = "") {
   std::string res = "[";
   for (size_t i = 0; i < vec.size(); i++) {
-    res += vectorString(vec[i]);
+    res += vectorString(vec[i], indentation + " ");
     if (i != vec.size() - 1)
-      res += ",\n";
+      res += ",\n" + indentation;
   }
   return res + "]";
 }
@@ -202,7 +206,11 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K, unsigned int k> friend struct Tensor;
   typedef std::vector<T> storage_type;
   typedef std::initializer_list<T> init_type;
-  Tensor(storage_type data) { isTensorType<T>(); }
+  Tensor(storage_type data) : shape(data.size()) {
+    isTensorType<T>();
+    node = fCreateGraph(data.data(), data.size(), toFlintType<T>(), &shape, 1);
+    node->reference_counter = 1;
+  }
   Tensor(init_type data) : shape(data.size()) {
     isTensorType<T>();
 
@@ -450,6 +458,7 @@ template <typename T, unsigned int n> struct Tensor {
   // copy
   Tensor(const Tensor &other) {
     shape = other.shape;
+    total_size = other.total_size;
     node = fCopyGraph(other.node);
     node->reference_counter++;
   }
@@ -459,6 +468,7 @@ template <typename T, unsigned int n> struct Tensor {
       fFreeGraph(node);
     }
     shape = other.shape;
+    total_size = other.total_size;
     node = fCopyGraph(other.node);
     node->reference_counter++;
     return *this;
@@ -466,6 +476,7 @@ template <typename T, unsigned int n> struct Tensor {
   // move
   Tensor(Tensor &&other) {
     shape = other.shape;
+    total_size = other.total_size;
     node = other.node; // was held by previous tensor -> no increment necessary
     other.node = nullptr;
   }
@@ -476,6 +487,7 @@ template <typename T, unsigned int n> struct Tensor {
       fFreeGraph(node);
     }
     shape = other.shape;
+    total_size = other.total_size;
     node = other.node;
     other.node = nullptr;
     return *this;
@@ -591,7 +603,7 @@ template <typename T, unsigned int n> struct Tensor {
     }
     }
   }
-  operator std::string() const {
+  operator std::string() {
     FOperation *op = node->operation;
     std::string foo = "Tensor<" +
                       (op->data_type == F_INT32     ? std::string("INT32")
@@ -603,27 +615,7 @@ template <typename T, unsigned int n> struct Tensor {
         op->op_type != FCONST)
       foo += "<not yet executed>";
     else {
-      switch (op->op_type) {
-      case FSTORE: {
-        FStore *store = (FStore *)node->operation->additional_data;
-        foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
-            (T *)store->data, (T *)store->data + store->num_entries));
-        break;
-      }
-      case FRESULTDATA: {
-        FResultData *store = (FResultData *)node->operation->additional_data;
-        foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
-            (T *)store->data, (T *)store->data + store->num_entries));
-        break;
-      }
-      case FCONST: {
-        FConst *store = (FConst *)node->operation->additional_data;
-        foo += std::to_string(((T *)store->value)[0]);
-        break;
-      }
-      default:
-        break;
-      }
+      foo += "\n" + FLINT_HPP_HELPER::vectorString(this->operator*(), " ");
     }
     foo += ")";
     return foo;
@@ -770,6 +762,7 @@ template <typename T, unsigned int n> struct Tensor {
     return Tensor<T, n - 1>(freduce_mul(&node, dimension), ns);
   }
   Tensor<T, n> abs() const { return Tensor<T, n>(fabs_g(node), shape); }
+
   template <typename... args>
   Tensor<T, n> slice(const args... dim_ranges) const {
     constexpr size_t num_ranges = sizeof...(args);
@@ -793,6 +786,25 @@ template <typename T, unsigned int n> struct Tensor {
       }
     }
     FGraphNode *nn = fslice_step(node, starts, ends, steps);
+    std::array<size_t, n> new_shape;
+    for (size_t i = 0; i < n; i++)
+      new_shape[i] = nn->operation->shape[i];
+    return Tensor<T, n>(nn, new_shape);
+  }
+
+  template <typename... args>
+  Tensor<T, n> repeat(const args... repetitions) const {
+    constexpr size_t num_repetitions = sizeof...(args);
+    static_assert(num_repetitions <= n,
+                  "A repetition operation may can only as many repetition "
+                  "entries as there are dimensions in the tensor!");
+    std::array<int, num_repetitions> repeat{static_cast<int>(repetitions)...};
+    std::array<int, n> acc_repeat;
+    for (int i = 0; i < num_repetitions; i++)
+      acc_repeat[i] = repeat[i];
+    for (int i = num_repetitions; i < n; i++)
+      acc_repeat[i] = 0;
+    FGraphNode *nn = frepeat(node, acc_repeat.data());
     std::array<size_t, n> new_shape;
     for (size_t i = 0; i < n; i++)
       new_shape[i] = nn->operation->shape[i];
