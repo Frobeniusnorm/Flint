@@ -566,8 +566,8 @@ TEST_CASE("Eager Execution") {
 TEST_CASE("Gradient Calculation") {
   Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
   Tensor<double, 3> t2{{{0.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
-  FGraphNode *res =
-      fgradient_add_g(t1.getGraphNode(), t2.getGraphNode(), t1.getGraphNode());
+  FGraphNode *res = fgradient_add_g(t1.get_graph_node(), t2.get_graph_node(),
+                                    t1.get_graph_node());
   FOperation *res_op = res->operation;
   CHECK_EQ(F_FLOAT32, res_op->data_type);
   CHECK_EQ(2, res_op->dimensions);

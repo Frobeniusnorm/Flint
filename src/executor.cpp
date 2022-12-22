@@ -311,9 +311,6 @@ generateCode(FGraphNode *node,
       code = type + " " + name + " = abs(v" +
              std::to_string(variable_index + 1) + ");\n" + code;
     } break;
-    case FREPEAT: {
-      // TODO
-    } break;
     case FREDUCE_SUM:
     case FREDUCE_MUL: {
       push_pred = false;
@@ -385,7 +382,38 @@ generateCode(FGraphNode *node,
       }
       index_defs += ";\n";
       code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-      variable_index--;
+      variable_index--; // because we dont generate a variable
+    } break;
+    case FREPEAT: {
+      const FOperation *op = node->operation;
+      FOperation *pred = node->predecessors[0]->operation;
+      unsigned int old_idx = num_indices++;
+      index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
+      // TODO add to index_defs a redefinition of index, so that we remap to src
+      // data
+      // calculate number of elements per dimension entry for destination and
+      // source
+      std::vector<size_t> acc_sizes_d(op->dimensions);
+      std::vector<size_t> acc_sizes_s(op->dimensions);
+      acc_sizes_d[op->dimensions - 1] = 1;
+      acc_sizes_s[op->dimensions - 1] = 1;
+      for (int dim = op->dimensions - 2; dim >= 0; dim--) {
+        acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
+        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred->shape[dim + 1];
+      }
+      // to get the index in the source array we first calculate the indices and
+      // reproject
+      index_defs += "{\nint working_index = index;\nindex = 0;\n";
+      for (int dim = 0; dim < op->dimensions; dim++) {
+        index_defs += "index += ((working_index /" +
+                      to_string(acc_sizes_d[dim]) + ") % " +
+                      to_string(pred->shape[dim]) + ") * " +
+                      to_string(acc_sizes_s[dim]) + ";\n";
+        index_defs += "working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
+      }
+      index_defs += "}\n";
+      code = "index = old_index" + to_string(old_idx) + ";\n" + code;
+      variable_index--; // because we dont generate a variable
     } break;
     default:
       break;

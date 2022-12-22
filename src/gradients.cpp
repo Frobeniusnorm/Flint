@@ -103,7 +103,6 @@ FGraphNode *fgradient_mul_g(FGraphNode *x, FGraphNode *y,
     return result;
   } else {
     // dx is the bigger one -> expand other one
-    //  TODO
   }
 
   return nullptr;
