@@ -14,15 +14,6 @@ experiment/
 *.gch
 *.pch
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
 # Compiled Static libraries
 *.lai
 *.la
@@ -34,6 +25,7 @@ experiment/
 *.out
 *.app
 test/test
+test/test_gradients
 test/benchmark
 libflint.a
 

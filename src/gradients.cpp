@@ -1,6 +1,7 @@
 #ifndef GRADIENTS_CPP
 #define GRADIENTS_CPP
 #include "../flint.h"
+#include <cstring>
 static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
                                    int dimensions) {
   switch (type) {
@@ -96,15 +97,31 @@ FGraphNode *fgradient_mul_g(FGraphNode *x, FGraphNode *y,
     b = tmp_gn;
   }
   if (b == dx) {
-    // dx is the smaller one -> reduce_sum other one
     FGraphNode *result = a;
-    for (int dim = ao->dimensions - 1; dim >= bo->dimensions; dim--)
+    if (a->operation->data_type != b->operation->data_type)
+      result = fconvert(result, b->operation->data_type);
+    // dx is the smaller one -> reduce_sum other one
+    for (int dim = 0; dim < ao->dimensions - bo->dimensions; dim++)
       result = freduce_sum(&result, dim);
     return result;
   } else {
+    FGraphNode *result = b;
+    if (a->operation->data_type != b->operation->data_type)
+      result = fconvert(result, a->operation->data_type);
     // dx is the bigger one -> expand other one
+    size_t new_shape[ao->dimensions];
+    int repetitions[ao->dimensions];
+    for (int i = 0; i < ao->dimensions - bo->dimensions; i++) {
+      new_shape[i] = 1;
+      repetitions[i] = ao->shape[i] - 1;
+    }
+    memcpy(new_shape + (ao->dimensions - bo->dimensions), bo->shape,
+           bo->dimensions * sizeof(size_t));
+    memset(repetitions + (ao->dimensions - bo->dimensions), 0,
+           bo->dimensions * sizeof(int));
+    result = freshape(result, new_shape, ao->dimensions);
+    result = frepeat(result, repetitions);
+    return result;
   }
-
-  return nullptr;
 }
 #endif

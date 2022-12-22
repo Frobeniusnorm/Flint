@@ -30,11 +30,14 @@ H_SRCS := $(wildcard $(SRCDIR)/*.hpp)
 C_SRCS := $(wildcard $(SRCDIR)/*.cpp)
 C_OBJS := $(C_SRCS:$(SRCDIR)/%.cpp=$(BUILDDIR)/%.o)
 
-debug-target: test/test test/benchmark
-production-target: libflint.a 
+debug-target: libflint.a test/test test/test_gradients
+production-target: libflint.a test/benchmark 
 # TEST
 test/test: libflint.a $(BUILDDIR)/test.o | $(BUILDDIR)
 	$(COMPILER) -o $@ $(BUILDDIR)/test.o -L. -lflint
+
+test/test_gradients: libflint.a $(BUILDDIR)/test_gradients.o | $(BUILDDIR)
+	$(COMPILER) -o $@ $(BUILDDIR)/test_gradients.o -L. -lflint
 
 test/benchmark: libflint.a $(BUILDDIR)/benchmark.o | $(BUILDDIR)
 	$(COMPILER) -o $@ $(BUILDDIR)/benchmark.o -L. -lflint
@@ -42,6 +45,9 @@ test/benchmark: libflint.a $(BUILDDIR)/benchmark.o | $(BUILDDIR)
 
 $(BUILDDIR)/test.o: test/test.cpp flint.h flint.hpp 
 	$(COMPILER) -c -o $(BUILDDIR)/test.o test/test.cpp
+
+$(BUILDDIR)/test_gradients.o: test/test_gradients.cpp flint.h flint.hpp 
+	$(COMPILER) -c -o $(BUILDDIR)/test_gradients.o test/test_gradients.cpp
 
 $(BUILDDIR)/benchmark.o: test/benchmark.cpp flint.hpp
 	$(COMPILER) -c -o $(BUILDDIR)/benchmark.o test/benchmark.cpp

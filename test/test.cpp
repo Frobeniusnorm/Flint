@@ -471,10 +471,14 @@ TEST_SUITE("C++ Bindings") {
     using namespace std;
     vector<vector<vector<int>>> res = *t1;
     CHECK_EQ(0, res[0][0][0]);
-    CHECK_EQ(1, res[0][1][0]); // 0
+    CHECK_EQ(1, res[0][1][0]);
     CHECK_EQ(0, res[0][2][0]);
-    CHECK_EQ(1, res[0][5][0]); // 0
-    CHECK_EQ(2, res[3][4][0]); // 1
+    CHECK_EQ(1, res[0][5][0]);
+    CHECK_EQ(2, res[3][4][0]);
+    Tensor<int, 2> t2{{0, 1}, {2, 3}};
+    t2 = t2.repeat(2, 3);
+    CHECK_EQ(3, t2[1][5]);
+    CHECK_EQ(0, t2[2][2]);
   }
   TEST_CASE("REDUCE OPERATIONS") {
     Tensor<double, 3> t1{{{1, 7}, {8, 8}, {2, 1}}, {{9, 3}, {2, 1}, {8, 9}}};
@@ -562,23 +566,6 @@ TEST_CASE("Eager Execution") {
   Tensor<double, 1> t5 = t4.reduce_mul(2).flattened();
   CHECK_EQ(20, t5[0]);
   disable_eager_execution();
-}
-TEST_CASE("Gradient Calculation") {
-  Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
-  Tensor<double, 3> t2{{{0.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
-  FGraphNode *res = fgradient_add_g(t1.get_graph_node(), t2.get_graph_node(),
-                                    t1.get_graph_node());
-  FOperation *res_op = res->operation;
-  CHECK_EQ(F_FLOAT32, res_op->data_type);
-  CHECK_EQ(2, res_op->dimensions);
-  CHECK_EQ(2, res_op->shape[0]);
-  CHECK_EQ(2, res_op->shape[1]);
-  res = fExecuteGraph(res);
-  res_op = res->operation;
-  FStore *store = (FStore *)res_op->additional_data;
-  float *dataf = (float *)store->data;
-  for (int i = 0; i < 4; i++)
-    CHECK_EQ(2.f, dataf[i]);
 }
 int main(int argc, char **argv) {
   bool doCPU = false, doGPU = false;
