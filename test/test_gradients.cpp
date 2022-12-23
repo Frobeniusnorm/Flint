@@ -30,7 +30,7 @@ TEST_SUITE("Gradient Calculation") {
       CHECK_EQ(2.f, dataf[i]);
     fFreeGraph(res);
   }
-  TEST_CASE("Gradient mul/div") {
+  TEST_CASE("Gradient mul") {
     Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
     Tensor<double, 3> t2{{{0.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
     FGraphNode *res = fgradient_mul_g(t1.get_graph_node(), t2.get_graph_node(),
@@ -58,6 +58,46 @@ TEST_SUITE("Gradient Calculation") {
     CHECK_EQ(0, datad[5]);
     CHECK_EQ(1, datad[6]);
     CHECK_EQ(2, datad[7]);
+    fFreeGraph(res);
+  }
+  TEST_CASE("Gradient div") {
+    Tensor<double, 2> x = {{-1., 3.}, {1., 2.}};
+    Tensor<double, 3> y = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
+
+    FGraphNode *node = fgradient_div_g(y.get_graph_node(), x.get_graph_node(),
+                                       x.get_graph_node());
+    FGraphNode *res = fExecuteGraph(node);
+    FResultData *data = (FResultData *)res->operation->additional_data;
+    double *datad = (double *)data->data;
+    CHECK_EQ(-5, datad[0]);
+    CHECK_EQ(-8, datad[2]);
+    CHECK_EQ(-2.5, datad[3]);
+    fFreeGraph(res);
+    node = fgradient_div_g(y.get_graph_node(), x.get_graph_node(),
+                           y.get_graph_node());
+    res = fExecuteGraph(node);
+    data = (FResultData *)res->operation->additional_data;
+    datad = (double *)data->data;
+    CHECK_EQ(-1, datad[0]);
+    CHECK_EQ(1, datad[2]);
+    CHECK_EQ(.5, datad[3]);
+    fFreeGraph(res);
+    node = fgradient_div_g(x.get_graph_node(), y.get_graph_node(),
+                           y.get_graph_node());
+    res = fExecuteGraph(node);
+    data = (FResultData *)res->operation->additional_data;
+    datad = (double *)data->data;
+    CHECK_EQ(1, datad[0]);
+    CHECK_EQ(-3, datad[1]);
+    CHECK_EQ(-.12, datad[5]);
+    fFreeGraph(res);
+    node = fgradient_div_g(x.get_graph_node(), y.get_graph_node(),
+                           x.get_graph_node());
+    res = fExecuteGraph(node);
+    data = (FResultData *)res->operation->additional_data;
+    datad = (double *)data->data;
+    CHECK_EQ(1.25, datad[0]);
+    CHECK_EQ(1.2, datad[1]);
     fFreeGraph(res);
   }
 }

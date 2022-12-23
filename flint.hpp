@@ -127,7 +127,7 @@ template <typename T> static constexpr FType toFlintType() {
     return F_INT64;
   if (std::is_same<T, float>())
     return F_FLOAT32;
-  if (std::is_same<T, double>())
+  else
     return F_FLOAT64;
 }
 // checks which of both types the flint backend will choose

@@ -2,6 +2,20 @@
 #define GRADIENTS_CPP
 #include "../flint.h"
 #include <cstring>
+#include <iostream>
+#include <ostream>
+// converts c++ type to flint type
+template <typename T> static constexpr FType toFlintType() {
+  if (std::is_same<T, int>())
+    return F_INT32;
+  if (std::is_same<T, long>())
+    return F_INT64;
+  if (std::is_same<T, float>())
+    return F_FLOAT32;
+  if (std::is_same<T, double>())
+    return F_FLOAT64;
+}
+
 static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
                                    int dimensions) {
   switch (type) {
@@ -104,7 +118,7 @@ FGraphNode *fgradient_mul_g(FGraphNode *x, FGraphNode *y,
     for (int dim = 0; dim < ao->dimensions - bo->dimensions; dim++)
       result = freduce_sum(&result, dim);
     return result;
-  } else {
+  } else if (a == dx) {
     FGraphNode *result = b;
     if (a->operation->data_type != b->operation->data_type)
       result = fconvert(result, a->operation->data_type);
@@ -122,6 +136,33 @@ FGraphNode *fgradient_mul_g(FGraphNode *x, FGraphNode *y,
     result = freshape(result, new_shape, ao->dimensions);
     result = frepeat(result, repetitions);
     return result;
-  }
+  } else
+    return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
+                           dx->operation->dimensions);
+}
+FGraphNode *fgradient_div_g(FGraphNode *a, FGraphNode *b,
+                            const FGraphNode *dx) {
+  FOperation *ao = a->operation;
+  FOperation *bo = b->operation;
+  if (a == dx) {
+    // (a / b) / da = (a * 1 / b) / da
+    return fgradient_mul_g(
+        a,
+        fdiv_g(constant_tensor(1., bo->data_type, bo->shape, bo->dimensions),
+               b),
+        a);
+  } else if (b == dx) {
+    // (a / b) / db = (a * b^-1) / db = -a * b^-2
+    FGraphNode *result = fmul(fmul(a, -1), fpow(b, -2));
+    if (result->operation->data_type != dx->operation->data_type)
+      result = fconvert(result, dx->operation->data_type);
+    if (bo->dimensions < ao->dimensions) {
+      for (int dim = 0; dim < ao->dimensions - bo->dimensions; dim++)
+        result = freduce_sum(&result, dim);
+    }
+    return result;
+  } else
+    return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
+                           dx->operation->dimensions);
 }
 #endif
