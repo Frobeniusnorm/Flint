@@ -77,7 +77,7 @@ void flintCleanup() {
   flintCleanup_gpu();
 }
 void flintInit(int cpu, int gpu) {
-  flog(F_VERBOSE, "Initializing Flint");
+  flogging(F_VERBOSE, "Initializing Flint");
   use_cpu = cpu;
   use_gpu = gpu;
   if (cpu)
@@ -195,8 +195,9 @@ void fFreeGraph(FGraphNode *graph) {
 // function to add nodes to the graph i.e. operations
 static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
   if (!op) {
-    flog(F_WARNING, "You are adding a node with a NULL operation, this is not "
-                    "correct behaviour!");
+    flogging(F_WARNING,
+             "You are adding a node with a NULL operation, this is not "
+             "correct behaviour!");
   }
   FGraphNode *foo = new FGraphNode();
   foo->reference_counter = 0;
@@ -333,11 +334,12 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
   if (lower) {
     for (int i = 0; i < lower_dim; i++)
       if (src[i + (op->dimensions - lower_dim)] != lower[i])
-        flog(F_ERROR,
-             "incompatible shapes of operands: " +
-                 vectorString(std::vector<size_t>(src, src + op->dimensions)) +
-                 " and " +
-                 vectorString(std::vector<size_t>(lower, lower + lower_dim)));
+        flogging(
+            F_ERROR,
+            "incompatible shapes of operands: " +
+                vectorString(std::vector<size_t>(src, src + op->dimensions)) +
+                " and " +
+                vectorString(std::vector<size_t>(lower, lower + lower_dim)));
   }
   op->shape = (size_t *)malloc(sizeof(size_t) * op->dimensions);
   memcpy((void *)op->shape, src, sizeof(size_t) * op->dimensions);
@@ -600,6 +602,25 @@ FGraphNode *fmax_cl(FGraphNode *a, const long b) { return max(a, b); }
 FGraphNode *fmax_cf(FGraphNode *a, const float b) { return max(a, b); }
 FGraphNode *fmax_cd(FGraphNode *a, const double b) { return max(a, b); }
 
+static inline FGraphNode *log_impl(FGraphNode *a,
+                                   const FOperationType logtype) {
+  FOperation *op = new FOperation();
+  op->op_type = logtype;
+  op->dimensions = a->operation->dimensions;
+  op->shape = safe_mal<size_t>(op->dimensions * sizeof(size_t));
+  memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
+  op->data_type = a->operation->data_type;
+  if (op->data_type == F_INT32 || op->data_type == F_INT64)
+    op->data_type = F_FLOAT64;
+  return addNode(op, {a});
+}
+/** Takes the elementwise natural logarithm of a */
+FGraphNode *flog(FGraphNode *a) { return log_impl(a, FLOG); }
+/** Takes the elementwise logarithm of a to the basis of 2*/
+FGraphNode *flog2(FGraphNode *a) { return log_impl(a, FLOG2); }
+/** Takes the elementwise logarithm of a to the basis of 10*/
+FGraphNode *flog10(FGraphNode *a) { return log_impl(a, FLOG10); }
+
 FGraphNode *fflatten(FGraphNode *a) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
@@ -617,8 +638,8 @@ FGraphNode *fflatten(FGraphNode *a) {
 }
 FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
   if (dimension == 0)
-    flog(F_ERROR,
-         "Flattening the first dimension of a tensor is not possible!");
+    flogging(F_ERROR,
+             "Flattening the first dimension of a tensor is not possible!");
 
   FOperation *prev_op = a->operation;
   size_t new_prevdim_size =
@@ -654,7 +675,7 @@ FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
   FOperation *bo = y->operation;
 
   if (ao->dimensions < 2 || bo->dimensions < 2)
-    flog(
+    flogging(
         F_ERROR,
         "Dimensions of operands of matrix multiplications must be at least 2!");
   size_t l = ao->shape[ao->dimensions - 2];
@@ -662,11 +683,12 @@ FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
   size_t mb = bo->shape[bo->dimensions - 2];
   size_t n = bo->shape[bo->dimensions - 1];
   if (m != mb)
-    flog(F_ERROR,
-         "Incompatible Shapes for matrix multiplications: " +
-             vectorString(std::vector(ao->shape, ao->shape + ao->dimensions)) +
-             " and " +
-             vectorString(std::vector(bo->shape, bo->shape + bo->dimensions)));
+    flogging(
+        F_ERROR,
+        "Incompatible Shapes for matrix multiplications: " +
+            vectorString(std::vector(ao->shape, ao->shape + ao->dimensions)) +
+            " and " +
+            vectorString(std::vector(bo->shape, bo->shape + bo->dimensions)));
   FOperation *res = new FOperation();
   res->dimensions = std::max(ao->dimensions, bo->dimensions);
   res->shape = safe_mal<size_t>(res->dimensions);
@@ -794,15 +816,16 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
     else
       op->shape[i] = op->shape[i] / step_abs + 1;
     if (op->shape[i] > a->operation->shape[i])
-      flog(F_ERROR, "Invalid slice: dimension " + std::to_string(i) +
-                        " larger then target tensor! (" +
-                        std::to_string(op->shape[i]) + " > " +
-                        std::to_string(a->operation->shape[i]) + ")");
+      flogging(F_ERROR, "Invalid slice: dimension " + std::to_string(i) +
+                            " larger then target tensor! (" +
+                            std::to_string(op->shape[i]) + " > " +
+                            std::to_string(a->operation->shape[i]) + ")");
     if ((step[i] < 0 && (slice->end[i] > slice->start[i])) ||
         (step[i] > 0 && (slice->end[i] < slice->start[i]))) {
-      flog(F_ERROR, "invalid slice: combination of step sign and start and end "
-                    "in dimension " +
-                        std::to_string(i) + " will yield empty tensor!");
+      flogging(F_ERROR,
+               "invalid slice: combination of step sign and start and end "
+               "in dimension " +
+                   std::to_string(i) + " will yield empty tensor!");
     }
   }
   return eager_execution ? execute_eagerly(foo) : foo;

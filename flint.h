@@ -77,7 +77,7 @@ void fSetLoggingLevel(int);
 enum FLogType { F_DEBUG, F_VERBOSE, F_INFO, F_ERROR, F_WARNING };
 
 /** Logs a :var:`NULL` terminated string with the given logging level. */
-void flog(FLogType type, const char *msg);
+void flogging(FLogType type, const char *msg);
 // TODO the following three methods are neaded for gradient calculation (i
 // think)
 /** All graph nodes that represent actual operations are after this call
@@ -102,7 +102,9 @@ enum FOperationType {
   FMUL,
   FDIV,
   FPOW,
-  FNEG,
+  FLOG,
+  FLOG2,
+  FLOG10,
   FLATTEN,
   FMATMUL,
   FCONVERSION,
@@ -301,6 +303,13 @@ FGraphNode *fpow_cl(FGraphNode *a, const long b);
 FGraphNode *fpow_cf(FGraphNode *a, const float b);
 FGraphNode *fpow_cd(FGraphNode *a, const double b);
 
+/** Takes the elementwise natural logarithm of a */
+FGraphNode *flog(FGraphNode *a);
+/** Takes the elementwise logarithm of a to the basis of 2*/
+FGraphNode *flog2(FGraphNode *a);
+/** Takes the elementwise logarithm of a to the basis of 10*/
+FGraphNode *flog10(FGraphNode *a);
+
 /** Carries out matrix multiplication on the last two dimensions of the tensors.
 E.g. a matrix multiplication of two tensors with shapes (64, 32, 16) and (16,
 24) will yield a tensor with shape (64, 32, 24). Since for one entry of the
@@ -463,6 +472,8 @@ inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
   return fflatten_dimension(a, dimension);
 }
 #include <string>
-inline void flog(FLogType type, std::string msg) { flog(type, msg.c_str()); }
+inline void flogging(FLogType type, std::string msg) {
+  flogging(type, msg.c_str());
+}
 #endif
 #endif

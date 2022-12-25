@@ -23,8 +23,8 @@
 template <typename T> inline T *safe_mal(unsigned int count) {
   T *data = (T *)malloc(sizeof(T) * count);
   if (!data) {
-    flog(F_ERROR,
-         "Could not malloc '" + std::to_string(sizeof(T) * count) + "' bytes!");
+    flogging(F_ERROR, "Could not malloc '" + std::to_string(sizeof(T) * count) +
+                          "' bytes!");
   }
   return data;
 }

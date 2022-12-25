@@ -834,7 +834,7 @@ protected:
                  int i) {
     shape[i] = vec.size();
     if (vec.size() <= 0)
-      flog(F_ERROR, "No dimension of the Tensor may have size 0!");
+      flogging(F_ERROR, "No dimension of the Tensor may have size 0!");
     initShape(*vec.begin(), i + 1);
     total_size *= vec.size();
   }
@@ -847,7 +847,7 @@ protected:
   void initShape(const std::vector<std::vector<K>> &vec, int i) {
     shape[i] = vec.size();
     if (vec.size() <= 0)
-      flog(F_ERROR, "No dimension of the Tensor may have size 0!");
+      flogging(F_ERROR, "No dimension of the Tensor may have size 0!");
     initShape(*vec.begin(), i + 1);
     total_size *= vec.size();
   }

@@ -44,7 +44,8 @@ void flintInit_cpu() {
     int cores = std::thread::hardware_concurrency();
     if (!cores)
       cores = 8;
-    flog(F_INFO, "Using " + std::to_string(cores) + " threads for CPU-backend");
+    flogging(F_INFO,
+             "Using " + std::to_string(cores) + " threads for CPU-backend");
     threads = std::vector<std::thread *>(cores);
     for (int i = 0; i < cores; i++)
       threads[i] = new std::thread(threadRoutine);
@@ -244,6 +245,21 @@ static void executeNode(FGraphNode *node,
     for (size_t i = from; i < from + size; i++)
       result[i] = abs(((T *)pred.data)[i]);
   } break;
+  case FLOG: {
+    CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = log(((T *)pred.data)[i]);
+  } break;
+  case FLOG2: {
+    CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = log2(((T *)pred.data)[i]);
+  } break;
+  case FLOG10: {
+    CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = log10(((T *)pred.data)[i]);
+  } break;
   default: { // binary operations
     CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];
     size_t im1 = p1.num_entries, im2 = p2.num_entries;
@@ -342,7 +358,7 @@ static blocking_queue<
 
 void flintCleanup_cpu() {
   if (initialized) {
-    flog(F_DEBUG, "Sending kill signal and poisson pills");
+    flogging(F_DEBUG, "Sending kill signal and poisson pills");
     initialized = false;
     for (size_t i = 0; i < threads.size(); i++)
       thread_queue.push_front({nullptr, {}, nullptr, 0, 0, nullptr});
@@ -376,7 +392,7 @@ static void threadRoutine() {
     sem->release();
   }
 }
-#define PARALLEL_EXECUTION_SIZE 1000 // for debugging
+#define PARALLEL_EXECUTION_SIZE 3 // for debugging
 template <typename T>
 inline void chooseExecutionMethod(FGraphNode *node,
                                   std::vector<CPUResultData> pred_data,
@@ -400,10 +416,10 @@ inline void chooseExecutionMethod(FGraphNode *node,
   }
   std::chrono::duration<double, std::milli> elapsed =
       std::chrono::high_resolution_clock::now() - start;
-  flog(F_DEBUG, (size >= PARALLEL_EXECUTION_SIZE
-                     ? std::string("Parallel Execution on CPU ")
-                     : std::string("Sequential Execution on CPU ")) +
-                    "took " + std::to_string(elapsed.count()) + "ms");
+  flogging(F_DEBUG, (size >= PARALLEL_EXECUTION_SIZE
+                         ? std::string("Parallel Execution on CPU ")
+                         : std::string("Sequential Execution on CPU ")) +
+                        "took " + std::to_string(elapsed.count()) + "ms");
 }
 FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
   if (!initialized)

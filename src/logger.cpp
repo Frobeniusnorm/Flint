@@ -2,7 +2,7 @@
 #include <iostream>
 
 static int logging_level = 5;
-void flog(FLogType type, const char *msg) {
+void flogging(FLogType type, const char *msg) {
   using namespace std;
   switch (type) {
   case F_DEBUG:
