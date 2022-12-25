@@ -198,8 +198,7 @@ FGraphNode *fgradient_pow(FGraphNode *a, FGraphNode *b, const FGraphNode *dx) {
     return fmul(b, fpow(a, fsub(b, 1)));
   } else if (b == dx) {
     // b^x / dx = b^x * ln(x)
-    // TODO implement ln
-    return nullptr;
+    return fmul(fpow(a, b), flog(b));
   } else
     return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
                            dx->operation->dimensions);
