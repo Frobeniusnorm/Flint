@@ -29,8 +29,8 @@ static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
     return fconstant_d((double)val, shape, dimensions);
   }
 }
-FGraphNode *fgradient_add_g(const FGraphNode *x, const FGraphNode *y,
-                            const FGraphNode *dx) {
+FGraphNode *fgradient_add(const FGraphNode *x, const FGraphNode *y,
+                          const FGraphNode *dx) {
   // ao is the higher dimensional vector
   const FOperation *ao = x->operation;
   const FOperation *bo = y->operation;
@@ -61,8 +61,8 @@ FGraphNode *fgradient_add_g(const FGraphNode *x, const FGraphNode *y,
     return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
                            dx->operation->dimensions);
 }
-FGraphNode *fgradient_sub_g(const FGraphNode *x, const FGraphNode *y,
-                            const FGraphNode *dx) {
+FGraphNode *fgradient_sub(const FGraphNode *x, const FGraphNode *y,
+                          const FGraphNode *dx) {
   // ao is the higher dimensional vector
   const FOperation *ao = x->operation;
   const FOperation *bo = y->operation;
@@ -96,8 +96,7 @@ FGraphNode *fgradient_sub_g(const FGraphNode *x, const FGraphNode *y,
     return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
                            dx->operation->dimensions);
 }
-FGraphNode *fgradient_mul_g(FGraphNode *x, FGraphNode *y,
-                            const FGraphNode *dx) {
+FGraphNode *fgradient_mul(FGraphNode *x, FGraphNode *y, const FGraphNode *dx) {
   // ao is the higher dimensional vector
   FOperation *ao = x->operation;
   FOperation *bo = y->operation;
@@ -112,16 +111,27 @@ FGraphNode *fgradient_mul_g(FGraphNode *x, FGraphNode *y,
   }
   if (b == dx) {
     FGraphNode *result = a;
-    if (a->operation->data_type != b->operation->data_type)
-      result = fconvert(result, b->operation->data_type);
     // dx is the smaller one -> reduce_sum other one
     for (int dim = 0; dim < ao->dimensions - bo->dimensions; dim++)
       result = freduce_sum(&result, dim);
     return result;
   } else if (a == dx) {
+    // const is special case since it technically has an incompatible shape
+    if (bo->op_type == FCONST) {
+      FConst *co = (FConst *)bo->additional_data;
+      switch (bo->data_type) {
+      case F_INT32:
+        return fconstant_i(*((int *)co->value), ao->shape, ao->dimensions);
+      case F_INT64:
+        return fconstant_l(*((long *)co->value), ao->shape, ao->dimensions);
+      case F_FLOAT32:
+        return fconstant_f(*((float *)co->value), ao->shape, ao->dimensions);
+      case F_FLOAT64:
+        return fconstant_d(*((double *)co->value), ao->shape, ao->dimensions);
+      }
+    }
+    // if not const
     FGraphNode *result = b;
-    if (a->operation->data_type != b->operation->data_type)
-      result = fconvert(result, a->operation->data_type);
     // dx is the bigger one -> expand other one
     size_t new_shape[ao->dimensions];
     int repetitions[ao->dimensions];
@@ -140,17 +150,34 @@ FGraphNode *fgradient_mul_g(FGraphNode *x, FGraphNode *y,
     return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
                            dx->operation->dimensions);
 }
-FGraphNode *fgradient_div_g(FGraphNode *a, FGraphNode *b,
-                            const FGraphNode *dx) {
+FGraphNode *fgradient_div(FGraphNode *a, FGraphNode *b, const FGraphNode *dx) {
   FOperation *ao = a->operation;
   FOperation *bo = b->operation;
   if (a == dx) {
+    FGraphNode *opb;
+    if (bo->op_type == FCONST) {
+      FConst *bop = (FConst *)bo->additional_data;
+      double div_val;
+      switch (bo->data_type) {
+      case F_INT32:
+        div_val = 1.0 / *((int *)bop->value);
+        break;
+      case F_INT64:
+        div_val = 1.0 / *((long *)bop->value);
+        break;
+      case F_FLOAT32:
+        div_val = 1.0 / *((float *)bop->value);
+        break;
+      case F_FLOAT64:
+        div_val = 1.0 / *((double *)bop->value);
+        break;
+      }
+      opb = constant_tensor(div_val, F_FLOAT64, ao->shape, ao->dimensions);
+    } else
+      opb = fdiv_g(
+          constant_tensor(1., bo->data_type, bo->shape, bo->dimensions), b);
     // (a / b) / da = (a * 1 / b) / da
-    return fgradient_mul_g(
-        a,
-        fdiv_g(constant_tensor(1., bo->data_type, bo->shape, bo->dimensions),
-               b),
-        a);
+    return fgradient_mul(a, opb, a);
   } else if (b == dx) {
     // (a / b) / db = (a * b^-1) / db = -a * b^-2
     FGraphNode *result = fmul(fmul(a, -1), fpow(b, -2));

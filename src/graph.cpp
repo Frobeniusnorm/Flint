@@ -424,6 +424,28 @@ static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, const T b) {
     cop->data_type = F_FLOAT64;
   return addNode(op, {a, addNode(cop, {})});
 }
+template <typename T>
+static FGraphNode *addConstWithNode(FOperation *op, const T b, FGraphNode *a) {
+  FConst *cons = new FConst();
+  T *cons_val = (T *)malloc(sizeof(T));
+  *cons_val = b;
+  cons->value = (void *)cons_val;
+  FOperation *cop = new FOperation();
+  cop->op_type = FCONST;
+  cop->dimensions = 1;
+  cop->shape = safe_mal<size_t>(1);
+  cop->shape[0] = 1;
+  cop->additional_data = (void *)cons;
+  if (typeid(T) == typeid(int))
+    cop->data_type = F_INT32;
+  else if (typeid(T) == typeid(long))
+    cop->data_type = F_INT64;
+  else if (typeid(T) == typeid(float))
+    cop->data_type = F_FLOAT32;
+  else if (typeid(T) == typeid(double))
+    cop->data_type = F_FLOAT64;
+  return addNode(op, {addNode(cop, {}), a});
+}
 // creates tensor consisting of a single value
 template <typename T>
 static inline FGraphNode *constant(const T value, const size_t *shape,
@@ -485,10 +507,24 @@ template <typename T> static inline FGraphNode *sub(FGraphNode *a, const T b) {
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
+template <typename T> static inline FGraphNode *sub(const T b, FGraphNode *a) {
+  FOperation *op = new FOperation();
+  op->op_type = FSUB;
+  op->additional_data = nullptr;
+  initShape_keep(op, a->operation, nullptr);
+  return addConstWithNode(op, b, a);
+}
 FGraphNode *fsub_cd(FGraphNode *a, const double b) { return sub<double>(a, b); }
 FGraphNode *fsub_cf(FGraphNode *a, const float b) { return sub<float>(a, b); }
 FGraphNode *fsub_ci(FGraphNode *a, const int b) { return sub<int>(a, b); }
 FGraphNode *fsub_cl(FGraphNode *a, const long b) { return sub<long>(a, b); }
+
+FGraphNode *fsub_icd(FGraphNode *a, const double b) {
+  return sub<double>(a, b);
+}
+FGraphNode *fsub_icf(FGraphNode *a, const float b) { return sub<float>(a, b); }
+FGraphNode *fsub_ici(FGraphNode *a, const int b) { return sub<int>(a, b); }
+FGraphNode *fsub_icl(FGraphNode *a, const long b) { return sub<long>(a, b); }
 // divides each entry in a by the constant value
 template <typename T> static inline FGraphNode *div(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
@@ -497,10 +533,24 @@ template <typename T> static inline FGraphNode *div(FGraphNode *a, const T b) {
   initShape_keep(op, a->operation, nullptr);
   return addNodeWithConst(op, a, b);
 }
+template <typename T> static inline FGraphNode *div(const T b, FGraphNode *a) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = FDIV;
+  initShape_keep(op, a->operation, nullptr);
+  return addConstWithNode(op, b, a);
+}
 FGraphNode *fdiv_cd(FGraphNode *a, const double b) { return div<double>(a, b); }
 FGraphNode *fdiv_cf(FGraphNode *a, const float b) { return div<float>(a, b); }
 FGraphNode *fdiv_ci(FGraphNode *a, const int b) { return div<int>(a, b); }
 FGraphNode *fdiv_cl(FGraphNode *a, const long b) { return div<long>(a, b); }
+
+FGraphNode *fdiv_icd(FGraphNode *a, const double b) {
+  return div<double>(a, b);
+}
+FGraphNode *fdiv_icf(FGraphNode *a, const float b) { return div<float>(a, b); }
+FGraphNode *fdiv_ici(FGraphNode *a, const int b) { return div<int>(a, b); }
+FGraphNode *fdiv_icl(FGraphNode *a, const long b) { return div<long>(a, b); }
 // multiplicates the constant value with each entry in a
 template <typename T> static inline FGraphNode *mul(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();

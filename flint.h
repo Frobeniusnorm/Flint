@@ -253,24 +253,38 @@ FGraphNode *fsub_g(FGraphNode *a, FGraphNode *b);
 FGraphNode *fdiv_g(FGraphNode *a, FGraphNode *b);
 FGraphNode *fmul_g(FGraphNode *a, FGraphNode *b);
 FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b);
-
+FGraphNode *fgradient_add(const FGraphNode *a, const FGraphNode *b,
+                          const FGraphNode *dx);
+FGraphNode *fgradient_sub(const FGraphNode *a, const FGraphNode *b,
+                          const FGraphNode *dx);
+FGraphNode *fgradient_mul(FGraphNode *a, FGraphNode *b, const FGraphNode *dx);
+FGraphNode *fgradient_div(FGraphNode *a, FGraphNode *b, const FGraphNode *dx);
 /** Elementwise addition of a and b :math:`a+b`. */
 FGraphNode *fadd_ci(FGraphNode *a, const int b);
 FGraphNode *fadd_cl(FGraphNode *a, const long b);
 FGraphNode *fadd_cf(FGraphNode *a, const float b);
 FGraphNode *fadd_cd(FGraphNode *a, const double b);
-
 /** Elementwise subtraction of a and b :math:`a-b`. */
 FGraphNode *fsub_ci(FGraphNode *a, const int b);
 FGraphNode *fsub_cl(FGraphNode *a, const long b);
 FGraphNode *fsub_cf(FGraphNode *a, const float b);
 FGraphNode *fsub_cd(FGraphNode *a, const double b);
 
+FGraphNode *fsub_ici(const int a, FGraphNode *b);
+FGraphNode *fsub_icl(const long a, FGraphNode *b);
+FGraphNode *fsub_icf(const float a, FGraphNode *b);
+FGraphNode *fsub_icd(const double a, FGraphNode *b);
+
 /** Elementwise division of a and b :math:`\frac{a}{b}`. */
 FGraphNode *fdiv_ci(FGraphNode *a, const int b);
 FGraphNode *fdiv_cl(FGraphNode *a, const long b);
 FGraphNode *fdiv_cf(FGraphNode *a, const float b);
 FGraphNode *fdiv_cd(FGraphNode *a, const double b);
+
+FGraphNode *fdiv_ici(const int a, FGraphNode *b);
+FGraphNode *fdiv_icl(const long a, FGraphNode *b);
+FGraphNode *fdiv_icf(const float a, FGraphNode *b);
+FGraphNode *fdiv_icd(const double a, FGraphNode *b);
 
 /** Elementwise multiplication of a and b :math:`a\cdot b`. */
 FGraphNode *fmul_ci(FGraphNode *a, const int b);
@@ -284,12 +298,6 @@ FGraphNode *fpow_cl(FGraphNode *a, const long b);
 FGraphNode *fpow_cf(FGraphNode *a, const float b);
 FGraphNode *fpow_cd(FGraphNode *a, const double b);
 
-FGraphNode *fgradient_add_g(const FGraphNode *a, const FGraphNode *b,
-                            const FGraphNode *dx);
-FGraphNode *fgradient_sub_g(const FGraphNode *a, const FGraphNode *b,
-                            const FGraphNode *dx);
-FGraphNode *fgradient_mul_g(FGraphNode *a, FGraphNode *b, const FGraphNode *dx);
-FGraphNode *fgradient_div_g(FGraphNode *a, FGraphNode *b, const FGraphNode *dx);
 /** Carries out matrix multiplication on the last two dimensions of the tensors.
 E.g. a matrix multiplication of two tensors with shapes (64, 32, 16) and (16,
 24) will yield a tensor with shape (64, 32, 24). Since for one entry of the
@@ -422,6 +430,13 @@ inline FGraphNode *fdiv(FGraphNode *a, const int b) { return fdiv_ci(a, b); }
 inline FGraphNode *fdiv(FGraphNode *a, const long b) { return fdiv_cl(a, b); }
 inline FGraphNode *fdiv(FGraphNode *a, const float b) { return fdiv_cf(a, b); }
 inline FGraphNode *fdiv(FGraphNode *a, const double b) { return fdiv_cd(a, b); }
+
+inline FGraphNode *fdiv(const int a, FGraphNode *b) { return fdiv_ici(a, b); }
+inline FGraphNode *fdiv(const long a, FGraphNode *b) { return fdiv_icl(a, b); }
+inline FGraphNode *fdiv(const float a, FGraphNode *b) { return fdiv_icf(a, b); }
+inline FGraphNode *fdiv(const double a, FGraphNode *b) {
+  return fdiv_icd(a, b);
+}
 
 inline FGraphNode *fpow(FGraphNode *a, FGraphNode *b) { return fpow_g(a, b); }
 inline FGraphNode *fpow(FGraphNode *a, const int b) { return fpow_ci(a, b); }
