@@ -192,4 +192,16 @@ FGraphNode *fgradient_div(FGraphNode *a, FGraphNode *b, const FGraphNode *dx) {
     return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
                            dx->operation->dimensions);
 }
+FGraphNode *fgradient_pow(FGraphNode *a, FGraphNode *b, const FGraphNode *dx) {
+  if (a == dx) {
+    // x^b / dx = b*x^(b-1)
+    return fmul(b, fpow(a, fsub(b, 1)));
+  } else if (b == dx) {
+    // b^x / dx = b^x * ln(x)
+    // TODO implement ln
+    return nullptr;
+  } else
+    return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
+                           dx->operation->dimensions);
+}
 #endif

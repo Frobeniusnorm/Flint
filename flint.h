@@ -259,11 +259,14 @@ FGraphNode *fgradient_sub(const FGraphNode *a, const FGraphNode *b,
                           const FGraphNode *dx);
 FGraphNode *fgradient_mul(FGraphNode *a, FGraphNode *b, const FGraphNode *dx);
 FGraphNode *fgradient_div(FGraphNode *a, FGraphNode *b, const FGraphNode *dx);
+FGraphNode *fgradient_pow(FGraphNode *a, FGraphNode *b, const FGraphNode *dx);
+
 /** Elementwise addition of a and b :math:`a+b`. */
 FGraphNode *fadd_ci(FGraphNode *a, const int b);
 FGraphNode *fadd_cl(FGraphNode *a, const long b);
 FGraphNode *fadd_cf(FGraphNode *a, const float b);
 FGraphNode *fadd_cd(FGraphNode *a, const double b);
+
 /** Elementwise subtraction of a and b :math:`a-b`. */
 FGraphNode *fsub_ci(FGraphNode *a, const int b);
 FGraphNode *fsub_cl(FGraphNode *a, const long b);
