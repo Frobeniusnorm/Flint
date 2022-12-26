@@ -521,12 +521,12 @@ FGraphNode *fsub_cf(FGraphNode *a, const float b) { return sub<float>(a, b); }
 FGraphNode *fsub_ci(FGraphNode *a, const int b) { return sub<int>(a, b); }
 FGraphNode *fsub_cl(FGraphNode *a, const long b) { return sub<long>(a, b); }
 
-FGraphNode *fsub_icd(FGraphNode *a, const double b) {
-  return sub<double>(a, b);
+FGraphNode *fsub_icd(const double b, FGraphNode *a) {
+  return sub<double>(b, a);
 }
-FGraphNode *fsub_icf(FGraphNode *a, const float b) { return sub<float>(a, b); }
-FGraphNode *fsub_ici(FGraphNode *a, const int b) { return sub<int>(a, b); }
-FGraphNode *fsub_icl(FGraphNode *a, const long b) { return sub<long>(a, b); }
+FGraphNode *fsub_icf(const float b, FGraphNode *a) { return sub<float>(b, a); }
+FGraphNode *fsub_ici(const int b, FGraphNode *a) { return sub<int>(b, a); }
+FGraphNode *fsub_icl(const long b, FGraphNode *a) { return sub<long>(b, a); }
 // divides each entry in a by the constant value
 template <typename T> static inline FGraphNode *div(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
@@ -547,12 +547,12 @@ FGraphNode *fdiv_cf(FGraphNode *a, const float b) { return div<float>(a, b); }
 FGraphNode *fdiv_ci(FGraphNode *a, const int b) { return div<int>(a, b); }
 FGraphNode *fdiv_cl(FGraphNode *a, const long b) { return div<long>(a, b); }
 
-FGraphNode *fdiv_icd(FGraphNode *a, const double b) {
-  return div<double>(a, b);
+FGraphNode *fdiv_icd(const double b, FGraphNode *a) {
+  return div<double>(b, a);
 }
-FGraphNode *fdiv_icf(FGraphNode *a, const float b) { return div<float>(a, b); }
-FGraphNode *fdiv_ici(FGraphNode *a, const int b) { return div<int>(a, b); }
-FGraphNode *fdiv_icl(FGraphNode *a, const long b) { return div<long>(a, b); }
+FGraphNode *fdiv_icf(const float b, FGraphNode *a) { return div<float>(b, a); }
+FGraphNode *fdiv_ici(const int b, FGraphNode *a) { return div<int>(b, a); }
+FGraphNode *fdiv_icl(const long b, FGraphNode *a) { return div<long>(b, a); }
 // multiplicates the constant value with each entry in a
 template <typename T> static inline FGraphNode *mul(FGraphNode *a, const T b) {
   FOperation *op = new FOperation();
