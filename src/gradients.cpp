@@ -1,8 +1,10 @@
 #ifndef GRADIENTS_CPP
 #define GRADIENTS_CPP
 #include "../flint.h"
+#include <cmath>
 #include <cstring>
 #include <iostream>
+#include <math.h>
 #include <ostream>
 // converts c++ type to flint type
 template <typename T> static constexpr FType toFlintType() {
@@ -200,6 +202,27 @@ FGraphNode *fgradient_pow(FGraphNode *a, FGraphNode *b, const FGraphNode *dx) {
     // b^x / dx = b^x * ln(x)
     return fmul(fpow(a, b), flog(b));
   } else
+    return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
+                           dx->operation->dimensions);
+}
+FGraphNode *fgradient_log(FGraphNode *a, FGraphNode *dx) {
+  if (a == dx)
+    return fdiv(1.0, a);
+  else
+    return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
+                           dx->operation->dimensions);
+}
+FGraphNode *fgradient_log10(FGraphNode *a, FGraphNode *dx) {
+  if (a == dx)
+    return fdiv(1.0, fmul(a, log(10.0)));
+  else
+    return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
+                           dx->operation->dimensions);
+}
+FGraphNode *fgradient_log2(FGraphNode *a, FGraphNode *dx) {
+  if (a == dx)
+    return fdiv(1.0, fmul(a, log(2.0)));
+  else
     return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
                            dx->operation->dimensions);
 }

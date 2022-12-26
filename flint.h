@@ -310,6 +310,10 @@ FGraphNode *flog2(FGraphNode *a);
 /** Takes the elementwise logarithm of a to the basis of 10*/
 FGraphNode *flog10(FGraphNode *a);
 
+FGraphNode *fgradient_log(FGraphNode *a, FGraphNode *dx);
+FGraphNode *fgradient_log2(FGraphNode *a, FGraphNode *dx);
+FGraphNode *fgradient_log10(FGraphNode *a, FGraphNode *dx);
+
 /** Carries out matrix multiplication on the last two dimensions of the tensors.
 E.g. a matrix multiplication of two tensors with shapes (64, 32, 16) and (16,
 24) will yield a tensor with shape (64, 32, 24). Since for one entry of the
