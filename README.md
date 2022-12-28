@@ -18,3 +18,8 @@ The Graph (i.e. all yet to be calculated indirect parent nodes to one needed lea
 ## Usage ##
 There is no first official version yet. However if you want to build it you need GCC (g++), Make and a installed OpenCL library. Then just run make and test if the implementation works on your machine with the test executable build in the test directory.
 To build the documentation you need Sphinx.
+
+## Dependencies ##
+- OpenCL
+- OpenCL C++ headers
+- Clang C++ Compiler with C++20 feature implementations like e.g. semaphores
