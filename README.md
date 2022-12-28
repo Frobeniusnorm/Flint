@@ -16,8 +16,7 @@ Just as other Tensor libraries, Flint collects operations in a graph and execute
 The Graph (i.e. all yet to be calculated indirect parent nodes to one needed leaf node) is executed when the user of the library requests the resulting data or another operation depends on the full result so that combining those operations becomes impossible (i.e. operations like matrix multiplication or reducing). The Framework allows you to choose between CPU or GPU execution, or you can let the framework decide on certain heuristics which backend to use.
 
 ## Usage ##
-There is no first official version yet. However if you want to build it you need GCC (g++), Make and a installed OpenCL library. Then just run make and test if the implementation works on your machine with the test executable build in the test directory.
-To build the documentation you need Sphinx.
+There is no first official version yet. However if you want to build it you need the Clang compiler, Make and a installed OpenCL library. Then just run make and test if the implementation works on your machine with the test executable build in the test directory.
 
 ## Dependencies ##
 - OpenCL
