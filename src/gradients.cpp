@@ -1,3 +1,17 @@
+/* Copyright 2022 David Schwarzbeck
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License. */
+
 #ifndef GRADIENTS_CPP
 #define GRADIENTS_CPP
 #include "../flint.h"
@@ -225,5 +239,15 @@ FGraphNode *fgradient_log2(FGraphNode *a, FGraphNode *dx) {
   else
     return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
                            dx->operation->dimensions);
+}
+FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
+  // a = x:
+  //  same shape -> 1-tensor matmul with b
+  //  dim(b) > dim(a) -> reduce_sum(transpose(matmul(b, 1-tensor)), axis = -1)
+  //  dim(a) > dim(b) -> repeat(transpose(matmul(b,1-tensor)), axis=0)
+  // b = x:
+  //  same shape -> a matmul with 1-tensor
+  //  dim(b) > dim(a) -> repeat(transpose(matmul(1-tensor, a)), axis=0)
+  //  dim(a) > dim(b) -> reduce_sum(transpose(matmul(1-tensor, a)), axis = -1)
 }
 #endif

@@ -322,7 +322,7 @@ be executed first. Therefor the method will implicitly (or eagerly) execute the
 two parameter nodes if their data is not allready present, the given pointers
 will be overwritten with the results. */
 FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b);
-
+FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx);
 /** The first method flattens the complete tensor to a tensor with one
 dimension, the second method flattens the tensor with :math:`n` dimensions along
 :c:var:`dimension`, resulting in a tensor with :math:`n-1` dimensions.
