@@ -6,9 +6,6 @@
 Flint is a Tensor math framework based on OpenCL, allowing you to write Tensor operations, which are 
 semi-lazily computed by the library.
 
-## Documentation ##
-You can build the sphinx documentation yourself or access the prebuilt document here: https://frobeniusnorm.github.io/Flint/
-
 ## Motivation ##
 This library aims to become a suitable replacement for existing CUDA based tensor execution frameworks by using OpenCL instead.
 This allows Flint to be executed on a larger amount of devices. The main target language will be C++, allowing users of Flint to mix developement and production code, with no need to rewrite everything for a faster language after e.g. training a machine learning model in python.
