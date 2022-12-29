@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <initializer_list>
 #include <iostream>
 #include <ostream>
 #include <sys/types.h>
@@ -813,6 +814,19 @@ template <typename T, unsigned int n> struct Tensor {
     std::array<size_t, n> new_shape;
     for (size_t i = 0; i < n; i++)
       new_shape[i] = nn->operation->shape[i];
+    return Tensor<T, n>(nn, new_shape);
+  }
+  Tensor<T, n> transpose(std::initializer_list<int> transposition = {}) {
+    std::array<int, n> acc_trans;
+    int i = 0;
+    for (auto it = transposition.begin(); it < transposition.end(); it++)
+      acc_trans[i++] = *it;
+    while (i < n)
+      acc_trans[i++] = n - i - 1;
+    std::array<size_t, n> new_shape;
+    for (int j = 0; j < n; j++)
+      new_shape[j] = shape[acc_trans[j]];
+    FGraphNode *nn = ftranspose(node, acc_trans.data());
     return Tensor<T, n>(nn, new_shape);
   }
   FGraphNode *get_graph_node() const { return node; }

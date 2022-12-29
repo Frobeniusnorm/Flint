@@ -480,6 +480,19 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(3, t2[1][5]);
     CHECK_EQ(0, t2[2][2]);
   }
+  TEST_CASE("TRANSPOSE") {
+    Tensor<int, 2> t1({{0, 1}, {2, 3}});
+    t1 = t1.transpose();
+    CHECK_EQ(0, t1[0][0]);
+    CHECK_EQ(2, t1[0][1]);
+    CHECK_EQ(1, t1[1][0]);
+    CHECK_EQ(3, t1[1][1]);
+    Tensor<double, 3> t2{{{1, 7}, {8, 8}, {2, 1}}, {{9, 3}, {2, 1}, {8, 9}}};
+    t2 = t2.transpose({2, 1, 0});
+    CHECK_EQ(9, t2[0][0][1]);
+    CHECK_EQ(3, t2[1][0][1]);
+    CHECK_EQ(8, t2[1][1][0]);
+  }
   TEST_CASE("REDUCE OPERATIONS") {
     Tensor<double, 3> t1{{{1, 7}, {8, 8}, {2, 1}}, {{9, 3}, {2, 1}, {8, 9}}};
     Tensor<double, 2> t2 = t1.reduce_sum(0);

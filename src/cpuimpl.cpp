@@ -198,6 +198,7 @@ static void executeNode(FGraphNode *node,
       int src_index = 0;
       for (int dim = 0; dim < op->dimensions; dim++) {
         int curr_idx = index / acc_sizes_d[dim];
+        index %= acc_sizes_d[dim];
         src_index += curr_idx * acc_sizes_s[transposition[dim]];
       }
       result[i] = ((T *)pred.data)[src_index];
@@ -418,7 +419,7 @@ static void threadRoutine() {
     sem->release();
   }
 }
-#define PARALLEL_EXECUTION_SIZE 3 // for debugging
+#define PARALLEL_EXECUTION_SIZE 100 // for debugging
 template <typename T>
 inline void chooseExecutionMethod(FGraphNode *node,
                                   std::vector<CPUResultData> pred_data,

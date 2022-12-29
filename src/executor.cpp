@@ -450,7 +450,7 @@ generateCode(FGraphNode *node,
       // reproject
       index_defs += "{\nint working_index = index;\nindex = 0;\n";
       for (int dim = 0; dim < op->dimensions; dim++) {
-        index_defs += "index += ((working_index /" +
+        index_defs += "index += (working_index /" +
                       to_string(acc_sizes_d[dim]) + ") * " +
                       to_string(acc_sizes_s[transposition[dim]]) + ";\n";
         index_defs += "working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
