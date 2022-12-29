@@ -167,8 +167,8 @@ FGraphNode *fgradient_mul(FGraphNode *x, FGraphNode *y, const FGraphNode *dx) {
                            dx->operation->dimensions);
 }
 FGraphNode *fgradient_div(FGraphNode *a, FGraphNode *b, const FGraphNode *dx) {
-  FOperation *ao = a->operation;
-  FOperation *bo = b->operation;
+  const FOperation *ao = a->operation;
+  const FOperation *bo = b->operation;
   if (a == dx) {
     FGraphNode *opb;
     if (bo->op_type == FCONST) {
@@ -241,13 +241,25 @@ FGraphNode *fgradient_log2(FGraphNode *a, FGraphNode *dx) {
                            dx->operation->dimensions);
 }
 FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
-  // a = x:
-  //  same shape -> 1-tensor matmul with b
-  //  dim(b) > dim(a) -> reduce_sum(transpose(matmul(b, 1-tensor)), axis = -1)
-  //  dim(a) > dim(b) -> repeat(transpose(matmul(b,1-tensor)), axis=0)
-  // b = x:
-  //  same shape -> a matmul with 1-tensor
-  //  dim(b) > dim(a) -> repeat(transpose(matmul(1-tensor, a)), axis=0)
-  //  dim(a) > dim(b) -> reduce_sum(transpose(matmul(1-tensor, a)), axis = -1)
+  if (a == dx) {
+    const FOperation *ao = a->operation;
+    const FOperation *bo = b->operation;
+    if (ao->dimensions == bo->dimensions) {
+      FGraphNode *onetensor =
+          constant_tensor(1.0, ao->data_type, ao->shape, ao->dimensions);
+      return fmatmul(&onetensor, &b);
+    } else if (bo->dimensions > ao->dimensions) {
+      //  dim(b) > dim(a) -> reduce_sum(transpose(matmul(b, 1-tensor)), axis =
+      //  -1)
+    } else {
+      //  dim(a) > dim(b) -> repeat(transpose(matmul(b,1-tensor)), axis=0)
+    }
+  } else if (b == dx) {
+    //  same shape -> a matmul with 1-tensor
+    //  dim(b) > dim(a) -> repeat(transpose(matmul(1-tensor, a)), axis=0)
+    //  dim(a) > dim(b) -> reduce_sum(transpose(matmul(1-tensor, a)), axis = -1)
+  } else
+    return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
+                           dx->operation->dimensions);
 }
 #endif

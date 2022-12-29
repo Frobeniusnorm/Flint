@@ -180,7 +180,7 @@ void fFreeGraph(FGraphNode *graph) {
           free(s->step);
           delete s;
         } break;
-        case FREPEAT:
+        case FTRANSPOSE:
         case FREDUCE_SUM:
         case FREDUCE_MUL:
           free(gn->operation->additional_data);
@@ -850,8 +850,25 @@ FGraphNode *frepeat(FGraphNode *a, int *repetitions) {
   for (int dim = 0; dim < op->dimensions; dim++) {
     op->shape[dim] = a->operation->shape[dim] * (repetitions[dim] + 1);
   }
+  return addNode(op, {a});
+}
+FGraphNode *ftranspose(FGraphNode *a, int *transpositions) {
+  FOperation *op = new FOperation();
+  op->op_type = FTRANSPOSE;
+  op->data_type = a->operation->data_type;
+  op->dimensions = a->operation->dimensions;
+  op->shape = safe_mal<size_t>(op->dimensions);
+  for (int i = 0; i < op->dimensions; i++) {
+    op->shape[i] = a->operation->shape[transpositions[i]];
+    // check that transpositions is reflexive
+    if (transpositions[transpositions[i]] != i)
+      flogging(
+          F_ERROR,
+          "Transpositions Array must be reflexive i.e for an dimension i let j "
+          "be transpositions[i]. Then i = transpositions[j] must hold.");
+  }
   op->additional_data = safe_mal<int>(op->dimensions);
-  memcpy(op->additional_data, repetitions,
+  memcpy(op->additional_data, transpositions,
          sizeof(int) * a->operation->dimensions);
   return addNode(op, {a});
 }

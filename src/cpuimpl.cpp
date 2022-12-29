@@ -177,6 +177,32 @@ static void executeNode(FGraphNode *node,
       result[i] = ((T *)pred.data)[src_index];
     }
   } break;
+  case FTRANSPOSE: {
+    const FOperation *op = node->operation;
+    const int *transposition = (int *)op->additional_data;
+    CPUResultData pred = predecessor_data[0];
+    for (int i = from; i < from + size; i++) {
+      // calculate number of elements per dimension entry for destination and
+      // source
+      std::vector<size_t> acc_sizes_d(op->dimensions);
+      std::vector<size_t> acc_sizes_s(op->dimensions);
+      acc_sizes_d[op->dimensions - 1] = 1;
+      acc_sizes_s[op->dimensions - 1] = 1;
+      for (int dim = op->dimensions - 2; dim >= 0; dim--) {
+        acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
+        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
+      }
+      // to get the index in the source array we first calculate the indices and
+      // reproject
+      int index = i;
+      int src_index = 0;
+      for (int dim = 0; dim < op->dimensions; dim++) {
+        int curr_idx = index / acc_sizes_d[dim];
+        src_index += curr_idx * acc_sizes_s[transposition[dim]];
+      }
+      result[i] = ((T *)pred.data)[src_index];
+    }
+  } break;
   case FREDUCE_SUM:
   case FREDUCE_MUL: {
     CPUResultData pred = predecessor_data[0];

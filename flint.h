@@ -116,6 +116,7 @@ enum FOperationType {
   FSLICE,
   FABS,
   FREPEAT,
+  FTRANSPOSE,
   FNUM_OPERATION_TYPES
 };
 /** Describes one operation. An operation always has a shape, described by
@@ -403,6 +404,15 @@ FGraphNode *fabs_g(FGraphNode *a);
  * [2,3,2,3,2,3], [0,1,0,1,0,1], [2,3,2,3,2,3]]
  */
 FGraphNode *frepeat(FGraphNode *a, int *repititions);
+/** Transposes this tensor along multiple dimensions
+ *
+ * @param a the node which should be transposed
+ * @param transpositions an array with the same number of entries as the tensor
+ * has dimensions, which gives the perumtation of dimensions. The tensor will
+ * have a resulting shape in which the size in dimension i corresponds to the
+ * former size in dimension transpositions[i].
+ */
+FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
 #ifdef __cplusplus
 }
 // no c++ bindings, but function overloading for c++ header

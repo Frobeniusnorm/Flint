@@ -402,7 +402,7 @@ generateCode(FGraphNode *node,
       FOperation *pred = node->predecessors[0]->operation;
       unsigned int old_idx = num_indices++;
       index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
-      // TODO add to index_defs a redefinition of index, so that we remap to src
+      // add to index_defs a redefinition of index, so that we remap to src
       // data
       // calculate number of elements per dimension entry for destination and
       // source
@@ -428,6 +428,37 @@ generateCode(FGraphNode *node,
       code = "index = old_index" + to_string(old_idx) + ";\n" + code;
       variable_index--; // because we dont generate a variable
     } break;
+    case FTRANSPOSE: {
+      const FOperation *op = node->operation;
+      const int *transposition = (int *)op->additional_data;
+      FOperation *pred = node->predecessors[0]->operation;
+      unsigned int old_idx = num_indices++;
+      index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
+      // add to index_defs a redefinition of index, so that we remap to src
+      // data
+      // calculate number of elements per dimension entry for destination and
+      // source
+      std::vector<size_t> acc_sizes_d(op->dimensions);
+      std::vector<size_t> acc_sizes_s(op->dimensions);
+      acc_sizes_d[op->dimensions - 1] = 1;
+      acc_sizes_s[op->dimensions - 1] = 1;
+      for (int dim = op->dimensions - 2; dim >= 0; dim--) {
+        acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
+        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred->shape[dim + 1];
+      }
+      // to get the index in the source array we first calculate the indices and
+      // reproject
+      index_defs += "{\nint working_index = index;\nindex = 0;\n";
+      for (int dim = 0; dim < op->dimensions; dim++) {
+        index_defs += "index += ((working_index /" +
+                      to_string(acc_sizes_d[dim]) + ") * " +
+                      to_string(acc_sizes_s[transposition[dim]]) + ";\n";
+        index_defs += "working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
+      }
+      index_defs += "}\n";
+      code = "index = old_index" + to_string(old_idx) + ";\n" + code;
+      variable_index--; // because we dont generate a variable
+    } break;
     default:
       break;
     }
@@ -447,7 +478,7 @@ static std::unordered_map<std::string, std::pair<cl_program, cl_kernel>>
     kernel_cache;
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   // TODO
-  return node;
+  return fExecuteGraph_gpu(node);
 }
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (!initialized) {
