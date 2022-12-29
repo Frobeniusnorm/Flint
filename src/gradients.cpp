@@ -20,6 +20,7 @@
 #include <iostream>
 #include <math.h>
 #include <ostream>
+#include <vector>
 // converts c++ type to flint type
 template <typename T> static constexpr FType toFlintType() {
   if (std::is_same<T, int>())
@@ -249,8 +250,19 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
           constant_tensor(1.0, ao->data_type, ao->shape, ao->dimensions);
       return fmatmul(&onetensor, &b);
     } else if (bo->dimensions > ao->dimensions) {
-      //  dim(b) > dim(a) -> reduce_sum(transpose(matmul(b, 1-tensor)), axis =
-      //  -1)
+      FGraphNode *onetensor =
+          constant_tensor(1.0, ao->data_type, ao->shape, ao->dimensions);
+      std::vector<int> transpositions(bo->dimensions);
+      int start = bo->dimensions - ao->dimensions;
+      for (int i = 0; i < start; i++)
+        transpositions[i] = i;
+      for (int i = 0; i < bo->dimensions; i++)
+        transpositions[start + i] = start + bo->dimensions - 1 - i;
+      FGraphNode *result =
+          ftranspose(fmatmul(&b, &onetensor), transpositions.data());
+      for (int dim = 0; dim < ao->dimensions - bo->dimensions; dim++)
+        result = freduce_sum(&result, dim);
+      return result;
     } else {
       //  dim(a) > dim(b) -> repeat(transpose(matmul(b,1-tensor)), axis=0)
     }
