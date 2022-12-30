@@ -9,7 +9,7 @@
 ./build/
 .clangd/
 experiment/
-
+docs/html/
 # Precompiled Headers
 *.gch
 *.pch
@@ -30,7 +30,4 @@ test/benchmark
 libflint.a
 
 #vscode
-.vscode
-.ccls-cache
 .cache
-.metals/

@@ -15,6 +15,14 @@
 #ifndef FLINT_HPP
 #define FLINT_HPP
 
+/** \file flint.hpp
+ * \brief This is the C++ implementation of Flint
+ *
+ * The core class of the C++ implementation is Tensor which has a template that
+ * describes the dimensionality and type of the Tensor. All C++ functions use
+ * the underlying implementations in flint.h.
+ */
+
 #include "flint.h"
 #include <algorithm>
 #include <array>
@@ -25,6 +33,10 @@
 #include <sys/types.h>
 #include <tuple>
 #include <vector>
+
+/**
+ * Useful helper functions used by the library itself.
+ */
 namespace FLINT_HPP_HELPER {
 template <typename T>
 static inline std::string vectorString(const std::vector<T> &vec,
@@ -143,7 +155,16 @@ template <typename K, typename V> static constexpr bool isStronger() {
                                            : 3;
   return a >= b;
 }
-// FOR INDEXING
+/**
+ * Contains static methods to configure Flints behaviour-
+ */
+namespace Flint {
+inline void setLoggingLevel(int level) { fSetLoggingLevel(level); }
+}; // namespace Flint
+/**
+ * Encapsulates the data of a tensor. Is only valid as long as the Tensor is
+ * valid. Provides an interface for index operations on multidimensional data.
+ */
 template <typename T, unsigned int dimensions> class TensorView;
 template <typename T> class TensorView<T, 1> {
   T *data;
@@ -154,12 +175,13 @@ public:
   TensorView(T *data, const std::vector<size_t> shape,
              const size_t already_indexed)
       : data(data), already_indexed(already_indexed), shape(shape[0]) {}
+  /**
+   * Returns a read-write-reference to the index data entry of the Tensor-data.
+   * Only valid as long as the original Tensor is valid.
+   */
   T &operator[](size_t index) { return data[already_indexed + index]; }
   size_t size() const { return shape; }
 };
-namespace Flint {
-inline void setLoggingLevel(int level) { fSetLoggingLevel(level); }
-}; // namespace Flint
 template <typename T, unsigned int n> class TensorView {
   T *data;
   const size_t already_indexed;
@@ -169,6 +191,11 @@ public:
   TensorView(T *data, const std::vector<size_t> shape,
              const size_t already_indexed)
       : data(data), already_indexed(already_indexed), shape(shape) {}
+  /**
+   * Returns a new TensorView object with one more index for the current
+   * dimension (i.e. the new TensorView has one dimension less). Only valid as
+   * long as the original Tensor is valid.
+   */
   TensorView<T, n - 1> operator[](size_t index) {
     std::vector<size_t> ns(shape.size() - 1);
     for (size_t i = 0; i < shape.size() - 1; i++) {
@@ -178,7 +205,9 @@ public:
     return TensorView<T, n - 1>(data, ns, already_indexed + index);
   }
 };
-// FOR SLICING
+/**
+ * Describes a slice operation for one dimension.
+ */
 struct TensorRange {
   static const long MAX_SIZE = 2147483647;
   long start = 0;

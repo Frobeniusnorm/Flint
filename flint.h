@@ -23,9 +23,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-/*
-  This is the basic header file and implementation of Flint, to be compatible
-  with as many languages as possible. It is C compatible.
+/** \file flint.h
+  \brief This is the basic header file and implementation of Flint, written in C
+  to be as compatile as possible
 
   Flints Execution structure represents an AST, so that each Graph may be
   compiled to a specific OpenCL program
