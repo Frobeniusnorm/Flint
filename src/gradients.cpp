@@ -242,17 +242,18 @@ FGraphNode *fgradient_log2(FGraphNode *a, FGraphNode *dx) {
                            dx->operation->dimensions);
 }
 FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
+  const FOperation *ao = a->operation;
+  const FOperation *bo = b->operation;
   if (a == dx) {
-    const FOperation *ao = a->operation;
-    const FOperation *bo = b->operation;
+    FGraphNode *onetensor =
+        constant_tensor(1.0, ao->data_type, ao->shape, ao->dimensions);
     if (ao->dimensions == bo->dimensions) {
-      FGraphNode *onetensor =
-          constant_tensor(1.0, ao->data_type, ao->shape, ao->dimensions);
       return fmatmul(&onetensor, &b);
     } else if (bo->dimensions > ao->dimensions) {
-      FGraphNode *onetensor =
-          constant_tensor(1.0, ao->data_type, ao->shape, ao->dimensions);
+      //  dim(b) > dim(a) -> reduce_sum(transpose(matmul(b, 1-tensor)), axis =
+      //  -1)
       std::vector<int> transpositions(bo->dimensions);
+      // only the last common dimensions have to be transposed
       int start = bo->dimensions - ao->dimensions;
       for (int i = 0; i < start; i++)
         transpositions[i] = i;
@@ -264,12 +265,65 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
         result = freduce_sum(&result, dim);
       return result;
     } else {
-      //  dim(a) > dim(b) -> repeat(transpose(matmul(b,1-tensor)), axis=0)
+      // dim(a) > dim(b) -> repeat(transpose(matmul(b, 1-tensor)), axis=0)
+      std::vector<int> transpositions(bo->dimensions);
+      // only the last common dimensions have to be transposed
+      int start = ao->dimensions - bo->dimensions;
+      for (int i = 0; i < start; i++)
+        transpositions[i] = i;
+      for (int i = 0; i < ao->dimensions; i++)
+        transpositions[start + i] = start + ao->dimensions - 1 - i;
+      FGraphNode *result =
+          ftranspose(fmatmul(&b, &onetensor), transpositions.data());
+      size_t new_shape[ao->dimensions];
+      int repetitions[ao->dimensions];
+      for (int i = 0; i < ao->dimensions - bo->dimensions; i++) {
+        new_shape[i] = 1;
+        repetitions[i] = ao->shape[i] - 1;
+      }
+      memcpy(new_shape + (ao->dimensions - bo->dimensions), bo->shape,
+             bo->dimensions * sizeof(size_t));
+      memset(repetitions + (ao->dimensions - bo->dimensions), 0,
+             bo->dimensions * sizeof(int));
+      result = freshape(result, new_shape, ao->dimensions);
+      result = frepeat(result, repetitions);
+      return result;
     }
   } else if (b == dx) {
+    FGraphNode *onetensor =
+        constant_tensor(1.0, bo->data_type, bo->shape, bo->dimensions);
     //  same shape -> a matmul with 1-tensor
-    //  dim(b) > dim(a) -> repeat(transpose(matmul(1-tensor, a)), axis=0)
-    //  dim(a) > dim(b) -> reduce_sum(transpose(matmul(1-tensor, a)), axis = -1)
+    if (ao->dimensions == bo->dimensions) {
+      return fmatmul(&a, &onetensor);
+    } else if (bo->dimensions > ao->dimensions) {
+      //  dim(b) > dim(a) -> repeat(transpose(matmul(1-tensor, a)), axis=0)
+      //  dim(a) > dim(b) -> repeat(transpose(matmul(b, 1-tensor)), axis=0)
+      std::vector<int> transpositions(bo->dimensions);
+      // only the last common dimensions have to be transposed
+      int start = bo->dimensions - ao->dimensions;
+      for (int i = 0; i < start; i++)
+        transpositions[i] = i;
+      for (int i = 0; i < bo->dimensions; i++)
+        transpositions[start + i] = start + bo->dimensions - 1 - i;
+      FGraphNode *result =
+          ftranspose(fmatmul(&onetensor, &a), transpositions.data());
+      size_t new_shape[bo->dimensions];
+      int repetitions[bo->dimensions];
+      for (int i = 0; i < bo->dimensions - ao->dimensions; i++) {
+        new_shape[i] = 1;
+        repetitions[i] = bo->shape[i] - 1;
+      }
+      memcpy(new_shape + (bo->dimensions - ao->dimensions), ao->shape,
+             ao->dimensions * sizeof(size_t));
+      memset(repetitions + (bo->dimensions - ao->dimensions), 0,
+             ao->dimensions * sizeof(int));
+      result = freshape(result, new_shape, bo->dimensions);
+      result = frepeat(result, repetitions);
+      return result;
+    } else {
+      //  dim(a) > dim(b) -> reduce_sum(transpose(matmul(1-tensor, a)), axis =
+      //  -1)
+    }
   } else
     return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
                            dx->operation->dimensions);
