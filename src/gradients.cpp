@@ -258,7 +258,7 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
       for (int i = 0; i < start; i++)
         transpositions[i] = i;
       for (int i = 0; i < bo->dimensions; i++)
-        transpositions[start + i] = start + bo->dimensions - 1 - i;
+        transpositions[start + i] = bo->dimensions - 1 - i;
       FGraphNode *result =
           ftranspose(fmatmul(&b, &onetensor), transpositions.data());
       for (int dim = 0; dim < ao->dimensions - bo->dimensions; dim++)
@@ -266,13 +266,13 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
       return result;
     } else {
       // dim(a) > dim(b) -> repeat(transpose(matmul(b, 1-tensor)), axis=0)
-      std::vector<int> transpositions(bo->dimensions);
+      std::vector<int> transpositions(ao->dimensions);
       // only the last common dimensions have to be transposed
       int start = ao->dimensions - bo->dimensions;
       for (int i = 0; i < start; i++)
         transpositions[i] = i;
       for (int i = 0; i < ao->dimensions; i++)
-        transpositions[start + i] = start + ao->dimensions - 1 - i;
+        transpositions[start + i] = ao->dimensions - 1 - i;
       FGraphNode *result =
           ftranspose(fmatmul(&b, &onetensor), transpositions.data());
       size_t new_shape[ao->dimensions];
@@ -297,14 +297,13 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
       return fmatmul(&a, &onetensor);
     } else if (bo->dimensions > ao->dimensions) {
       //  dim(b) > dim(a) -> repeat(transpose(matmul(1-tensor, a)), axis=0)
-      //  dim(a) > dim(b) -> repeat(transpose(matmul(b, 1-tensor)), axis=0)
       std::vector<int> transpositions(bo->dimensions);
       // only the last common dimensions have to be transposed
       int start = bo->dimensions - ao->dimensions;
       for (int i = 0; i < start; i++)
         transpositions[i] = i;
       for (int i = 0; i < bo->dimensions; i++)
-        transpositions[start + i] = start + bo->dimensions - 1 - i;
+        transpositions[start + i] = bo->dimensions - 1 - i;
       FGraphNode *result =
           ftranspose(fmatmul(&onetensor, &a), transpositions.data());
       size_t new_shape[bo->dimensions];
@@ -323,6 +322,18 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
     } else {
       //  dim(a) > dim(b) -> reduce_sum(transpose(matmul(1-tensor, a)), axis =
       //  -1)
+      std::vector<int> transpositions(ao->dimensions);
+      // only the last common dimensions have to be transposed
+      int start = ao->dimensions - bo->dimensions;
+      for (int i = 0; i < start; i++)
+        transpositions[i] = i;
+      for (int i = 0; i < ao->dimensions; i++)
+        transpositions[start + i] = ao->dimensions - 1 - i;
+      FGraphNode *result =
+          ftranspose(fmatmul(&onetensor, &a), transpositions.data());
+      for (int dim = 0; dim < ao->dimensions - bo->dimensions; dim++)
+        result = freduce_sum(&result, dim);
+      return result;
     }
   } else
     return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
