@@ -261,7 +261,7 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
         transpositions[start + i] = bo->dimensions - 1 - i;
       FGraphNode *result =
           ftranspose(fmatmul(&b, &onetensor), transpositions.data());
-      for (int dim = 0; dim < ao->dimensions - bo->dimensions; dim++)
+      for (int dim = 0; dim < bo->dimensions - ao->dimensions; dim++)
         result = freduce_sum(&result, dim);
       return result;
     } else {

@@ -133,6 +133,26 @@ TEST_SUITE("Gradient Calculation") {
     CHECK_EQ(2, d2[5]);
     CHECK_EQ(-2, d2[6]);
     CHECK_EQ(-2, d2[7]);
+    fFreeGraph(g1);
+    fFreeGraph(g2);
+    g1 = fExecuteGraph(fgradient_matmul(x.get_graph_node(), y.get_graph_node(),
+                                        y.get_graph_node()));
+    g2 = fExecuteGraph(fgradient_matmul(y.get_graph_node(), x.get_graph_node(),
+                                        y.get_graph_node()));
+    CHECK_EQ(2, g1->operation->dimensions);
+    CHECK_EQ(2, g2->operation->dimensions);
+    d1 = (double *)((FResultData *)g1->operation->additional_data)->data;
+    d2 = (double *)((FResultData *)g2->operation->additional_data)->data;
+    CHECK_EQ(13, d1[0]);
+    CHECK_EQ(13, d1[1]);
+    CHECK_EQ(16, d1[2]);
+    CHECK_EQ(16, d1[3]);
+    CHECK_EQ(11, d2[0]);
+    CHECK_EQ(18, d2[1]);
+    CHECK_EQ(11, d2[2]);
+    CHECK_EQ(18, d2[3]);
+    fFreeGraph(g1);
+    fFreeGraph(g2);
   }
 }
 int main(int argc, char **argv) {
