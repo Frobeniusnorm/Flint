@@ -100,6 +100,40 @@ TEST_SUITE("Gradient Calculation") {
     CHECK_EQ(1.2, datad[1]);
     fFreeGraph(res);
   }
+  TEST_CASE("Gradient matmul") {
+    Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
+    Tensor<double, 2> y = {{3.0, -7.0}, {-1.0, 5.0}};
+    FGraphNode *g1 = fExecuteGraph(fgradient_matmul(
+        x.get_graph_node(), y.get_graph_node(), x.get_graph_node()));
+    FGraphNode *g2 = fExecuteGraph(fgradient_matmul(
+        y.get_graph_node(), x.get_graph_node(), x.get_graph_node()));
+    CHECK_EQ(3, g1->operation->dimensions);
+    CHECK_EQ(3, g2->operation->dimensions);
+    for (int i = 0; i < 3; i++) {
+      CHECK_EQ(2, g1->operation->shape[i]);
+      CHECK_EQ(2, g2->operation->shape[i]);
+    }
+    double *d1 =
+        (double *)((FResultData *)g1->operation->additional_data)->data;
+    double *d2 =
+        (double *)((FResultData *)g2->operation->additional_data)->data;
+    CHECK_EQ(-4, d1[0]);
+    CHECK_EQ(4, d1[1]);
+    CHECK_EQ(-4, d1[2]);
+    CHECK_EQ(4, d1[3]);
+    CHECK_EQ(-4, d1[4]);
+    CHECK_EQ(4, d1[5]);
+    CHECK_EQ(-4, d1[6]);
+    CHECK_EQ(4, d1[7]);
+    CHECK_EQ(2, d2[0]);
+    CHECK_EQ(2, d2[1]);
+    CHECK_EQ(-2, d2[2]);
+    CHECK_EQ(-2, d2[3]);
+    CHECK_EQ(2, d2[4]);
+    CHECK_EQ(2, d2[5]);
+    CHECK_EQ(-2, d2[6]);
+    CHECK_EQ(-2, d2[7]);
+  }
 }
 int main(int argc, char **argv) {
   doctest::Context context;
