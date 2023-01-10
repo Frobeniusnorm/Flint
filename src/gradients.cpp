@@ -49,6 +49,7 @@ static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
 FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx) {
   // TODO
   //  Compute https://mananshah99.github.io/blog/2020/08/15/backprop/
+  //  And https://dlsys.cs.washington.edu/pdf/lecture4.pdf
 }
 FGraphNode *fgradient_add(const FGraphNode *x, const FGraphNode *y,
                           const FGraphNode *dx) {
