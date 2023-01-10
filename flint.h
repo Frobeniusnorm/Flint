@@ -235,7 +235,7 @@ void fFreeGraph(FGraphNode *graph);
  * incremented) */
 FGraphNode *fCopyGraph(const FGraphNode *graph);
 
-/* Executes the graph node operations from all yet to be executed predecessors
+/** Executes the graph node operations from all yet to be executed predecessors
  * to :var:`node` and returns a node with a :struct:`FResultData` operation in
  * which the resulting data is stored. If the graph is executed by the GPU
  * backend, a opencl kernel containing all selected operations is compiled and
@@ -249,6 +249,14 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node);
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node);
 FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node);
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
+//  gradient calculation
+/** Calculates the overall gradient of an output node to a variable.
+ *
+ * @param outputfct the Node which represents the chain of functions of which
+ * this operations computes the gradient.
+ * @param dx the variable for which outputfct is derived for
+ */
+FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx);
 //  operations
 /** Elementwise addition of a and b :math:`a+b`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);

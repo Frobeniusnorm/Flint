@@ -46,6 +46,10 @@ static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
     return fconstant_d((double)val, shape, dimensions);
   }
 }
+FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx) {
+  // TODO
+  //  Compute https://mananshah99.github.io/blog/2020/08/15/backprop/
+}
 FGraphNode *fgradient_add(const FGraphNode *x, const FGraphNode *y,
                           const FGraphNode *dx) {
   // ao is the higher dimensional vector
