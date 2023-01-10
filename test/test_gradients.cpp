@@ -158,7 +158,7 @@ TEST_SUITE("Gradient Calculation") {
 int main(int argc, char **argv) {
   doctest::Context context;
   context.applyCommandLine(argc, argv);
-  flintInit(1, 0);
+  flintInit(0, 1);
   int res = context.run();
   flintCleanup();
   return res;

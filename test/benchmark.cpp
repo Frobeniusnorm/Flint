@@ -84,8 +84,8 @@ int main(int argc, char **argv) {
   if (argc > 1) {
     cpu = gpu = false;
     if (argc > 3)
-      flog(F_ERROR, "Invalid number of command line arguments! Call this "
-                    "program like this: benchmark [cpu] [gpu]");
+      flogging(F_ERROR, "Invalid number of command line arguments! Call this "
+                        "program like this: benchmark [cpu] [gpu]");
 
     for (int i = 1; i < argc; i++) {
       if (strcmp(argv[i], "cpu") == 0)
@@ -93,9 +93,9 @@ int main(int argc, char **argv) {
       else if (strcmp(argv[i], "gpu") == 0)
         gpu = true;
       else
-        flog(F_ERROR,
-             "Invalid argument: " + std::string(argv[i]) +
-                 "! Call this program like this: benchmark [cpu] [gpu]");
+        flogging(F_ERROR,
+                 "Invalid argument: " + std::string(argv[i]) +
+                     "! Call this program like this: benchmark [cpu] [gpu]");
     }
   }
   call_benchmarks(cpu && gpu ? 2 : cpu ? 0 : 1);

@@ -14,15 +14,14 @@ BUILDDIR=build
 # creates and executes test target if set to "debug", change to enable production mode 
 MODE=debug
 
-.PHONY: debug-target production-target
-
+.PHONY: debug production
 COMPILER = clang++ -std=c++2a -gdwarf-4 -l OpenCL
 ifeq ($(MODE),debug)
 	COMPILER += -g -Og -Wall
-	.DEFAULT_GOAL :=debug-target
+	.DEFAULT_GOAL :=debug
 else
 	COMPILER += -O3
-	.DEFAULT_GOAL :=production-target
+	.DEFAULT_GOAL :=production
 endif
 
 # WILD CARDS FOR COMPILATION
@@ -30,8 +29,8 @@ H_SRCS := $(wildcard $(SRCDIR)/*.hpp)
 C_SRCS := $(wildcard $(SRCDIR)/*.cpp)
 C_OBJS := $(C_SRCS:$(SRCDIR)/%.cpp=$(BUILDDIR)/%.o)
 
-debug-target: libflint.a test/test test/test_gradients
-production-target: libflint.a test/benchmark 
+debug: libflint.a test/test test/test_gradients test/benchmark
+production: libflint.a test/benchmark 
 # TEST
 test/test: libflint.a $(BUILDDIR)/test.o | $(BUILDDIR)
 	$(COMPILER) -o $@ $(BUILDDIR)/test.o -L. -lflint

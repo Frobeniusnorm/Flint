@@ -40,22 +40,17 @@ static cl_context context;
 static cl_command_queue queue;
 static cl_device_id device;
 void flintInit_gpu() {
-  cl_platform_id platform = NULL;
-  device = NULL;
+  cl_platform_id platforms[10];
   cl_uint num_dev, num_plat;
-  if (clGetPlatformIDs(1, &platform, &num_plat) != CL_SUCCESS)
+  if (clGetPlatformIDs(10, &platforms[0], &num_plat) != CL_SUCCESS)
     flogging(F_ERROR, "clGetPlatformIds");
   if (num_plat == 0)
     flogging(F_ERROR,
              "Could not find any OpenCL Platform available! Please make "
              "sure, you have setup your OpenCL driver right!");
-  if (clGetDeviceIDs(platform, CL_DEVICE_TYPE_DEFAULT, 1, &device, &num_dev) !=
-      CL_SUCCESS)
-    flogging(F_ERROR, "clGetDeviceIds");
-  if (num_dev == 0)
-    flogging(F_ERROR,
-             "Could not find any OpenCL devices available! Please make sure, "
-             "you have setup your OpenCL driver right!");
+  flogging(F_VERBOSE, "Found " + std::to_string(num_plat) + " platforms!");
+  device = NULL;
+  // find suitable device
   char dev_name[128];
   size_t dev_name_size;
   char dev_vers[128];
@@ -63,29 +58,52 @@ void flintInit_gpu() {
   char dev_vend[128];
   size_t dev_vend_size;
   cl_device_type dev_type;
+  cl_device_type highest_type = 0;
   size_t dev_type_size;
-  clGetDeviceInfo(device, CL_DEVICE_NAME, 128 * sizeof(char),
-                  (void *)&dev_name[0], &dev_name_size);
-  clGetDeviceInfo(device, CL_DEVICE_VERSION, 128, (void *)&dev_vers[0],
-                  &dev_vers_size);
-  clGetDeviceInfo(device, CL_DEVICE_VENDOR, 128, (void *)&dev_vend[0],
-                  &dev_vend_size);
-  clGetDeviceInfo(device, CL_DEVICE_TYPE, sizeof(dev_type), (void *)&dev_type,
-                  &dev_type_size);
   std::string dev_type_string;
-  if ((dev_type & CL_DEVICE_TYPE_CPU) == CL_DEVICE_TYPE_CPU) {
-    dev_type_string = "CPU";
-  } else if ((dev_type & CL_DEVICE_TYPE_GPU) == CL_DEVICE_TYPE_GPU) {
-    dev_type_string = "GPU";
-  } else if ((dev_type & CL_DEVICE_TYPE_ACCELERATOR) ==
-             CL_DEVICE_TYPE_ACCELERATOR) {
-    dev_type_string = "Accelerator";
-  } else
-    dev_type_string = "Device";
-  std::string info =
-      "Using " + dev_type_string + " '" + std::string(dev_vend, dev_vend_size) +
-      "', '" + std::string(dev_name, dev_name_size) + "' with OpenCL version " +
-      std::string(dev_vers, dev_vers_size);
+  for (int i = 0; i < num_plat; i++) {
+    cl_device_id curr_dev;
+    if (clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_DEFAULT, 1, &curr_dev,
+                       &num_dev) != CL_SUCCESS) {
+      flogging(F_WARNING, "clGetDeviceIDS did not return CL_SUCCESS!");
+      continue;
+    }
+    if (num_dev == 0) {
+      flogging(F_WARNING, "Platform has no devices!");
+      continue;
+    }
+    clGetDeviceInfo(curr_dev, CL_DEVICE_NAME, 128 * sizeof(char),
+                    (void *)&dev_name[0], &dev_name_size);
+    clGetDeviceInfo(curr_dev, CL_DEVICE_VERSION, 128, (void *)&dev_vers[0],
+                    &dev_vers_size);
+    clGetDeviceInfo(curr_dev, CL_DEVICE_VENDOR, 128, (void *)&dev_vend[0],
+                    &dev_vend_size);
+    clGetDeviceInfo(curr_dev, CL_DEVICE_TYPE, sizeof(dev_type),
+                    (void *)&dev_type, &dev_type_size);
+    if (dev_type > highest_type) {
+      highest_type = dev_type;
+      device = curr_dev;
+      if ((dev_type & CL_DEVICE_TYPE_CPU) == CL_DEVICE_TYPE_CPU) {
+        dev_type_string = "CPU";
+      } else if ((dev_type & CL_DEVICE_TYPE_GPU) == CL_DEVICE_TYPE_GPU) {
+        dev_type_string = "GPU";
+      } else if ((dev_type & CL_DEVICE_TYPE_ACCELERATOR) ==
+                 CL_DEVICE_TYPE_ACCELERATOR) {
+        dev_type_string = "Accelerator";
+      } else
+        dev_type_string = "Device";
+    }
+  }
+  if (!device) {
+    flogging(F_ERROR,
+             "Could not find any OpenCL devices available! Please make sure, "
+             "you have setup your OpenCL driver right!");
+  }
+  std::string info = "Using " + dev_type_string + " '" +
+                     std::string(dev_vend, dev_vend_size - 1) + "', '" +
+                     std::string(dev_name, dev_name_size - 1) +
+                     "' with OpenCL version " +
+                     std::string(dev_vers, dev_vers_size);
   flogging(F_INFO, info);
   int status = 0;
   context = clCreateContext(NULL, 1, &device, openclCallback, NULL, &status);
