@@ -88,6 +88,8 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx) {
   }
 }
 FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
+  // if not called on an eagerly execute graph, warn the first time
+  static bool eager_eval_warning = false;
   // Autodiff algorithm
   //  Compute https://mananshah99.github.io/blog/2020/08/15/backprop/
   //  And https://dlsys.cs.washington.edu/pdf/lecture4.pdf
@@ -113,8 +115,20 @@ FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
     for (int i = 0; i < y->num_predecessor; i++) {
       // parent "Content"
       FGraphNode *parent_result = y->predecessors[i];
-      // TODO
+      if (eager_eval_warning && !parent_result->result_data) {
+        flogging(F_WARNING,
+                 "Gradient calculation on a lazy graph is inefficient! We "
+                 "advise to enable eager execution.");
+        eager_eval_warning = false;
+      }
+      FGraphNode *local = fmul(local_gradient(y, parent_result),
+                               fCalculateGradient(parent_result, dx));
+      if (!result)
+        result = local;
+      else
+        result = fadd(result, local);
     }
+    return result;
   }
 }
 FGraphNode *fgradient_add(const FGraphNode *x, const FGraphNode *y,
