@@ -18,8 +18,10 @@
 #include <cmath>
 #include <cstring>
 #include <iostream>
+#include <list>
 #include <math.h>
 #include <ostream>
+#include <unordered_set>
 #include <vector>
 // converts c++ type to flint type
 template <typename T> static constexpr FType toFlintType() {
@@ -46,10 +48,74 @@ static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
     return fconstant_d((double)val, shape, dimensions);
   }
 }
-FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx) {
-  // TODO
+static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx) {
+  switch (y->operation->op_type) {
+  case FSTORE:
+  case FCONST:
+    return constant_tensor(y == dx ? 1.0 : 0.0, dx->operation->data_type,
+                           dx->operation->shape, dx->operation->dimensions);
+  case FADD:
+    return fgradient_add(y->predecessors[0], y->predecessors[1], dx);
+  case FSUB:
+    return fgradient_sub(y->predecessors[0], y->predecessors[1], dx);
+  case FMUL:
+    return fgradient_mul(y->predecessors[0], y->predecessors[1], dx);
+  case FDIV:
+    return fgradient_div(y->predecessors[0], y->predecessors[1], dx);
+  case FPOW:
+    return fgradient_pow(y->predecessors[0], y->predecessors[1], dx);
+  case FLOG:
+    return fgradient_log(y->predecessors[0], dx);
+  case FLOG2:
+    return fgradient_log2(y->predecessors[0], dx);
+  case FLOG10:
+    return fgradient_log10(y->predecessors[0], dx);
+  case FMATMUL:
+    return fgradient_matmul(y->predecessors[0], y->predecessors[1], dx);
+  case FLATTEN:
+  case FCONVERSION:
+  case FRESHAPE:
+  case FMIN:
+  case FMAX:
+  case FREDUCE_SUM:
+  case FREDUCE_MUL:
+  case FSLICE:
+  case FABS:
+  case FREPEAT:
+  case FTRANSPOSE:
+  case FNUM_OPERATION_TYPES:
+    return nullptr;
+  }
+}
+FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
+  // Autodiff algorithm
   //  Compute https://mananshah99.github.io/blog/2020/08/15/backprop/
   //  And https://dlsys.cs.washington.edu/pdf/lecture4.pdf
+  //  And
+  //  https://marksaroufim.medium.com/automatic-differentiation-step-by-step-24240f97a6e6
+  // we know that dy / dx = sum([(dy / dp) * (dp / dx) for p in
+  // predecessors(y)])
+  // for now: recursive calculation, later on switch to iterative representation
+  if (y == dx)
+    return constant_tensor(1.0, dx->operation->data_type, dx->operation->shape,
+                           dx->operation->dimensions);
+  // check again
+  if (y == dx) {
+    return constant_tensor(1.0, dx->operation->data_type, dx->operation->shape,
+                           dx->operation->dimensions);
+  } else if (y->operation->op_type == FSTORE ||
+             y->operation->op_type == FCONST) {
+    return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
+                           dx->operation->dimensions);
+  } else {
+    // iterate over parents
+    FGraphNode *result = nullptr;
+    for (int i = 0; i < y->num_predecessor; i++) {
+      // parent "Content"
+      FGraphNode *parent_result = y->predecessors[i];
+      // TODO
+    }
+  }
 }
 FGraphNode *fgradient_add(const FGraphNode *x, const FGraphNode *y,
                           const FGraphNode *dx) {
