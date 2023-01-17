@@ -92,7 +92,7 @@ TEST_SUITE("Execution") {
     gn1 = fmul(gn1, gn11);
     fFreeGraph(gn11); // delete handle
     FGraphNode *result = fExecuteGraph(gn1);
-    FResultData *rd = (FResultData *)result->operation->additional_data;
+    FResultData *rd = result->result_data;
     CHECK_EQ(rd->num_entries, 10);
     for (size_t i = 0; i < rd->num_entries; i++)
       CHECK_EQ(((double *)rd->data)[i], 44);
@@ -107,7 +107,7 @@ TEST_SUITE("Execution") {
     gn3 = fsub(gn3, 80);
     gn3 = fadd(gn3, gn2);
     result = fExecuteGraph(gn3);
-    rd = (FResultData *)result->operation->additional_data;
+    rd = result->result_data;
     CHECK_EQ(rd->num_entries, 10);
     for (int i = 0; i < 10; i++)
       CHECK_EQ(((double *)rd->data)[i], 8 + (i + 1) * 2);
@@ -128,7 +128,7 @@ TEST_SUITE("Execution") {
         fCreateGraph(f2.data(), f2.size(), F_FLOAT64, shape.data(), 2);
     FGraphNode *gn3 = fadd(gn1, gn2);
     FGraphNode *result = fExecuteGraph(gn3);
-    FResultData *rd = (FResultData *)result->operation->additional_data;
+    FResultData *rd = result->result_data;
     CHECK_EQ(rd->num_entries, 9);
     REQUIRE_EQ(result->operation->dimensions, 2);
     CHECK_EQ(result->operation->shape[0], 3);
@@ -148,10 +148,10 @@ TEST_SUITE("Execution") {
     FGraphNode *gn4 =
         fCreateGraph(f3.data(), f3.size(), F_INT32, shape_f3.data(), 3);
     FGraphNode *gn5 = fadd(gn4, result);
-    FGraphNode *newResult[2] = {nullptr, nullptr};
+    FGraphNode *newResult;
     for (int i = 0; i < 2; i++) {
-      newResult[i] = fExecuteGraph(gn5);
-      rd = (FResultData *)newResult[i]->operation->additional_data;
+      newResult = fExecuteGraph(gn5);
+      rd = newResult->result_data;
 
       for (int i = 0; i < 4; i++)
         for (int j = 0; j < 3; j++)
@@ -159,8 +159,7 @@ TEST_SUITE("Execution") {
             CHECK_EQ(((double *)rd->data)[i * 9 + j * 3 + k],
                      v1[j][k] + v2[j][k] + v3[i][j][k]);
     }
-    fFreeGraph(newResult[0]);
-    fFreeGraph(newResult[1]);
+    fFreeGraph(newResult);
   }
   TEST_CASE("pow") {
     using namespace std;
@@ -189,19 +188,19 @@ TEST_SUITE("Execution") {
     FGraphNode *r2 = fExecuteGraph(g3);
     CHECK_EQ(2, r3->operation->dimensions);
     CHECK_EQ(3, r3->operation->shape[0]);
-    FResultData *res = (FResultData *)r1->operation->additional_data;
+    FResultData *res = r1->result_data;
     long *ldata = (long *)res->data;
     for (int i = 0; i < 3; i++)
       for (int j = 0; j < 2; j++)
         CHECK_EQ(ldata[i * 2 + j], e1[i][j]);
 
-    res = (FResultData *)r2->operation->additional_data;
+    res = r2->result_data;
     float *fdata = (float *)res->data;
     for (int i = 0; i < 3; i++)
       for (int j = 0; j < 2; j++)
         CHECK_EQ(fdata[i * 2 + j], e2[i][j]);
 
-    res = (FResultData *)r3->operation->additional_data;
+    res = r3->result_data;
     int *idata = (int *)res->data;
     for (int i = 0; i < 3; i++)
       for (int j = 0; j < 2; j++)
@@ -223,7 +222,7 @@ TEST_SUITE("Execution") {
     g = fadd(fflatten(g), gi);
     fFreeGraph(gi);
     g = fExecuteGraph(g);
-    FResultData *res = (FResultData *)g->operation->additional_data;
+    FResultData *res = g->result_data;
     int *data = (int *)res->data;
     for (int i = 0; i < 6; i++)
       CHECK_EQ(data[i], e1[i]);
@@ -251,8 +250,8 @@ TEST_SUITE("Execution") {
     vector<int> exp{3, 4, 6, 7, 9, 10, 11, 12, 12, 13, 13, 14};
     g1 = fExecuteGraph(g1);
     g2 = fExecuteGraph(g2);
-    int *r1 = (int *)((FResultData *)g1->operation->additional_data)->data;
-    int *r2 = (int *)((FResultData *)g2->operation->additional_data)->data;
+    int *r1 = (int *)(g1->result_data->data);
+    int *r2 = (int *)(g2->result_data->data);
     for (int i = 0; i < 12; i++) {
       CHECK_EQ(r1[i], exp[i]);
       CHECK_EQ(r2[i], exp[i]);
@@ -287,7 +286,7 @@ TEST_SUITE("Execution") {
         fCreateGraph(data2.data(), data2.size(), F_FLOAT32, s1.data(), 2);
     FGraphNode *mm1 = fmatmul(&g1, &g2);
     FGraphNode *r1 = fExecuteGraph(mm1);
-    FResultData *rd1 = (FResultData *)r1->operation->additional_data;
+    FResultData *rd1 = r1->result_data;
     vector<float> exp1{4 + 4, 3 + 2, 12 + 8, 9 + 4};
     float *d1 = (float *)rd1->data;
     for (int i = 0; i < 4; i++)
@@ -308,7 +307,7 @@ TEST_SUITE("Execution") {
     REQUIRE_EQ(mm2->operation->shape[0], s3[0]);
     REQUIRE_EQ(mm2->operation->shape[1], s3[1]);
     FGraphNode *r2 = fExecuteGraph(mm2);
-    FResultData *rd2 = (FResultData *)r2->operation->additional_data;
+    FResultData *rd2 = r2->result_data;
     int *d2 = (int *)rd2->data;
     for (int i = 0; i < 4; i++)
       CHECK_EQ(exp2[i], d2[i]);
@@ -335,7 +334,7 @@ TEST_SUITE("Execution") {
     REQUIRE_EQ(mm2->operation->shape[1], 2);
     REQUIRE_EQ(mm2->operation->shape[2], 2);
     r2 = fExecuteGraph(mm2);
-    FResultData *rd3 = (FResultData *)r2->operation->additional_data;
+    FResultData *rd3 = r2->result_data;
     double *d3 = (double *)rd3->data;
     for (size_t i = 0; i < rd3->num_entries; i++)
       CHECK_EQ(fe3[i], d3[i]);

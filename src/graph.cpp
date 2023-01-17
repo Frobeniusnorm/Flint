@@ -33,8 +33,7 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
   const FOperation *fop = f->operation;
   bool all_calculated = true;
   for (int i = 0; i < f->num_predecessor; i++) {
-    if (fop->op_type != FSTORE && fop->op_type != FRESULTDATA &&
-        fop->op_type != FCONST) {
+    if (fop->op_type != FSTORE && !f->result_data && fop->op_type != FCONST) {
       all_calculated = false;
       break;
     }
@@ -91,6 +90,7 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
                          const int dimensions) {
   FGraphNode *gn = new FGraphNode();
   gn->reference_counter = 0;
+  gn->result_data = nullptr;
   FOperation *op = new FOperation();
   FStore *store = new FStore();
   op->dimensions = dimensions;
@@ -146,6 +146,14 @@ void fFreeGraph(FGraphNode *graph) {
         all.insert(gn->predecessors[i]);
       }
     }
+    if (gn->result_data) {
+      FResultData *rd = gn->result_data;
+      if (rd->data)
+        free(rd->data);
+      if (rd->mem_id)
+        clReleaseMemObject(rd->mem_id);
+      delete rd;
+    }
     if (gn->predecessors != NULL && gn->num_predecessor != 0)
       free(gn->predecessors);
     if (gn->operation != NULL) {
@@ -153,14 +161,6 @@ void fFreeGraph(FGraphNode *graph) {
         free(gn->operation->shape);
       if (gn->operation->additional_data)
         switch (gn->operation->op_type) {
-        case FRESULTDATA: {
-          FResultData *rd = (FResultData *)gn->operation->additional_data;
-          if (rd->data)
-            free(rd->data);
-          if (rd->mem_id)
-            clReleaseMemObject(rd->mem_id);
-          delete rd;
-        } break;
         case FSTORE: {
           FStore *st = (FStore *)gn->operation->additional_data;
           free(st->data);
@@ -202,6 +202,7 @@ static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
   FGraphNode *foo = new FGraphNode();
   foo->reference_counter = 0;
   foo->operation = op;
+  foo->result_data = nullptr;
   foo->num_predecessor = pre.size();
   foo->predecessors =
       pre.size() == 0 ? NULL : safe_mal<FGraphNode *>(pre.size());
@@ -214,6 +215,34 @@ static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
 FGraphNode *fCopyGraph(const FGraphNode *node) {
   FGraphNode *foo = new FGraphNode();
   // predecessors
+  foo->result_data = nullptr;
+  if (node->result_data) {
+    FResultData *ord = node->result_data;
+    FResultData *crd = new FResultData();
+    foo->result_data = crd;
+    crd->mem_id = nullptr;
+    crd->num_entries = ord->num_entries;
+    size_t byte_size = crd->num_entries;
+    switch (node->operation->data_type) {
+    case F_INT32:
+      crd->data = safe_mal<int>(crd->num_entries);
+      byte_size *= sizeof(int);
+      break;
+    case F_INT64:
+      crd->data = safe_mal<long>(crd->num_entries);
+      byte_size *= sizeof(long);
+      break;
+    case F_FLOAT32:
+      crd->data = safe_mal<float>(crd->num_entries);
+      byte_size *= sizeof(float);
+      break;
+    case F_FLOAT64:
+      crd->data = safe_mal<double>(crd->num_entries);
+      byte_size *= sizeof(double);
+      break;
+    }
+    std::memcpy(crd->data, ord->data, byte_size);
+  }
   foo->num_predecessor = node->num_predecessor;
   if (foo->num_predecessor) {
     foo->predecessors = safe_mal<FGraphNode *>(foo->num_predecessor);
@@ -242,16 +271,6 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
     void *src = nullptr;
     size_t num_entries = 0;
     switch (op->op_type) {
-    case FRESULTDATA: {
-      FResultData *ord = (FResultData *)node->operation->additional_data;
-      FResultData *crd = new FResultData();
-      op->additional_data = (void *)crd;
-      crd->mem_id = nullptr;
-      crd->num_entries = ord->num_entries;
-      num_entries = crd->num_entries;
-      src = ord->data;
-      data = &crd->data;
-    } break;
     case FSTORE: {
       FStore *ord = (FStore *)node->operation->additional_data;
       FStore *crd = new FStore();
@@ -663,11 +682,11 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
 FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
   FGraphNode *x = *a;
   FGraphNode *y = *b;
-  if (x->operation->op_type != FSTORE && x->operation->op_type != FRESULTDATA) {
+  if (x->operation->op_type != FSTORE && !x->result_data) {
     x = fExecuteGraph(x);
     *a = x;
   }
-  if (y->operation->op_type != FSTORE && y->operation->op_type != FRESULTDATA) {
+  if (y->operation->op_type != FSTORE && !y->result_data) {
     y = fExecuteGraph(y);
     *b = y;
   }
@@ -703,6 +722,7 @@ FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
 
   FGraphNode *node = new FGraphNode();
   node->operation = res;
+  node->result_data = nullptr;
   node->num_predecessor = 2;
   node->predecessors = safe_mal<FGraphNode *>(2);
   node->predecessors[0] = x;
@@ -715,6 +735,7 @@ FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
 FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions) {
   FGraphNode *node = new FGraphNode();
   node->operation = new FOperation();
+  node->result_data = nullptr;
   node->operation->shape = safe_mal<size_t>(dimensions);
   std::memcpy(node->operation->shape, newshape, dimensions * sizeof(size_t));
   node->operation->data_type = a->operation->data_type;
@@ -731,6 +752,7 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   FGraphNode *foo = new FGraphNode();
   foo->reference_counter = 0;
   foo->num_predecessor = 1;
+  foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
   foo->predecessors[0] = a;
   a->reference_counter++;
@@ -748,13 +770,14 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
 static inline FGraphNode *reduce_operation(FGraphNode **x, const int dimension,
                                            FOperationType type) {
   FGraphNode *a = *x;
-  if (a->operation->op_type != FSTORE && a->operation->op_type != FRESULTDATA) {
+  if (a->operation->op_type != FSTORE && !a->result_data) {
     a = fExecuteGraph(a);
     *x = a;
   }
   FGraphNode *foo = new FGraphNode();
   foo->reference_counter = 0;
   foo->num_predecessor = 1;
+  foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
   foo->predecessors[0] = a;
   a->reference_counter++;
@@ -786,6 +809,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
   // construct nodes
   FGraphNode *foo = new FGraphNode();
   foo->num_predecessor = 1;
+  foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
   foo->predecessors[0] = a;
   foo->reference_counter = 0;

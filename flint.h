@@ -95,7 +95,6 @@ int is_eager_execution();
 enum FType { F_INT32, F_INT64, F_FLOAT32, F_FLOAT64 };
 enum FOperationType {
   FSTORE,
-  FRESULTDATA,
   FCONST,
   FADD,
   FSUB,
@@ -135,32 +134,6 @@ struct FOperation {
   FType data_type;
   void *additional_data;
 };
-/** Describes one node in the Graph. Stores the corresponding operation in
- * :member:`FGraphNode.operation`, an array of predecessors (the arguments of
- * the operation) in :member:`FGraphNode.predecessors`, its size in
- * :member:`FGraphNode.num_predecessor` and the reference counter in
- * `FGraphNode.reference_counter`. Do not modify any parameter by yourself,
- * since the framework manages them, but you can read the data and structure
- * from them. The nodes are allocated by the operation functions, they and their
- * members should neither be manually created, edited or freed except by the
- * corresponding flint methods. */
-struct FGraphNode {
-  int num_predecessor;
-  FGraphNode **predecessors;
-  FOperation *operation;    // the operation represented by this graph node
-  size_t reference_counter; // for garbage collection in free graph
-};
-/** Result of an call to :func:`fCreateGraph`, see :struct:`FResultData`.
- * Data of this Operation may always be changed, since the framework assumes
- * this. */
-struct FStore {
-  // link to gpu data
-  cl_mem mem_id = nullptr;
-  void *data;
-  size_t num_entries;
-};
-// TODO dirty bit to may keep store data
-
 /** Stores the resulting data after an execution of :func:`fExecuteGraph`.
  *  The data can be found in :c:member:`FResultData.data`, the datatype in
  * :c:member:`FOperation.data_type` of the corresponding :struct:`FGraphNode`.
@@ -177,6 +150,33 @@ struct FResultData {
   void *data;
   size_t num_entries;
 };
+/** Describes one node in the Graph. Stores the corresponding operation in
+ * :member:`FGraphNode.operation`, an array of predecessors (the arguments of
+ * the operation) in :member:`FGraphNode.predecessors`, its size in
+ * :member:`FGraphNode.num_predecessor` and the reference counter in
+ * `FGraphNode.reference_counter`. Do not modify any parameter by yourself,
+ * since the framework manages them, but you can read the data and structure
+ * from them. The nodes are allocated by the operation functions, they and their
+ * members should neither be manually created, edited or freed except by the
+ * corresponding flint methods. */
+struct FGraphNode {
+  int num_predecessor;
+  FGraphNode **predecessors;
+  FOperation *operation;    // the operation represented by this graph node
+  size_t reference_counter; // for garbage collection in free graph
+  FResultData *result_data; // to store computational result
+};
+/** Result of an call to :func:`fCreateGraph`, see :struct:`FResultData`.
+ * Data of this Operation may always be changed, since the framework assumes
+ * this. */
+struct FStore {
+  // link to gpu data
+  cl_mem mem_id = nullptr;
+  void *data;
+  size_t num_entries;
+};
+// TODO dirty bit to may keep store data
+
 // A single-value constant (does not have to be loaded as a tensor)
 struct FConst {
   void *value; // has to be one of Type

@@ -451,8 +451,7 @@ inline void chooseExecutionMethod(FGraphNode *node,
 FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
   if (!initialized)
     flintInit_cpu();
-  bool is_data_node = node->operation->op_type == FSTORE ||
-                      node->operation->op_type == FRESULTDATA ||
+  bool is_data_node = node->operation->op_type == FSTORE || node->result_data ||
                       node->operation->op_type == FCONST;
 
   std::vector<CPUResultData> pred_data(node->num_predecessor);
@@ -465,11 +464,13 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
     // build predecessor data
     for (int i = 0; i < node->num_predecessor; i++) {
       FGraphNode *pred = node->predecessors[i];
-      if (pred->operation->op_type == FSTORE ||
-          pred->operation->op_type == FRESULTDATA) {
+      if (pred->operation->op_type == FSTORE) {
         FStore *store = (FStore *)node->operation;
         pred_data[i].data = store->data;
         pred_data[i].num_entries = store->num_entries;
+      } else if (pred->result_data) {
+        pred_data[i].data = pred->result_data;
+        pred_data[i].num_entries = pred->result_data->num_entries;
       } else { // FConst
         pred_data[i].num_entries = 1;
         pred_data[i].data = ((FConst *)node->operation)->value;
@@ -529,29 +530,14 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
   rd->data = data;
   rd->num_entries = total;
   rd->mem_id = nullptr;
-  FOperation *op = new FOperation();
-  op->dimensions = node->operation->dimensions;
-  op->shape = safe_mal<size_t>(node->operation->dimensions);
-  memcpy(op->shape, node->operation->shape,
-         node->operation->dimensions * sizeof(size_t));
-  op->data_type = node->operation->data_type;
-  op->additional_data = (void *)rd;
-  op->op_type = FRESULTDATA;
-  FGraphNode *rn = new FGraphNode();
-  rn->operation = op;
-  rn->predecessors = safe_mal<FGraphNode *>(1);
-  rn->predecessors[0] = node;
-  node->reference_counter++;
-  rn->num_predecessor = 1;
-  rn->reference_counter = 0;
-  return rn;
+  node->result_data = rd;
+  return node;
 }
 
 FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   if (!initialized)
     flintInit_cpu();
-  if (node->operation->op_type == FSTORE ||
-      node->operation->op_type == FRESULTDATA)
+  if (node->operation->op_type == FSTORE || node->result_data)
     return node;
   // TODO parallel execution
   using namespace std;
@@ -583,32 +569,32 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
     size_t size = 1;
     for (int j = 0; j < curr->operation->dimensions; j++)
       size *= curr->operation->shape[j];
-    if (curr->operation->op_type == FSTORE ||
-        curr->operation->op_type == FRESULTDATA ||
+    if (curr->operation->op_type == FSTORE || curr->result_data ||
         curr->operation->op_type == FCONST) {
       CPUResultData foo;
       foo.shape =
           vector<size_t>(curr->operation->shape,
                          curr->operation->shape + curr->operation->dimensions);
       foo.type = curr->operation->data_type;
-      switch (curr->operation->op_type) {
-      case FSTORE: {
-        FStore *store = (FStore *)curr->operation->additional_data;
+      if (curr->result_data) {
+        FResultData *store = curr->result_data;
         foo.num_entries = store->num_entries;
         foo.data = store->data;
-      } break;
-      case FRESULTDATA: {
-        FResultData *store = (FResultData *)curr->operation->additional_data;
-        foo.num_entries = store->num_entries;
-        foo.data = store->data;
-      } break;
-      case FCONST: {
-        FConst *cdata = (FConst *)curr->operation->additional_data;
-        foo.num_entries = 1;
-        foo.data = cdata->value;
-      } break;
-      default: // idc
-        break;
+      } else {
+        switch (curr->operation->op_type) {
+        case FSTORE: {
+          FStore *store = (FStore *)curr->operation->additional_data;
+          foo.num_entries = store->num_entries;
+          foo.data = store->data;
+        } break;
+        case FCONST: {
+          FConst *cdata = (FConst *)curr->operation->additional_data;
+          foo.num_entries = 1;
+          foo.data = cdata->value;
+        } break;
+        default: // idc
+          break;
+        }
       }
       results.insert({curr, foo});
     } else {
@@ -666,31 +652,30 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
     }
   }
   CPUResultData final = results[node];
-  // free all other data
-  for (auto &[gn, rd] : results) {
-    if (gn != node && gn->operation->op_type != FSTORE &&
-        gn->operation->op_type != FRESULTDATA &&
-        gn->operation->op_type != FCONST)
-      free(rd.data);
+  if (!is_eager_execution()) {
+    // free all other data
+    for (auto &[gn, rd] : results) {
+      if (gn != node && gn->operation->op_type != FSTORE && !gn->result_data &&
+          gn->operation->op_type != FCONST)
+        free(rd.data);
+    }
+  } else {
+    for (auto &[gn, rd] : results) {
+      if (gn != node && gn->operation->op_type != FSTORE && !gn->result_data &&
+          gn->operation->op_type != FCONST) {
+        FResultData *result = new FResultData();
+        result->data = rd.data;
+        result->num_entries = rd.num_entries;
+        result->mem_id = nullptr;
+        gn->result_data = result;
+      }
+    }
   }
   // return data
   FResultData *rd = new FResultData();
   rd->data = final.data;
   rd->num_entries = final.num_entries;
   rd->mem_id = nullptr;
-  FOperation *op = new FOperation();
-  op->dimensions = node->operation->dimensions;
-  op->shape = safe_mal<size_t>(final.shape.size());
-  memcpy(op->shape, final.shape.data(), final.shape.size() * sizeof(size_t));
-  op->data_type = node->operation->data_type;
-  op->additional_data = (void *)rd;
-  op->op_type = FRESULTDATA;
-  FGraphNode *rn = new FGraphNode();
-  rn->operation = op;
-  rn->predecessors = safe_mal<FGraphNode *>(1);
-  rn->predecessors[0] = node;
-  node->reference_counter++;
-  rn->num_predecessor = 1;
-  rn->reference_counter = 0;
-  return rn;
+  node->result_data = rd;
+  return node;
 }

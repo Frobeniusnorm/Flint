@@ -146,10 +146,10 @@ void flintCleanup_gpu() {
 
 static std::string
 generateCode(FGraphNode *node,
-             std::list<std::pair<FOperation *, std::string>> &parameters) {
+             std::list<std::pair<FGraphNode *, std::string>> &parameters) {
   using namespace std;
   list<tuple<FGraphNode *, string>> todo;
-  unordered_map<FOperation *, std::string> assigned_params;
+  unordered_map<FGraphNode *, std::string> assigned_params;
   int variable_index = 0;
   string code = "";
 
@@ -165,321 +165,324 @@ generateCode(FGraphNode *node,
     bool push_pred = true;
     // write code
     string type = typeString(node->operation->data_type);
-    switch (node->operation->op_type) {
-    case FRESULTDATA:
-    case FSTORE: {
+    // need to be outside switch to include result_data
+    if (node->operation->op_type == FSTORE || node->result_data) {
       push_pred = false;
       size_t num_entries =
           node->operation->op_type == FSTORE
               ? ((FStore *)node->operation->additional_data)->num_entries
-              : ((FResultData *)node->operation->additional_data)->num_entries;
-      if (assigned_params.find(node->operation) != assigned_params.end()) {
-        code = type + " " + name + " = " + assigned_params[node->operation] +
-               "[index%" + to_string(num_entries) + "];\n" + code;
+              : node->result_data->num_entries;
+      if (assigned_params.find(node) != assigned_params.end()) {
+        code = type + " " + name + " = " + assigned_params[node] + "[index%" +
+               to_string(num_entries) + "];\n" + code;
       } else {
         size_t pid = assigned_params.size();
-        assigned_params.insert({node->operation, "P" + to_string(pid)});
-        parameters.push_back({node->operation, "P" + to_string(pid)});
+        assigned_params.insert({node, "P" + to_string(pid)});
+        parameters.push_back({node, "P" + to_string(pid)});
         code = type + " " + name + " = P" + to_string(pid) + "[index%" +
                to_string(num_entries) + "];\n" + code;
       }
-    } break;
-    case FCONST:
-      switch (node->operation->data_type) {
-      case F_INT32: {
-        FConst *actcst = (FConst *)node->operation->additional_data;
-        code = type + " " + name + " = " + to_string(*((int *)actcst->value)) +
-               ";\n" + code;
-      } break;
-      case F_INT64: {
-        FConst *actcst = (FConst *)node->operation->additional_data;
-        code = type + " " + name + " = " + to_string(*((long *)actcst->value)) +
-               ";\n" + code;
-      } break;
-      case F_FLOAT64: {
-        FConst *actcst = (FConst *)node->operation->additional_data;
-        code = type + " " + name + " = " +
-               to_string(*((double *)actcst->value)) + ";\n" + code;
-      } break;
-      case F_FLOAT32: {
-        FConst *actcst = (FConst *)node->operation->additional_data;
-        code = type + " " + name + " = " +
-               to_string(*((float *)actcst->value)) + ";\n" + code;
-      } break;
-      }
-      break;
-    // Binary Operators
-    case FADD:
-    case FSUB:
-    case FDIV:
-    case FMUL: {
-      // size of current variable has to be equal to the size of one opperand,
-      // the other one is at least smaller but not larger
-      char op = '\0';
+    } else
       switch (node->operation->op_type) {
-      case FADD:
-        op = '+';
-        break;
-      case FSUB:
-        op = '-';
-        break;
-      case FDIV:
-        op = '/';
-        break;
-      case FMUL:
-        op = '*';
-        break;
-      default:
-        break; // shut up compiler
-      }
-      code = type + " " + name + " = v" + to_string(variable_index + 1) + " " +
-             op + " v" + to_string(variable_index + 2) + ";\n" + code;
-      break;
-    }
-    case FPOW: {
-      FOperation *x = node->predecessors[0]->operation;
-      FOperation *y = node->predecessors[1]->operation;
-      if ((x->data_type == F_FLOAT32 || x->data_type == F_FLOAT64) &&
-          (y->data_type == F_FLOAT32 || y->data_type == F_FLOAT64))
-        code = type + " " + name + " = pow(v" + to_string(variable_index + 1) +
-               ", v" + to_string(variable_index + 2) + ");\n" + code;
-      else if (x->data_type == F_INT64 &&
-               (y->data_type == F_INT32 || y->data_type == F_INT64))
-        code = type + " " + name + " = (long)pown((double)v" +
-               to_string(variable_index + 1) + ", (int)v" +
-               to_string(variable_index + 2) + ");\n" + code;
-      else if (x->data_type == F_INT32 &&
-               (y->data_type == F_INT32 || y->data_type == F_INT64))
-        code = type + " " + name + " = (int)pown((float)v" +
-               to_string(variable_index + 1) + ", (int)v" +
-               to_string(variable_index + 2) + ");\n" + code;
-      else
-        code = type + " " + name + " = pow((double)v" +
-               to_string(variable_index + 1) + ", (double)v" +
-               to_string(variable_index + 2) + ");\n" + code;
-    } break;
-    case FMIN: {
-      code = type + " " + name + " = min(v" + to_string(variable_index + 1) +
-             ", v" + to_string(variable_index + 2) + ");\n" + code;
-
-    } break;
-    case FMAX: {
-      code = type + " " + name + " = max(v" + to_string(variable_index + 1) +
-             ", v" + to_string(variable_index + 2) + ");\n" + code;
-
-    } break;
-    case FMATMUL: {
-      string par1, par2;
-      push_pred = false;
-      FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
-      // we ignore the value assignment of the parameters since we have to
-      // access the arrays directly parameter 1
-      if (assigned_params.find(gnp1->operation) != assigned_params.end()) {
-        par1 = assigned_params[gnp1->operation];
-      } else {
-        par1 = "P" + to_string(assigned_params.size());
-        assigned_params.insert({gnp1->operation, par1});
-        parameters.push_back({gnp1->operation, par1});
-      }
-      // parameter 2
-      if (assigned_params.find(gnp2->operation) != assigned_params.end()) {
-        par2 = assigned_params[gnp2->operation];
-      } else {
-        par2 = "P" + to_string(assigned_params.size());
-        assigned_params.insert({gnp2->operation, par2});
-        parameters.push_back({gnp2->operation, par2});
-      }
-      size_t l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
-      size_t m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
-      size_t n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
-      // we need to compute $name
-      // indices j and k of $name
-      string j = "((index % " + to_string(l * n) + ")/" + to_string(n) + ")";
-      string k = "((index % " + to_string(l * n) + ")%" + to_string(n) + ")";
-      // base index of matrix start of p1 and p2
-      string base_p1 = "";
-      if (gnp1->operation->dimensions > 2) {
-        // get matrix number of index and then reproject
-        base_p1 = "(index / " + to_string(l * n) + ") * " + to_string(l * m);
-      } else
-        base_p1 = "0";
-      string base_p2 = "";
-      if (gnp2->operation->dimensions > 2) {
-        // get matrix number of index and then reproject
-        base_p2 = "(index / " + to_string(l * n) + ") * " + to_string(m * n);
-      } else
-        base_p2 = "0";
-      code = "for(int i = 0; i < " + to_string(m) +
-             "; i++){\n"
-             "  " +
-             name + " += " + par1 + "[" + base_p1 + " + " + j + " * " +
-             to_string(m) + " + i] * " + par2 + "[" + base_p2 + " + i * " +
-             to_string(n) + " + " + k + "];\n}\n" + code;
-      code = type + " " + name + " = 0;\n" + code;
-    } break;
-    case FRESHAPE:
-    case FLATTEN: {
-      code = type + " " + name + " = v" + to_string(variable_index + 1) +
-             ";\n" + code;
-    } break;
-    case FCONVERSION: {
-      code = type + " " + name + " = (" + type + ")v" +
-             to_string(variable_index + 1) + ";\n" + code;
-    }; break;
-    case FABS: {
-      code = type + " " + name + " = abs(v" +
-             std::to_string(variable_index + 1) + ");\n" + code;
-    } break;
-    case FLOG: {
-      code = type + " " + name + " = log(v" +
-             std::to_string(variable_index + 1) + ");\n" + code;
-    } break;
-    case FLOG2: {
-      code = type + " " + name + " = log2(v" +
-             std::to_string(variable_index + 1) + ");\n" + code;
-    } break;
-    case FLOG10: {
-      code = type + " " + name + " = log2(v" +
-             std::to_string(variable_index + 1) + ");\n" + code;
-    } break;
-    case FREDUCE_SUM:
-    case FREDUCE_MUL: {
-      push_pred = false;
-      FGraphNode *prev = node->predecessors[0];
-      int red_dim = ((int *)node->operation->additional_data)[0];
-      size_t it_dim =
-          1; // iteration size <=> product of all dimensions along dim
-      for (size_t d = red_dim + 1; d < prev->operation->dimensions; d++)
-        it_dim *= prev->operation->shape[d];
-      std::string reduce_code = type + " " + name + " = ";
-      reduce_code +=
-          std::to_string(node->operation->op_type == FREDUCE_SUM ? 0 : 1) +
-          ";\n";
-      reduce_code += "for(long i = 0; i < " +
-                     std::to_string(prev->operation->shape[red_dim]) +
-                     "; i++){\n";
-      // we ignore the value assignment of the parameters since we have to
-      // access the arrays directly parameter 1
-      std::string par1 = "";
-      if (assigned_params.find(prev->operation) != assigned_params.end()) {
-        par1 = assigned_params[prev->operation];
-      } else {
-        par1 = "P" + to_string(assigned_params.size());
-        parameters.push_back({prev->operation, par1});
-        assigned_params.insert({prev->operation, par1});
-      }
-      reduce_code +=
-          " " + name +
-          (node->operation->op_type == FREDUCE_SUM ? " += " : " *= ") + par1 +
-          "[(index / " + std::to_string(it_dim) + ") * " +
-          std::to_string(it_dim) + " * " +
-          std::to_string(prev->operation->shape[red_dim]) + " + index % " +
-          std::to_string(it_dim) + " + i * " + std::to_string(it_dim) +
-          "];\n}\n";
-      code = reduce_code + code;
-    } break;
-    case FSLICE: {
-      FOperation *pred = node->predecessors[0]->operation;
-      FSlice *slice = (FSlice *)node->operation->additional_data;
-      unsigned int old_idx = num_indices++;
-      index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
-      // flattened shape data
-      std::vector<size_t> acc_sizes(node->operation->dimensions);
-      std::vector<size_t> acc_sizes_pred(acc_sizes.size());
-      for (long d = node->operation->dimensions - 1; d >= 0; d--) {
-        if (d == node->operation->dimensions - 1) {
-          acc_sizes[d] = 1;
-          acc_sizes_pred[d] = 1;
-        } else {
-          acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred->shape[d + 1];
-          acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
+      case FCONST:
+        switch (node->operation->data_type) {
+        case F_INT32: {
+          FConst *actcst = (FConst *)node->operation->additional_data;
+          code = type + " " + name + " = " +
+                 to_string(*((int *)actcst->value)) + ";\n" + code;
+        } break;
+        case F_INT64: {
+          FConst *actcst = (FConst *)node->operation->additional_data;
+          code = type + " " + name + " = " +
+                 to_string(*((long *)actcst->value)) + ";\n" + code;
+        } break;
+        case F_FLOAT64: {
+          FConst *actcst = (FConst *)node->operation->additional_data;
+          code = type + " " + name + " = " +
+                 to_string(*((double *)actcst->value)) + ";\n" + code;
+        } break;
+        case F_FLOAT32: {
+          FConst *actcst = (FConst *)node->operation->additional_data;
+          code = type + " " + name + " = " +
+                 to_string(*((float *)actcst->value)) + ";\n" + code;
+        } break;
         }
+        break;
+      // Binary Operators
+      case FADD:
+      case FSUB:
+      case FDIV:
+      case FMUL: {
+        // size of current variable has to be equal to the size of one opperand,
+        // the other one is at least smaller but not larger
+        char op = '\0';
+        switch (node->operation->op_type) {
+        case FADD:
+          op = '+';
+          break;
+        case FSUB:
+          op = '-';
+          break;
+        case FDIV:
+          op = '/';
+          break;
+        case FMUL:
+          op = '*';
+          break;
+        default:
+          break; // shut up compiler
+        }
+        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+               " " + op + " v" + to_string(variable_index + 2) + ";\n" + code;
+        break;
       }
-      // calculate start
-      size_t start = 0;
-      std::vector<long> step(node->operation->dimensions);
-      for (long d = 0; d < step.size(); d++) {
-        start += slice->start[d] * acc_sizes_pred[d];
+      case FPOW: {
+        FOperation *x = node->predecessors[0]->operation;
+        FOperation *y = node->predecessors[1]->operation;
+        if ((x->data_type == F_FLOAT32 || x->data_type == F_FLOAT64) &&
+            (y->data_type == F_FLOAT32 || y->data_type == F_FLOAT64))
+          code = type + " " + name + " = pow(v" +
+                 to_string(variable_index + 1) + ", v" +
+                 to_string(variable_index + 2) + ");\n" + code;
+        else if (x->data_type == F_INT64 &&
+                 (y->data_type == F_INT32 || y->data_type == F_INT64))
+          code = type + " " + name + " = (long)pown((double)v" +
+                 to_string(variable_index + 1) + ", (int)v" +
+                 to_string(variable_index + 2) + ");\n" + code;
+        else if (x->data_type == F_INT32 &&
+                 (y->data_type == F_INT32 || y->data_type == F_INT64))
+          code = type + " " + name + " = (int)pown((float)v" +
+                 to_string(variable_index + 1) + ", (int)v" +
+                 to_string(variable_index + 2) + ");\n" + code;
+        else
+          code = type + " " + name + " = pow((double)v" +
+                 to_string(variable_index + 1) + ", (double)v" +
+                 to_string(variable_index + 2) + ");\n" + code;
+      } break;
+      case FMIN: {
+        code = type + " " + name + " = min(v" + to_string(variable_index + 1) +
+               ", v" + to_string(variable_index + 2) + ");\n" + code;
+
+      } break;
+      case FMAX: {
+        code = type + " " + name + " = max(v" + to_string(variable_index + 1) +
+               ", v" + to_string(variable_index + 2) + ");\n" + code;
+
+      } break;
+      case FMATMUL: {
+        string par1, par2;
+        push_pred = false;
+        FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
+        // we ignore the value assignment of the parameters since we have to
+        // access the arrays directly parameter 1
+        if (assigned_params.find(gnp1) != assigned_params.end()) {
+          par1 = assigned_params[gnp1];
+        } else {
+          par1 = "P" + to_string(assigned_params.size());
+          assigned_params.insert({gnp1, par1});
+          parameters.push_back({gnp1, par1});
+        }
+        // parameter 2
+        if (assigned_params.find(gnp2) != assigned_params.end()) {
+          par2 = assigned_params[gnp2];
+        } else {
+          par2 = "P" + to_string(assigned_params.size());
+          assigned_params.insert({gnp2, par2});
+          parameters.push_back({gnp2, par2});
+        }
+        size_t l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
+        size_t m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
+        size_t n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
+        // we need to compute $name
+        // indices j and k of $name
+        string j = "((index % " + to_string(l * n) + ")/" + to_string(n) + ")";
+        string k = "((index % " + to_string(l * n) + ")%" + to_string(n) + ")";
+        // base index of matrix start of p1 and p2
+        string base_p1 = "";
+        if (gnp1->operation->dimensions > 2) {
+          // get matrix number of index and then reproject
+          base_p1 = "(index / " + to_string(l * n) + ") * " + to_string(l * m);
+        } else
+          base_p1 = "0";
+        string base_p2 = "";
+        if (gnp2->operation->dimensions > 2) {
+          // get matrix number of index and then reproject
+          base_p2 = "(index / " + to_string(l * n) + ") * " + to_string(m * n);
+        } else
+          base_p2 = "0";
+        code = "for(int i = 0; i < " + to_string(m) +
+               "; i++){\n"
+               "  " +
+               name + " += " + par1 + "[" + base_p1 + " + " + j + " * " +
+               to_string(m) + " + i] * " + par2 + "[" + base_p2 + " + i * " +
+               to_string(n) + " + " + k + "];\n}\n" + code;
+        code = type + " " + name + " = 0;\n" + code;
+      } break;
+      case FRESHAPE:
+      case FLATTEN: {
+        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+               ";\n" + code;
+      } break;
+      case FCONVERSION: {
+        code = type + " " + name + " = (" + type + ")v" +
+               to_string(variable_index + 1) + ";\n" + code;
+      }; break;
+      case FABS: {
+        code = type + " " + name + " = abs(v" +
+               std::to_string(variable_index + 1) + ");\n" + code;
+      } break;
+      case FLOG: {
+        code = type + " " + name + " = log(v" +
+               std::to_string(variable_index + 1) + ");\n" + code;
+      } break;
+      case FLOG2: {
+        code = type + " " + name + " = log2(v" +
+               std::to_string(variable_index + 1) + ");\n" + code;
+      } break;
+      case FLOG10: {
+        code = type + " " + name + " = log2(v" +
+               std::to_string(variable_index + 1) + ");\n" + code;
+      } break;
+      case FREDUCE_SUM:
+      case FREDUCE_MUL: {
+        push_pred = false;
+        FGraphNode *prev = node->predecessors[0];
+        int red_dim = ((int *)node->operation->additional_data)[0];
+        size_t it_dim =
+            1; // iteration size <=> product of all dimensions along dim
+        for (size_t d = red_dim + 1; d < prev->operation->dimensions; d++)
+          it_dim *= prev->operation->shape[d];
+        std::string reduce_code = type + " " + name + " = ";
+        reduce_code +=
+            std::to_string(node->operation->op_type == FREDUCE_SUM ? 0 : 1) +
+            ";\n";
+        reduce_code += "for(long i = 0; i < " +
+                       std::to_string(prev->operation->shape[red_dim]) +
+                       "; i++){\n";
+        // we ignore the value assignment of the parameters since we have to
+        // access the arrays directly parameter 1
+        std::string par1 = "";
+        if (assigned_params.find(prev) != assigned_params.end()) {
+          par1 = assigned_params[prev];
+        } else {
+          par1 = "P" + to_string(assigned_params.size());
+          parameters.push_back({prev, par1});
+          assigned_params.insert({prev, par1});
+        }
+        reduce_code +=
+            " " + name +
+            (node->operation->op_type == FREDUCE_SUM ? " += " : " *= ") + par1 +
+            "[(index / " + std::to_string(it_dim) + ") * " +
+            std::to_string(it_dim) + " * " +
+            std::to_string(prev->operation->shape[red_dim]) + " + index % " +
+            std::to_string(it_dim) + " + i * " + std::to_string(it_dim) +
+            "];\n}\n";
+        code = reduce_code + code;
+      } break;
+      case FSLICE: {
+        FOperation *pred = node->predecessors[0]->operation;
+        FSlice *slice = (FSlice *)node->operation->additional_data;
+        unsigned int old_idx = num_indices++;
+        index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
+        // flattened shape data
+        std::vector<size_t> acc_sizes(node->operation->dimensions);
+        std::vector<size_t> acc_sizes_pred(acc_sizes.size());
+        for (long d = node->operation->dimensions - 1; d >= 0; d--) {
+          if (d == node->operation->dimensions - 1) {
+            acc_sizes[d] = 1;
+            acc_sizes_pred[d] = 1;
+          } else {
+            acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred->shape[d + 1];
+            acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
+          }
+        }
+        // calculate start
+        size_t start = 0;
+        std::vector<long> step(node->operation->dimensions);
+        for (long d = 0; d < step.size(); d++) {
+          start += slice->start[d] * acc_sizes_pred[d];
+        }
+        index_defs += "index = " + to_string(start);
+        // accumulate index
+        for (long d = 0; d < node->operation->dimensions; d++) {
+          index_defs +=
+              " + (" +
+              (d == 0 ? string("index")
+                      : string("index %" + to_string(acc_sizes[d - 1]))) +
+              ") / " + to_string(acc_sizes[d]) + " * " +
+              to_string(slice->step[d] * (long)acc_sizes_pred[d]);
+        }
+        index_defs += ";\n";
+        code = "index = old_index" + to_string(old_idx) + ";\n" + code;
+        variable_index--; // because we dont generate a variable
+      } break;
+      case FREPEAT: {
+        const FOperation *op = node->operation;
+        FOperation *pred = node->predecessors[0]->operation;
+        unsigned int old_idx = num_indices++;
+        index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
+        // add to index_defs a redefinition of index, so that we remap to src
+        // data
+        // calculate number of elements per dimension entry for destination and
+        // source
+        std::vector<size_t> acc_sizes_d(op->dimensions);
+        std::vector<size_t> acc_sizes_s(op->dimensions);
+        acc_sizes_d[op->dimensions - 1] = 1;
+        acc_sizes_s[op->dimensions - 1] = 1;
+        for (int dim = op->dimensions - 2; dim >= 0; dim--) {
+          acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
+          acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred->shape[dim + 1];
+        }
+        // to get the index in the source array we first calculate the indices
+        // and reproject
+        index_defs += "{\nint working_index = index;\nindex = 0;\n";
+        for (int dim = 0; dim < op->dimensions; dim++) {
+          index_defs += "index += ((working_index /" +
+                        to_string(acc_sizes_d[dim]) + ") % " +
+                        to_string(pred->shape[dim]) + ") * " +
+                        to_string(acc_sizes_s[dim]) + ";\n";
+          index_defs +=
+              "working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
+        }
+        index_defs += "}\n";
+        code = "index = old_index" + to_string(old_idx) + ";\n" + code;
+        variable_index--; // because we dont generate a variable
+      } break;
+      case FTRANSPOSE: {
+        const FOperation *op = node->operation;
+        const int *transposition = (int *)op->additional_data;
+        FOperation *pred = node->predecessors[0]->operation;
+        unsigned int old_idx = num_indices++;
+        index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
+        // add to index_defs a redefinition of index, so that we remap to src
+        // data
+        // calculate number of elements per dimension entry for destination and
+        // source
+        std::vector<size_t> acc_sizes_d(op->dimensions);
+        std::vector<size_t> acc_sizes_s(op->dimensions);
+        acc_sizes_d[op->dimensions - 1] = 1;
+        acc_sizes_s[op->dimensions - 1] = 1;
+        for (int dim = op->dimensions - 2; dim >= 0; dim--) {
+          acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
+          acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred->shape[dim + 1];
+        }
+        // to get the index in the source array we first calculate the indices
+        // and reproject
+        index_defs += "{\nint working_index = index;\nindex = 0;\n";
+        for (int dim = 0; dim < op->dimensions; dim++) {
+          index_defs += "index += (working_index /" +
+                        to_string(acc_sizes_d[dim]) + ") * " +
+                        to_string(acc_sizes_s[transposition[dim]]) + ";\n";
+          index_defs +=
+              "working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
+        }
+        index_defs += "}\n";
+        code = "index = old_index" + to_string(old_idx) + ";\n" + code;
+        variable_index--; // because we dont generate a variable
+      } break;
+      default:
+        break;
       }
-      index_defs += "index = " + to_string(start);
-      // accumulate index
-      for (long d = 0; d < node->operation->dimensions; d++) {
-        index_defs +=
-            " + (" +
-            (d == 0 ? string("index")
-                    : string("index %" + to_string(acc_sizes[d - 1]))) +
-            ") / " + to_string(acc_sizes[d]) + " * " +
-            to_string(slice->step[d] * (long)acc_sizes_pred[d]);
-      }
-      index_defs += ";\n";
-      code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-      variable_index--; // because we dont generate a variable
-    } break;
-    case FREPEAT: {
-      const FOperation *op = node->operation;
-      FOperation *pred = node->predecessors[0]->operation;
-      unsigned int old_idx = num_indices++;
-      index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
-      // add to index_defs a redefinition of index, so that we remap to src
-      // data
-      // calculate number of elements per dimension entry for destination and
-      // source
-      std::vector<size_t> acc_sizes_d(op->dimensions);
-      std::vector<size_t> acc_sizes_s(op->dimensions);
-      acc_sizes_d[op->dimensions - 1] = 1;
-      acc_sizes_s[op->dimensions - 1] = 1;
-      for (int dim = op->dimensions - 2; dim >= 0; dim--) {
-        acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
-        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred->shape[dim + 1];
-      }
-      // to get the index in the source array we first calculate the indices and
-      // reproject
-      index_defs += "{\nint working_index = index;\nindex = 0;\n";
-      for (int dim = 0; dim < op->dimensions; dim++) {
-        index_defs += "index += ((working_index /" +
-                      to_string(acc_sizes_d[dim]) + ") % " +
-                      to_string(pred->shape[dim]) + ") * " +
-                      to_string(acc_sizes_s[dim]) + ";\n";
-        index_defs += "working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
-      }
-      index_defs += "}\n";
-      code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-      variable_index--; // because we dont generate a variable
-    } break;
-    case FTRANSPOSE: {
-      const FOperation *op = node->operation;
-      const int *transposition = (int *)op->additional_data;
-      FOperation *pred = node->predecessors[0]->operation;
-      unsigned int old_idx = num_indices++;
-      index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
-      // add to index_defs a redefinition of index, so that we remap to src
-      // data
-      // calculate number of elements per dimension entry for destination and
-      // source
-      std::vector<size_t> acc_sizes_d(op->dimensions);
-      std::vector<size_t> acc_sizes_s(op->dimensions);
-      acc_sizes_d[op->dimensions - 1] = 1;
-      acc_sizes_s[op->dimensions - 1] = 1;
-      for (int dim = op->dimensions - 2; dim >= 0; dim--) {
-        acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
-        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred->shape[dim + 1];
-      }
-      // to get the index in the source array we first calculate the indices and
-      // reproject
-      index_defs += "{\nint working_index = index;\nindex = 0;\n";
-      for (int dim = 0; dim < op->dimensions; dim++) {
-        index_defs += "index += (working_index /" +
-                      to_string(acc_sizes_d[dim]) + ") * " +
-                      to_string(acc_sizes_s[transposition[dim]]) + ";\n";
-        index_defs += "working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
-      }
-      index_defs += "}\n";
-      code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-      variable_index--; // because we dont generate a variable
-    } break;
-    default:
-      break;
-    }
     // push predecessors dfs
     if (push_pred)
       for (int i = 0; i < node->num_predecessor; i++)
@@ -503,32 +506,22 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     flintInit_gpu();
   }
   auto start = std::chrono::high_resolution_clock::now();
-  FOperation *result = new FOperation();
   FResultData *resultData = new FResultData();
-  result->op_type = FRESULTDATA;
-  result->data_type = node->operation->data_type;
-  result->additional_data = resultData;
-  FGraphNode *newsucc = new FGraphNode();
-  newsucc->num_predecessor = 1;
-  newsucc->reference_counter = 0;
-  newsucc->predecessors = safe_mal<FGraphNode *>(1);
-  newsucc->predecessors[0] = node;
-  node->reference_counter++;
-  newsucc->operation = result;
   FOperation *node_op = node->operation;
   size_t total_size_node = 1;
   for (int i = 0; i < node_op->dimensions; i++)
     total_size_node *= node_op->shape[i];
   // calculate Code and Parameters
   using namespace std;
-  list<pair<FOperation *, string>> parameters;
+  list<pair<FGraphNode *, string>> parameters;
   string graph_code = generateCode(node, parameters);
   string code = "__kernel void execute_graph(__global ";
   code += typeString(node->operation->data_type);
   code += " *R";
   // insert parameters
   for (auto &[op, name] : parameters)
-    code += ", __global const " + typeString(op->data_type) + " *" + name;
+    code += ", __global const " + typeString(op->operation->data_type) + " *" +
+            name;
   code += "){\n";
   // add the execution code
   code += graph_code;
@@ -595,7 +588,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     flogging(F_ERROR, "Not enough memory to create buffer!");
   int index = 1;
   std::vector<cl_event> writeEvents;
-  for (auto &[op, name] : parameters) {
+  for (auto &[gn, name] : parameters) {
+    FOperation *op = gn->operation;
     // TODO keep track of when data in Store is changed
     cl_mem mem_obj = nullptr;
     bool doWrite =
@@ -604,10 +598,10 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     size_t type_size = typeSize(op->data_type);
     size_t total_size = op->op_type == FSTORE
                             ? ((FStore *)op->additional_data)->num_entries
-                            : ((FResultData *)op->additional_data)->num_entries;
+                            : gn->result_data->num_entries;
     cl_mem mem_id = op->op_type == FSTORE
                         ? ((FStore *)op->additional_data)->mem_id
-                        : ((FResultData *)op->additional_data)->mem_id;
+                        : gn->result_data->mem_id;
     if (mem_id) {
       mem_obj = mem_id;
     } else {
@@ -618,14 +612,13 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       if (op->op_type == FSTORE)
         ((FStore *)op->additional_data)->mem_id = mem_obj;
       else
-        ((FResultData *)op->additional_data)->mem_id = mem_obj;
+        gn->result_data->mem_id = mem_obj;
       doWrite = true;
     }
     // actually write the buffer
     if (doWrite) {
-      void *data = op->op_type == FSTORE
-                       ? ((FStore *)op->additional_data)->data
-                       : ((FResultData *)op->additional_data)->data;
+      void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
+                                         : gn->result_data->data;
       writeEvents.emplace_back();
       err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_TRUE, 0,
                                       total_size * type_size, data, 0, nullptr,
@@ -665,11 +658,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     }
     flogging(F_ERROR, msg);
   }
-  // size for result
-  result->dimensions = node_op->dimensions;
-  result->shape = safe_mal<size_t>(result->dimensions);
-  memcpy((void *)result->shape, (void *)node_op->shape,
-         result->dimensions * sizeof(size_t));
   resultData->data = malloc(total_size_node * type_size_node);
   resultData->num_entries = total_size_node;
   if (!resultData->data)
@@ -688,5 +676,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   flogging(F_DEBUG, "compilation took " + to_string(compilation_time.count()) +
                         "ms, execution took " + to_string(elapsed.count()) +
                         "ms");
-  return newsucc;
+  node->result_data = resultData;
+  return node;
 }

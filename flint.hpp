@@ -264,18 +264,16 @@ template <typename T> struct Tensor<T, 1> {
     node->reference_counter++;
   }
   T &operator[](const size_t index) {
+    if (node->result_data)
+      return ((T *)node->result_data->data)[index];
     switch (node->operation->op_type) {
     case FSTORE: {
       FStore *store = (FStore *)node->operation->additional_data;
       return ((T *)store->data)[index];
     }
-    case FRESULTDATA: {
-      FResultData *store = (FResultData *)node->operation->additional_data;
-      return ((T *)store->data)[index];
-    }
     default: {
       execute();
-      FResultData *store = (FResultData *)node->operation->additional_data;
+      FResultData *store = node->result_data;
       return ((T *)store->data)[index];
     }
     }
@@ -309,14 +307,14 @@ template <typename T> struct Tensor<T, 1> {
   }
   const size_t get_shape() const { return shape; }
   std::vector<T> operator*() {
+    if (node->result_data) {
+      return std::vector<T>((T *)node->result_data->data,
+                            (T *)node->result_data->data +
+                                node->result_data->num_entries);
+    }
     switch (node->operation->op_type) {
     case FSTORE: {
       FStore *store = (FStore *)node->operation->additional_data;
-      return std::vector<T>((T *)store->data,
-                            (T *)store->data + store->num_entries);
-    }
-    case FRESULTDATA: {
-      FResultData *store = (FResultData *)node->operation->additional_data;
       return std::vector<T>((T *)store->data,
                             (T *)store->data + store->num_entries);
     }
@@ -326,16 +324,15 @@ template <typename T> struct Tensor<T, 1> {
     }
     default: {
       execute();
-      FResultData *store = (FResultData *)node->operation->additional_data;
+      FResultData *store = node->result_data;
       return std::vector<T>((T *)store->data,
                             (T *)store->data + store->num_entries);
     }
     }
   }
   void execute() {
-    FOperation *op = node->operation;
-    if (op->op_type != FSTORE && op->op_type != FRESULTDATA &&
-        op->op_type != FCONST) {
+    const FOperation *op = node->operation;
+    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
       node->reference_counter--;
       node = fExecuteGraph(node);
       node->reference_counter++;
@@ -349,30 +346,29 @@ template <typename T> struct Tensor<T, 1> {
                        : op->data_type == F_FLOAT32 ? std::string("FLOAT32")
                                                     : std::string("FLOAT64")) +
                       ", shape: " + std::to_string(shape) + ">(";
-    if (op->op_type != FSTORE && op->op_type != FRESULTDATA &&
-        op->op_type != FCONST)
+    if (op->op_type != FSTORE && node->result_data && op->op_type != FCONST)
       foo += "<not yet executed>";
     else {
-      switch (op->op_type) {
-      case FSTORE: {
-        FStore *store = (FStore *)node->operation->additional_data;
+      if (node->result_data) {
+        FResultData *store = node->result_data;
         foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
             (T *)store->data, (T *)store->data + store->num_entries));
-        break;
-      }
-      case FRESULTDATA: {
-        FResultData *store = (FResultData *)node->operation->additional_data;
-        foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
-            (T *)store->data, (T *)store->data + store->num_entries));
-        break;
-      }
-      case FCONST: {
-        FConst *store = (FConst *)node->operation->additional_data;
-        foo += std::to_string(((T *)store->value)[0]);
-        break;
-      }
-      default: // to make the compiler shut up
-        break;
+      } else {
+        switch (op->op_type) {
+        case FSTORE: {
+          FStore *store = (FStore *)node->operation->additional_data;
+          foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
+              (T *)store->data, (T *)store->data + store->num_entries));
+          break;
+        }
+        case FCONST: {
+          FConst *store = (FConst *)node->operation->additional_data;
+          foo += std::to_string(((T *)store->value)[0]);
+          break;
+        }
+        default: // to make the compiler shut up
+          break;
+        }
       }
     }
     foo += ")";
@@ -545,6 +541,14 @@ template <typename T, unsigned int n> struct Tensor {
   // to copy the complete data, because of that we recommend the builtin index
   // access of the Tensor.
   storage_type operator*() {
+    if (node->result_data) {
+      FResultData *store = node->result_data;
+      storage_type result(shape[0]);
+      const std::vector<T> src = std::vector<T>(
+          (T *)store->data, (T *)store->data + store->num_entries);
+      bringIntoShape(result, src, 0, 0, total_size);
+      return result;
+    }
     switch (node->operation->op_type) {
     case FSTORE: {
       FStore *store = (FStore *)node->operation->additional_data;
@@ -554,17 +558,9 @@ template <typename T, unsigned int n> struct Tensor {
       bringIntoShape(result, src, 0, 0, total_size);
       return result;
     }
-    case FRESULTDATA: {
-      FResultData *store = (FResultData *)node->operation->additional_data;
-      storage_type result(shape[0]);
-      const std::vector<T> src = std::vector<T>(
-          (T *)store->data, (T *)store->data + store->num_entries);
-      bringIntoShape(result, src, 0, 0, total_size);
-      return result;
-    }
     default: {
       execute();
-      FResultData *store = (FResultData *)node->operation->additional_data;
+      FResultData *store = node->result_data;
       storage_type result(shape[0]);
       const std::vector<T> src = std::vector<T>(
           (T *)store->data, (T *)store->data + store->num_entries);
@@ -575,35 +571,33 @@ template <typename T, unsigned int n> struct Tensor {
   }
   void execute() {
     FOperation *op = node->operation;
-    if (op->op_type != FSTORE && op->op_type != FRESULTDATA &&
-        op->op_type != FCONST) {
-      // no longer held by this tensor
-      node->reference_counter--;
+    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
       node = fExecuteGraph(node);
-      node->reference_counter++;
     }
   }
   void execute_cpu() {
     FOperation *op = node->operation;
-    if (op->op_type != FSTORE && op->op_type != FRESULTDATA &&
-        op->op_type != FCONST) {
-      // no longer held by this tensor
-      node->reference_counter--;
+    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
       node = fExecuteGraph_cpu(node);
-      node->reference_counter++;
     }
   }
   void execute_gpu() {
     FOperation *op = node->operation;
-    if (op->op_type != FSTORE && op->op_type != FRESULTDATA &&
-        op->op_type != FCONST) {
-      // no longer held by this tensor
-      node->reference_counter--;
+    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
       node = fExecuteGraph_gpu(node);
-      node->reference_counter++;
     }
   }
   TensorView<T, n - 1> operator[](const size_t index) {
+    if (node->result_data) {
+      FResultData *store = node->result_data;
+      size_t alrdindx = index;
+      std::vector<size_t> ns(shape.size() - 1);
+      for (size_t i = 1; i < shape.size(); i++) {
+        ns[i - 1] = shape[i];
+        alrdindx *= shape[i];
+      }
+      return TensorView<T, n - 1>((T *)store->data, ns, alrdindx);
+    }
     switch (node->operation->op_type) {
     case FSTORE: {
       FStore *store = (FStore *)node->operation->additional_data;
@@ -615,19 +609,9 @@ template <typename T, unsigned int n> struct Tensor {
       }
       return TensorView<T, n - 1>((T *)store->data, ns, alrdindx);
     }
-    case FRESULTDATA: {
-      FResultData *store = (FResultData *)node->operation->additional_data;
-      size_t alrdindx = index;
-      std::vector<size_t> ns(shape.size() - 1);
-      for (size_t i = 1; i < shape.size(); i++) {
-        ns[i - 1] = shape[i];
-        alrdindx *= shape[i];
-      }
-      return TensorView<T, n - 1>((T *)store->data, ns, alrdindx);
-    }
     default: {
       execute();
-      FResultData *store = (FResultData *)node->operation->additional_data;
+      FResultData *store = node->result_data;
       size_t alrdindx = index;
       std::vector<size_t> ns(shape.size() - 1);
       for (size_t i = 1; i < shape.size(); i++) {
@@ -646,8 +630,7 @@ template <typename T, unsigned int n> struct Tensor {
                        : op->data_type == F_FLOAT32 ? std::string("FLOAT32")
                                                     : std::string("FLOAT64")) +
                       ", shape: " + FLINT_HPP_HELPER::arrayString(shape) + ">(";
-    if (op->op_type != FSTORE && op->op_type != FRESULTDATA &&
-        op->op_type != FCONST)
+    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST)
       foo += "<not yet executed>";
     else {
       foo += "\n" + FLINT_HPP_HELPER::vectorString(this->operator*(), " ");

@@ -16,7 +16,7 @@ TEST_SUITE("Gradient Calculation") {
     CHECK_EQ(2, res_op->shape[1]);
     res = fExecuteGraph(res);
     res_op = res->operation;
-    FStore *store = (FStore *)res_op->additional_data;
+    FResultData *store = res->result_data;
     float *dataf = (float *)store->data;
     for (int i = 0; i < 4; i++)
       CHECK_EQ(2.f, dataf[i]);
@@ -24,7 +24,7 @@ TEST_SUITE("Gradient Calculation") {
     res = fgradient_sub(t1.get_graph_node(), t2.get_graph_node(),
                         t1.get_graph_node());
     res = fExecuteGraph(res);
-    store = (FStore *)res->operation->additional_data;
+    store = res->result_data;
     dataf = (float *)store->data;
     for (int i = 0; i < 4; i++)
       CHECK_EQ(2.f, dataf[i]);
@@ -37,7 +37,7 @@ TEST_SUITE("Gradient Calculation") {
                                     t1.get_graph_node());
     CHECK_EQ(2, res->operation->dimensions);
     res = fExecuteGraph(res);
-    FStore *store = (FStore *)res->operation->additional_data;
+    FResultData *store = res->result_data;
     double *datad = (double *)store->data;
     CHECK_EQ(4, datad[0]);
     CHECK_EQ(6, datad[1]);
@@ -48,7 +48,7 @@ TEST_SUITE("Gradient Calculation") {
                         t2.get_graph_node());
     CHECK_EQ(3, res->operation->dimensions);
     res = fExecuteGraph(res);
-    store = (FStore *)res->operation->additional_data;
+    store = res->result_data;
     float *dataf = (float *)store->data;
     CHECK_EQ(-1, dataf[0]);
     CHECK_EQ(0, dataf[1]);
@@ -67,7 +67,7 @@ TEST_SUITE("Gradient Calculation") {
     FGraphNode *node = fgradient_div(y.get_graph_node(), x.get_graph_node(),
                                      x.get_graph_node());
     FGraphNode *res = fExecuteGraph(node);
-    FResultData *data = (FResultData *)res->operation->additional_data;
+    FResultData *data = res->result_data;
     double *datad = (double *)data->data;
     CHECK_EQ(-5, datad[0]);
     CHECK_EQ(-8, datad[2]);
@@ -76,7 +76,7 @@ TEST_SUITE("Gradient Calculation") {
     node = fgradient_div(y.get_graph_node(), x.get_graph_node(),
                          y.get_graph_node());
     res = fExecuteGraph(node);
-    data = (FResultData *)res->operation->additional_data;
+    data = res->result_data;
     datad = (double *)data->data;
     CHECK_EQ(-1, datad[0]);
     CHECK_EQ(1, datad[2]);
@@ -85,7 +85,7 @@ TEST_SUITE("Gradient Calculation") {
     node = fgradient_div(x.get_graph_node(), y.get_graph_node(),
                          y.get_graph_node());
     res = fExecuteGraph(node);
-    data = (FResultData *)res->operation->additional_data;
+    data = res->result_data;
     datad = (double *)data->data;
     CHECK_EQ(1, datad[0]);
     CHECK_EQ(-3, datad[1]);
@@ -94,7 +94,7 @@ TEST_SUITE("Gradient Calculation") {
     node = fgradient_div(x.get_graph_node(), y.get_graph_node(),
                          x.get_graph_node());
     res = fExecuteGraph(node);
-    data = (FResultData *)res->operation->additional_data;
+    data = res->result_data;
     datad = (double *)data->data;
     CHECK_EQ(1.25, datad[0]);
     CHECK_EQ(1.2, datad[1]);
@@ -113,10 +113,8 @@ TEST_SUITE("Gradient Calculation") {
       CHECK_EQ(2, g1->operation->shape[i]);
       CHECK_EQ(2, g2->operation->shape[i]);
     }
-    double *d1 =
-        (double *)((FResultData *)g1->operation->additional_data)->data;
-    double *d2 =
-        (double *)((FResultData *)g2->operation->additional_data)->data;
+    double *d1 = (double *)(g1->result_data)->data;
+    double *d2 = (double *)(g2->result_data)->data;
     CHECK_EQ(-4, d1[0]);
     CHECK_EQ(4, d1[1]);
     CHECK_EQ(-4, d1[2]);
@@ -141,8 +139,8 @@ TEST_SUITE("Gradient Calculation") {
                                         y.get_graph_node()));
     CHECK_EQ(2, g1->operation->dimensions);
     CHECK_EQ(2, g2->operation->dimensions);
-    d1 = (double *)((FResultData *)g1->operation->additional_data)->data;
-    d2 = (double *)((FResultData *)g2->operation->additional_data)->data;
+    d1 = (double *)(g1->result_data)->data;
+    d2 = (double *)(g2->result_data)->data;
     CHECK_EQ(13, d1[0]);
     CHECK_EQ(13, d1[1]);
     CHECK_EQ(16, d1[2]);
