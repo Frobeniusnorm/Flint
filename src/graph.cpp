@@ -146,7 +146,9 @@ void fFreeGraph(FGraphNode *graph) {
         all.insert(gn->predecessors[i]);
       }
     }
+    bool freed_res = false;
     if (gn->result_data) {
+      freed_res = true;
       FResultData *rd = gn->result_data;
       if (rd->data)
         free(rd->data);
@@ -163,9 +165,11 @@ void fFreeGraph(FGraphNode *graph) {
         switch (gn->operation->op_type) {
         case FSTORE: {
           FStore *st = (FStore *)gn->operation->additional_data;
-          free(st->data);
-          if (st->mem_id)
-            clReleaseMemObject(st->mem_id);
+          if (!freed_res) {
+            free(st->data);
+            if (st->mem_id)
+              clReleaseMemObject(st->mem_id);
+          }
           delete st;
         } break;
         case FCONST: {

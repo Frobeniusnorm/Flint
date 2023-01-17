@@ -537,7 +537,17 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   if (!initialized)
     flintInit_cpu();
-  if (node->operation->op_type == FSTORE || node->result_data)
+  if (node->operation->op_type == FSTORE) {
+    // copy to result
+    FResultData *rd = new FResultData();
+    node->result_data = rd;
+    FStore *store = (FStore *)node->operation->additional_data;
+    rd->num_entries = store->num_entries;
+    rd->data = store->data;
+    rd->mem_id = store->mem_id;
+    return node;
+  }
+  if (node->result_data)
     return node;
   // TODO parallel execution
   using namespace std;

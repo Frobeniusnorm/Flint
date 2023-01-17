@@ -161,17 +161,28 @@ TEST_SUITE("Autodiff") {
     Tensor<double, 3> z = {{{1, 1}, {2, 2}}, {{3, 3}, {-1, -1}}};
     Tensor<double, 3> w = (x + z).matmul(y) * z;
     disable_eager_execution();
-    FGraphNode *res =
-        fCalculateGradient(w.get_graph_node(), x.get_graph_node());
+    FGraphNode *res;
+    // res = fCalculateGradient(w.get_graph_node(), x.get_graph_node());
+    // fExecuteGraph_cpu(res);
+    // for (int i = 0; i < 8; i++)
+    //   std::cout << ((double *)res->result_data->data)[i] << " ";
+    // std::cout << std::endl;
+    res = fCalculateGradient(w.get_graph_node(), y.get_graph_node());
     fExecuteGraph_cpu(res);
-    for (int i = 0; i < 8; i++)
-      std::cout << ((double *)res->result_data->data)[i] << " " << std::endl;
+    for (int i = 0; i < 4; i++)
+      std::cout << ((double *)res->result_data->data)[i] << " ";
+    std::cout << std::endl;
+    // res = fCalculateGradient(w.get_graph_node(), z.get_graph_node());
+    // fExecuteGraph_cpu(res);
+    // for (int i = 0; i < 8; i++)
+    //   std::cout << ((double *)res->result_data->data)[i] << " ";
+    // std::cout << std::endl;
   }
 }
 int main(int argc, char **argv) {
   doctest::Context context;
   context.applyCommandLine(argc, argv);
-  flintInit(0, 1);
+  flintInit(1, 0);
   int res = context.run();
   flintCleanup();
   return res;

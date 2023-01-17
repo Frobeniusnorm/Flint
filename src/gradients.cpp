@@ -87,9 +87,20 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx) {
     return nullptr;
   }
 }
+template <typename T> static std::string printNode(FGraphNode *node) {
+  std::string s = "";
+  if (!node->result_data) {
+    fExecuteGraph(node);
+  }
+  for (int i = 0; i < node->result_data->num_entries; i++)
+    s += std::to_string(((T *)node->result_data->data)[i]) +
+         (i == node->result_data->num_entries - 1 ? std::string("")
+                                                  : std::string(", "));
+  return s;
+}
 FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
   // if not called on an eagerly execute graph, warn the first time
-  static bool eager_eval_warning = false;
+  static bool eager_eval_warning = true;
   // Autodiff algorithm
   //  Compute https://mananshah99.github.io/blog/2020/08/15/backprop/
   //  And https://dlsys.cs.washington.edu/pdf/lecture4.pdf
@@ -98,10 +109,6 @@ FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
   // we know that dy / dx = sum([(dy / dp) * (dp / dx) for p in
   // predecessors(y)])
   // for now: recursive calculation, later on switch to iterative representation
-  if (y == dx)
-    return constant_tensor(1.0, dx->operation->data_type, dx->operation->shape,
-                           dx->operation->dimensions);
-  // check again
   if (y == dx) {
     return constant_tensor(1.0, dx->operation->data_type, dx->operation->shape,
                            dx->operation->dimensions);
@@ -121,8 +128,10 @@ FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
                  "advise to enable eager execution.");
         eager_eval_warning = false;
       }
-      FGraphNode *local = fmul(local_gradient(y, parent_result),
-                               fCalculateGradient(parent_result, dx));
+      FGraphNode *lg = local_gradient(y, parent_result);
+      FGraphNode *local = fmul(lg, fCalculateGradient(parent_result, dx));
+      flogging(F_DEBUG, "local gradient: " + printNode<double>(lg));
+      flogging(F_DEBUG, "local: " + printNode<double>(local));
       if (!result)
         result = local;
       else
@@ -342,7 +351,7 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
       int start = bo->dimensions - ao->dimensions;
       for (int i = 0; i < start; i++)
         transpositions[i] = i;
-      for (int i = 0; i < bo->dimensions; i++)
+      for (int i = 0; start + i < bo->dimensions; i++)
         transpositions[start + i] = bo->dimensions - 1 - i;
       FGraphNode *result =
           ftranspose(fmatmul(&b, &onetensor), transpositions.data());
@@ -356,7 +365,7 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
       int start = ao->dimensions - bo->dimensions;
       for (int i = 0; i < start; i++)
         transpositions[i] = i;
-      for (int i = 0; i < ao->dimensions; i++)
+      for (int i = 0; start + i < ao->dimensions; i++)
         transpositions[start + i] = ao->dimensions - 1 - i;
       FGraphNode *result =
           ftranspose(fmatmul(&b, &onetensor), transpositions.data());
@@ -387,7 +396,7 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
       int start = bo->dimensions - ao->dimensions;
       for (int i = 0; i < start; i++)
         transpositions[i] = i;
-      for (int i = 0; i < bo->dimensions; i++)
+      for (int i = 0; start + i < bo->dimensions; i++)
         transpositions[start + i] = bo->dimensions - 1 - i;
       FGraphNode *result =
           ftranspose(fmatmul(&onetensor, &a), transpositions.data());
@@ -412,7 +421,7 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
       int start = ao->dimensions - bo->dimensions;
       for (int i = 0; i < start; i++)
         transpositions[i] = i;
-      for (int i = 0; i < ao->dimensions; i++)
+      for (int i = 0; start + i < ao->dimensions; i++)
         transpositions[start + i] = ao->dimensions - 1 - i;
       FGraphNode *result =
           ftranspose(fmatmul(&onetensor, &a), transpositions.data());
