@@ -380,7 +380,7 @@ template <typename T> struct Tensor<T, 1> {
       typename std::conditional<isStronger<K, T>(), K, T>::type;
   // OPERATIONS
   template <typename K, unsigned int k>
-  Tensor<stronger_return<K>, k> operator+(const Tensor<K, k> other) const {
+  Tensor<stronger_return<K>, k> operator+(const Tensor<K, k> &other) const {
     return Tensor<stronger_return<K>, k>(fadd(node, other.node), other.shape);
   }
   template <typename K>
@@ -388,7 +388,7 @@ template <typename T> struct Tensor<T, 1> {
     return Tensor<stronger_return<K>, 1>(fadd(node, con), shape);
   }
   template <typename K, unsigned int k>
-  Tensor<stronger_return<K>, k> operator-(const Tensor<K, k> other) const {
+  Tensor<stronger_return<K>, k> operator-(const Tensor<K, k> &other) const {
     return Tensor<stronger_return<K>, k>(fsub(node, other.node), other.shape);
   }
   template <typename K>
@@ -396,7 +396,7 @@ template <typename T> struct Tensor<T, 1> {
     return Tensor<stronger_return<K>, 1>(fsub(node, con), shape);
   }
   template <typename K, unsigned int k>
-  Tensor<stronger_return<K>, k> operator*(const Tensor<K, k> other) const {
+  Tensor<stronger_return<K>, k> operator*(const Tensor<K, k> &other) const {
     return Tensor<stronger_return<K>, k>(fmul(node, other.node), other.shape);
   }
   template <typename K>
@@ -404,7 +404,7 @@ template <typename T> struct Tensor<T, 1> {
     return Tensor<stronger_return<K>, 1>(fmul(node, con), shape);
   }
   template <typename K, unsigned int k>
-  Tensor<stronger_return<K>, k> operator/(const Tensor<K, k> other) const {
+  Tensor<stronger_return<K>, k> operator/(const Tensor<K, k> &other) const {
     return Tensor<stronger_return<K>, k>(fdiv(node, other.node), other.shape);
   }
   template <typename K>
@@ -412,21 +412,21 @@ template <typename T> struct Tensor<T, 1> {
     return Tensor<stronger_return<K>, 1>(fdiv(node, con), shape);
   }
   template <typename K, unsigned int k>
-  Tensor<stronger_return<K>, k> pow(const Tensor<K, k> other) const {
+  Tensor<stronger_return<K>, k> pow(const Tensor<K, k> &other) const {
     return Tensor<stronger_return<K>, k>(fpow(node, other.node), other.shape);
   }
   template <typename K> Tensor<stronger_return<K>, 1> pow(const K other) const {
     return Tensor<stronger_return<K>, 1>(fpow(node, other), shape);
   }
   template <typename K, unsigned int k>
-  Tensor<stronger_return<K>, k> min(const Tensor<K, k> other) const {
+  Tensor<stronger_return<K>, k> min(const Tensor<K, k> &other) const {
     return Tensor<stronger_return<K>, k>(fmin(node, other.node));
   }
   template <typename K> Tensor<stronger_return<K>, 1> min(const K other) const {
     return Tensor<stronger_return<K>, 1>(fmin(node, other));
   }
   template <typename K, unsigned int k>
-  Tensor<stronger_return<K>, k> max(const Tensor<K, k> other) const {
+  Tensor<stronger_return<K>, k> max(const Tensor<K, k> &other) const {
     return Tensor<stronger_return<K>, k>(fmax(node, other.node));
   }
   template <typename K> Tensor<stronger_return<K>, 1> max(const K other) const {
@@ -646,7 +646,7 @@ template <typename T, unsigned int n> struct Tensor {
   // OPERATIONS
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
-  operator+(const Tensor<K, k> other) const {
+  operator+(const Tensor<K, k> &other) const {
     if constexpr (k >= n)
       return Tensor<stronger_return<K>, k>(fadd(node, other.node), other.shape);
     else
@@ -658,7 +658,7 @@ template <typename T, unsigned int n> struct Tensor {
   }
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
-  operator-(const Tensor<K, k> other) const {
+  operator-(const Tensor<K, k> &other) const {
     if constexpr (k >= n)
       return Tensor<stronger_return<K>, k>(fsub(node, other.node), other.shape);
     else
@@ -670,7 +670,7 @@ template <typename T, unsigned int n> struct Tensor {
   }
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
-  operator*(const Tensor<K, k> other) const {
+  operator*(const Tensor<K, k> &other) const {
     if constexpr (k >= n)
       return Tensor<stronger_return<K>, k>(fmul(node, other.node), other.shape);
     else
@@ -683,7 +683,7 @@ template <typename T, unsigned int n> struct Tensor {
   Tensor<T, n> operator-() const { return Tensor<T, n>(fmul(node, -1), shape); }
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
-  operator/(const Tensor<K, k> other) const {
+  operator/(const Tensor<K, k> &other) const {
     if constexpr (k >= n)
       return Tensor<stronger_return<K>, k>(fdiv(node, other.node), other.shape);
     else
@@ -705,7 +705,8 @@ template <typename T, unsigned int n> struct Tensor {
     return Tensor<T, n - 1>(foo, ns);
   }
   template <typename K, unsigned int k>
-  Tensor<stronger_return<K>, n> pow(const Tensor<stronger_return<K>, k> other) {
+  Tensor<stronger_return<K>, n>
+  pow(const Tensor<stronger_return<K>, k> &other) {
     static_assert(
         k <= n,
         "Can't take the power of a tensor to a tensor with higher dimension!");
@@ -715,7 +716,7 @@ template <typename T, unsigned int n> struct Tensor {
     return Tensor<stronger_return<K>, n>(fpow(node, other), shape);
   }
   template <typename K, unsigned int k>
-  Tensor<stronger_return<K>, k >= n ? k : n> matmul(Tensor<K, k> other) {
+  Tensor<stronger_return<K>, k >= n ? k : n> matmul(Tensor<K, k> &other) {
     int x = shape[shape.size() - 2];
     int z = other.shape[other.shape.size() - 1];
     std::array<size_t, k >= n ? k : n> ns;

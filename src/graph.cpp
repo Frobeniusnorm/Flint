@@ -859,8 +859,8 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
   return eager_execution ? execute_eagerly(foo) : foo;
 }
 FGraphNode *fslice(FGraphNode *a, const long *start, const long *end) {
-  long step = 1;
-  FGraphNode *foo = fslice_step(a, start, end, &step);
+  std::vector<long> step(a->operation->dimensions, 1);
+  FGraphNode *foo = fslice_step(a, start, end, &step[0]);
   return foo;
 }
 FGraphNode *fabs_g(FGraphNode *a) {

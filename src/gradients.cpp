@@ -129,13 +129,35 @@ FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
         eager_eval_warning = false;
       }
       FGraphNode *lg = local_gradient(y, parent_result);
-      FGraphNode *local = fmul(lg, fCalculateGradient(parent_result, dx));
-      flogging(F_DEBUG, "local gradient: " + printNode<double>(lg));
+      FGraphNode *pg = fCalculateGradient(parent_result, dx);
+      // TODO somewhere here we have to put everything in shape, so that we
+      // generate a right-shaped gradient
+      FGraphNode *local = fmul(lg, pg);
+      flogging(F_DEBUG, "Operation: " + std::to_string(y->operation->op_type));
       flogging(F_DEBUG, "local: " + printNode<double>(local));
       if (!result)
         result = local;
       else
         result = fadd(result, local);
+    }
+    if (result->operation->dimensions > dx->operation->dimensions) {
+      // slice to fit
+      std::vector<long> start(result->operation->dimensions),
+          end(result->operation->dimensions);
+      int i = 0;
+      for (; i < dx->operation->dimensions; i++) {
+        start[start.size() - 1 - i] = 0;
+        end[start.size() - 1 - i] = dx->operation->shape[start.size() - 1 - i];
+      }
+      int j = i;
+      for (; i < start.size(); i++) {
+        start[start.size() - 1 - i] = 0;
+        end[start.size() - 1 - i] = 1;
+      }
+      result = fslice(result, start.data(), end.data());
+      for (; j < start.size(); j++) {
+        result = fflatten_dimension(result, 1);
+      }
     }
     return result;
   }
