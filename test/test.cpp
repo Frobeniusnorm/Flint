@@ -284,7 +284,7 @@ TEST_SUITE("Execution") {
         fCreateGraph(data1.data(), data1.size(), F_FLOAT32, s1.data(), 2);
     FGraphNode *g2 =
         fCreateGraph(data2.data(), data2.size(), F_FLOAT32, s1.data(), 2);
-    FGraphNode *mm1 = fmatmul(&g1, &g2);
+    FGraphNode *mm1 = fmatmul(g1, g2);
     FGraphNode *r1 = fExecuteGraph(mm1);
     FResultData *rd1 = r1->result_data;
     vector<float> exp1{4 + 4, 3 + 2, 12 + 8, 9 + 4};
@@ -303,7 +303,7 @@ TEST_SUITE("Execution") {
     vector<size_t> s3{2, 2};
     g1 = fCreateGraph(data3.data(), data3.size(), F_INT32, s1.data(), 2);
     g2 = fCreateGraph(data4.data(), data4.size(), F_INT32, s2.data(), 2);
-    FGraphNode *mm2 = fmatmul(&g1, &g2);
+    FGraphNode *mm2 = fmatmul(g1, g2);
     REQUIRE_EQ(mm2->operation->shape[0], s3[0]);
     REQUIRE_EQ(mm2->operation->shape[1], s3[1]);
     FGraphNode *r2 = fExecuteGraph(mm2);
@@ -329,7 +329,7 @@ TEST_SUITE("Execution") {
 
     g1 = fCreateGraph(f5.data(), f5.size(), F_FLOAT64, s5.data(), s5.size());
     g2 = fCreateGraph(f6.data(), f6.size(), F_FLOAT32, s6.data(), s6.size());
-    mm2 = fmatmul(&g1, &g2);
+    mm2 = fmatmul(g1, g2);
     REQUIRE_EQ(mm2->operation->shape[0], 2);
     REQUIRE_EQ(mm2->operation->shape[1], 2);
     REQUIRE_EQ(mm2->operation->shape[2], 2);

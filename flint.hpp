@@ -726,7 +726,7 @@ template <typename T, unsigned int n> struct Tensor {
     ns[ns.size() - 2] = x;
     ns[ns.size() - 1] = z;
     return Tensor < stronger_return<K>,
-           k >= n ? k : n > (fmatmul(&node, &other.node), ns);
+           k >= n ? k : n > (fmatmul(node, other.node), ns);
   }
   template <typename K> Tensor<K, n> convert() const {
     return Tensor<K, n>(fconvert(node, toFlintType<K>()), shape);
@@ -768,7 +768,7 @@ template <typename T, unsigned int n> struct Tensor {
       ns[i] = shape[i];
     for (size_t i = dimension; i < ns.size(); i++)
       ns[i] = shape[i + 1];
-    return Tensor<T, n - 1>(freduce_sum(&node, dimension), ns);
+    return Tensor<T, n - 1>(freduce_sum(node, dimension), ns);
   }
   Tensor<T, n - 1> reduce_mul(int dimension) {
     std::array<size_t, n - 1> ns;
@@ -778,7 +778,7 @@ template <typename T, unsigned int n> struct Tensor {
       ns[i] = shape[i];
     for (size_t i = dimension; i < ns.size(); i++)
       ns[i] = shape[i + 1];
-    return Tensor<T, n - 1>(freduce_mul(&node, dimension), ns);
+    return Tensor<T, n - 1>(freduce_mul(node, dimension), ns);
   }
   Tensor<T, n> abs() const { return Tensor<T, n>(fabs_g(node), shape); }
 

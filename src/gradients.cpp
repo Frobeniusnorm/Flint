@@ -98,7 +98,9 @@ template <typename T> static std::string printNode(FGraphNode *node) {
                                                   : std::string(", "));
   return s;
 }
+static bool adapt_grad = true;
 FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
+  adapt_grad = false;
   // if not called on an eagerly execute graph, warn the first time
   static bool eager_eval_warning = true;
   // Autodiff algorithm
@@ -112,8 +114,7 @@ FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
   if (y == dx) {
     return constant_tensor(1.0, dx->operation->data_type, dx->operation->shape,
                            dx->operation->dimensions);
-  } else if (y->operation->op_type == FSTORE ||
-             y->operation->op_type == FCONST) {
+  } else if (y->num_predecessor == 0) {
     return constant_tensor(0.0, dx->operation->data_type, dx->operation->shape,
                            dx->operation->dimensions);
   } else {
@@ -129,35 +130,29 @@ FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
         eager_eval_warning = false;
       }
       FGraphNode *lg = local_gradient(y, parent_result);
+      // TODO (to make this work):
+      //  - remove all shape adaptions from the gradients,
+      //  - write a function unbroadcast
+      //  (https://mostafa-samir.github.io/auto-diff-pt2/#Unbroadcasting%20Adjoints)
+      //    which essentially is the following code
+      //  - maybe remove gradient functions from flint.h except this one
+      if (lg->operation->dimensions > dx->operation->dimensions) {
+        // TODO somewhere here we have to put everything in shape, so that we
+        // generate a right-shaped gradient
+        int diff = lg->operation->dimensions - dx->operation->dimensions;
+        for (int i = 0; i < diff; i++)
+          lg = freduce_sum(lg, 0);
+      }
       FGraphNode *pg = fCalculateGradient(parent_result, dx);
-      // TODO somewhere here we have to put everything in shape, so that we
-      // generate a right-shaped gradient
       FGraphNode *local = fmul(lg, pg);
+
       flogging(F_DEBUG, "Operation: " + std::to_string(y->operation->op_type));
       flogging(F_DEBUG, "local: " + printNode<double>(local));
+      flogging(F_DEBUG, "local-gradient: " + printNode<double>(lg));
       if (!result)
         result = local;
       else
         result = fadd(result, local);
-    }
-    if (result->operation->dimensions > dx->operation->dimensions) {
-      // slice to fit
-      std::vector<long> start(result->operation->dimensions),
-          end(result->operation->dimensions);
-      int i = 0;
-      for (; i < dx->operation->dimensions; i++) {
-        start[start.size() - 1 - i] = 0;
-        end[start.size() - 1 - i] = dx->operation->shape[start.size() - 1 - i];
-      }
-      int j = i;
-      for (; i < start.size(); i++) {
-        start[start.size() - 1 - i] = 0;
-        end[start.size() - 1 - i] = 1;
-      }
-      result = fslice(result, start.data(), end.data());
-      for (; j < start.size(); j++) {
-        result = fflatten_dimension(result, 1);
-      }
     }
     return result;
   }
@@ -180,6 +175,8 @@ FGraphNode *fgradient_add(const FGraphNode *x, const FGraphNode *y,
     // d(x + x = 2 * x) / dx = 2
     return constant_tensor(2.0, ao->data_type, ao->shape, ao->dimensions);
   else if (b == dx) {
+    if (!adapt_grad)
+      return constant_tensor(1.0, ao->data_type, ao->shape, ao->dimensions);
     // count number of times b is added to a and return tensor with shape
     // of b with that value
     int times = 1;
@@ -244,9 +241,11 @@ FGraphNode *fgradient_mul(FGraphNode *x, FGraphNode *y, const FGraphNode *dx) {
   }
   if (b == dx) {
     FGraphNode *result = a;
+    if (!adapt_grad)
+      return result;
     // dx is the smaller one -> reduce_sum other one
     for (int dim = 0; dim < ao->dimensions - bo->dimensions; dim++)
-      result = freduce_sum(&result, dim);
+      result = freduce_sum(result, 0);
     return result;
   } else if (a == dx) {
     // const is special case since it technically has an incompatible shape
@@ -265,6 +264,8 @@ FGraphNode *fgradient_mul(FGraphNode *x, FGraphNode *y, const FGraphNode *dx) {
     }
     // if not const
     FGraphNode *result = b;
+    if (!adapt_grad)
+      return result;
     // dx is the bigger one -> expand other one
     size_t new_shape[ao->dimensions];
     int repetitions[ao->dimensions];
@@ -318,7 +319,7 @@ FGraphNode *fgradient_div(FGraphNode *a, FGraphNode *b, const FGraphNode *dx) {
       result = fconvert(result, dx->operation->data_type);
     if (bo->dimensions < ao->dimensions) {
       for (int dim = 0; dim < ao->dimensions - bo->dimensions; dim++)
-        result = freduce_sum(&result, dim);
+        result = freduce_sum(result, 0);
     }
     return result;
   } else
@@ -364,7 +365,7 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
     FGraphNode *onetensor =
         constant_tensor(1.0, ao->data_type, ao->shape, ao->dimensions);
     if (ao->dimensions == bo->dimensions) {
-      return fmatmul(&onetensor, &b);
+      return fmatmul(onetensor, b);
     } else if (bo->dimensions > ao->dimensions) {
       //  dim(b) > dim(a) -> reduce_sum(transpose(matmul(b, 1-tensor)), axis =
       //  -1)
@@ -376,9 +377,11 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
       for (int i = 0; start + i < bo->dimensions; i++)
         transpositions[start + i] = bo->dimensions - 1 - i;
       FGraphNode *result =
-          ftranspose(fmatmul(&b, &onetensor), transpositions.data());
+          ftranspose(fmatmul(b, onetensor), transpositions.data());
+      if (!adapt_grad)
+        return result;
       for (int dim = 0; dim < bo->dimensions - ao->dimensions; dim++)
-        result = freduce_sum(&result, dim);
+        result = freduce_sum(result, 0);
       return result;
     } else {
       // dim(a) > dim(b) -> repeat(transpose(matmul(b, 1-tensor)), axis=0)
@@ -390,7 +393,9 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
       for (int i = 0; start + i < ao->dimensions; i++)
         transpositions[start + i] = ao->dimensions - 1 - i;
       FGraphNode *result =
-          ftranspose(fmatmul(&b, &onetensor), transpositions.data());
+          ftranspose(fmatmul(b, onetensor), transpositions.data());
+      if (!adapt_grad)
+        return result;
       size_t new_shape[ao->dimensions];
       int repetitions[ao->dimensions];
       for (int i = 0; i < ao->dimensions - bo->dimensions; i++) {
@@ -410,7 +415,7 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
         constant_tensor(1.0, bo->data_type, bo->shape, bo->dimensions);
     //  same shape -> a matmul with 1-tensor
     if (ao->dimensions == bo->dimensions) {
-      return fmatmul(&a, &onetensor);
+      return fmatmul(a, onetensor);
     } else if (bo->dimensions > ao->dimensions) {
       //  dim(b) > dim(a) -> repeat(transpose(matmul(1-tensor, a)), axis=0)
       std::vector<int> transpositions(bo->dimensions);
@@ -421,7 +426,9 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
       for (int i = 0; start + i < bo->dimensions; i++)
         transpositions[start + i] = bo->dimensions - 1 - i;
       FGraphNode *result =
-          ftranspose(fmatmul(&onetensor, &a), transpositions.data());
+          ftranspose(fmatmul(onetensor, a), transpositions.data());
+      if (!adapt_grad)
+        return result;
       size_t new_shape[bo->dimensions];
       int repetitions[bo->dimensions];
       for (int i = 0; i < bo->dimensions - ao->dimensions; i++) {
@@ -446,9 +453,11 @@ FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx) {
       for (int i = 0; start + i < ao->dimensions; i++)
         transpositions[start + i] = ao->dimensions - 1 - i;
       FGraphNode *result =
-          ftranspose(fmatmul(&onetensor, &a), transpositions.data());
+          ftranspose(fmatmul(onetensor, a), transpositions.data());
+      if (!adapt_grad)
+        return result;
       for (int dim = 0; dim < ao->dimensions - bo->dimensions; dim++)
-        result = freduce_sum(&result, dim);
+        result = freduce_sum(result, 0);
       return result;
     }
   } else

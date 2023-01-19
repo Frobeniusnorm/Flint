@@ -170,22 +170,24 @@ TEST_SUITE("Autodiff") {
     Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
     Tensor<double, 2> y = {{3.0, -7.0}, {-1.0, 5.0}};
     Tensor<double, 3> z = {{{1, 1}, {2, 2}}, {{3, 3}, {-1, -1}}};
-    Tensor<double, 3> w = (x + y).matmul(y) * z;
+    Tensor<double, 3> w = (x + y) * z;
     disable_eager_execution();
     FGraphNode *res;
-    // res = fCalculateGradient(w.get_graph_node(), x.get_graph_node());
-    // fExecuteGraph_cpu(res);
-    // for (int i = 0; i < 8; i++)
-    //   std::cout << ((double *)res->result_data->data)[i] << " ";
-    // std::cout << std::endl;
+    res = fCalculateGradient(w.get_graph_node(), x.get_graph_node());
+    fExecuteGraph_cpu(res);
+    for (int i = 0; i < 8; i++)
+      std::cout << ((double *)res->result_data->data)[i] << " ";
+    std::cout << std::endl;
+
     res = fCalculateGradient(w.get_graph_node(), y.get_graph_node());
     fExecuteGraph_cpu(res);
-    flogging(F_DEBUG, printNode<double>(res));
-    // res = fCalculateGradient(w.get_graph_node(), z.get_graph_node());
-    // fExecuteGraph_cpu(res);
-    // for (int i = 0; i < 8; i++)
-    //   std::cout << ((double *)res->result_data->data)[i] << " ";
-    // std::cout << std::endl;
+    std::cout << printNode<double>(res) << std::endl;
+
+    res = fCalculateGradient(w.get_graph_node(), z.get_graph_node());
+    fExecuteGraph_cpu(res);
+    for (int i = 0; i < 8; i++)
+      std::cout << ((double *)res->result_data->data)[i] << " ";
+    std::cout << std::endl;
   }
 }
 int main(int argc, char **argv) {

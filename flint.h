@@ -330,7 +330,7 @@ tensor multiple other previous entries are needed, the operand tensors need to
 be executed first. Therefor the method will implicitly (or eagerly) execute the
 two parameter nodes if their data is not allready present, the given pointers
 will be overwritten with the results. */
-FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b);
+FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b);
 FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx);
 /** The first method flattens the complete tensor to a tensor with one
 dimension, the second method flattens the tensor with :math:`n` dimensions along
@@ -369,15 +369,15 @@ FGraphNode *fmax_cd(FGraphNode *a, const double b);
  * freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node. The corresponding
- * result node is then stored in the memory pointed to by a. */
-FGraphNode *freduce_sum(FGraphNode **a, const int dimension);
+ * result is then stored in the memory pointed to by a. */
+FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
 /** Reduces one dimension of the tensor by multiplicative folding e.g.
  * freduce_mul([[1,2,3], [4,5,6]], 0) = [4,10,18],
  * freduce_mul([[1,2,3], [4,5,6]], 1) = [6, 120]
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node. The corresponding
- * result node is then stored in the memory pointed to by a. */
-FGraphNode *freduce_mul(FGraphNode **a, const int dimension);
+ * result is then stored in the memory pointed to by a. */
+FGraphNode *freduce_mul(FGraphNode *a, const int dimension);
 /** Selects a slice of the tensor with a dimension wise start and end index.
  * :var:`start` and :var:`end` are arrays with as many entries
  * as the tensor has dimensions. They may contain negative values,

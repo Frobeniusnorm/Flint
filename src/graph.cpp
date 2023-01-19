@@ -683,16 +683,14 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
   return addNode(op, {a});
 }
 
-FGraphNode *fmatmul(FGraphNode **a, FGraphNode **b) {
-  FGraphNode *x = *a;
-  FGraphNode *y = *b;
+FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b) {
+  FGraphNode *x = a;
+  FGraphNode *y = b;
   if (x->operation->op_type != FSTORE && !x->result_data) {
     x = fExecuteGraph(x);
-    *a = x;
   }
   if (y->operation->op_type != FSTORE && !y->result_data) {
     y = fExecuteGraph(y);
-    *b = y;
   }
   FOperation *ao = x->operation;
   FOperation *bo = y->operation;
@@ -771,12 +769,11 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   ;
 }
 
-static inline FGraphNode *reduce_operation(FGraphNode **x, const int dimension,
+static inline FGraphNode *reduce_operation(FGraphNode *x, const int dimension,
                                            FOperationType type) {
-  FGraphNode *a = *x;
+  FGraphNode *a = x;
   if (a->operation->op_type != FSTORE && !a->result_data) {
     a = fExecuteGraph(a);
-    *x = a;
   }
   FGraphNode *foo = new FGraphNode();
   foo->reference_counter = 0;
@@ -801,10 +798,10 @@ static inline FGraphNode *reduce_operation(FGraphNode **x, const int dimension,
 }
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
 // freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
-FGraphNode *freduce_sum(FGraphNode **a, const int dimension) {
+FGraphNode *freduce_sum(FGraphNode *a, const int dimension) {
   return reduce_operation(a, dimension, FREDUCE_SUM);
 }
-FGraphNode *freduce_mul(FGraphNode **a, const int dimension) {
+FGraphNode *freduce_mul(FGraphNode *a, const int dimension) {
   return reduce_operation(a, dimension, FREDUCE_MUL);
 }
 
