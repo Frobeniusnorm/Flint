@@ -46,6 +46,12 @@ template <typename T> static std::string printNode(FGraphNode *node) {
                                                   : std::string(", "));
   return s;
 }
+static FGraphNode *transpose(FGraphNode *g) {
+  std::vector<int> trans(g->operation->dimensions);
+  for (int i = 0; i < trans.size(); i++)
+    trans[i] = trans.size() - 1 - i;
+  return ftranspose(g, trans.data());
+}
 static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
                                    int dimensions) {
   switch (type) {
@@ -97,18 +103,37 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   case FMATMUL: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];
-    if (a == dx) {
-      std::vector<int> trans(b->operation->dimensions);
-      for (int i = 0; i < trans.size(); i++)
-        trans[i] = trans.size() - 1 - i;
-      FGraphNode *tb = ftranspose(b, trans.data());
-      return fmatmul(prev_adj, tb);
-    } else if (b == dx) {
-      std::vector<int> trans(a->operation->dimensions);
-      for (int i = 0; i < trans.size(); i++)
-        trans[i] = trans.size() - 1 - i;
-      FGraphNode *ta = ftranspose(a, trans.data());
-      return fmatmul(ta, prev_adj);
+    if (a == dx || b == dx) {
+      FGraphNode *mm =
+          (a == dx) ? (fmatmul(b, prev_adj)) : (fmatmul(prev_adj, a));
+      // transpose on innermost dimensions
+      size_t diff =
+          abs(dx->operation->dimensions - prev_adj->operation->dimensions);
+      std::vector<int> trans(mm->operation->dimensions);
+      if (b == dx) {
+        int i = 0;
+        for (; i < trans.size() - diff - 1; i++) {
+          trans[i] = i;
+          std::cout << trans[i] << " ";
+        }
+        for (; i < trans.size(); i++) {
+          trans[i] = trans.size() - 1 - (i - (trans.size() - diff - 1));
+          std::cout << trans[i] << " ";
+        }
+        std::cout << std::endl;
+      } else {
+        int i = 0;
+        for (; i < diff; i++) {
+          trans[i] = diff - i;
+          std::cout << trans[i] << " ";
+        }
+        for (; i < trans.size(); i++) {
+          trans[i] = i;
+          std::cout << trans[i] << " ";
+        }
+        std::cout << std::endl;
+      }
+      return ftranspose(mm, trans.data());
     } else {
       return nullptr;
     }
@@ -170,11 +195,12 @@ FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
       continue;
     FGraphNode *adj = adjoints[curr];
     for (int i = 0; i < curr->num_predecessor; i++) {
+
       FGraphNode *parent = curr->predecessors[i];
       FGraphNode *local_grad = local_gradient(curr, parent, adj);
       if (adjoints.contains(parent)) {
         adjoints[parent] =
-            fadd(adjoints[parent], unbroadcast(local_grad, parent));
+            unbroadcast(fadd(adjoints[parent], local_grad), parent);
       } else {
         adjoints.insert({parent, unbroadcast(local_grad, parent)});
       }
