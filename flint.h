@@ -256,7 +256,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
  * this operations computes the gradient.
  * @param dx the variable for which outputfct is derived for
  */
-FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx);
+FGraphNode *fCalculateGradient(const FGraphNode *outputfct,
+                               const FGraphNode *dx);
 //  operations
 /** Elementwise addition of a and b :math:`a+b`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
@@ -264,13 +265,6 @@ FGraphNode *fsub_g(FGraphNode *a, FGraphNode *b);
 FGraphNode *fdiv_g(FGraphNode *a, FGraphNode *b);
 FGraphNode *fmul_g(FGraphNode *a, FGraphNode *b);
 FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b);
-FGraphNode *fgradient_add(const FGraphNode *a, const FGraphNode *b,
-                          const FGraphNode *dx);
-FGraphNode *fgradient_sub(const FGraphNode *a, const FGraphNode *b,
-                          const FGraphNode *dx);
-FGraphNode *fgradient_mul(FGraphNode *a, FGraphNode *b, const FGraphNode *dx);
-FGraphNode *fgradient_div(FGraphNode *a, FGraphNode *b, const FGraphNode *dx);
-FGraphNode *fgradient_pow(FGraphNode *a, FGraphNode *b, const FGraphNode *dx);
 
 /** Elementwise addition of a and b :math:`a+b`. */
 FGraphNode *fadd_ci(FGraphNode *a, const int b);
@@ -319,10 +313,6 @@ FGraphNode *flog2(FGraphNode *a);
 /** Takes the elementwise logarithm of a to the basis of 10*/
 FGraphNode *flog10(FGraphNode *a);
 
-FGraphNode *fgradient_log(FGraphNode *a, FGraphNode *dx);
-FGraphNode *fgradient_log2(FGraphNode *a, FGraphNode *dx);
-FGraphNode *fgradient_log10(FGraphNode *a, FGraphNode *dx);
-
 /** Carries out matrix multiplication on the last two dimensions of the tensors.
 E.g. a matrix multiplication of two tensors with shapes (64, 32, 16) and (16,
 24) will yield a tensor with shape (64, 32, 24). Since for one entry of the
@@ -331,7 +321,6 @@ be executed first. Therefor the method will implicitly (or eagerly) execute the
 two parameter nodes if their data is not allready present, the given pointers
 will be overwritten with the results. */
 FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b);
-FGraphNode *fgradient_matmul(FGraphNode *a, FGraphNode *b, FGraphNode *dx);
 /** The first method flattens the complete tensor to a tensor with one
 dimension, the second method flattens the tensor with :math:`n` dimensions along
 :c:var:`dimension`, resulting in a tensor with :math:`n-1` dimensions.

@@ -451,6 +451,11 @@ template <typename T> struct Tensor<T, 1> {
     FGraphNode *nn = frepeat(node, &repetitions);
     return Tensor<T, 1>(nn, (shape * repetitions + 1));
   }
+  template <typename K, unsigned int k>
+  Tensor<stronger_return<K>, k> gradient(const Tensor<K, k> &dx) {
+    return Tensor<stronger_return<K>, k>(
+        fCalculateGradient(this->node, dx.node), dx.shape);
+  }
 
 protected:
   Tensor(FGraphNode *node, size_t shape) : node(node), shape(shape) {
@@ -843,6 +848,12 @@ template <typename T, unsigned int n> struct Tensor {
     return Tensor<T, n>(nn, new_shape);
   }
   FGraphNode *get_graph_node() const { return node; }
+
+  template <typename K, unsigned int k>
+  Tensor<stronger_return<K>, k> gradient(const Tensor<K, k> &dx) {
+    return Tensor<stronger_return<K>, k>(
+        fCalculateGradient(this->node, dx.node), dx.shape);
+  }
 
 protected:
   Tensor(FGraphNode *node, std::array<size_t, n> shape)
