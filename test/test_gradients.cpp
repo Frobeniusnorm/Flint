@@ -46,6 +46,13 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(dz[1][0][1], 18);
     CHECK_EQ(dz[1][1][0], -10);
     CHECK_EQ(dz[1][1][1], -10);
+    Tensor<double, 3> zy = z.matmul(y);
+    w = (x.matmul(y)).matmul(zy);
+    dy = w.gradient(y);
+    CHECK_EQ(dy[0][0], 67);
+    CHECK_EQ(dy[0][1], 67);
+    CHECK_EQ(dy[1][0], 67);
+    CHECK_EQ(dy[1][1], 67);
   }
 }
 int main(int argc, char **argv) {
