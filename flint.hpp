@@ -236,16 +236,17 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K, unsigned int k> friend struct Tensor;
   typedef std::vector<T> storage_type;
   typedef std::initializer_list<T> init_type;
-  Tensor(storage_type data) : shape(data.size()) {
+  Tensor(storage_type data) : shape{data.size()} {
     isTensorType<T>();
-    node = fCreateGraph(data.data(), data.size(), toFlintType<T>(), &shape, 1);
+    node =
+        fCreateGraph(data.data(), data.size(), toFlintType<T>(), &shape[0], 1);
     node->reference_counter = 1;
   }
-  Tensor(init_type data) : shape(data.size()) {
+  Tensor(init_type data) : shape{data.size()} {
     isTensorType<T>();
 
-    node = fCreateGraph(std::begin(data), data.size(), toFlintType<T>(), &shape,
-                        1);
+    node = fCreateGraph(std::begin(data), data.size(), toFlintType<T>(),
+                        &shape[0], 1);
     node->reference_counter = 1;
   }
   // copy
@@ -305,7 +306,7 @@ template <typename T> struct Tensor<T, 1> {
     FGraphNode *node = fconstant(value, &size, 1);
     return Tensor(node, size);
   }
-  const size_t get_shape() const { return shape; }
+  const size_t get_shape() const { return shape[0]; }
   std::vector<T> operator*() {
     if (node->result_data) {
       return std::vector<T>((T *)node->result_data->data,
@@ -345,8 +346,8 @@ template <typename T> struct Tensor<T, 1> {
                        : op->data_type == F_INT64   ? std::string("INT64")
                        : op->data_type == F_FLOAT32 ? std::string("FLOAT32")
                                                     : std::string("FLOAT64")) +
-                      ", shape: " + std::to_string(shape) + ">(";
-    if (op->op_type != FSTORE && node->result_data && op->op_type != FCONST)
+                      ", shape: " + std::to_string(shape[0]) + ">(";
+    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST)
       foo += "<not yet executed>";
     else {
       if (node->result_data) {
@@ -439,9 +440,9 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<T, 1> slice(long start = 0, long end = TensorRange::MAX_SIZE,
                      long step = 1) const {
     if (start == TensorRange::MAX_SIZE)
-      start = shape - 1;
+      start = shape[0] - 1;
     if (end == TensorRange::MAX_SIZE)
-      end = shape;
+      end = shape[0];
     FGraphNode *nn = fslice_step(node, &start, &end, &step);
     return Tensor<T, 1>(nn, nn->operation->shape[0]);
   }
@@ -449,7 +450,7 @@ template <typename T> struct Tensor<T, 1> {
 
   Tensor<T, 1> repeat(int repetitions) const {
     FGraphNode *nn = frepeat(node, &repetitions);
-    return Tensor<T, 1>(nn, (shape * repetitions + 1));
+    return Tensor<T, 1>(nn, (shape[0] * repetitions + 1));
   }
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k> gradient(const Tensor<K, k> &dx) {
@@ -458,11 +459,15 @@ template <typename T> struct Tensor<T, 1> {
   }
 
 protected:
-  Tensor(FGraphNode *node, size_t shape) : node(node), shape(shape) {
+  Tensor(FGraphNode *node, size_t shape) : node(node), shape{shape} {
+    node->reference_counter++;
+  }
+  Tensor(FGraphNode *node, std::array<size_t, 1> shape)
+      : node(node), shape(shape) {
     node->reference_counter++;
   }
   FGraphNode *node;
-  size_t shape;
+  std::array<size_t, 1> shape;
 };
 
 // multi dimensional

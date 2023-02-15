@@ -60,6 +60,8 @@ static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
   }
 }
 static FGraphNode *unbroadcast(FGraphNode *adjoint, const FGraphNode *node) {
+  flogging(F_INFO, std::to_string(adjoint->operation->dimensions) + " => " +
+                       std::to_string(node->operation->dimensions));
   if (adjoint->operation->dimensions > node->operation->dimensions) {
     size_t diff = adjoint->operation->dimensions - node->operation->dimensions;
     FGraphNode *res = adjoint;
@@ -67,25 +69,31 @@ static FGraphNode *unbroadcast(FGraphNode *adjoint, const FGraphNode *node) {
       res = freduce_sum(res, 0);
     }
     return res;
+  } else if (adjoint->operation->dimensions < node->operation->dimensions) {
+    size_t diff = node->operation->dimensions - adjoint->operation->dimensions;
+    std::vector<size_t> new_shape(node->operation->dimensions);
+    std::vector<int> repetitions(node->operation->dimensions);
+    for (int i = 0; i < diff; i++) {
+      new_shape[i] = 1;
+      repetitions[i] = node->operation->shape[i];
+    }
+    for (int i = diff; i < new_shape.size(); i++)
+      new_shape[i] = adjoint->operation->shape[i - diff];
+    FGraphNode *res = freshape(adjoint, new_shape.data(), new_shape.size());
+    res = frepeat(res, repetitions.data());
+    return res;
   }
   return adjoint;
 }
 static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
                                   FGraphNode *prev_adj) {
   switch (y->operation->op_type) {
-  case FSTORE:
-  case FCONST:
-    return fmul(prev_adj, constant_tensor(
-                              y == dx ? 1.0 : 0.0, dx->operation->data_type,
-                              dx->operation->shape, dx->operation->dimensions));
   case FADD:
-    return fmul(
-        prev_adj,
-        constant_tensor(
-            (dx == y->predecessors[0] || dx == y->predecessors[1]) ? 1.0 : 0.0,
-            dx->operation->data_type, dx->operation->shape,
-            dx->operation->dimensions));
-  case FSUB:
+    return (dx == y->predecessors[0] || dx == y->predecessors[1])
+               ? prev_adj
+               : constant_tensor(0.0, dx->operation->data_type,
+                                 dx->operation->shape,
+                                 dx->operation->dimensions);
   case FMUL: {
     if (y->predecessors[0] == dx) {
       return fmul(prev_adj, y->predecessors[1]);
@@ -94,11 +102,6 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
     } else
       return nullptr;
   }
-  case FDIV:
-  case FPOW:
-  case FLOG:
-  case FLOG2:
-  case FLOG10:
   case FMATMUL: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];
@@ -120,26 +123,12 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
       return nullptr;
     }
   }
-  case FLATTEN:
-  case FCONVERSION:
-  case FRESHAPE:
-  case FMIN:
-  case FMAX:
-  case FREDUCE_SUM:
-  case FREDUCE_MUL:
-  case FSLICE:
-  case FABS:
-  case FREPEAT:
-  case FTRANSPOSE:
-  case FNUM_OPERATION_TYPES:
+  default:
     return nullptr;
   }
 }
 
-static bool adapt_grad = true;
-
 FGraphNode *fCalculateGradient(const FGraphNode *y, const FGraphNode *dx) {
-  adapt_grad = false;
   using namespace std;
   // to store gradients per node
   unordered_map<const FGraphNode *, FGraphNode *> adjoints;
@@ -159,7 +148,7 @@ FGraphNode *fCalculateGradient(const FGraphNode *y, const FGraphNode *dx) {
     in_working.erase(curr);
     if (curr == dx) {
       sol = adjoints[curr];
-      continue;
+      return sol;
     }
     if (curr->operation->op_type == FSTORE ||
         curr->operation->op_type == FCONST)
@@ -171,7 +160,7 @@ FGraphNode *fCalculateGradient(const FGraphNode *y, const FGraphNode *dx) {
       FGraphNode *local_grad = local_gradient(curr, parent, adj);
       if (adjoints.contains(parent)) {
         adjoints[parent] =
-            unbroadcast(fadd(adjoints[parent], local_grad), parent);
+            fadd(adjoints[parent], unbroadcast(local_grad, parent));
       } else {
         adjoints.insert({parent, unbroadcast(local_grad, parent)});
       }
@@ -181,6 +170,7 @@ FGraphNode *fCalculateGradient(const FGraphNode *y, const FGraphNode *dx) {
       }
     }
   }
+  flogging(F_WARNING, "Operation graph did not contain the derivative!");
   return sol;
 }
 #endif

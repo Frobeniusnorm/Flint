@@ -735,6 +735,15 @@ FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b) {
   return eager_execution ? execute_eagerly(node) : node;
 }
 FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions) {
+  size_t total_size_node = 1;
+  for (int i = 0; i < a->operation->dimensions; i++)
+    total_size_node *= a->operation->shape[i];
+  size_t total_size_new = 1;
+  for (int i = 0; i < dimensions; i++)
+    total_size_new *= newshape[i];
+  if (total_size_node != total_size_new)
+    flogging(F_ERROR, "To reshape a node the product of its new shape must "
+                      "match the product of its old!");
   FGraphNode *node = new FGraphNode();
   node->operation = new FOperation();
   node->result_data = nullptr;

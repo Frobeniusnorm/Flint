@@ -53,6 +53,42 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(dy[0][1], 67);
     CHECK_EQ(dy[1][0], 67);
     CHECK_EQ(dy[1][1], 67);
+    dx = w.gradient(x);
+    CHECK_EQ(dx[0][0][0], 0);
+    CHECK_EQ(dx[1][1][1], 0);
+    dz = w.gradient(z);
+    CHECK_EQ(dz[0][0][0], -20);
+    CHECK_EQ(dz[0][0][1], 20);
+    CHECK_EQ(dz[0][1][0], 4);
+    CHECK_EQ(dz[0][1][1], -4);
+    CHECK_EQ(dz[1][0][0], -72);
+    CHECK_EQ(dz[1][0][1], 72);
+    CHECK_EQ(dz[1][1][0], 40);
+    CHECK_EQ(dz[1][1][1], -40);
+  }
+  TEST_CASE("Add, Mul, Matmul") {
+    Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
+    Tensor<double, 1> y = {5., -7.};
+    Tensor<double, 2> z = {{4, 3}, {2.5, 1.5}};
+    Tensor<double, 2> y_z = z * y;
+    Tensor<double, 3> w = (x + y).matmul(y_z) * (x + z);
+    Tensor<double, 3> dx = w.gradient(x);
+    CHECK_EQ(61., dx[0][0][0]);
+    CHECK_EQ(-42.5, dx[0][0][1]);
+    CHECK_EQ(85.5, dx[0][1][0]);
+    CHECK_EQ(-96.0, dx[0][1][1]);
+    CHECK_EQ(147., dx[1][0][0]);
+    CHECK_EQ(-152, dx[1][0][1]);
+    CHECK_EQ(211.5, dx[1][1][0]);
+    CHECK_EQ(-214., dx[1][1][1]);
+    Tensor<double, 1> dy = w.gradient(y);
+    CHECK_EQ(743., dy[0]);
+    CHECK_EQ(638.5, dy[1]);
+    Tensor<double, 2> dz = w.gradient(z);
+    CHECK_EQ(1335., dz[0][0]);
+    CHECK_EQ(-1778., dz[0][1]);
+    CHECK_EQ(-10., dz[1][0]);
+    CHECK_EQ(70., dz[1][1]);
   }
 }
 int main(int argc, char **argv) {
