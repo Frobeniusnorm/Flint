@@ -101,6 +101,7 @@ enum FOperationType {
   FMUL,
   FDIV,
   FPOW,
+  FNEG,
   FLOG,
   FLOG2,
   FLOG10,
@@ -312,6 +313,9 @@ FGraphNode *flog(FGraphNode *a);
 FGraphNode *flog2(FGraphNode *a);
 /** Takes the elementwise logarithm of a to the basis of 10*/
 FGraphNode *flog10(FGraphNode *a);
+
+/** Negates the elements of the tensor */
+FGraphNode *fneg(FGraphNode *a);
 
 /** Carries out matrix multiplication on the last two dimensions of the tensors.
 E.g. a matrix multiplication of two tensors with shapes (64, 32, 16) and (16,

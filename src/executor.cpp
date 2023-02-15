@@ -343,6 +343,10 @@ generateCode(FGraphNode *node,
         code = type + " " + name + " = log2(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
+      case FNEG: {
+        code = type + " " + name + " = -v" +
+               std::to_string(variable_index + 1) + ";\n" + code;
+      } break;
       case FREDUCE_SUM:
       case FREDUCE_MUL: {
         push_pred = false;

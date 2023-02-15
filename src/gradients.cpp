@@ -89,16 +89,32 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
                                   FGraphNode *prev_adj) {
   switch (y->operation->op_type) {
   case FADD:
-    return (dx == y->predecessors[0] || dx == y->predecessors[1])
-               ? prev_adj
-               : constant_tensor(0.0, dx->operation->data_type,
-                                 dx->operation->shape,
-                                 dx->operation->dimensions);
+    return (dx == y->predecessors[0] || dx == y->predecessors[1]) ? prev_adj
+                                                                  : nullptr;
+  case FSUB:
+    if (dx == y->predecessors[0])
+      return prev_adj;
+    else if (dx == y->predecessors[1])
+      return fneg(prev_adj);
+    else
+      return nullptr;
   case FMUL: {
     if (y->predecessors[0] == dx) {
       return fmul(prev_adj, y->predecessors[1]);
     } else if (y->predecessors[1] == dx) {
       return fmul(prev_adj, y->predecessors[0]);
+    } else
+      return nullptr;
+  }
+  case FDIV: {
+    FGraphNode *a = y->predecessors[0];
+    FGraphNode *b = y->predecessors[1];
+    if (a == dx) {
+      // d(a / b)/da = d(a * b^(-1))/da = b^(-1)
+      return fdiv(1., b);
+    } else if (b == dx) {
+      // d(a / b)/db = d(a * b^(-1))/db = -a * b^(-2)
+      return fneg(fmul(a, fpow(b, -2.)));
     } else
       return nullptr;
   }

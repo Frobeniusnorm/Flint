@@ -644,6 +644,16 @@ FGraphNode *flog2(FGraphNode *a) { return log_impl(a, FLOG2); }
 /** Takes the elementwise logarithm of a to the basis of 10*/
 FGraphNode *flog10(FGraphNode *a) { return log_impl(a, FLOG10); }
 
+/** Negates the elements of the tensor */
+FGraphNode *fneg(FGraphNode *a) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = FNEG;
+  op->dimensions = a->operation->dimensions;
+  op->shape = safe_mal<size_t>(op->dimensions);
+  op->data_type = a->operation->data_type;
+  return addNode(op, {a});
+}
 FGraphNode *fflatten(FGraphNode *a) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
@@ -655,7 +665,6 @@ FGraphNode *fflatten(FGraphNode *a) {
   for (int i = 0; i < prev_op->dimensions; i++)
     total_size *= prev_op->shape[i];
   op->shape[0] = total_size;
-  op->additional_data = nullptr;
   op->data_type = prev_op->data_type;
   return addNode(op, {a});
 }
