@@ -275,6 +275,28 @@ TEST_SUITE("Execution") {
         for (int k = 0; k < 2; k++)
           CHECK_EQ(i * 6 + j * 2 + k, t6[i][j][k][0]);
   }
+  TEST_CASE("neg") {
+    using namespace std;
+    vector<float> data1{1, 2, 3, 4};
+    vector<float> data2{4, 3, 2, 1};
+    vector<size_t> s1{2, 2};
+    FGraphNode *g1 =
+        fCreateGraph(data1.data(), data1.size(), F_FLOAT32, s1.data(), 2);
+    FGraphNode *g2 =
+        fCreateGraph(data2.data(), data2.size(), F_FLOAT32, s1.data(), 2);
+    g1 = fExecuteGraph(fneg(g1));
+    g2 = fExecuteGraph(fneg(g2));
+    FResultData *rd1 = g1->result_data;
+    FResultData *rd2 = g2->result_data;
+    CHECK_EQ(-1, ((float *)rd1->data)[0]);
+    CHECK_EQ(-2, ((float *)rd1->data)[1]);
+    CHECK_EQ(-3, ((float *)rd1->data)[2]);
+    CHECK_EQ(-4, ((float *)rd1->data)[3]);
+    CHECK_EQ(-4, ((float *)rd2->data)[0]);
+    CHECK_EQ(-3, ((float *)rd2->data)[1]);
+    CHECK_EQ(-2, ((float *)rd2->data)[2]);
+    CHECK_EQ(-1, ((float *)rd2->data)[3]);
+  }
   TEST_CASE("matmul") {
     using namespace std;
     vector<float> data1{1, 2, 3, 4};

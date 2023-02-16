@@ -59,9 +59,15 @@ static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
     return fconstant_d((double)val, shape, dimensions);
   }
 }
+static void printShape(const FGraphNode *node) {
+  std::cout << "shape: ";
+  for (int i = 0; i < node->operation->dimensions; i++)
+    std::cout << node->operation->shape[i]
+              << ((i == node->operation->dimensions - 1) ? std::string("")
+                                                         : std::string(", "));
+  std::cout << std::endl;
+}
 static FGraphNode *unbroadcast(FGraphNode *adjoint, const FGraphNode *node) {
-  flogging(F_INFO, std::to_string(adjoint->operation->dimensions) + " => " +
-                       std::to_string(node->operation->dimensions));
   if (adjoint->operation->dimensions > node->operation->dimensions) {
     size_t diff = adjoint->operation->dimensions - node->operation->dimensions;
     FGraphNode *res = adjoint;
@@ -72,10 +78,10 @@ static FGraphNode *unbroadcast(FGraphNode *adjoint, const FGraphNode *node) {
   } else if (adjoint->operation->dimensions < node->operation->dimensions) {
     size_t diff = node->operation->dimensions - adjoint->operation->dimensions;
     std::vector<size_t> new_shape(node->operation->dimensions);
-    std::vector<int> repetitions(node->operation->dimensions);
+    std::vector<int> repetitions(node->operation->dimensions, 0);
     for (int i = 0; i < diff; i++) {
       new_shape[i] = 1;
-      repetitions[i] = node->operation->shape[i];
+      repetitions[i] = node->operation->shape[i] - 1;
     }
     for (int i = diff; i < new_shape.size(); i++)
       new_shape[i] = adjoint->operation->shape[i - diff];
@@ -171,7 +177,6 @@ FGraphNode *fCalculateGradient(const FGraphNode *y, const FGraphNode *dx) {
       continue;
     FGraphNode *adj = adjoints[curr];
     for (int i = 0; i < curr->num_predecessor; i++) {
-
       FGraphNode *parent = curr->predecessors[i];
       FGraphNode *local_grad = local_gradient(curr, parent, adj);
       if (adjoints.contains(parent)) {

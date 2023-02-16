@@ -3,17 +3,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
 
-template <typename T> static std::string printNode(FGraphNode *node) {
-  std::string s = "";
-  if (!node->result_data) {
-    fExecuteGraph(node);
-  }
-  for (int i = 0; i < node->result_data->num_entries; i++)
-    s += std::to_string(((T *)node->result_data->data)[i]) +
-         (i == node->result_data->num_entries - 1 ? std::string("")
-                                                  : std::string(", "));
-  return s;
-}
 TEST_SUITE("Autodiff") {
   TEST_CASE("Two Times Matmul") {
     Flint::setLoggingLevel(2);
@@ -89,6 +78,25 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(-1778., dz[0][1]);
     CHECK_EQ(-10., dz[1][0]);
     CHECK_EQ(70., dz[1][1]);
+  }
+  TEST_CASE("Sub, Mul, Div") {
+    Flint::setLoggingLevel(3);
+    Tensor<double, 3> u = {{{1, 1}, {2, 2}}, {{3, 3}, {-1, -1}}};
+    Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
+    Tensor<double, 1> y = {5., -7.};
+    Tensor<double, 2> z = {{4, 3}, {2.5, 1.5}};
+    Tensor<double, 2> y_z = z * y;
+    Tensor<double, 3> w = (x - y) / y_z * (x - z) - y_z / z;
+    std::cout << (std::string)w << std::endl;
+    Tensor<double, 3> dx = w.gradient(x);
+    dx.execute();
+    std::cout << (std::string)dx << std::endl;
+    Tensor<double, 1> dy = w.gradient(y);
+    dy.execute();
+    std::cout << (std::string)dy << std::endl;
+    Tensor<double, 2> dz = w.gradient(z);
+    dz.execute();
+    std::cout << (std::string)dz << std::endl;
   }
 }
 int main(int argc, char **argv) {

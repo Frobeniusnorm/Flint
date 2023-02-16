@@ -651,6 +651,7 @@ FGraphNode *fneg(FGraphNode *a) {
   op->op_type = FNEG;
   op->dimensions = a->operation->dimensions;
   op->shape = safe_mal<size_t>(op->dimensions);
+  memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
   op->data_type = a->operation->data_type;
   return addNode(op, {a});
 }
