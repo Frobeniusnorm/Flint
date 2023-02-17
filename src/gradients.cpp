@@ -117,10 +117,10 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
     FGraphNode *b = y->predecessors[1];
     if (a == dx) {
       // d(a / b)/da = d(a * b^(-1))/da = b^(-1)
-      return fdiv(1., b);
+      return fdiv(prev_adj, b);
     } else if (b == dx) {
       // d(a / b)/db = d(a * b^(-1))/db = -a * b^(-2)
-      return fneg(fmul(a, fpow(b, -2.)));
+      return fneg(fdiv(fmul(prev_adj, a), fpow(b, 2.)));
     } else
       return nullptr;
   }
@@ -170,7 +170,6 @@ FGraphNode *fCalculateGradient(const FGraphNode *y, const FGraphNode *dx) {
     in_working.erase(curr);
     if (curr == dx) {
       sol = adjoints[curr];
-      return sol;
     }
     if (curr->operation->op_type == FSTORE ||
         curr->operation->op_type == FCONST)
@@ -191,7 +190,8 @@ FGraphNode *fCalculateGradient(const FGraphNode *y, const FGraphNode *dx) {
       }
     }
   }
-  flogging(F_WARNING, "Operation graph did not contain the derivative!");
+  if (!sol)
+    flogging(F_WARNING, "Operation graph did not contain the derivative!");
   return sol;
 }
 #endif

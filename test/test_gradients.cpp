@@ -81,12 +81,13 @@ TEST_SUITE("Autodiff") {
   }
   TEST_CASE("Sub, Mul, Div") {
     Flint::setLoggingLevel(3);
-    Tensor<double, 3> u = {{{1, 1}, {2, 2}}, {{3, 3}, {-1, -1}}};
     Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
     Tensor<double, 1> y = {5., -7.};
     Tensor<double, 2> z = {{4, 3}, {2.5, 1.5}};
-    Tensor<double, 2> y_z = z * y;
-    Tensor<double, 3> w = (x - y) / y_z * (x - z) - y_z / z;
+    Tensor<double, 2> u = z / (y - z);
+    Tensor<double, 2> v = y / (z * z);
+    Tensor<double, 3> w = (x - y) / (z * y) * (x - z) - (z * y);
+    w.execute();
     std::cout << (std::string)w << std::endl;
     Tensor<double, 3> dx = w.gradient(x);
     dx.execute();
@@ -95,6 +96,12 @@ TEST_SUITE("Autodiff") {
     dy.execute();
     std::cout << (std::string)dy << std::endl;
     Tensor<double, 2> dz = w.gradient(z);
+    dz.execute();
+    std::cout << (std::string)dz << std::endl;
+    dy = u.gradient(y);
+    dy.execute();
+    std::cout << (std::string)dy << std::endl;
+    dz = u.gradient(z);
     dz.execute();
     std::cout << (std::string)dz << std::endl;
   }

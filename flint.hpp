@@ -283,7 +283,6 @@ template <typename T> struct Tensor<T, 1> {
   Tensor(Tensor &&other) {
     shape = other.shape;
     node = other.node;
-    other.allocated = nullptr;
     other.node = nullptr;
   }
   void operator=(Tensor &&other) {
@@ -293,7 +292,6 @@ template <typename T> struct Tensor<T, 1> {
     }
     shape = other.shape;
     node = other.node;
-    other.allocated = nullptr;
     other.node = nullptr;
   }
   ~Tensor() {
@@ -336,6 +334,22 @@ template <typename T> struct Tensor<T, 1> {
     if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
       node->reference_counter--;
       node = fExecuteGraph(node);
+      node->reference_counter++;
+    }
+  }
+  void execute_cpu() {
+    const FOperation *op = node->operation;
+    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
+      node->reference_counter--;
+      node = fExecuteGraph_cpu(node);
+      node->reference_counter++;
+    }
+  }
+  void execute_gpu() {
+    const FOperation *op = node->operation;
+    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
+      node->reference_counter--;
+      node = fExecuteGraph_gpu(node);
       node->reference_counter++;
     }
   }
