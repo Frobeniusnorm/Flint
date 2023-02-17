@@ -145,7 +145,51 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
       return nullptr;
     }
   }
-  default:
+  case FPOW: {
+    FGraphNode *a = y->predecessors[0];
+    FGraphNode *b = y->predecessors[1];
+    if (a == dx) {
+      // x^b / dx = b*x^(b-1)
+      return fmul(prev_adj, fmul(b, fpow(a, fsub(b, 1))));
+    } else if (b == dx) {
+      // b^x / dx = b^x * ln(x)
+      return fmul(prev_adj, fmul(fpow(a, b), flog(b)));
+    } else
+      return nullptr;
+  }
+  case FNEG: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx) {
+      return fneg(prev_adj);
+    } else
+      return nullptr;
+  }
+  case FLOG: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx)
+      return fdiv(prev_adj, a);
+    else
+      return nullptr;
+  }
+  case FLOG2: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx)
+      return fdiv(1.0, fmul(a, log(2.0)));
+    else
+      return nullptr;
+  }
+  case FLOG10:
+  case FLATTEN:
+  case FCONVERSION:
+  case FRESHAPE:
+  case FMIN:
+  case FMAX:
+  case FREDUCE_SUM:
+  case FREDUCE_MUL:
+  case FSLICE:
+  case FABS:
+  case FREPEAT:
+  case FTRANSPOSE:
     return nullptr;
   }
 }
