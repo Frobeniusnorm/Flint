@@ -59,14 +59,6 @@ static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
     return fconstant_d((double)val, shape, dimensions);
   }
 }
-static void printShape(const FGraphNode *node) {
-  std::cout << "shape: ";
-  for (int i = 0; i < node->operation->dimensions; i++)
-    std::cout << node->operation->shape[i]
-              << ((i == node->operation->dimensions - 1) ? std::string("")
-                                                         : std::string(", "));
-  std::cout << std::endl;
-}
 static FGraphNode *unbroadcast(FGraphNode *adjoint, const FGraphNode *node) {
   if (adjoint->operation->dimensions > node->operation->dimensions) {
     size_t diff = adjoint->operation->dimensions - node->operation->dimensions;
@@ -196,6 +188,7 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
   case FABS:
   case FREPEAT:
   case FTRANSPOSE:
+  default:
     return nullptr;
   }
 }
