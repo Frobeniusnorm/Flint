@@ -84,26 +84,21 @@ TEST_SUITE("Autodiff") {
     Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
     Tensor<double, 1> y = {5., -7.};
     Tensor<double, 2> z = {{4, 3}, {2.5, 1.5}};
-    Tensor<double, 2> u = z / (y - z);
-    Tensor<double, 2> v = y / (z * z);
     Tensor<double, 3> w = (x - y) / (z * y) * (x - z) - (z * y);
-    w.execute();
-    std::cout << (std::string)w << std::endl;
     Tensor<double, 3> dx = w.gradient(x);
-    dx.execute();
-    std::cout << (std::string)dx << std::endl;
     Tensor<double, 1> dy = w.gradient(y);
-    dy.execute();
-    std::cout << (std::string)dy << std::endl;
     Tensor<double, 2> dz = w.gradient(z);
-    dz.execute();
-    std::cout << (std::string)dz << std::endl;
-    dy = u.gradient(y);
-    dy.execute();
-    std::cout << (std::string)dy << std::endl;
-    dz = u.gradient(z);
-    dz.execute();
-    std::cout << (std::string)dz << std::endl;
+    using doctest::Approx;
+    CHECK_EQ(Approx(-0.35).epsilon(0.001), dx[0][0][0]);
+    CHECK_EQ(Approx(-0.28).epsilon(0.001), dx[0][1][0]);
+    CHECK_EQ(Approx(-0.05).epsilon(0.001), dx[1][0][0]);
+    CHECK_EQ(Approx(-1.8571429).epsilon(0.001), dx[1][1][1]);
+    CHECK_EQ(Approx(-13.29).epsilon(0.001), dy[0]);
+    CHECK_EQ(Approx(-9.639456).epsilon(0.001), dy[1]);
+    CHECK_EQ(Approx(-9.9).epsilon(0.001), dz[0][0]);
+    CHECK_EQ(Approx(15.079366).epsilon(0.001), dz[0][1]);
+    CHECK_EQ(Approx(-10).epsilon(0.001), dz[1][0]);
+    CHECK_EQ(Approx(22.126986).epsilon(0.001), dz[1][1]);
   }
 }
 int main(int argc, char **argv) {
