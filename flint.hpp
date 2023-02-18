@@ -353,7 +353,8 @@ template <typename T> struct Tensor<T, 1> {
       node->reference_counter++;
     }
   }
-  operator std::string() const {
+  Tensor<T, 1> operator-() const { return Tensor<T, 1>(fneg(node), shape); }
+  operator std::string() {
     FOperation *op = node->operation;
     std::string foo = "Tensor<" +
                       (op->data_type == F_INT32     ? std::string("INT32")
@@ -388,6 +389,10 @@ template <typename T> struct Tensor<T, 1> {
     }
     foo += ")";
     return foo;
+  }
+  friend std::ostream &operator<<(std::ostream &os, Tensor<T, 1> &t) {
+    os << (std::string)t;
+    return os;
   }
   // to calculate the return type of two tensors at compile time
   template <typename K>
@@ -593,6 +598,7 @@ template <typename T, unsigned int n> struct Tensor {
     }
     }
   }
+
   void execute() {
     FOperation *op = node->operation;
     if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
@@ -611,6 +617,7 @@ template <typename T, unsigned int n> struct Tensor {
       node = fExecuteGraph_gpu(node);
     }
   }
+  Tensor<T, n> operator-() const { return Tensor<T, n>(fneg(node), shape); }
   TensorView<T, n - 1> operator[](const size_t index) {
     if (node->result_data) {
       FResultData *store = node->result_data;
@@ -662,6 +669,10 @@ template <typename T, unsigned int n> struct Tensor {
     foo += ")";
     return foo;
   }
+  friend std::ostream &operator<<(std::ostream &os, Tensor<T, n> &t) {
+    os << (std::string)t;
+    return os;
+  }
   // to calculate the return type of two tensors at compile time
   template <typename K>
   using stronger_return =
@@ -704,7 +715,6 @@ template <typename T, unsigned int n> struct Tensor {
   Tensor<stronger_return<K>, n> operator*(const K other) const {
     return Tensor<stronger_return<K>, n>(fmul(node, other), shape);
   }
-  Tensor<T, n> operator-() const { return Tensor<T, n>(fmul(node, -1), shape); }
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator/(const Tensor<K, k> &other) const {

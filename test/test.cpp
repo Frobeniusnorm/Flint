@@ -616,10 +616,14 @@ int main(int argc, char **argv) {
   doctest::Context context;
   context.applyCommandLine(argc, argv);
   int res;
-  disable_eager_execution();
   if (doCPU) {
     flintInit(1, 0);
     res = context.run();
+    enable_eager_execution();
+    Tensor<int, 3> t1{{{0}, {1}}, {{2}, {3}}};
+    Tensor<int, 2> t2 = t1.repeat(1, 2).flattened(2);
+    std::cout << t2 << std::endl;
+    disable_eager_execution();
     flintCleanup();
   }
   if (doGPU) {
