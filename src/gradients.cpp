@@ -35,17 +35,6 @@ template <typename T> static constexpr FType toFlintType() {
   if (std::is_same<T, double>())
     return F_FLOAT64;
 }
-template <typename T> static std::string printNode(FGraphNode *node) {
-  std::string s = "";
-  if (!node->result_data) {
-    fExecuteGraph(node);
-  }
-  for (int i = 0; i < node->result_data->num_entries; i++)
-    s += std::to_string(((T *)node->result_data->data)[i]) +
-         (i == node->result_data->num_entries - 1 ? std::string("")
-                                                  : std::string(", "));
-  return s;
-}
 static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
                                    int dimensions) {
   switch (type) {
@@ -144,8 +133,8 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
       // x^b / dx = b*x^(b-1)
       return fmul(prev_adj, fmul(b, fpow(a, fsub(b, 1))));
     } else if (b == dx) {
-      // b^x / dx = b^x * ln(x)
-      return fmul(prev_adj, fmul(fpow(a, b), flog(b)));
+      // a^x / dx = a^x * ln(a)
+      return fmul(prev_adj, fmul(fpow(a, b), flog(a)));
     } else
       return nullptr;
   }

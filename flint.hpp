@@ -739,16 +739,25 @@ template <typename T, unsigned int n> struct Tensor {
     return Tensor<T, n - 1>(foo, ns);
   }
   template <typename K, unsigned int k>
-  Tensor<stronger_return<K>, n>
-  pow(const Tensor<stronger_return<K>, k> &other) {
-    static_assert(
-        k <= n,
-        "Can't take the power of a tensor to a tensor with higher dimension!");
-    return Tensor<stronger_return<K>, n>(fpow(node, other.node), shape);
+  Tensor<stronger_return<K>, k >= n ? k : n> pow(const Tensor<K, k> &other) {
+    if constexpr (k >= n)
+      return Tensor<stronger_return<K>, k>(fpow(node, other.node), other.shape);
+    else
+      return Tensor<stronger_return<K>, n>(fpow(node, other.node), shape);
   }
   template <typename K> Tensor<stronger_return<K>, n> pow(const K other) {
     return Tensor<stronger_return<K>, n>(fpow(node, other), shape);
   }
+  Tensor<T, n> log() {
+    return Tensor<stronger_return<T>, n>(flog(node), shape);
+  }
+  Tensor<T, n> log2() {
+    return Tensor<stronger_return<T>, n>(flog2(node), shape);
+  }
+  Tensor<T, n> log10() {
+    return Tensor<stronger_return<T>, n>(flog10(node), shape);
+  }
+
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n> matmul(Tensor<K, k> &other) {
     int x = shape[shape.size() - 2];

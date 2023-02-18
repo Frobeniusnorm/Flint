@@ -100,6 +100,27 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(Approx(-10).epsilon(0.001), dz[1][0]);
     CHECK_EQ(Approx(22.126986).epsilon(0.001), dz[1][1]);
   }
+  TEST_CASE("Pow, Neg, Log") {
+    Tensor<double, 3> x = {{{42, 75.3}, {4, 4}, {50, 3}},
+                           {{7, 9}, {3.5, 77}, {10, 10}}};
+    Tensor<double, 1> y = {-7, 5.5};
+    Tensor<double, 2> z = {{1.5, 2.5}, {3.5, 4.5}, {7.5, 9}};
+    Tensor<double, 3> w = x.pow(y).log();
+    Tensor<double, 3> dx = w.gradient(x);
+    Tensor<double, 1> dy = w.gradient(y);
+    using doctest::Approx;
+    CHECK_EQ(Approx(-0.1666666).epsilon(0.001), dx[0][0][0]);
+    CHECK_EQ(Approx(0.07304117).epsilon(0.001), dx[0][0][1]);
+    CHECK_EQ(Approx(-1.75).epsilon(0.001), dx[0][1][0]);
+    CHECK_EQ(Approx(1.833333).epsilon(0.001), dx[0][2][1]);
+    CHECK_EQ(Approx(-1).epsilon(0.001), dx[1][0][0]);
+    CHECK_EQ(Approx(0.071428).epsilon(0.001), dx[1][1][1]);
+    CHECK_EQ(Approx(0.55).epsilon(0.001), dx[1][2][1]);
+    CHECK_EQ(Approx(14.537247).epsilon(0.001), dy[0]);
+    CHECK_EQ(Approx(15.650002).epsilon(0.001), dy[1]);
+    // TODO: test with negative values with integer y
+    // TODO: test log2 and log10
+  }
 }
 int main(int argc, char **argv) {
   doctest::Context context;

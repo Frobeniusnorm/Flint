@@ -882,6 +882,7 @@ FGraphNode *fslice(FGraphNode *a, const long *start, const long *end) {
 FGraphNode *fabs_g(FGraphNode *a) {
   FOperation *op = new FOperation();
   op->op_type = FABS;
+  op->additional_data = nullptr;
   initShape_keep(op, a->operation, nullptr);
   return addNode(op, {a});
 }
