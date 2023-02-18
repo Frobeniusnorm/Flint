@@ -1,0 +1,100 @@
+@font-face {
+  font-family: FiraCode;
+  src: url(FiraCode-Regular.ttf);
+}
+html {
+  font-family: FiraCode; 
+}
+#header-bar{
+    background-color: #D0D0D0;
+    height: 2.75em;
+    position: fixed;
+    top: 0px;
+    color: white;
+    padding-top: 5px;
+    font-size: 1.2em;
+    left: 0px;
+    width: 100%;
+    z-index: 15;
+}
+#header-bar .item{
+    margin-left: 20px;
+    display:inline-block;
+}
+#header-bar .selected{
+    color: #0070B0;
+    text-decoration: underline;
+    text-underline-offset: 5px;
+}
+a{
+    color: #001050;
+    cursor: pointer;
+}
+a:hover{
+    color: #0070B0;
+}
+body{
+  background-color: #F1F1F1;
+  color: black;
+  width: 100%;
+  margin:0;
+}
+.left-spaced{
+    padding-left: 10px;
+    display: inline-block;
+}
+.spacer{
+  display: block; 
+  height: 0.1em;
+}
+.content{
+  max-width: 80em;
+  min-width: 55%;
+  padding: 10px 20px;
+  left: 0px;
+  margin-left: 0px;
+  display: block;
+  text-align: left;
+}
+.card {
+  background: white;
+  display: inline-block;
+  padding: 5px 10px;
+}
+pre{
+  margin: 0;
+}
+.code{
+  background: #002030; 
+  color: white; 
+  padding: 10px 20px;
+  font-size: 1.3em;
+}
+/* Index */
+#showcase_background{
+  background-color: #000A40;
+  top: 2.75em;
+  left: 0px;
+  width: 100%;
+  padding-top: 5em;
+  padding-bottom: 2em;
+  z-index: 10;
+  color:white;
+}
+#showcase_background h1{
+  background-color: white;
+  text-weight: bold;
+  text-align: center;
+  color: black;
+  display: inline-block;
+  padding: 5px;
+}
+#showcase_background h2{
+  background-color: white;
+  text-weight: normal;
+  text-align: center;
+  color: black;
+  display: inline-block;
+  padding: 5px;
+}
+
