@@ -2,12 +2,16 @@
   font-family: FiraCode;
   src: url(FiraCode-Regular.ttf);
 }
+* {
+  box-sizing: border-box;
+}
 html {
   font-family: FiraCode; 
 }
+/* header */
 #header-bar{
     background-color: #D0D0D0;
-    height: 3em;
+    height: 3.5em;
     position: fixed;
     top: 0px;
     color: white;
@@ -35,9 +39,24 @@ html {
     text-decoration: underline;
     text-underline-offset: 5px;
 }
+/* footer */
+#footer{
+  background-color: #000A40;
+  margin-top: 2.75em;
+  left: 0px;
+  width: 100%;
+  padding-top: 3em;
+  padding-bottom: 1em;
+  z-index: 10;
+  color:white;
+}
+/* restyle elements */
 a{
     color: #001050;
     cursor: pointer;
+}
+#footer a{
+  color: #F2F2F2;
 }
 a:hover{
     color: #0070B0;
@@ -47,6 +66,28 @@ body{
   color: black;
   width: 100%;
   margin:0;
+}
+pre{
+  margin: 0;
+  white-space: pre-wrap;
+}
+/* basic classes */
+
+.column {
+  float: left;
+  width: 25%;
+  text-align: left;
+  padding: 10px;
+}
+@media screen and (max-width: 600px) {
+  .column {
+    width: 100%;
+  }
+}
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
 }
 .left-spaced{
     padding-left: 10px;
@@ -75,10 +116,6 @@ body{
   background: white;
   display: inline-block;
   padding: 5px 10px;
-}
-pre{
-  margin: 0;
-  white-space: pre-wrap;
 }
 .code{
   background: #002030; 

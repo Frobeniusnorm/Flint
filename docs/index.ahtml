@@ -1,23 +1,4 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-  <title>
-    Flint Documentation
-  </title>
-  <link rel="stylesheet" href="style.css" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-</head>
-
-<body>
-  <div id="header-bar">
-    <div class="left-spaced">
-      <img src="flint.png" style="width:5.5em; height:2.9em; display: inline-block; vertical-align: middle;" />
-      <span class="item selected">About</span>
-      <a class="item">Documentation</a>
-      <a class="item">Tutorial</a>
-    </div>
-  </div>
+@include("header.html")
   <div id="showcase_background">
     <center>
       <h1>
@@ -91,9 +72,4 @@ std::cout << t2 << std::endl;
       </div>
     </div>
   </center>
-  <div id="footer">
-
-  </div>
-</body>
-
-</html>
+@include("footer.html")

@@ -20,11 +20,21 @@ module HtmlParser where
                 | isDigit x = x : helper t False
                 | otherwise = x : helper t True
             helper [] _ = []
+    includeFiles :: [Char] -> IO [Char]
+    includeFiles ('@':'i':'n':'c':'l':'u':'d':'e':'(':'"':t) = do
+        let path = takeWhile (/= '"') t
+        inc_file <- readFile path
+        includeFiles $ inc_file ++ drop 1 ( dropWhile (/= ')') t)
+    includeFiles (x:t) = do 
+        rek <- includeFiles t
+        return (x : rek)
+    includeFiles [] = return []
 
     foldHtml :: FilePath -> IO ()
     foldHtml path = do
         content <- readFile path
-        writeFile (newFilename path) (transformCode content)
+        included <- includeFiles content
+        writeFile (newFilename path) (transformCode included)
         where
             transformCode str = concatMap (\x -> do
                     let code = map fst x
