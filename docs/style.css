@@ -23,6 +23,13 @@ html {
     display:inline-block;
     white-space: nowrap;
 }
+@media only screen and (max-width: 50em){
+  #header-bar .item{
+    margin-left: 0;
+    display:inline-block;
+    white-space: nowrap;
+  }
+}
 #header-bar .selected{
     color: #0070B0;
     text-decoration: underline;
@@ -44,6 +51,12 @@ body{
 .left-spaced{
     padding-left: 10px;
     display: inline-block;
+}
+@media only screen and (max-width: 50em){
+  .left-spaced{
+    padding-left: 0px;
+    display: inline-block;
+  }
 }
 .spacer{
   display: block; 

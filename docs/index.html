@@ -65,18 +65,15 @@
       <br />
       <pre class="card code">
 
-<span style="color: #F030FF">class</span> Test {
-
-};
-<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, 3&gt; t1{{{0}, {1}}, {{2}, {3}}};
-<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, 2&gt; t2 = t1.repeat(1, 2).flattened(2);
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; t1{{{<span style="color: #30F0FF">0</span>}, {<span style="color: #30F0FF">1</span>}}, {{<span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">3</span>}}};
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; t2 = t1.repeat(<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>).flattened(<span style="color: #30F0FF">2</span>);
 std::cout &lt;&lt; t2 &lt;&lt; std::endl;
-<span style="color: #D0D0D0">/* Tensor&lt;INT32, shape: [4, 6]&gt;( 
- *  [[0, 1, 0, 1, 0, 1], 
- *   [2, 3, 2, 3, 2, 3], 
- *   [0, 1, 0, 1, 0, 1], 
- *   [2, 3, 2, 3, 2, 3]]) */</span>
- }
+<span style="color: #D0D0D0">/* Tensor&lt;INT32, shape: [<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">6</span>]&gt;( 
+ *  [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>], 
+ *   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>], 
+ *   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>], 
+ *   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]]) */</span>
+
       </pre>
       <div style="display: block; height: 2em"></div>
       <div class="card">
@@ -99,4 +96,4 @@ std::cout &lt;&lt; t2 &lt;&lt; std::endl;
   </div>
 </body>
 
-</html>
+</html>
