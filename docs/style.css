@@ -7,19 +7,21 @@ html {
 }
 #header-bar{
     background-color: #D0D0D0;
-    height: 2.75em;
+    height: 3em;
     position: fixed;
     top: 0px;
     color: white;
     padding-top: 5px;
-    font-size: 1.2em;
+    font-size: 1em;
     left: 0px;
     width: 100%;
     z-index: 15;
+    white-space: nowrap;
 }
 #header-bar .item{
     margin-left: 20px;
     display:inline-block;
+    white-space: nowrap;
 }
 #header-bar .selected{
     color: #0070B0;
@@ -63,12 +65,14 @@ body{
 }
 pre{
   margin: 0;
+  white-space: pre-wrap;
 }
 .code{
   background: #002030; 
   color: white; 
   padding: 10px 20px;
   font-size: 1.3em;
+  text-align: left;
 }
 /* Index */
 #showcase_background{
@@ -82,16 +86,16 @@ pre{
   color:white;
 }
 #showcase_background h1{
-  background-color: white;
-  text-weight: bold;
+  background-color: #D0D0D0;
+  font-weight: bold;
   text-align: center;
   color: black;
   display: inline-block;
   padding: 5px;
 }
 #showcase_background h2{
-  background-color: white;
-  text-weight: normal;
+  background-color: #D0D0D0;
+  font-weight: normal;
   text-align: center;
   color: black;
   display: inline-block;
