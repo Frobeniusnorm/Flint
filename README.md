@@ -24,4 +24,4 @@ There is no first official version yet. However if you want to build it you need
 
 ## Attribution to included libraries ##
 - Benchmarking: [plf::nanotimer](https://github.com/mattreecebentley/plf_nanotimer) (zlib Licence)
-- Documentation: [Doxygen](https://github.com/doxygen/doxygen)
+- Testing: [Doctest](https://github.com/doctest/doctest) (MIT Licence)
