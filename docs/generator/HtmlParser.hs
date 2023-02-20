@@ -54,10 +54,18 @@ module HtmlParser where
                     "<span style=\"color: " ++ highKeyword ++ "\">class</span>" ++ highlightCode t
             highlightCode ('i':'n':'t':t) = 
                     "<span style=\"color: " ++ highType ++ "\">int</span>" ++ highlightCode t
+            highlightCode ('f':'l':'o':'a':'t':t) = 
+                    "<span style=\"color: " ++ highType ++ "\">float</span>" ++ highlightCode t
+            highlightCode ('d':'o':'u':'b':'l':'e':t) = 
+                    "<span style=\"color: " ++ highType ++ "\">double</span>" ++ highlightCode t
+            highlightCode ('l':'o':'n':'g':t) = 
+                    "<span style=\"color: " ++ highType ++ "\">long</span>" ++ highlightCode t
+            highlightCode ('s':'i':'z':'e':'_':'t':t) = 
+                    "<span style=\"color: " ++ highType ++ "\">double</span>" ++ highlightCode t
             highlightCode ('T':'e':'n':'s':'o':'r':t) =
                     "<span style=\"color: " ++ highType ++ "\">Tensor</span>" ++ highlightCode t
             highlightCode ('/':'/':t) =
-                    "<span style=\"color: #D0D0D0\">" ++ takeWhile (/= '\n') t ++ "</span>" ++ highlightCode (dropWhile (/= '\n') t)
+                    "<span style=\"color: #D0D0D0\">//" ++ takeWhile (/= '\n') t ++ "</span>" ++ highlightCode (dropWhile (/= '\n') t)
             highlightCode ('/':'*':t) = do
                     -- char and following char zipped together to detect /*
                     let interleaved = zip t (drop 1 t)

@@ -1,0 +1,75 @@
+@include("header.html")
+  <div id="header-bar">
+    <div class="left-spaced">
+      <img src="flint.png" style="width:5.5em; height:2.9em; display: inline-block; vertical-align: middle;" />
+      <a class="item" href="index.html">About</a>
+      <span class="item selected">Documentation</span>
+      <a class="item">Tutorial</a>
+    </div>
+  </div>
+  <center>
+    <div class="content">
+      <div style="display: block; height: 5em;"></div>
+      <div class="card">
+        <span style="font-size:1.5em; font-weight: bold;">C Headers</span>
+      </div>
+      <br />
+      <div class="card">
+        <p style="padding-bottom: 10px; padding-top: 2px;">
+          The C Header mainly exists for abstracting the implementation from the C++ syntax sugar.<br/>
+          It acts as a common interface for writing high level interfaces, especially to provide an easy interface for other languages.
+          <div style="display: block; height: 0.1em;"></div>
+          If you want to write a language interface for Flint or really squeeze that last bit of performance out of it by avoiding the C++ overhead, this
+          is the place to go.
+          <div style="display: block; height: 1em;"></div>
+          <pre class="card code">
+            @code{
+float data1[] = {1,2,3,4};
+double data2[] = {4,3,2,1};
+size_t shape[] = {2,2};
+FGraphNode *g1 = fCreateGraph(&data1[0], 4, F_FLOAT32, &shape[0]);
+FGraphNode *g2 = fCreateGraph(&data2[0], 4, F_FLOAT64, &shape[0]);
+FGraphNode *mm = fExecuteGraph(fmatmul(g1, g2));
+FResultData *rd = mm->result_data;
+double* result = rd->data;
+size_t result_shape = {mm->operation->shape[0], mm->operation->shape[1]}; }
+          </pre>
+        </p>
+      </div>
+      <br/>
+      <div class="card button1">
+        <a href="">Documentation</a>
+      </div>
+      <div style="display: block; height: 2em;"></div>
+      <div class="card">
+        <span style="font-size:1.5em; font-weight: bold;">C++ Headers</span>
+      </div>
+      <br />
+      <div class="card">
+        <p style="padding-bottom: 10px; padding-top: 2px;">
+          Those headers allow convenient, fast developement directly in C++.
+          It provides class abstractions around the C Interface, with templates binding the types and dimensionality of the Tensors,
+          which provides a strong compile time type check, which helps you to find bugs,<i>before</i> you start your application.
+          <div style="display: block; height: 0.1em;"></div>
+          If you want to develop in C++ this is the place to go. 
+          <div style="display: block; height: 1em;"></div>
+          <pre class="card code">
+            @code{
+Tensor<float, 2> t1{{1,2}, {3,4}};
+Tensor<double, 2> t2{{4,3}, {2,1}};
+Tensor<double, 2> mm = t1.matmul(t2);
+// access directly (fast)
+std::cout << mm[0][1] << std::endl;
+std::cout << mm << std::endl;
+// or transform to vector (slow)
+std::vector<std::vector<double>> res = *mm; }
+          </pre>
+        </p>
+      </div>
+      <br/>
+      <div class="card button2">
+        <a href="">Documentation</a>
+      </div>
+    </div>
+  </center>
+@include("footer.html")

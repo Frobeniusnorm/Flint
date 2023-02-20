@@ -1,4 +1,12 @@
 @include("header.html")
+  <div id="header-bar">
+    <div class="left-spaced">
+      <img src="flint.png" style="width:5.5em; height:2.9em; display: inline-block; vertical-align: middle;" />
+      <a class="item selected">About</a>
+      <a class="item" href="documentation.html">Documentation</a>
+      <a class="item">Tutorial</a>
+    </div>
+  </div>
   <div id="showcase_background">
     <center>
       <h1>
@@ -53,8 +61,7 @@ std::cout << t2 << std::endl;
  *  [[0, 1, 0, 1, 0, 1], 
  *   [2, 3, 2, 3, 2, 3], 
  *   [0, 1, 0, 1, 0, 1], 
- *   [2, 3, 2, 3, 2, 3]]) */
- }
+ *   [2, 3, 2, 3, 2, 3]]) */}
       </pre>
       <div style="display: block; height: 2em"></div>
       <div class="card">
