@@ -123,9 +123,21 @@ TEST_SUITE("Autodiff") {
                            {{-3, -2.5}, {1.5, 2.5}},
                            {{-42, -75.3}, {4, -4}}}};
     Tensor<int, 2> r = {{2, 3}, {4, 5}};
-    Tensor<float, 4> e = -r.pow(t * 2 - 1);
+    Tensor<float, 4> e = t.pow(r * 2 - 1);
+    std::cout << "dt" << std::endl;
     Tensor<double, 4> dt = e.gradient(t);
+    CHECK_EQ(Approx(-0.75).epsilon(0.001), dt[0][0][0][0]);
+    CHECK_EQ(Approx(-405).epsilon(0.001), dt[0][0][0][1]);
+    CHECK_EQ(Approx(-79.734375).epsilon(0.001), dt[0][1][1][0]);
+    CHECK_EQ(Approx(-13732.910).epsilon(0.01), dt[0][1][1][1]);
+    CHECK_EQ(Approx(-160749630.).epsilon(10), dt[0][2][0][1]);
+    CHECK_EQ(Approx(-28672.000).epsilon(0.01), dt[0][2][1][0]);
+    std::cout << "dr" << std::endl;
     Tensor<double, 2> dr = e.gradient(r);
+    CHECK_EQ(0, dr[0][0]);
+    CHECK_EQ(Approx(-533.9256).epsilon(0.001), dr[0][1]);
+    CHECK_EQ(Approx(-45453.805).epsilon(0.01), dr[1][0]);
+    CHECK_EQ(Approx(-6990.7437).epsilon(0.01), dr[1][1]);
     // TODO: test log2 and log10
   }
 }

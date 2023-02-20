@@ -287,6 +287,26 @@ static void executeNode(FGraphNode *node,
     for (size_t i = from; i < from + size; i++)
       result[i] = -((T *)pred.data)[i];
   } break;
+  case FSIGN: {
+    CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++) {
+      T val = ((T *)pred.data)[i];
+      result[i] = val < 0 ? -1 : 1;
+    }
+  } break;
+  case FEVEN: {
+    CPUResultData pred = predecessor_data[0];
+    if constexpr (std::is_same_v<T, int> || std::is_same_v<T, long>) {
+      for (size_t i = from; i < from + size; i++) {
+        T val = ((T *)pred.data)[i];
+        result[i] = val % 2 == 0 ? 1 : 0;
+      }
+    } else {
+      for (size_t i = from; i < from + size; i++) {
+        result[i] = 0;
+      }
+    }
+  } break;
   case FLOG10: {
     CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)

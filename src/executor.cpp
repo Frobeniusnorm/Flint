@@ -347,6 +347,14 @@ generateCode(FGraphNode *node,
         code = type + " " + name + " = -v" +
                std::to_string(variable_index + 1) + ";\n" + code;
       } break;
+      case FSIGN: {
+        code = type + " " + name + " = v" + std::to_string(variable_index + 1) +
+               " < 0 ? -1 : 1;\n" + code;
+      } break;
+      case FEVEN: {
+        code = type + " " + name + " = v" + std::to_string(variable_index + 1) +
+               " % 2 == 0 ? 1 : 0;\n" + code;
+      } break;
       case FREDUCE_SUM:
       case FREDUCE_MUL: {
         push_pred = false;

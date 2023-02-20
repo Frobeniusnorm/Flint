@@ -134,7 +134,7 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
       return fmul(prev_adj, fmul(b, fpow(a, fsub(b, 1))));
     } else if (b == dx) {
       // a^x / dx = a^x * ln(a)
-      return fmul(prev_adj, fmul(fpow(a, b), flog(a)));
+      return fmul(prev_adj, fmul(fpow(a, b), flog(fabs_g(a))));
     } else
       return nullptr;
   }

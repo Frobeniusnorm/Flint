@@ -354,6 +354,7 @@ template <typename T> struct Tensor<T, 1> {
     }
   }
   Tensor<T, 1> operator-() const { return Tensor<T, 1>(fneg(node), shape); }
+  Tensor<T, 1> sign() const { return Tensor<T, 1>(fsign(node), shape); }
   operator std::string() {
     FOperation *op = node->operation;
     std::string foo = "Tensor<" +
@@ -618,6 +619,8 @@ template <typename T, unsigned int n> struct Tensor {
     }
   }
   Tensor<T, n> operator-() const { return Tensor<T, n>(fneg(node), shape); }
+  Tensor<T, n> sign() const { return Tensor<T, n>(fsign(node), shape); }
+  Tensor<T, n> even() const { return Tensor<T, n>(feven(node), shape); }
   TensorView<T, n - 1> operator[](const size_t index) {
     if (node->result_data) {
       FResultData *store = node->result_data;

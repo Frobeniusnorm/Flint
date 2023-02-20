@@ -353,8 +353,8 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
     lower = a->shape;
     lower_dim = a->dimensions;
   }
-  // check shape if both are defined
-  if (lower) {
+  // check shape if both are defined and lower is not a constant
+  if (lower && !(lower_dim == 1 && lower[0] == 1)) {
     for (int i = 0; i < lower_dim; i++)
       if (src[i + (op->dimensions - lower_dim)] != lower[i])
         flogging(
@@ -405,8 +405,6 @@ FGraphNode *fmul_g(FGraphNode *a, FGraphNode *b) {
   return addNode(op, {a, b});
 }
 FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b) {
-  // if (!(a->operation->dimensions >= b->operation->dimensions))
-  //   log(ERROR, "pow(a, b) must fulfill a->dimensions >= b->dimensions");
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = FPOW;
@@ -649,6 +647,29 @@ FGraphNode *fneg(FGraphNode *a) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
   op->op_type = FNEG;
+  op->dimensions = a->operation->dimensions;
+  op->shape = safe_mal<size_t>(op->dimensions);
+  memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
+  op->data_type = a->operation->data_type;
+  return addNode(op, {a});
+}
+FGraphNode *fsign(FGraphNode *a) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = FSIGN;
+  op->dimensions = a->operation->dimensions;
+  op->shape = safe_mal<size_t>(op->dimensions);
+  memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
+  op->data_type = a->operation->data_type;
+  return addNode(op, {a});
+}
+FGraphNode *feven(FGraphNode *a) {
+  if (a->operation->data_type != F_INT32 && a->operation->data_type != F_INT64)
+    flogging(F_ERROR,
+             "Can't compute if tensor is even for floating point tensor!");
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = FEVEN;
   op->dimensions = a->operation->dimensions;
   op->shape = safe_mal<size_t>(op->dimensions);
   memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));

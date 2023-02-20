@@ -103,6 +103,8 @@ enum FOperationType {
   FPOW,
   FNEG,
   FLOG,
+  FSIGN,
+  FEVEN,
   FLOG2,
   FLOG10,
   FLATTEN,
@@ -316,7 +318,12 @@ FGraphNode *flog10(FGraphNode *a);
 
 /** Negates the elements of the tensor */
 FGraphNode *fneg(FGraphNode *a);
-
+/** Returns a tensor x with the shape of a with x_i = 1 if a_i >= 0 else x_i =
+ * -1 */
+FGraphNode *fsign(FGraphNode *a);
+/** Returns a tensor x with the shape of a with x_i = 1 if (a_i % 2) == 0 else
+ * x_i = 0*/
+FGraphNode *feven(FGraphNode *a);
 /** Carries out matrix multiplication on the last two dimensions of the tensors.
 E.g. a matrix multiplication of two tensors with shapes (64, 32, 16) and (16,
 24) will yield a tensor with shape (64, 32, 24). Since for one entry of the
