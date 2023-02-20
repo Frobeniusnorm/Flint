@@ -28,6 +28,6 @@ test/test
 test/test_gradients
 test/benchmark
 libflint.a
-
+compile_commands.json
 #vscode
 .cache
