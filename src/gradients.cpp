@@ -193,8 +193,8 @@ FGraphNode *fCalculateGradient(const FGraphNode *y, const FGraphNode *dx) {
   in_working.insert(y);
 
   // initialize
-  adjoints[y] = constant_tensor(1., y->operation->data_type,
-                                y->operation->shape, y->operation->dimensions);
+  adjoints[y] = constant_tensor(1., F_FLOAT64, y->operation->shape,
+                                y->operation->dimensions);
   FGraphNode *sol = nullptr;
   while (!working.empty()) {
     const FGraphNode *curr = working.front();
@@ -224,6 +224,8 @@ FGraphNode *fCalculateGradient(const FGraphNode *y, const FGraphNode *dx) {
   }
   if (!sol)
     flogging(F_WARNING, "Operation graph did not contain the derivative!");
+  if (sol->operation->data_type != F_FLOAT64)
+    flogging(F_ERROR, "I did something wrong!"); // TODO remove this
   return sol;
 }
 #endif

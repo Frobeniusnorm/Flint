@@ -119,6 +119,13 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(Approx(14.537247).epsilon(0.001), dy[0]);
     CHECK_EQ(Approx(15.650002).epsilon(0.001), dy[1]);
     // TODO: test with negative values with integer y
+    Tensor<float, 4> t = {{{{-0.5, 3}, {1.5, -1}},
+                           {{-3, -2.5}, {1.5, 2.5}},
+                           {{-42, -75.3}, {4, -4}}}};
+    Tensor<int, 2> r = {{2, 3}, {4, 5}};
+    Tensor<float, 4> e = -r.pow(t * 2 - 1);
+    Tensor<double, 4> dt = e.gradient(t);
+    Tensor<double, 2> dr = e.gradient(r);
     // TODO: test log2 and log10
   }
 }

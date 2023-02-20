@@ -81,8 +81,8 @@ arrayString(const std::array<std::array<T, k>, n> &vec) {
   }
   return res + "]";
 }
-template <typename T>
-static std::vector<T> flattened(const std::vector<std::vector<T>> vec) {
+template <typename E, typename T>
+static std::vector<E> flattened(const std::vector<std::vector<T>> vec) {
   using namespace std;
   vector<T> result;
   for (const vector<T> &v : vec) {
@@ -91,19 +91,19 @@ static std::vector<T> flattened(const std::vector<std::vector<T>> vec) {
   return result;
 }
 
-template <typename T>
-static std::vector<T>
+template <typename E, typename T>
+static std::vector<E>
 flattened(const std::vector<std::vector<std::vector<T>>> vec) {
   using namespace std;
-  vector<T> result;
+  vector<E> result;
   for (const vector<vector<T>> &v : vec) {
-    vector<T> rec = flattened(v);
+    vector<E> rec = flattened<E>(v);
     result.insert(result.end(), rec.begin(), rec.end());
   }
   return result;
 }
-template <typename T>
-static std::vector<T>
+template <typename E, typename T>
+static std::vector<E>
 flattened(const std::initializer_list<std::initializer_list<T>> vec) {
   using namespace std;
   vector<T> result;
@@ -113,14 +113,14 @@ flattened(const std::initializer_list<std::initializer_list<T>> vec) {
   return result;
 }
 
-template <typename T>
-static std::vector<T> flattened(
+template <typename E, typename T>
+static std::vector<E> flattened(
     const std::initializer_list<std::initializer_list<std::initializer_list<T>>>
         vec) {
   using namespace std;
-  vector<T> result;
+  vector<E> result;
   for (const initializer_list<initializer_list<T>> &v : vec) {
-    vector<T> rec = flattened(v);
+    vector<E> rec = flattened<E>(v);
     result.insert(result.end(), rec.begin(), rec.end());
   }
   return result;
@@ -499,7 +499,7 @@ template <typename T, unsigned int n> struct Tensor {
     isTensorType<T>();
     static_assert(n > 1, "Dimension must be at least 1");
     initShape(data, 0);
-    std::vector<T> flat = FLINT_HPP_HELPER::flattened(data);
+    std::vector<T> flat = FLINT_HPP_HELPER::flattened<T>(data);
     node = fCreateGraph(flat.data(), flat.size(), toFlintType<T>(),
                         shape.data(), shape.size());
     // the node which is currently hold is always referenced
@@ -509,7 +509,7 @@ template <typename T, unsigned int n> struct Tensor {
     isTensorType<T>();
     static_assert(n > 1, "Dimension must be at least 1");
     initShape(data, 0);
-    std::vector<T> flat = FLINT_HPP_HELPER::flattened(data);
+    std::vector<T> flat = FLINT_HPP_HELPER::flattened<T>(data);
     node = fCreateGraph(flat.data(), flat.size(), toFlintType<T>(),
                         shape.data(), shape.size());
     // the node which is currently hold is always referenced
@@ -888,9 +888,8 @@ template <typename T, unsigned int n> struct Tensor {
   FGraphNode *get_graph_node() const { return node; }
 
   template <typename K, unsigned int k>
-  Tensor<stronger_return<K>, k> gradient(const Tensor<K, k> &dx) {
-    return Tensor<stronger_return<K>, k>(
-        fCalculateGradient(this->node, dx.node), dx.shape);
+  Tensor<double, k> gradient(const Tensor<K, k> &dx) {
+    return Tensor<double, k>(fCalculateGradient(this->node, dx.node), dx.shape);
   }
 
 protected:

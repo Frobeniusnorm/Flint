@@ -423,6 +423,12 @@ TEST_SUITE("C++ Bindings") {
         }
       }
     }
+    Tensor<int, 7> large{{{{{{{0, 1}}}}}}};
+    std::vector<std::vector<
+        std::vector<std::vector<std::vector<std::vector<std::vector<int>>>>>>>
+        res5 = *large;
+    CHECK_EQ(1, large[0][0][0][0][0][0][1]);
+    CHECK_EQ(1, res5[0][0][0][0][0][0][1]);
   }
   TEST_CASE("Parameter Communitivity") {
     using namespace std;
@@ -619,11 +625,6 @@ int main(int argc, char **argv) {
   if (doCPU) {
     flintInit(1, 0);
     res = context.run();
-    enable_eager_execution();
-    Tensor<int, 3> t1{{{0}, {1}}, {{2}, {3}}};
-    Tensor<int, 2> t2 = t1.repeat(1, 2).flattened(2);
-    std::cout << t2 << std::endl;
-    disable_eager_execution();
     flintCleanup();
   }
   if (doGPU) {
