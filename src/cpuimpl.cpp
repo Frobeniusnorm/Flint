@@ -274,8 +274,9 @@ static void executeNode(FGraphNode *node,
   } break;
   case FLOG: {
     CPUResultData pred = predecessor_data[0];
-    for (size_t i = from; i < from + size; i++)
+    for (size_t i = from; i < from + size; i++) {
       result[i] = log(((T *)pred.data)[i]);
+    }
   } break;
   case FLOG2: {
     CPUResultData pred = predecessor_data[0];

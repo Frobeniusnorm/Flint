@@ -72,6 +72,17 @@ static FGraphNode *unbroadcast(FGraphNode *adjoint, const FGraphNode *node) {
   }
   return adjoint;
 }
+template <typename T> static std::string printNode(FGraphNode *node) {
+  std::string s = "";
+  if (!node->result_data) {
+    fExecuteGraph(node);
+  }
+  for (int i = 0; i < node->result_data->num_entries; i++)
+    s += std::to_string(((T *)node->result_data->data)[i]) +
+         (i == node->result_data->num_entries - 1 ? std::string("")
+                                                  : std::string(", "));
+  return s;
+}
 static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
                                   FGraphNode *prev_adj) {
   switch (y->operation->op_type) {

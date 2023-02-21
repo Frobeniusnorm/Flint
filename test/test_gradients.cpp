@@ -119,25 +119,27 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(Approx(14.537247).epsilon(0.001), dy[0]);
     CHECK_EQ(Approx(15.650002).epsilon(0.001), dy[1]);
     // TODO: test with negative values with integer y
-    Tensor<float, 4> t = {{{{-0.5, 3}, {1.5, -1}},
-                           {{-3, -2.5}, {1.5, 2.5}},
-                           {{-42, -75.3}, {4, -4}}}};
+    Tensor<double, 4> t = {{{{-0.5, 3}, {1.5, -1}},
+                            {{-3, -2.5}, {1.5, 2.5}},
+                            {{-42, -75.3}, {4, -4}}}};
     Tensor<int, 2> r = {{2, 3}, {4, 5}};
-    Tensor<float, 4> e = t.pow(r * 2 - 1);
-    std::cout << "dt" << std::endl;
+    Tensor<double, 4> e = t.pow(r + 1);
+
     Tensor<double, 4> dt = e.gradient(t);
-    CHECK_EQ(Approx(-0.75).epsilon(0.001), dt[0][0][0][0]);
-    CHECK_EQ(Approx(-405).epsilon(0.001), dt[0][0][0][1]);
-    CHECK_EQ(Approx(-79.734375).epsilon(0.001), dt[0][1][1][0]);
-    CHECK_EQ(Approx(-13732.910).epsilon(0.01), dt[0][1][1][1]);
-    CHECK_EQ(Approx(-160749630.).epsilon(10), dt[0][2][0][1]);
-    CHECK_EQ(Approx(-28672.000).epsilon(0.01), dt[0][2][1][0]);
-    std::cout << "dr" << std::endl;
+    CHECK_EQ(Approx(0.75).epsilon(0.001), dt[0][0][0][0]);
+    CHECK_EQ(Approx(108).epsilon(0.001), dt[0][0][0][1]);
+    CHECK_EQ(Approx(-6).epsilon(0.001), dt[0][0][1][1]);
+    CHECK_EQ(Approx(25.312498).epsilon(0.001), dt[0][1][1][0]);
+    CHECK_EQ(Approx(585.93744).epsilon(0.01), dt[0][1][1][1]);
+    CHECK_EQ(Approx(-1707830.5).epsilon(1), dt[0][2][0][1]);
+    CHECK_EQ(Approx(1280.).epsilon(0.01), dt[0][2][1][0]);
+    e.execute();
     Tensor<double, 2> dr = e.gradient(r);
     CHECK_EQ(0, dr[0][0]);
-    CHECK_EQ(Approx(-533.9256).epsilon(0.001), dr[0][1]);
-    CHECK_EQ(Approx(-45453.805).epsilon(0.01), dr[1][0]);
-    CHECK_EQ(Approx(-6990.7437).epsilon(0.01), dr[1][1]);
+    CHECK_EQ(Approx(88.987595).epsilon(0.001), dr[0][1]);
+    CHECK_EQ(Approx(1425.7234).epsilon(0.01), dr[1][0]);
+    CHECK_EQ(Approx(223.70378).epsilon(0.01), dr[1][1]);
+    std::cout << dr << std::endl;
     // TODO: test log2 and log10
   }
 }
@@ -145,6 +147,7 @@ int main(int argc, char **argv) {
   doctest::Context context;
   context.applyCommandLine(argc, argv);
   flintInit(1, 0);
+  Flint::setLoggingLevel(3);
   int res = context.run();
   flintCleanup();
   return res;

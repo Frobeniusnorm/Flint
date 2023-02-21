@@ -155,6 +155,11 @@ template <typename K, typename V> static constexpr bool isStronger() {
                                            : 3;
   return a >= b;
 }
+template <typename K> static constexpr bool isInt() {
+  return std::is_same<K, int>() || std::is_same<K, long>();
+}
+template <typename T>
+using to_float = typename std::conditional<isInt<T>(), double, T>::type;
 /**
  * Contains static methods to configure Flints behaviour-
  */
@@ -680,7 +685,6 @@ template <typename T, unsigned int n> struct Tensor {
   template <typename K>
   using stronger_return =
       typename std::conditional<isStronger<K, T>(), K, T>::type;
-
   // OPERATIONS
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
@@ -751,14 +755,14 @@ template <typename T, unsigned int n> struct Tensor {
   template <typename K> Tensor<stronger_return<K>, n> pow(const K other) {
     return Tensor<stronger_return<K>, n>(fpow(node, other), shape);
   }
-  Tensor<T, n> log() {
-    return Tensor<stronger_return<T>, n>(flog(node), shape);
+  Tensor<to_float<T>, n> log() {
+    return Tensor<to_float<T>, n>(flog(node), shape);
   }
-  Tensor<T, n> log2() {
-    return Tensor<stronger_return<T>, n>(flog2(node), shape);
+  Tensor<to_float<T>, n> log2() {
+    return Tensor<to_float<T>, n>(flog2(node), shape);
   }
-  Tensor<T, n> log10() {
-    return Tensor<stronger_return<T>, n>(flog10(node), shape);
+  Tensor<to_float<T>, n> log10() {
+    return Tensor<to_float<T>, n>(flog10(node), shape);
   }
 
   template <typename K, unsigned int k>
