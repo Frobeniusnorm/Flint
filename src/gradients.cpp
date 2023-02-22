@@ -89,13 +89,14 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
   case FADD:
     return (dx == y->predecessors[0] || dx == y->predecessors[1]) ? prev_adj
                                                                   : nullptr;
-  case FSUB:
+  case FSUB: {
     if (dx == y->predecessors[0])
       return prev_adj;
     else if (dx == y->predecessors[1])
       return fneg(prev_adj);
     else
       return nullptr;
+  }
   case FMUL: {
     if (y->predecessors[0] == dx) {
       return fmul(prev_adj, y->predecessors[1]);
@@ -145,7 +146,9 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
       return fmul(prev_adj, fmul(b, fpow(a, fsub(b, 1))));
     } else if (b == dx) {
       // a^x / dx = a^x * ln(a)
-      return fmul(prev_adj, fmul(fpow(a, b), flog(fabs_g(a))));
+      // has to be zero when a < 0 since not differentiable
+      return fmul(prev_adj, fmul(fmul(fadd(fsign(a), 1), 0.5),
+                                 fmul(fpow(a, b), flog(fabs_g(a)))));
     } else
       return nullptr;
   }

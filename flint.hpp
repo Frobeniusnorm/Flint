@@ -478,9 +478,8 @@ template <typename T> struct Tensor<T, 1> {
     return Tensor<T, 1>(nn, (shape[0] * repetitions + 1));
   }
   template <typename K, unsigned int k>
-  Tensor<stronger_return<K>, k> gradient(const Tensor<K, k> &dx) {
-    return Tensor<stronger_return<K>, k>(
-        fCalculateGradient(this->node, dx.node), dx.shape);
+  Tensor<double, k> gradient(const Tensor<K, k> &dx) {
+    return Tensor<double, k>(fCalculateGradient(this->node, dx.node), dx.shape);
   }
 
 protected:
