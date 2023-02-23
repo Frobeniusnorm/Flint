@@ -458,6 +458,15 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K> Tensor<stronger_return<K>, 1> max(const K other) const {
     return Tensor<stronger_return<K>, 1>(fmax(node, other));
   }
+  Tensor<to_float<T>, 1> log() {
+    return Tensor<to_float<T>, 1>(flog(node), shape);
+  }
+  Tensor<to_float<T>, 1> log2() {
+    return Tensor<to_float<T>, 1>(flog2(node), shape);
+  }
+  Tensor<to_float<T>, 1> log10() {
+    return Tensor<to_float<T>, 1>(flog10(node), shape);
+  }
   template <typename K> Tensor<K, 1> convert() const {
     return Tensor<K, 1>(fconvert(node, toFlintType<K>()), shape);
   }

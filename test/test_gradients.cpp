@@ -138,7 +138,23 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(Approx(88.987595).epsilon(0.001), dr[0][1]);
     CHECK_EQ(Approx(1425.7234).epsilon(0.01), dr[1][0]);
     CHECK_EQ(Approx(223.70378).epsilon(0.01), dr[1][1]);
-    // TODO: test log2 and log10
+    // test log2 and log10
+    Tensor<double, 3> n = x.log10() * (z.log2() + 3);
+    Tensor<double, 2> dz = n.gradient(z);
+    CHECK_EQ(Approx(2.374048).epsilon(0.001), dz[0][0]);
+    CHECK_EQ(Approx(1.633729).epsilon(0.001), dz[0][1]);
+    CHECK_EQ(Approx(0.472432).epsilon(0.001), dz[1][0]);
+    CHECK_EQ(Approx(0.797826).epsilon(0.001), dz[1][1]);
+    CHECK_EQ(Approx(0.519172).epsilon(0.001), dz[2][0]);
+    CHECK_EQ(Approx(0.236782).epsilon(0.001), dz[2][1]);
+    dx = n.gradient(x);
+    CHECK_EQ(Approx(0.037069).epsilon(0.001), dx[0][0][0]);
+    CHECK_EQ(Approx(0.024927).epsilon(0.001), dx[0][0][1]);
+    CHECK_EQ(Approx(0.521952).epsilon(0.001), dx[0][1][0]);
+    CHECK_EQ(Approx(0.893188).epsilon(0.001), dx[0][2][1]);
+    CHECK_EQ(Approx(0.222419).epsilon(0.001), dx[1][0][0]);
+    CHECK_EQ(Approx(0.029159).epsilon(0.001), dx[1][1][1]);
+    CHECK_EQ(Approx(0.256533).epsilon(0.001), dx[1][2][0]);
   }
 }
 int main(int argc, char **argv) {

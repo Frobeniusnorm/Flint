@@ -176,7 +176,7 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
   case FLOG10: {
     FGraphNode *a = y->predecessors[0];
     if (a == dx)
-      return fdiv(prev_adj, fmul(a, log(2.0)));
+      return fdiv(prev_adj, fmul(a, log(10.0)));
     else
       return nullptr;
   }
