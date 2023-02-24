@@ -180,9 +180,16 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
     else
       return nullptr;
   }
-  case FLATTEN:
-  case FCONVERSION:
   case FRESHAPE:
+  case FLATTEN: {
+    // reproject adjacent into previous shape, should be okay since
+    // shape(prev_adj) = shape(y)
+    FGraphNode *prev = y->predecessors[0];
+    return freshape(prev_adj, prev->operation->shape,
+                    prev->operation->dimensions);
+  }
+  case FCONVERSION:
+    return prev_adj;
   case FMIN:
   case FMAX:
   case FREDUCE_SUM:
