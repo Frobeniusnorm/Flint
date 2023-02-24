@@ -358,8 +358,9 @@ template <typename T> struct Tensor<T, 1> {
       node->reference_counter++;
     }
   }
-  Tensor<T, 1> operator-() const { return Tensor<T, 1>(fneg(node), shape); }
-  Tensor<T, 1> sign() const { return Tensor<T, 1>(fsign(node), shape); }
+  Tensor<int, 1> operator-() const { return Tensor<int, 1>(fneg(node), shape); }
+  Tensor<int, 1> sign() const { return Tensor<int, 1>(fsign(node), shape); }
+  Tensor<int, 1> even() const { return Tensor<int, 1>(feven(node), shape); }
   operator std::string() {
     FOperation *op = node->operation;
     std::string foo = "Tensor<" +
@@ -471,6 +472,27 @@ template <typename T> struct Tensor<T, 1> {
     return Tensor<K, 1>(fconvert(node, toFlintType<K>()), shape);
   }
   Tensor<T, 1> abs() const { return Tensor<T, 1>(fabs_g(node), shape); }
+  template <typename K, unsigned int k>
+  Tensor<int, k> operator<(const Tensor<K, k> &other) const {
+    return Tensor<int, k>(fless(node, other.node), other.shape);
+  }
+  template <typename K> Tensor<int, 1> operator<(const K other) const {
+    return Tensor<int, 1>(fless(node, other));
+  }
+  template <typename K, unsigned int k>
+  Tensor<int, 1> operator>(const Tensor<K, k> &other) const {
+    return Tensor<int, k>(fgreater(node, other.node), other.shape);
+  }
+  template <typename K> Tensor<int, 1> operator>(const K other) const {
+    return Tensor<int, 1>(fgreater(node, other));
+  }
+  template <typename K, unsigned int k>
+  Tensor<int, k> equal(const Tensor<K, k> &other) const {
+    return Tensor<int, k>(fequal(node, other.node), other.shape);
+  }
+  template <typename K> Tensor<int, 1> equal(const K other) const {
+    return Tensor<int, 1>(fequal(node, other));
+  }
   Tensor<T, 1> slice(long start = 0, long end = TensorRange::MAX_SIZE,
                      long step = 1) const {
     if (start == TensorRange::MAX_SIZE)
@@ -632,8 +654,8 @@ template <typename T, unsigned int n> struct Tensor {
     }
   }
   Tensor<T, n> operator-() const { return Tensor<T, n>(fneg(node), shape); }
-  Tensor<T, n> sign() const { return Tensor<T, n>(fsign(node), shape); }
-  Tensor<T, n> even() const { return Tensor<T, n>(feven(node), shape); }
+  Tensor<int, n> sign() const { return Tensor<int, n>(fsign(node), shape); }
+  Tensor<int, n> even() const { return Tensor<int, n>(feven(node), shape); }
   TensorView<T, n - 1> operator[](const size_t index) {
     if (node->result_data) {
       FResultData *store = node->result_data;
@@ -798,7 +820,7 @@ template <typename T, unsigned int n> struct Tensor {
   }
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
-  min(const Tensor<K, k> other) const {
+  min(const Tensor<K, k> &other) const {
     if constexpr (k >= n)
       return Tensor<stronger_return<K>, k>(fmin(node, other.node), other.shape);
     else
@@ -809,7 +831,7 @@ template <typename T, unsigned int n> struct Tensor {
   }
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
-  max(const Tensor<K, k> other) const {
+  max(const Tensor<K, k> &other) const {
     if constexpr (k >= n)
       return Tensor<stronger_return<K>, k>(fmax(node, other.node), other.shape);
     else
@@ -817,6 +839,36 @@ template <typename T, unsigned int n> struct Tensor {
   }
   template <typename K> Tensor<stronger_return<K>, n> max(const K other) const {
     return Tensor<stronger_return<K>, n>(fmax(node, other));
+  }
+  template <typename K, unsigned int k>
+  Tensor<int, k >= n ? k : n> operator<(const Tensor<K, k> &other) const {
+    if constexpr (k >= n)
+      return Tensor<int, k>(fless(node, other.node), other.shape);
+    else
+      return Tensor<int, n>(fless(node, other.node), shape);
+  }
+  template <typename K> Tensor<int, n> operator<(const K other) const {
+    return Tensor<int, n>(fless(node, other));
+  }
+  template <typename K, unsigned int k>
+  Tensor<int, k >= n ? k : n> operator>(const Tensor<K, k> &other) const {
+    if constexpr (k >= n)
+      return Tensor<int, k>(fgreater(node, other.node), other.shape);
+    else
+      return Tensor<int, n>(fgreater(node, other.node), shape);
+  }
+  template <typename K> Tensor<int, n> operator>(const K other) const {
+    return Tensor<int, n>(fgreater(node, other));
+  }
+  template <typename K, unsigned int k>
+  Tensor<int, k >= n ? k : n> equal(const Tensor<K, k> &other) const {
+    if constexpr (k >= n)
+      return Tensor<int, k>(fequal(node, other.node), other.shape);
+    else
+      return Tensor<int, n>(fequal(node, other.node), shape);
+  }
+  template <typename K> Tensor<int, n> equal(const K other) const {
+    return Tensor<int, n>(fequal(node, other));
   }
   Tensor<T, n - 1> reduce_sum(int dimension) {
     std::array<size_t, n - 1> ns;

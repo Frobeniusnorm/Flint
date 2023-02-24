@@ -269,6 +269,21 @@ generateCode(FGraphNode *node,
                ", v" + to_string(variable_index + 2) + ");\n" + code;
 
       } break;
+      case FLESS: {
+        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+               " < v" + to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
+
+      } break;
+      case FEQUAL: {
+        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+               " == v" + to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
+
+      } break;
+      case FGREATER: {
+        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+               " > v" + to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
+
+      } break;
       case FMATMUL: {
         string par1, par2;
         push_pred = false;

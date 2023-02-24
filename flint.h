@@ -118,6 +118,9 @@ enum FOperationType {
   FABS,
   FREPEAT,
   FTRANSPOSE,
+  FLESS,
+  FEQUAL,
+  FGREATER,
   FNUM_OPERATION_TYPES
 };
 /**
@@ -324,6 +327,30 @@ FGraphNode *fsign(FGraphNode *a);
 /** Returns a tensor x with the shape of a with x_i = 1 if (a_i % 2) == 0 else
  * x_i = 0*/
 FGraphNode *feven(FGraphNode *a);
+/** Compares two tensors elementwise by a < b and returns a 0,1 INT32 Tensor */
+FGraphNode *fless_g(FGraphNode *a, FGraphNode *b);
+/** Compares two tensors elementwise by a > b and returns a 0,1 INT32 Tensor */
+FGraphNode *fgreater_g(FGraphNode *a, FGraphNode *b);
+/** Compares two tensors elementwise by a = b and returns a 0,1 INT32 Tensor */
+FGraphNode *fequal_g(FGraphNode *a, FGraphNode *b);
+/** Compares a tensor and a constant elementwise by a < b and returns a 0,1
+ * INT32 Tensor */
+FGraphNode *fless_ci(FGraphNode *a, const int b);
+FGraphNode *fless_cl(FGraphNode *a, const long b);
+FGraphNode *fless_cf(FGraphNode *a, const float b);
+FGraphNode *fless_cd(FGraphNode *a, const double b);
+/** Compares a tensor and a constant elementwise by a > b and returns a 0,1
+ * INT32 Tensor */
+FGraphNode *fgreater_ci(FGraphNode *a, const int b);
+FGraphNode *fgreater_cl(FGraphNode *a, const long b);
+FGraphNode *fgreater_cf(FGraphNode *a, const float b);
+FGraphNode *fgreater_cd(FGraphNode *a, const double b);
+/** Compares a tensor and a constant elementwise by a = b and returns a 0,1
+ * INT32 Tensor */
+FGraphNode *fequal_ci(FGraphNode *a, const int b);
+FGraphNode *fequal_cl(FGraphNode *a, const long b);
+FGraphNode *fequal_cf(FGraphNode *a, const float b);
+FGraphNode *fequal_cd(FGraphNode *a, const double b);
 /** Carries out matrix multiplication on the last two dimensions of the tensors.
 E.g. a matrix multiplication of two tensors with shapes (64, 32, 16) and (16,
 24) will yield a tensor with shape (64, 32, 24). Since for one entry of the
@@ -489,6 +516,48 @@ inline FGraphNode *fmax(FGraphNode *a, const int b) { return fmax_ci(a, b); }
 inline FGraphNode *fmax(FGraphNode *a, const long b) { return fmax_cl(a, b); }
 inline FGraphNode *fmax(FGraphNode *a, const float b) { return fmax_cf(a, b); }
 inline FGraphNode *fmax(FGraphNode *a, const double b) { return fmax_cd(a, b); }
+
+inline FGraphNode *fless(FGraphNode *a, FGraphNode *b) { return fless_g(a, b); }
+inline FGraphNode *fless(FGraphNode *a, const int b) { return fless_ci(a, b); }
+inline FGraphNode *fless(FGraphNode *a, const long b) { return fless_cl(a, b); }
+inline FGraphNode *fless(FGraphNode *a, const float b) {
+  return fless_cf(a, b);
+}
+inline FGraphNode *fless(FGraphNode *a, const double b) {
+  return fless_cd(a, b);
+}
+
+inline FGraphNode *fequal(FGraphNode *a, FGraphNode *b) {
+  return fequal_g(a, b);
+}
+inline FGraphNode *fequal(FGraphNode *a, const int b) {
+  return fequal_ci(a, b);
+}
+inline FGraphNode *fequal(FGraphNode *a, const long b) {
+  return fequal_cl(a, b);
+}
+inline FGraphNode *fequal(FGraphNode *a, const float b) {
+  return fequal_cf(a, b);
+}
+inline FGraphNode *fequal(FGraphNode *a, const double b) {
+  return fequal_cd(a, b);
+}
+
+inline FGraphNode *fgreater(FGraphNode *a, FGraphNode *b) {
+  return fgreater_g(a, b);
+}
+inline FGraphNode *fgreater(FGraphNode *a, const int b) {
+  return fgreater_ci(a, b);
+}
+inline FGraphNode *fgreater(FGraphNode *a, const long b) {
+  return fgreater_cl(a, b);
+}
+inline FGraphNode *fgreater(FGraphNode *a, const float b) {
+  return fgreater_cf(a, b);
+}
+inline FGraphNode *fgreater(FGraphNode *a, const double b) {
+  return fgreater_cd(a, b);
+}
 
 inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
   return fflatten_dimension(a, dimension);

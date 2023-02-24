@@ -118,11 +118,24 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
     for (size_t i = from; i < from + size; i++)
       result[i] = MAX_VAL(data1[i % index_man_1], data2[i % index_man_2]);
     break;
+  case FEQUAL:
+    for (size_t i = from; i < from + size; i++)
+      result[i] = data1[i % index_man_1] == data2[i % index_man_2] ? 1 : 0;
+    break;
+  case FLESS:
+    for (size_t i = from; i < from + size; i++)
+      result[i] = data1[i % index_man_1] < data2[i % index_man_2] ? 1 : 0;
+    break;
+  case FGREATER:
+    for (size_t i = from; i < from + size; i++)
+      result[i] = data1[i % index_man_1] > data2[i % index_man_2] ? 1 : 0;
+    break;
   default:
     break;
   }
 }
 // i hate this function more than anything else in this library (yet)
+// EDIT: nope i was wrong, computeGradient is worse
 template <typename T>
 static void executeNode(FGraphNode *node,
                         std::vector<CPUResultData> predecessor_data, T *result,

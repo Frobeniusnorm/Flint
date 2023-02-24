@@ -660,7 +660,7 @@ FGraphNode *fsign(FGraphNode *a) {
   op->dimensions = a->operation->dimensions;
   op->shape = safe_mal<size_t>(op->dimensions);
   memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
-  op->data_type = a->operation->data_type;
+  op->data_type = F_INT32;
   return addNode(op, {a});
 }
 FGraphNode *feven(FGraphNode *a) {
@@ -673,7 +673,7 @@ FGraphNode *feven(FGraphNode *a) {
   op->dimensions = a->operation->dimensions;
   op->shape = safe_mal<size_t>(op->dimensions);
   memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
-  op->data_type = a->operation->data_type;
+  op->data_type = F_INT32;
   return addNode(op, {a});
 }
 FGraphNode *fflatten(FGraphNode *a) {
@@ -938,3 +938,67 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions) {
          sizeof(int) * a->operation->dimensions);
   return addNode(op, {a});
 }
+FGraphNode *fless_g(FGraphNode *a, FGraphNode *b) {
+  FOperation *op = new FOperation();
+  op->op_type = FLESS;
+  op->additional_data = nullptr;
+  initShape_keep(op, a->operation, b->operation);
+  op->data_type = F_INT32;
+  return addNode(op, {a, b});
+}
+FGraphNode *fgreater_g(FGraphNode *a, FGraphNode *b) {
+  FOperation *op = new FOperation();
+  op->op_type = FGREATER;
+  op->additional_data = nullptr;
+  initShape_keep(op, a->operation, b->operation);
+  op->data_type = F_INT32;
+  return addNode(op, {a, b});
+}
+FGraphNode *fequal_g(FGraphNode *a, FGraphNode *b) {
+  FOperation *op = new FOperation();
+  op->op_type = FEQUAL;
+  op->additional_data = nullptr;
+  initShape_keep(op, a->operation, b->operation);
+  op->data_type = F_INT32;
+  return addNode(op, {a, b});
+}
+template <typename T> static inline FGraphNode *less(FGraphNode *a, const T b) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = FLESS;
+  initShape_keep(op, a->operation, nullptr);
+  op->data_type = F_INT32;
+  return addNodeWithConst(op, a, b);
+}
+FGraphNode *fless_ci(FGraphNode *a, const int b) { return less(a, b); }
+FGraphNode *fless_cl(FGraphNode *a, const long b) { return less(a, b); }
+FGraphNode *fless_cf(FGraphNode *a, const float b) { return less(a, b); }
+FGraphNode *fless_cd(FGraphNode *a, const double b) { return less(a, b); }
+
+template <typename T>
+static inline FGraphNode *greater(FGraphNode *a, const T b) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = FGREATER;
+  initShape_keep(op, a->operation, nullptr);
+  op->data_type = F_INT32;
+  return addNodeWithConst(op, a, b);
+}
+FGraphNode *fgreater_ci(FGraphNode *a, const int b) { return greater(a, b); }
+FGraphNode *fgreater_cl(FGraphNode *a, const long b) { return greater(a, b); }
+FGraphNode *fgreater_cf(FGraphNode *a, const float b) { return greater(a, b); }
+FGraphNode *fgreater_cd(FGraphNode *a, const double b) { return greater(a, b); }
+
+template <typename T>
+static inline FGraphNode *equal(FGraphNode *a, const T b) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->op_type = FEQUAL;
+  initShape_keep(op, a->operation, nullptr);
+  op->data_type = F_INT32;
+  return addNodeWithConst(op, a, b);
+}
+FGraphNode *fequal_ci(FGraphNode *a, const int b) { return equal(a, b); }
+FGraphNode *fequal_cl(FGraphNode *a, const long b) { return equal(a, b); }
+FGraphNode *fequal_cf(FGraphNode *a, const float b) { return equal(a, b); }
+FGraphNode *fequal_cd(FGraphNode *a, const double b) { return equal(a, b); }

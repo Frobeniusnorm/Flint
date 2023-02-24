@@ -594,6 +594,75 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(7, t2[2]);
     CHECK_EQ(9, t2[3]);
   }
+  TEST_CASE("FSIGN, FEVEN") {
+    Tensor<long, 5> t1{{{{{-1, -3}, {4, 3}}}, {{{4, -2}, {-999, 0}}}}};
+    Tensor<int, 5> s1 = t1.sign();
+    CHECK_EQ(-1, s1[0][0][0][0][0]);
+    CHECK_EQ(-1, s1[0][0][0][0][1]);
+    CHECK_EQ(1, s1[0][0][0][1][0]);
+    CHECK_EQ(1, s1[0][0][0][1][1]);
+    CHECK_EQ(1, s1[0][1][0][0][0]);
+    CHECK_EQ(-1, s1[0][1][0][0][1]);
+    CHECK_EQ(-1, s1[0][1][0][1][0]);
+    CHECK_EQ(1, s1[0][1][0][1][1]);
+    Tensor<int, 5> e1 = t1.even();
+    CHECK_EQ(0, e1[0][0][0][0][0]);
+    CHECK_EQ(0, e1[0][0][0][0][1]);
+    CHECK_EQ(1, e1[0][0][0][1][0]);
+    CHECK_EQ(0, e1[0][0][0][1][1]);
+    CHECK_EQ(1, e1[0][1][0][0][0]);
+    CHECK_EQ(1, e1[0][1][0][0][1]);
+    CHECK_EQ(0, e1[0][1][0][1][0]);
+    CHECK_EQ(1, e1[0][1][0][1][1]);
+    Tensor<long, 1> t2{-1, 2, 5, -8};
+    Tensor<int, 1> s2 = t2.sign();
+    CHECK_EQ(s2[0], -1);
+    CHECK_EQ(s2[1], 1);
+    CHECK_EQ(s2[2], 1);
+    CHECK_EQ(s2[3], -1);
+    Tensor<int, 1> e2 = t2.even();
+    CHECK_EQ(e2[0], 0);
+    CHECK_EQ(e2[1], 1);
+    CHECK_EQ(e2[2], 0);
+    CHECK_EQ(e2[3], 1);
+    Tensor<float, 2> t3{{0.1}, {-9999.999}, {49.12345}, {-3.141592}};
+    Tensor<int, 2> s3 = t3.sign();
+    CHECK_EQ(1, s3[0][0]);
+    CHECK_EQ(-1, s3[1][0]);
+    CHECK_EQ(1, s3[2][0]);
+    CHECK_EQ(-1, s3[3][0]);
+  }
+  TEST_CASE("FLESS, FGREATER, FEQUAL") {
+    Tensor<int, 2> t1{{-1, 3, 1, -6}, {-7, 9, 5, -8}};
+    Tensor<long, 1> t2{-1, 2, 5, -8};
+    Tensor<int, 2> l12 = t1 < t2;
+    CHECK_EQ(0, l12[0][0]);
+    CHECK_EQ(0, l12[0][1]);
+    CHECK_EQ(1, l12[0][2]);
+    CHECK_EQ(0, l12[0][3]);
+    CHECK_EQ(1, l12[1][0]);
+    CHECK_EQ(0, l12[1][1]);
+    CHECK_EQ(0, l12[1][2]);
+    CHECK_EQ(0, l12[1][3]);
+    Tensor<int, 2> g12 = t1 > t2;
+    CHECK_EQ(0, g12[0][0]);
+    CHECK_EQ(1, g12[0][1]);
+    CHECK_EQ(0, g12[0][2]);
+    CHECK_EQ(1, g12[0][3]);
+    CHECK_EQ(0, g12[1][0]);
+    CHECK_EQ(1, g12[1][1]);
+    CHECK_EQ(0, g12[1][2]);
+    CHECK_EQ(0, g12[1][3]);
+    Tensor<int, 2> e12 = t1.equal(t2);
+    CHECK_EQ(1, e12[0][0]);
+    CHECK_EQ(0, e12[0][1]);
+    CHECK_EQ(0, e12[0][2]);
+    CHECK_EQ(0, e12[0][3]);
+    CHECK_EQ(0, e12[1][0]);
+    CHECK_EQ(0, e12[1][1]);
+    CHECK_EQ(1, e12[1][2]);
+    CHECK_EQ(1, e12[1][3]);
+  }
 }
 TEST_CASE("Eager Execution") {
   enable_eager_execution();
