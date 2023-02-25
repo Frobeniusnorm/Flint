@@ -190,12 +190,34 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
   }
   case FCONVERSION:
     return prev_adj;
-  case FMIN:
-  case FMAX:
+  case FMIN: {
+    FGraphNode *a = y->predecessors[0];
+    FGraphNode *b = y->predecessors[1];
+    if (a == dx) {
+      return fmul(prev_adj, fadd(fless(a, b), fequal(a, b)));
+    } else if (b == dx)
+      return fmul(prev_adj, fgreater(a, b));
+    else
+      return nullptr;
+  }
+  case FMAX: {
+    FGraphNode *a = y->predecessors[0];
+    FGraphNode *b = y->predecessors[1];
+    if (a == dx)
+      return fmul(prev_adj, fadd(fgreater(a, b), fequal(a, b)));
+    else if (b == dx)
+      return fmul(prev_adj, fless(a, b));
+    else
+      return nullptr;
+  }
+  case FABS: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx)
+      return fmul(prev_adj, fsub(fsign(a), fequal(a, 0.0)));
+  }
   case FREDUCE_SUM:
   case FREDUCE_MUL:
   case FSLICE:
-  case FABS:
   case FREPEAT:
   case FTRANSPOSE:
   default:

@@ -22,7 +22,7 @@ double matrix_multiplication(bool backend) {
   Tensor<float, 3> mat2(d2);
   timer.start();
   for (int i = 0; i < 1000; i++) {
-    Tensor<float, 3> res = mat2.matmul(mat1).pow(3.141592f);
+    Tensor<float, 2> res = mat2.matmul(mat1).pow(3.141592f).reduce_mul(0);
     if (backend)
       res.execute_gpu();
     else

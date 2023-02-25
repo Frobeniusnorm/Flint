@@ -156,6 +156,38 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(Approx(0.029159).epsilon(0.001), dx[1][1][1]);
     CHECK_EQ(Approx(0.256533).epsilon(0.001), dx[1][2][0]);
   }
+  TEST_CASE("Min, Max, Abs") {
+    Tensor<double, 3> x = {{{42, 75.3}, {4, 4}, {50, 3}},
+                           {{7, 9}, {3.5, 77}, {10, 10}}};
+    Tensor<double, 1> y = {-7, 5.5};
+    Tensor<double, 2> z = {{1.5, 5.5}, {-7, 4.5}, {7.5, -9}};
+    Tensor<double, 2> m1 = (z.min(y) * 0.3).abs();
+    Tensor<double, 3> m2 = (y.min(z) * 0.3).max(x).abs() * y.abs();
+    Tensor<double, 3> dx2 = m2.gradient(x);
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 3; j++) {
+        CHECK_EQ(7, dx2[i][j][0]);
+        CHECK_EQ(5.5, dx2[i][j][1]);
+      }
+    }
+    Tensor<double, 1> dy1 = m1.gradient(y);
+    CHECK_EQ(-0.6, dy1[0]);
+    CHECK_EQ(0, dy1[1]);
+    Tensor<double, 1> dy2 = m2.gradient(y);
+    CHECK_EQ(-116.5, dy2[0]);
+    CHECK_EQ(178.3, dy2[1]);
+    Tensor<double, 2> dz1 = m1.gradient(z);
+    CHECK_EQ(0, dz1[0][0]);
+    CHECK_EQ(0.3, dz1[0][1]);
+    CHECK_EQ(-0.3, dz1[1][0]);
+    CHECK_EQ(0.3, dz1[1][1]);
+    CHECK_EQ(0., dz1[2][0]);
+    CHECK_EQ(-0.3, dz1[2][1]);
+    Tensor<double, 2> dz2 = m2.gradient(z);
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 2; j++)
+        CHECK_EQ(0, dz2[i][j]);
+  }
 }
 int main(int argc, char **argv) {
   doctest::Context context;

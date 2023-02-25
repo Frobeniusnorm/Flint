@@ -447,17 +447,17 @@ template <typename T> struct Tensor<T, 1> {
   }
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k> min(const Tensor<K, k> &other) const {
-    return Tensor<stronger_return<K>, k>(fmin(node, other.node));
+    return Tensor<stronger_return<K>, k>(fmin(node, other.node), other.shape);
   }
   template <typename K> Tensor<stronger_return<K>, 1> min(const K other) const {
-    return Tensor<stronger_return<K>, 1>(fmin(node, other));
+    return Tensor<stronger_return<K>, 1>(fmin(node, other), shape);
   }
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k> max(const Tensor<K, k> &other) const {
-    return Tensor<stronger_return<K>, k>(fmax(node, other.node));
+    return Tensor<stronger_return<K>, k>(fmax(node, other.node), other.shape);
   }
   template <typename K> Tensor<stronger_return<K>, 1> max(const K other) const {
-    return Tensor<stronger_return<K>, 1>(fmax(node, other));
+    return Tensor<stronger_return<K>, 1>(fmax(node, other), shape);
   }
   Tensor<to_float<T>, 1> log() {
     return Tensor<to_float<T>, 1>(flog(node), shape);
