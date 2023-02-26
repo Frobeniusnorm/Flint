@@ -63,7 +63,7 @@ a:hover{
     color: #0070B0;
 }
 body{
-  background-color: #F1F1F1;
+  background-color: #EDEDED;
   color: black;
   width: 100%;
   margin:0;
@@ -172,7 +172,7 @@ pre{
   color:white;
 }
 #showcase_background h1{
-  background-color: #D0D0D0;
+  background-color: #F1F1F1;
   font-weight: bold;
   text-align: center;
   color: black;
@@ -180,7 +180,7 @@ pre{
   padding: 5px;
 }
 #showcase_background h2{
-  background-color: #D0D0D0;
+  background-color: #F1F1F1;
   font-weight: normal;
   text-align: center;
   color: black;

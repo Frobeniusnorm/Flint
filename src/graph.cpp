@@ -735,12 +735,12 @@ FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b) {
   size_t mb = bo->shape[bo->dimensions - 2];
   size_t n = bo->shape[bo->dimensions - 1];
   if (m != mb)
-    flogging(
-        F_ERROR,
-        "Incompatible Shapes for matrix multiplications: " +
-            vectorString(std::vector(ao->shape, ao->shape + ao->dimensions)) +
-            " and " +
-            vectorString(std::vector(bo->shape, bo->shape + bo->dimensions)));
+    flogging(F_ERROR, "Incompatible Shapes for matrix multiplications: " +
+                          vectorString(std::vector<size_t>(
+                              ao->shape, ao->shape + ao->dimensions)) +
+                          " and " +
+                          vectorString(std::vector<size_t>(
+                              bo->shape, bo->shape + bo->dimensions)));
   FOperation *res = new FOperation();
   res->dimensions = std::max(ao->dimensions, bo->dimensions);
   res->shape = safe_mal<size_t>(res->dimensions);

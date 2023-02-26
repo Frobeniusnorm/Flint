@@ -217,7 +217,21 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
     } else
       return nullptr;
   }
-  case FREDUCE_SUM:
+  case FREDUCE_SUM: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx) {
+      FOperation *op = y->operation;
+      const int dim = ((int *)op->additional_data)[0];
+      std::vector<int> rep(a->operation->dimensions);
+      std::vector<size_t> ns(a->operation->dimensions);
+      for (int i = 0; i < rep.size(); i++) {
+        rep[i] = i == dim ? a->operation->shape[i] - 1 : 0;
+        ns[i] = i != dim ? a->operation->shape[i] : 1;
+      }
+      return frepeat(freshape(prev_adj, ns.data(), ns.size()), rep.data());
+    } else
+      return nullptr;
+  }
   case FREDUCE_MUL:
   case FSLICE:
   case FREPEAT:

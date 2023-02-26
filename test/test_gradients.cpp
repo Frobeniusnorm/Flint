@@ -188,6 +188,37 @@ TEST_SUITE("Autodiff") {
       for (int j = 0; j < 2; j++)
         CHECK_EQ(0, dz2[i][j]);
   }
+  TEST_CASE("Reduce Operations") {
+    Tensor<float, 2> a{{0, 3, -1}, {0.5, 2.5, 1}};
+    Tensor<float, 1> b = a.reduce_sum(1) * 2;
+    Tensor<double, 2> da = b.gradient(a);
+    for (int i = 0; i < 2; i++)
+      for (int j = 0; j < 3; j++)
+        CHECK_EQ(2, da[i][j]);
+    Tensor<double, 3> x = {{{42, 75.3}, {4, 4}, {50, 3}},
+                           {{7, 9}, {3.5, 77}, {10, 10}}};
+    Tensor<double, 1> w = (x.reduce_sum(2) * a).reduce_sum(0);
+    da = w.gradient(a);
+    Tensor<double, 3> dx = w.gradient(x);
+    CHECK_EQ(117.3, da[0][0]);
+    CHECK_EQ(8, da[0][1]);
+    CHECK_EQ(53, da[0][2]);
+    CHECK_EQ(16, da[1][0]);
+    CHECK_EQ(80.5, da[1][1]);
+    CHECK_EQ(20, da[1][2]);
+    CHECK_EQ(0.0, dx[0][0][0]);
+    CHECK_EQ(0.0, dx[0][0][1]);
+    CHECK_EQ(3.0, dx[0][1][0]);
+    CHECK_EQ(3.0, dx[0][1][1]);
+    CHECK_EQ(-1, dx[0][2][0]);
+    CHECK_EQ(-1, dx[0][2][1]);
+    CHECK_EQ(0.5, dx[1][0][0]);
+    CHECK_EQ(0.5, dx[1][0][1]);
+    CHECK_EQ(2.5, dx[1][1][0]);
+    CHECK_EQ(2.5, dx[1][1][1]);
+    CHECK_EQ(1, dx[1][2][0]);
+    CHECK_EQ(1, dx[1][2][1]);
+  }
 }
 int main(int argc, char **argv) {
   doctest::Context context;
