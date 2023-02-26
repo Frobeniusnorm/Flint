@@ -212,8 +212,10 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
   }
   case FABS: {
     FGraphNode *a = y->predecessors[0];
-    if (a == dx)
+    if (a == dx) {
       return fmul(prev_adj, fsub(fsign(a), fequal(a, 0.0)));
+    } else
+      return nullptr;
   }
   case FREDUCE_SUM:
   case FREDUCE_MUL:

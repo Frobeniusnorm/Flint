@@ -303,22 +303,54 @@ static void executeNode(FGraphNode *node,
   } break;
   case FSIGN: {
     CPUResultData pred = predecessor_data[0];
-    for (size_t i = from; i < from + size; i++) {
-      T val = ((T *)pred.data)[i];
-      result[i] = val < 0 ? -1 : 1;
+    switch (pred.type) {
+    case F_INT32: {
+      for (size_t i = from; i < from + size; i++) {
+        int val = ((int *)pred.data)[i];
+        result[i] = val < 0 ? -1 : 1;
+      }
+    } break;
+    case F_INT64: {
+      for (size_t i = from; i < from + size; i++) {
+        long val = ((long *)pred.data)[i];
+        result[i] = val < 0 ? -1 : 1;
+      }
+    } break;
+    case F_FLOAT32: {
+      for (size_t i = from; i < from + size; i++) {
+        float val = ((float *)pred.data)[i];
+        result[i] = val < 0 ? -1 : 1;
+      }
+    } break;
+    case F_FLOAT64: {
+      for (size_t i = from; i < from + size; i++) {
+        double val = ((double *)pred.data)[i];
+        result[i] = val < 0 ? -1 : 1;
+      }
+    } break;
     }
   } break;
-  case FEVEN: {
+  case FEVEN: { // it aint pretty but it does its job
     CPUResultData pred = predecessor_data[0];
-    if constexpr (std::is_same_v<T, int> || std::is_same_v<T, long>) {
+    switch (pred.type) {
+    case F_INT32: {
       for (size_t i = from; i < from + size; i++) {
-        T val = ((T *)pred.data)[i];
+        int val = ((int *)pred.data)[i];
         result[i] = val % 2 == 0 ? 1 : 0;
       }
-    } else {
+    } break;
+    case F_INT64: {
+      for (size_t i = from; i < from + size; i++) {
+        long val = ((long *)pred.data)[i];
+        result[i] = val % 2 == 0 ? 1 : 0;
+      }
+    } break;
+    case F_FLOAT64:
+    case F_FLOAT32: {
       for (size_t i = from; i < from + size; i++) {
         result[i] = 0;
       }
+    } break;
     }
   } break;
   case FLOG10: {
