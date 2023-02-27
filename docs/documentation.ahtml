@@ -38,7 +38,7 @@ size_t result_shape = {mm->operation->shape[0], mm->operation->shape[1]}; }
       </div>
       <br/>
       <div class="card button1">
-        <a href="">Documentation</a>
+        <a href="c_doc.html">Documentation</a>
       </div>
       <div style="display: block; height: 2em;"></div>
       <div class="card">

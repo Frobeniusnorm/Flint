@@ -34,15 +34,28 @@ module CPPParser where
     highlightDoc str = inlineCode (bulletpointHighlight str)
 
     compileCppToHtml str = do
-        concatMap (\a ->
-            "<div class=\"card\"><pre class=\"card_header_code\">"
-            ++ snd a ++
-            "</pre></div>\n<br />\n<div class=\"card\"><div style=\"padding: 5px;\">"
-            ++ highlightDoc (parseDoc (fst a) "") ++
-            "</div></div><div style=\"display: block; height: 2em;\"></div>\n") (parseCpp str)
+        let fcts_defs = parseCpp str
+        "<div class=\"card\">" ++
+            "    <span class=\"card_header\">Overview</span>" ++
+            "</div><br /><div class=\"card\"><ul>" ++
+            concatMap (\a -> "<li><a href=\"#" ++ strip_fctname (snd a) ++ "\">" ++ snd a ++ "</a></li>") fcts_defs ++
+            "</ul></div><div style=\"display: block; height: 2em;\"></div>" ++
+            concatMap (\a ->
+                "<div id=\""
+                    ++ strip_fctname (snd a) ++
+                    "\"></div><div class=\"card\"><pre class=\"card_header_code\">"
+                    ++ snd a ++
+                    "</pre></div>\n<br />\n<div class=\"card\"><div style=\"padding: 5px;\">"
+                    ++ highlightDoc (parseDoc (fst a) "") ++
+                    "</div></div><div style=\"display: block; height: 2em;\"></div>\n") fcts_defs
         where
             parseDoc ('\n':t) res = do
                 let stripped = dropWhile (\x -> x == ' ' || x == '\t') t
                 parseDoc (if not (null stripped) && head stripped == '*' then drop 1 stripped else stripped) (res ++ "\n")
             parseDoc (x:t) res = parseDoc t (res ++ [x])
             parseDoc [] res = res
+
+            strip_fctname str = do
+                let foo = takeWhile (/= '(') (drop 1 $ dropWhile (/= ' ') str)
+                if not (null foo) && head foo == '*' then 
+                    drop 1 foo else foo

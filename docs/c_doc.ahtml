@@ -10,14 +10,6 @@
   <center>
     <div class="content">
         <div style="display: block; height: 5em;"></div>
-        <div class="card">
-            <span class="card_header">Overview</span>
-        </div>
-        <br />
-        <div class="card">
-            Some Stuff
-        </div>
-        <div style="display: block; height: 2em;"></div>
         @from_code("../flint.h")
     </div>
 </center>
