@@ -159,7 +159,24 @@ pre{
   color: inherit;
   text-decoration: none;
 }
-
+.card_header{
+  font-size: 1.5em; 
+  font-weight: bold;
+}
+.card_header_code{
+  background-color: #BBD5FF;
+  border-radius: 4px;
+  padding: 3px 5px;
+  font-size: 1.5em; 
+  font-weight: 500;
+}
+.inline_code{
+  background-color: #DEDEDE;
+  border-radius: 4px;
+  padding: 3px 5px;
+  display: inline;
+  font-size: 1.2em;
+}
 /* Index */
 #showcase_background{
   background-color: #000A40;

@@ -1,6 +1,7 @@
 module HtmlParser where
     import Data.Char (isDigit, isAlpha)
     import Data.List
+    import CPPParser (parseCpp, compileCppToHtml)
     highKeyword = "#F030FF"
     highType = "#FFF030"
     highLiteral = "#30F0FF"
@@ -25,7 +26,11 @@ module HtmlParser where
         let path = takeWhile (/= '"') t
         inc_file <- readFile path
         includeFiles $ inc_file ++ drop 1 ( dropWhile (/= ')') t)
-    includeFiles (x:t) = do 
+    includeFiles ('@':'f':'r':'o':'m':'_':'c':'o':'d':'e':'(':'"':t) = do
+        let path = takeWhile (/= '"') t
+        inc_file <- readFile path
+        includeFiles $ compileCppToHtml inc_file ++ drop 1 ( dropWhile (/= ')') t)
+    includeFiles (x:t) = do
         rek <- includeFiles t
         return (x : rek)
     includeFiles [] = return []
@@ -40,7 +45,7 @@ module HtmlParser where
                     let code = map fst x
                     if snd (head x) then
                         highlightCode $ highlightLiterals $ replaceIllegal code
-                    else code) 
+                    else code)
                 (groupBy (\a b -> snd a == snd b) (markCode str 0 False))
             markCode "" n _ = []
             markCode ('@':'c':'o':'d':'e':'{' :t) 0 _ = markCode t 1 True
@@ -49,18 +54,18 @@ module HtmlParser where
             markCode ('}':t) n iscode = ('}',iscode) : markCode t (n - 1) iscode
             markCode (x : t) n iscode = (x, iscode) : markCode t n iscode
 
-            highlightCode [] = [] 
+            highlightCode [] = []
             highlightCode ('c':'l':'a':'s':'s':t) =
                     "<span style=\"color: " ++ highKeyword ++ "\">class</span>" ++ highlightCode t
-            highlightCode ('i':'n':'t':t) = 
+            highlightCode ('i':'n':'t':t) =
                     "<span style=\"color: " ++ highType ++ "\">int</span>" ++ highlightCode t
-            highlightCode ('f':'l':'o':'a':'t':t) = 
+            highlightCode ('f':'l':'o':'a':'t':t) =
                     "<span style=\"color: " ++ highType ++ "\">float</span>" ++ highlightCode t
-            highlightCode ('d':'o':'u':'b':'l':'e':t) = 
+            highlightCode ('d':'o':'u':'b':'l':'e':t) =
                     "<span style=\"color: " ++ highType ++ "\">double</span>" ++ highlightCode t
-            highlightCode ('l':'o':'n':'g':t) = 
+            highlightCode ('l':'o':'n':'g':t) =
                     "<span style=\"color: " ++ highType ++ "\">long</span>" ++ highlightCode t
-            highlightCode ('s':'i':'z':'e':'_':'t':t) = 
+            highlightCode ('s':'i':'z':'e':'_':'t':t) =
                     "<span style=\"color: " ++ highType ++ "\">double</span>" ++ highlightCode t
             highlightCode ('T':'e':'n':'s':'o':'r':t) =
                     "<span style=\"color: " ++ highType ++ "\">Tensor</span>" ++ highlightCode t

@@ -21,7 +21,7 @@
   <center>
     <div class="content">
       <div class="card">
-        <span style="font-size:1.5em; font-weight: bold;">Why Flint?</span>
+        <span class="card_header">Why Flint?</span>
       </div>
       <br />
       <div class="card">
@@ -49,7 +49,7 @@
       </div>
       <div style="display: block; height: 2em"></div>
       <div class="card" style="margin-top: 1em">
-        <span style="font-size:1.5em; font-weight: bold;">Example</span>
+        <span class="card_header">Example</span>
       </div>
       <br />
       <pre class="card code">
@@ -65,7 +65,7 @@ std::cout << t2 << std::endl;
       </pre>
       <div style="display: block; height: 2em"></div>
       <div class="card">
-        <span style="font-size:1.5em; font-weight: bold;">Efficiency</span>
+        <span class="card_header">Efficiency</span>
       </div>
       <br />
       <div class="card">
