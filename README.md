@@ -17,6 +17,8 @@ The Graph (i.e. all yet to be calculated indirect parent nodes to one needed lea
 ## Usage ##
 There is no first official version yet. However if you want to build it you need the Clang compiler, Make and a installed OpenCL library. Then just run make and test if the implementation works on your machine with the test executable build in the test directory.
 
+There is a documentation which is very much a work in progress: [frobeniusnorm.github.io/Flint](frobeniusnorm.github.io/Flint). You can also build it yourself with the Makefile in the docs folder, the prerequisit is a working version of ghc. However usually the newest version of the documentation is already built in the repository.
+
 ## Dependencies ##
 - OpenCL
 - OpenCL C++ headers
