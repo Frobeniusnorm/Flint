@@ -75,7 +75,7 @@ void flintCleanup_gpu();
  * - 3: Logging level 2 + `F_INFO` (for developement)
  * - 4: Logging level 3 + `F_VERBOSE` (for library developement)
  * - 5: Logging level 4 + `F_DEBUG` (when a bug in the library has been found)
- * test */
+ */
 void fSetLoggingLevel(int);
 
 /**
@@ -417,7 +417,7 @@ FGraphNode *fneg(FGraphNode *a);
 /** Returns a tensor x with the shape of a with `x[i] = 1` if `a[i] >= 0` else
  * `x[i] = -1` */
 FGraphNode *fsign(FGraphNode *a);
-/** Returns a tensor `x` with the shape of `a` with `x[i] = 1` if `a[i] % 2 ==
+/** Returns a tensor `x` with the shape of `a` with `x[i] = 1` if `a[i] % 2 =
  * 0` else `x[i] = 0` */
 FGraphNode *feven(FGraphNode *a);
 /** Compares two tensors elementwise by `a < b` and returns a 0,1 INT32 Tensor
