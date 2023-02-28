@@ -1,11 +1,13 @@
 module CPPParser where
+    import Data.List (isPrefixOf)
     -- parses a cpp file to a list of documentations and function declerations
     parseCpp :: String -> [(String, String)]
     parseCpp = parseHelper
         where
             parseHelper ('/':'*':'*':l) = do
                 let doc = map fst (takeWhile (\a -> fst a /= '*' || snd a /= '/') (zip l (drop 1 l)))
-                let func = takeWhile (\a -> a /= ';' && a /= '{') (drop (length doc + 2) l)
+                let func = takeWhile (\a -> a /= ';' && a /= '{') 
+                        (dropWhile (\a -> a == ' ' || a == '\t' || a == '\n' || a == '\r') (drop (length doc + 2) l))
                 let r = drop (length doc + length func) l
                 (doc, func) : parseHelper r
             parseHelper (x:t) = parseHelper t
@@ -35,10 +37,18 @@ module CPPParser where
 
     compileCppToHtml str = do
         let fcts_defs = parseCpp str
+        let ovw_fcts = concatMap (\a -> "<li><a href=\"#" ++ strip_fctname (snd a) ++ "\">" ++ snd a ++ "</a></li>")
+                (filter (\a -> not ("enum" `isPrefixOf` snd a) && not ("struct" `isPrefixOf` snd a)) fcts_defs)
+        let ovw_types = concatMap (\a -> "<li><a href=\"#" ++ strip_fctname (snd a) ++ "\">" ++ snd a ++ "</a></li>")
+                (filter (\a -> ("enum" `isPrefixOf` snd a) || ("struct" `isPrefixOf` snd a)) fcts_defs)
         "<div class=\"card\">" ++
             "    <span class=\"card_header\">Overview</span>" ++
-            "</div><br /><div class=\"card\"><ul>" ++
-            concatMap (\a -> "<li><a href=\"#" ++ strip_fctname (snd a) ++ "\">" ++ snd a ++ "</a></li>") fcts_defs ++
+            "</div><br /><div class=\"card\">\
+            \<span class=\"card_header\" style=\"font-size:1.2em\">Types</span><ul>"
+            ++ ovw_types ++
+            "</ul>\
+            \<span class=\"card_header\" style=\"font-size:1.2em\">Functions</span><ul>"
+            ++ ovw_fcts ++
             "</ul></div><div style=\"display: block; height: 2em;\"></div>" ++
             concatMap (\a ->
                 "<div id=\""
@@ -57,5 +67,5 @@ module CPPParser where
 
             strip_fctname str = do
                 let foo = takeWhile (/= '(') (drop 1 $ dropWhile (/= ' ') str)
-                if not (null foo) && head foo == '*' then 
+                if not (null foo) && head foo == '*' then
                     drop 1 foo else foo
