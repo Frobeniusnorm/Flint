@@ -328,8 +328,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
  *    the gradient is to be computed.
  * - `dx`: the variable for which outputfct is derived for
  */
-FGraphNode *fCalculateGradient(const FGraphNode *outputfct,
-                               const FGraphNode *dx);
+FGraphNode *fCalculateGradient(FGraphNode *outputfct, const FGraphNode *dx);
 //  operations
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);

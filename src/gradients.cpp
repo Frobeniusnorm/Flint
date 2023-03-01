@@ -83,7 +83,7 @@ template <typename T> static std::string printNode(FGraphNode *node) {
                                                   : std::string(", "));
   return s;
 }
-static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
+static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
                                   FGraphNode *prev_adj) {
   switch (y->operation->op_type) {
   case FADD:
@@ -232,7 +232,23 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
     } else
       return nullptr;
   }
-  case FREDUCE_MUL:
+  case FREDUCE_MUL: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx) {
+      FOperation *op = y->operation;
+      const int dim = ((int *)op->additional_data)[0];
+      std::vector<int> rep(a->operation->dimensions);
+      std::vector<size_t> ns(a->operation->dimensions);
+      for (int i = 0; i < rep.size(); i++) {
+        rep[i] = i == dim ? a->operation->shape[i] - 1 : 0;
+        ns[i] = i != dim ? a->operation->shape[i] : 1;
+      }
+      return fmul(
+          prev_adj,
+          fdiv(frepeat(freshape(y, ns.data(), ns.size()), rep.data()), a));
+    } else
+      return nullptr;
+  }
   case FSLICE:
   case FREPEAT:
   case FTRANSPOSE:
@@ -241,13 +257,13 @@ static FGraphNode *local_gradient(const FGraphNode *y, FGraphNode *dx,
   }
 }
 
-FGraphNode *fCalculateGradient(const FGraphNode *y, const FGraphNode *dx) {
+FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
   using namespace std;
   // to store gradients per node
-  unordered_map<const FGraphNode *, FGraphNode *> adjoints;
+  unordered_map<FGraphNode *, FGraphNode *> adjoints;
   // fixpoint iteration
-  list<const FGraphNode *> working;
-  unordered_set<const FGraphNode *> in_working;
+  list<FGraphNode *> working;
+  unordered_set<FGraphNode *> in_working;
   working.push_back(y);
   in_working.insert(y);
 
@@ -256,7 +272,7 @@ FGraphNode *fCalculateGradient(const FGraphNode *y, const FGraphNode *dx) {
                                 y->operation->dimensions);
   FGraphNode *sol = nullptr;
   while (!working.empty()) {
-    const FGraphNode *curr = working.front();
+    FGraphNode *curr = working.front();
     working.pop_front();
     in_working.erase(curr);
     if (curr == dx) {
