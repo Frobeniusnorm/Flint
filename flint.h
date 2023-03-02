@@ -535,7 +535,8 @@ FGraphNode *fmax_cd(FGraphNode *a, const double b);
  * The results of the predecessor node must be available, to
  * ensure that the method may execute the parameter node. The corresponding
  * result is then stored in the memory pointed to by `a`. */
-FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
+FGraphNode *freduce_sum(FGraphNode *a,
+                        const int dimension); // TODO what about single dim case
 /** Reduces one dimension of the tensor by multiplicative folding e.g.
  *
  * `freduce_mul([[1,2,3], [4,5,6]], 0) = [4,10,18]`,

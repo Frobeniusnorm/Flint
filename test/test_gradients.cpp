@@ -218,6 +218,23 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(2.5, dx[1][1][1]);
     CHECK_EQ(1, dx[1][2][0]);
     CHECK_EQ(1, dx[1][2][1]);
+    Tensor<double, 2> t = (x.reduce_mul(2) * a + 3) * a.reduce_mul(0);
+    da = t.gradient(a);
+    dx = t.gradient(x);
+    /*
+    [[  18.75 , 1939.375, -194.   ],
+       [   0.   , 4204.5  ,  -56.   ]], dtype=float32)>, <tf.Tensor: shape=(2,
+3, 2), dtype=float32, numpy= array([[[   0.   ,    0.   ], [  90.   ,   90.   ],
+        [   3.   ,   50.   ]],
+
+       [[   0.   ,    0.   ],
+        [1443.75 ,   65.625],
+        [ -10.   ,  -10.   ]]] */
+    CHECK_EQ(18.75, da[0][0]);
+    CHECK_EQ(-194, da[0][2]);
+    CHECK_EQ(0, da[1][0]);
+    CHECK_EQ(4204.5, da[1][1]);
+    CHECK_EQ(-56, da[1][2]);
   }
 }
 int main(int argc, char **argv) {
