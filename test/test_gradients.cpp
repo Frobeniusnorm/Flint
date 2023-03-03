@@ -220,9 +220,6 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(1, dx[1][2][1]);
     Tensor<double, 2> t = (x.reduce_mul(2) * a + 3) * a.reduce_mul(0);
     da = t.gradient(a);
-    da.execute();
-    std::cout << da << std::endl;
-    dx = t.gradient(x);
     /*
     [[  18.75 , 1939.375, -194.   ],
        [   0.   , 4204.5  ,  -56.   ]], dtype=float32)>, <tf.Tensor: shape=(2,
@@ -237,6 +234,19 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(0, da[1][0]);
     CHECK_EQ(4204.5, da[1][1]);
     CHECK_EQ(-56, da[1][2]);
+    dx = t.gradient(x);
+    CHECK_EQ(0, dx[0][0][0]);
+    CHECK_EQ(0, dx[0][0][1]);
+    CHECK_EQ(90, dx[0][1][0]);
+    CHECK_EQ(90, dx[0][1][1]);
+    CHECK_EQ(3, dx[0][2][0]);
+    CHECK_EQ(50, dx[0][2][1]);
+    CHECK_EQ(0, dx[1][0][0]);
+    CHECK_EQ(0, dx[1][0][1]);
+    CHECK_EQ(1443.75, dx[1][1][0]);
+    CHECK_EQ(65.625, dx[1][1][1]);
+    CHECK_EQ(-10, dx[1][2][0]);
+    CHECK_EQ(-10, dx[1][2][1]);
   }
 }
 int main(int argc, char **argv) {

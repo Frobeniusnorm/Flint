@@ -238,17 +238,23 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
         ns[i] = i != dim ? a->operation->shape[i] : 1;
       }
       FGraphNode *zero_node = fequal(a, 0.0);
+      // the normal gradient would be y/a, this does not work for a_i = 0, but
+      // at first we calculate the gradient for every a_i != 0 broadcast y
       FGraphNode *ls = frepeat(freshape(y, ns.data(), ns.size()), rep.data());
+      // calculate y/a and remove division by 0 case (it does not matter what we
+      // add in that case, since we multiply by 1 - fequal(a, 0.0), just avoid /
+      // 0 for portability)
       FGraphNode *lg = fmul(
           fsub_ici(1, zero_node),
           fdiv(ls, fadd(a, zero_node))); // explicitly removing divison by 0
-      // to compute a_i = 0 case we set each zero to 1 and repeat the
-      // computation
+      // to compute a_i = 0 case we set each 0-entry to 1 and repeat the
+      // computation, this yields the correct gradients only for the entries
+      // where a_i = 0
       FGraphNode *zg =
           fmul(zero_node, frepeat(freshape(freduce_mul(fadd(a, zero_node), dim),
                                            ns.data(), ns.size()),
                                   rep.data()));
-      // now we can add both gradients
+      // now we can add both gradients and multiply with the previous adjoint
       return fmul(frepeat(freshape(prev_adj, ns.data(), ns.size()), rep.data()),
                   fadd(lg, zg));
     } else
