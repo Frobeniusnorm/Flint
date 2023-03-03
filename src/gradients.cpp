@@ -228,11 +228,6 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   }
   case FREDUCE_MUL: {
     FGraphNode *a = y->predecessors[0];
-
-    std::cout << printShape(a->operation->shape, a->operation->dimensions)
-              << std::endl;
-    std::cout << printShape(y->operation->shape, y->operation->dimensions)
-              << std::endl;
     if (a == dx) {
       FOperation *op = y->operation;
       const int dim = ((int *)op->additional_data)[0];
@@ -242,11 +237,20 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
         rep[i] = i == dim ? a->operation->shape[i] - 1 : 0;
         ns[i] = i != dim ? a->operation->shape[i] : 1;
       }
-      std::cout << "new shape: " << vectorString(ns) << std::endl;
-      std::cout << "repetitions: " << vectorString(rep) << std::endl;
-      return fmul(
-          frepeat(freshape(prev_adj, ns.data(), ns.size()), rep.data()),
-          fdiv(frepeat(freshape(y, ns.data(), ns.size()), rep.data()), a));
+      FGraphNode *zero_node = fequal(a, 0.0);
+      FGraphNode *ls = frepeat(freshape(y, ns.data(), ns.size()), rep.data());
+      FGraphNode *lg = fmul(
+          fsub_ici(1, zero_node),
+          fdiv(ls, fadd(a, zero_node))); // explicitly removing divison by 0
+      // to compute a_i = 0 case we set each zero to 1 and repeat the
+      // computation
+      FGraphNode *zg =
+          fmul(zero_node, frepeat(freshape(freduce_mul(fadd(a, zero_node), dim),
+                                           ns.data(), ns.size()),
+                                  rep.data()));
+      // now we can add both gradients
+      return fmul(frepeat(freshape(prev_adj, ns.data(), ns.size()), rep.data()),
+                  fadd(lg, zg));
     } else
       return nullptr;
   }

@@ -220,6 +220,8 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(1, dx[1][2][1]);
     Tensor<double, 2> t = (x.reduce_mul(2) * a + 3) * a.reduce_mul(0);
     da = t.gradient(a);
+    da.execute();
+    std::cout << da << std::endl;
     dx = t.gradient(x);
     /*
     [[  18.75 , 1939.375, -194.   ],
