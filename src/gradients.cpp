@@ -15,6 +15,7 @@
 #ifndef GRADIENTS_CPP
 #define GRADIENTS_CPP
 #include "../flint.h"
+#include "utils.hpp"
 #include <cmath>
 #include <cstring>
 #include <iostream>
@@ -24,17 +25,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-// converts c++ type to flint type
-template <typename T> static constexpr FType toFlintType() {
-  if (std::is_same<T, int>())
-    return F_INT32;
-  if (std::is_same<T, long>())
-    return F_INT64;
-  if (std::is_same<T, float>())
-    return F_FLOAT32;
-  if (std::is_same<T, double>())
-    return F_FLOAT64;
-}
 static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
                                    int dimensions) {
   switch (type) {
@@ -71,6 +61,10 @@ static FGraphNode *unbroadcast(FGraphNode *adjoint, const FGraphNode *node) {
     return res;
   }
   return adjoint;
+}
+static std::string printShape(size_t *shape, int dim) {
+  std::vector<size_t> sh(shape, shape + dim);
+  return vectorString(sh);
 }
 template <typename T> static std::string printNode(FGraphNode *node) {
   std::string s = "";
@@ -234,6 +228,11 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   }
   case FREDUCE_MUL: {
     FGraphNode *a = y->predecessors[0];
+
+    std::cout << printShape(a->operation->shape, a->operation->dimensions)
+              << std::endl;
+    std::cout << printShape(y->operation->shape, y->operation->dimensions)
+              << std::endl;
     if (a == dx) {
       FOperation *op = y->operation;
       const int dim = ((int *)op->additional_data)[0];
@@ -243,8 +242,10 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
         rep[i] = i == dim ? a->operation->shape[i] - 1 : 0;
         ns[i] = i != dim ? a->operation->shape[i] : 1;
       }
+      std::cout << "new shape: " << vectorString(ns) << std::endl;
+      std::cout << "repetitions: " << vectorString(rep) << std::endl;
       return fmul(
-          prev_adj,
+          frepeat(freshape(prev_adj, ns.data(), ns.size()), rep.data()),
           fdiv(frepeat(freshape(y, ns.data(), ns.size()), rep.data()), a));
     } else
       return nullptr;

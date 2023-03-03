@@ -28,7 +28,9 @@ template <typename T> inline T *safe_mal(unsigned int count) {
   }
   return data;
 }
-template <typename T> inline std::string vectorString(std::vector<T> vec) {
+template <typename T>
+static inline std::string vectorString(const std::vector<T> &vec,
+                                       std::string indentation = "") {
   std::string res = "[";
   for (size_t i = 0; i < vec.size(); i++) {
     res += std::to_string(vec[i]);
@@ -38,12 +40,13 @@ template <typename T> inline std::string vectorString(std::vector<T> vec) {
   return res + "]";
 }
 template <typename T>
-inline std::string vectorString(std::vector<std::vector<T>> &vec) {
+static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
+                                       std::string indentation = "") {
   std::string res = "[";
   for (size_t i = 0; i < vec.size(); i++) {
-    res += vectorString(vec[i]);
+    res += vectorString(vec[i], indentation + " ");
     if (i != vec.size() - 1)
-      res += ",\n";
+      res += ",\n" + indentation;
   }
   return res + "]";
 }
