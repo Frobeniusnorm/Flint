@@ -920,7 +920,18 @@ template <typename T, unsigned int n> struct Tensor {
       new_shape[i] = nn->operation->shape[i];
     return Tensor<T, n>(nn, new_shape);
   }
-
+  Tensor<T, n> extend(std::array<size_t, n> new_shape,
+                      std::array<size_t, n> indices) {
+    return Tensor<T, n>(fextend(node, new_shape.data(), indices.data()),
+                        new_shape);
+  }
+  Tensor<T, n> extend(std::array<size_t, n> new_shape,
+                      std::array<size_t, n> indices,
+                      std::array<size_t, n> steps) {
+    return Tensor<T, n>(
+        fextend_steps(node, new_shape.data(), indices.data(), steps.data()),
+        new_shape);
+  }
   template <typename... args>
   Tensor<T, n> repeat(const args... repetitions) const {
     constexpr size_t num_repetitions = sizeof...(args);

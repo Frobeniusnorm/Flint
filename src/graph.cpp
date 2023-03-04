@@ -1003,8 +1003,7 @@ FGraphNode *fequal_cl(FGraphNode *a, const long b) { return equal(a, b); }
 FGraphNode *fequal_cf(FGraphNode *a, const float b) { return equal(a, b); }
 FGraphNode *fequal_cd(FGraphNode *a, const double b) { return equal(a, b); }
 FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
-                         const int dimensions, const long *insert_at,
-                         const long *step_size) {
+                         const size_t *insert_at, const long *step_size) {
   // construct nodes
   FGraphNode *foo = new FGraphNode();
   foo->num_predecessor = 1;
@@ -1014,6 +1013,7 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
   foo->reference_counter = 0;
   a->reference_counter++;
   // construct operation
+  const int dimensions = a->operation->dimensions;
   FOperation *op = new FOperation();
   foo->operation = op;
   op->op_type = FEXTEND;
@@ -1023,14 +1023,15 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
   memcpy(op->shape, new_shape, dimensions * sizeof(size_t));
   op->additional_data = safe_mal<FExtend>(1);
   FExtend &extend = *(FExtend *)op->additional_data;
-  extend.start = safe_mal<long>(dimensions);
+  extend.start = safe_mal<size_t>(dimensions);
   extend.step = safe_mal<long>(dimensions);
-  memcpy(extend.start, insert_at, dimensions * sizeof(long));
+  memcpy(extend.start, insert_at, dimensions * sizeof(size_t));
   memcpy(extend.step, step_size, dimensions * sizeof(long));
   return eager_execution ? execute_eagerly(foo) : foo;
 }
 FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
-                    const int dimensions, const long *insert_at) {
+                    const size_t *insert_at) {
+  const int dimensions = a->operation->dimensions;
   std::vector<long> steps(dimensions, 1);
-  return fextend_step(a, new_shape, dimensions, insert_at, steps.data());
+  return fextend_step(a, new_shape, insert_at, steps.data());
 }

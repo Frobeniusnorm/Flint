@@ -280,6 +280,40 @@ static void executeNode(FGraphNode *node,
       result[i] = ((T *)pred.data)[j];
     }
   } break;
+  case FEXTEND: {
+    CPUResultData pred = predecessor_data[0];
+    FExtend *extend = (FExtend *)node->operation->additional_data;
+    // flattened shape data
+    std::vector<size_t> acc_sizes(node->operation->dimensions);
+    std::vector<size_t> acc_sizes_pred(acc_sizes.size());
+    for (long d = node->operation->dimensions - 1; d >= 0; d--) {
+      if (d == node->operation->dimensions - 1) {
+        acc_sizes[d] = 1;
+        acc_sizes_pred[d] = 1;
+      } else {
+        acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
+        acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
+      }
+    }
+    // calculate for each entry corresponding element
+    for (size_t i = from; i < from + size; i++) {
+      size_t j = 0;
+      bool set_zero = false;
+      for (size_t d = 0; d < acc_sizes.size(); d++) {
+        // get dimension index
+        size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
+        if (di % extend->step[d] != 0 || di < extend->start[d]) {
+          set_zero = true;
+          break;
+        }
+        di -= extend->start[d];
+        di /= extend->step[d];
+        // reproject
+        j += di * acc_sizes_pred[d];
+      }
+      result[i] = set_zero ? 0 : ((T *)pred.data)[j];
+    }
+  } break;
   case FABS: {
     CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)

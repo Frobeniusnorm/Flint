@@ -663,6 +663,12 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(1, e12[1][2]);
     CHECK_EQ(1, e12[1][3]);
   }
+  TEST_CASE("FEXTEND") {
+    Tensor<float, 2> a{{1, 2}, {3, 4}};
+    a = a.extend(std::array<size_t, 2>{4, 4}, std::array<size_t, 2>{1, 2});
+    a.execute();
+    std::cout << a << std::endl;
+  }
 }
 TEST_CASE("Eager Execution") {
   enable_eager_execution();
