@@ -307,6 +307,10 @@ static void executeNode(FGraphNode *node,
           break;
         }
         di -= extend->start[d];
+        if (di >= pred.shape[d]) {
+          set_zero = true;
+          break;
+        }
         di /= extend->step[d];
         // reproject
         j += di * acc_sizes_pred[d];

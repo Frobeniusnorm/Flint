@@ -666,8 +666,18 @@ TEST_SUITE("C++ Bindings") {
   TEST_CASE("FEXTEND") {
     Tensor<float, 2> a{{1, 2}, {3, 4}};
     a = a.extend(std::array<size_t, 2>{4, 4}, std::array<size_t, 2>{1, 2});
-    a.execute();
-    std::cout << a << std::endl;
+    for (int i = 0; i < 4; i++) {
+      CHECK_EQ(0.0, a[0][i]);
+      CHECK_EQ(0.0, a[3][i]);
+    }
+    CHECK_EQ(0, a[1][0]);
+    CHECK_EQ(0, a[1][1]);
+    CHECK_EQ(1, a[1][2]);
+    CHECK_EQ(2, a[1][3]);
+    CHECK_EQ(0, a[2][0]);
+    CHECK_EQ(0, a[2][1]);
+    CHECK_EQ(3, a[2][2]);
+    CHECK_EQ(4, a[2][3]);
   }
 }
 TEST_CASE("Eager Execution") {
