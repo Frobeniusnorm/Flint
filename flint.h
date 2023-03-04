@@ -138,6 +138,7 @@ enum FOperationType {
   FABS,
   FREPEAT,
   FTRANSPOSE,
+  FEXTEND,
   FLESS,
   FEQUAL,
   FGREATER,
@@ -212,6 +213,10 @@ struct FConst {
 struct FSlice {
   long *start;
   long *end;
+  long *step;
+};
+struct FExtend {
+  long *start;
   long *step;
 };
 // functions
@@ -570,7 +575,33 @@ FGraphNode *fslice(FGraphNode *a, const long *start, const long *end);
  */
 FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
                         const long *step);
-
+/**
+ * Creates a new tensor of zeroes with the requested shape. The original tensor
+ * is embedded at the given indices.
+ * - `a` original tensor which shape is to be extended
+ * - `new_shape` array of new sizes per dimension. Has `dimension` number of
+ *    entries
+ * - `dimensions` number of dimensions of the extended result
+ * - `insert_at` array with indices per dimension denoting where `a` is to be
+ *    placed in the resulting tensor
+ */
+FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
+                    const int dimensions, const long *insert_at);
+/**
+ * Creates a new tensor of zeroes with the requested shape. The original tensor
+ * is embedded at the given indices.
+ * - `a` original tensor which shape is to be extended,
+ * - `new_shape` array of new sizes per dimension. Has `dimension` number of
+ *    entries.
+ * - `dimensions` number of dimensions of the extended result.
+ * - `insert_at` array with indices per dimension denoting where `a` is to be
+ *    placed in the resulting tensor. Has a value per dimension.
+ * - `step_size` allows to pull apart `a`, emplacing `step_size[i]` 0 between
+ * each value of `a`. Has a value per dimension.
+ */
+FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
+                         const int dimensions, const long *insert_at,
+                         const long *step_size);
 /** Takes the elementwise absolute value of `a`, i.e. `|a[i]|` */
 FGraphNode *fabs_g(FGraphNode *a);
 /** Repeats dimensions of a tensor multiple times

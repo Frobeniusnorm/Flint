@@ -276,7 +276,9 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     int *transp = ((int *)y->operation->additional_data);
     return ftranspose(prev_adj, transp);
   }
-  case FSLICE:
+  case FSLICE: {
+    // TODO here a fextend function would be great :(
+  }
   default:
     return nullptr;
   }
