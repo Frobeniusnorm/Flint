@@ -302,16 +302,20 @@ static void executeNode(FGraphNode *node,
       for (size_t d = 0; d < acc_sizes.size(); d++) {
         // get dimension index
         size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
-        if (di % extend->step[d] != 0 || di < extend->start[d]) {
+        if (di < extend->start[d]) {
           set_zero = true;
           break;
         }
         di -= extend->start[d];
-        if (di >= pred.shape[d]) {
+        if (di % extend->step[d] != 0) {
           set_zero = true;
           break;
         }
         di /= extend->step[d];
+        if (di >= pred.shape[d]) {
+          set_zero = true;
+          break;
+        }
         // reproject
         j += di * acc_sizes_pred[d];
       }

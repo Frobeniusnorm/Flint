@@ -927,9 +927,9 @@ template <typename T, unsigned int n> struct Tensor {
   }
   Tensor<T, n> extend(std::array<size_t, n> new_shape,
                       std::array<size_t, n> indices,
-                      std::array<size_t, n> steps) {
+                      std::array<long, n> steps) {
     return Tensor<T, n>(
-        fextend_steps(node, new_shape.data(), indices.data(), steps.data()),
+        fextend_step(node, new_shape.data(), indices.data(), steps.data()),
         new_shape);
   }
   template <typename... args>
