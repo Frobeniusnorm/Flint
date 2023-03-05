@@ -156,7 +156,6 @@ generateCode(FGraphNode *node,
   // indexing logic
   string index_defs = "int index = get_global_id(0);\n";
   unsigned int num_indices = 0;
-
   todo.push_front({node, "v0"});
   while (!todo.empty()) {
     // take from queue
@@ -172,16 +171,13 @@ generateCode(FGraphNode *node,
           node->operation->op_type == FSTORE
               ? ((FStore *)node->operation->additional_data)->num_entries
               : node->result_data->num_entries;
-      if (assigned_params.find(node) != assigned_params.end()) {
-        code = type + " " + name + " = " + assigned_params[node] + "[index%" +
-               to_string(num_entries) + "];\n" + code;
-      } else {
+      if (assigned_params.find(node) == assigned_params.end()) {
         size_t pid = assigned_params.size();
         assigned_params.insert({node, "P" + to_string(pid)});
         parameters.push_back({node, "P" + to_string(pid)});
-        code = type + " " + name + " = P" + to_string(pid) + "[index%" +
-               to_string(num_entries) + "];\n" + code;
       }
+      code = type + " " + name + " = " + assigned_params[node] + "[index%" +
+             to_string(num_entries) + "];\n" + code;
     } else
       switch (node->operation->op_type) {
       case FCONST:
@@ -440,6 +436,70 @@ generateCode(FGraphNode *node,
               to_string(slice->step[d] * (long)acc_sizes_pred[d]);
         }
         index_defs += ";\n";
+        code = "index = old_index" + to_string(old_idx) + ";\n" + code;
+        variable_index--; // because we dont generate a variable
+      } break;
+      case FEXTEND: {
+        FOperation *pred = node->predecessors[0]->operation;
+        FExtend *extend = (FExtend *)node->operation->additional_data;
+        unsigned int old_idx = num_indices++;
+        index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
+        // flattened shape data
+        std::vector<size_t> acc_sizes(node->operation->dimensions);
+        std::vector<size_t> acc_sizes_pred(acc_sizes.size());
+        for (long d = node->operation->dimensions - 1; d >= 0; d--) {
+          if (d == node->operation->dimensions - 1) {
+            acc_sizes[d] = 1;
+            acc_sizes_pred[d] = 1;
+          } else {
+            acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred->shape[d + 1];
+            acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
+          }
+        }
+        // calculate start
+        index_defs += "index = 0";
+        std::string set_zero_cond = "if(";
+        // accumulate index
+        for (long d = 0; d < node->operation->dimensions; d++) {
+          long step = extend->step[d];
+          bool inv = step < 0;
+          if (inv)
+            step = -step;
+          std::string dim_idx =
+              "((" +
+              (d == 0 ? string("index")
+                      : string("index %" + to_string(acc_sizes[d - 1]))) +
+              ") / " + to_string(acc_sizes[d]) + " - " +
+              to_string(extend->start[d]) + ") / " + to_string(step);
+          if (d != 0)
+            set_zero_cond += " || ";
+          // if di < start
+          set_zero_cond +=
+              "(" +
+              (d == 0 ? string("index")
+                      : string("index %" + to_string(acc_sizes[d - 1]))) +
+              ") / " + to_string(acc_sizes[d]) + " < " +
+              to_string(extend->start[d]);
+          // if di % step != 0
+          set_zero_cond +=
+              " || ((" +
+              (d == 0 ? string("index")
+                      : string("index %" + to_string(acc_sizes[d - 1]))) +
+              ") / " + to_string(acc_sizes[d]) + " - " +
+              to_string(extend->start[d]) + ") % " + to_string(step) + " != 0";
+          // if di >= shape
+          set_zero_cond +=
+              " || " + dim_idx + " >= " + to_string(pred->shape[d]);
+
+          // finish index
+          if (inv)
+            dim_idx =
+                "(" + to_string(pred->shape[d]) + " - " + dim_idx + " - 1)";
+          index_defs += " + " + dim_idx + " * " + to_string(acc_sizes_pred[d]);
+        }
+        index_defs += ";\nif(index < 0) index = 0;\n";
+        code = set_zero_cond + ") v" + to_string(variable_index) + " = 0;\n" +
+               code;
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
         variable_index--; // because we dont generate a variable
       } break;
