@@ -681,7 +681,6 @@ TEST_SUITE("C++ Bindings") {
     Tensor<float, 2> b{{1, 2}, {3, 4}};
     b = b.extend(std::array<size_t, 2>{4, 7}, std::array<size_t, 2>{2, 1},
                  std::array<long, 2>{1, 2});
-    b.execute();
     for (int i = 0; i < 7; i++) {
       CHECK_EQ(0.0, b[0][i]);
       CHECK_EQ(0.0, b[1][i]);
@@ -700,6 +699,27 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(0.0, b[3][4]);
     CHECK_EQ(0.0, b[3][5]);
     CHECK_EQ(0.0, b[3][6]);
+    Tensor<float, 2> c{{1, 2}, {3, 4}};
+    c = c.extend(std::array<size_t, 2>{4, 7}, std::array<size_t, 2>{2, 1},
+                 std::array<long, 2>{-1, -2});
+    for (int i = 0; i < 7; i++) {
+      CHECK_EQ(0.0, c[0][i]);
+      CHECK_EQ(0.0, c[1][i]);
+    }
+    CHECK_EQ(0.0, c[2][0]);
+    CHECK_EQ(4.0, c[2][1]);
+    CHECK_EQ(0.0, c[2][2]);
+    CHECK_EQ(3.0, c[2][3]);
+    CHECK_EQ(0.0, c[2][4]);
+    CHECK_EQ(0.0, c[2][5]);
+    CHECK_EQ(0.0, c[2][6]);
+    CHECK_EQ(0.0, c[3][0]);
+    CHECK_EQ(2.0, c[3][1]);
+    CHECK_EQ(0.0, c[3][2]);
+    CHECK_EQ(1.0, c[3][3]);
+    CHECK_EQ(0.0, c[3][4]);
+    CHECK_EQ(0.0, c[3][5]);
+    CHECK_EQ(0.0, c[3][6]);
   }
 }
 TEST_CASE("Eager Execution") {

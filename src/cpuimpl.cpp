@@ -300,6 +300,10 @@ static void executeNode(FGraphNode *node,
       size_t j = 0;
       bool set_zero = false;
       for (size_t d = 0; d < acc_sizes.size(); d++) {
+        long step = extend->step[d];
+        bool inv = step < 0;
+        if (inv)
+          step = -step;
         // get dimension index
         size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
         if (di < extend->start[d]) {
@@ -307,14 +311,18 @@ static void executeNode(FGraphNode *node,
           break;
         }
         di -= extend->start[d];
-        if (di % extend->step[d] != 0) {
+        if (di % step != 0) {
           set_zero = true;
           break;
         }
-        di /= extend->step[d];
+        di /= step;
         if (di >= pred.shape[d]) {
           set_zero = true;
           break;
+        }
+        // reverse if negative
+        if (inv) {
+          di = pred.shape[d] - di - 1;
         }
         // reproject
         j += di * acc_sizes_pred[d];
