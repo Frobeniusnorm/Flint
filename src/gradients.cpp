@@ -277,7 +277,10 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     return ftranspose(prev_adj, transp);
   }
   case FSLICE: {
-    // TODO here a fextend function would be great :(
+    const FGraphNode *a = y->predecessors[0];
+    const FSlice *slice = (FSlice *)y->operation->additional_data;
+    return fextend_step(prev_adj, a->operation->shape,
+                        (unsigned long *)slice->start, slice->step);
   }
   default:
     return nullptr;
