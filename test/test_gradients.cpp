@@ -239,6 +239,38 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(-10, dx[1][2][0]);
     CHECK_EQ(-10, dx[1][2][1]);
   }
+  TEST_CASE("REPEAT, SLICE, TRANSPOSE") {
+    Tensor<double, 2> t{
+        {0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 0, 1}, {2, 3, 4, 5}, {6, 7, 8, 9}};
+    Tensor<double, 2> r =
+        (t.slice(TensorRange(0, 4, 2), TensorRange(-1, -5, -1))).transpose() *
+        Tensor<double, 2>{{1, 2}, {3, 4}, {5, 6}, {7, 8}};
+    Tensor<double, 2> gr = r.gradient(t);
+    for (int i = 0; i < 4; i++) {
+      CHECK_EQ(0, gr[1][i]);
+      CHECK_EQ(0, gr[3][i]);
+      CHECK_EQ(0, gr[4][i]);
+    }
+    CHECK_EQ(8, gr[2][0]);
+    CHECK_EQ(7, gr[0][0]);
+    CHECK_EQ(6, gr[2][1]);
+    CHECK_EQ(5, gr[0][1]);
+    CHECK_EQ(4, gr[2][2]);
+    CHECK_EQ(3, gr[0][2]);
+    CHECK_EQ(2, gr[2][3]);
+    CHECK_EQ(1, gr[0][3]);
+    gr = t.slice(TensorRange(-1, -2, -1)).repeat(1, 0) *
+         Tensor<double, 1>{1, 2, 3, 4};
+
+    gr = gr.gradient(t);
+    for (int i = 0; i < 4; i++) {
+      CHECK_EQ(0, gr[0][i]);
+      CHECK_EQ(0, gr[1][i]);
+      CHECK_EQ(0, gr[2][i]);
+      CHECK_EQ(0, gr[3][i]);
+      CHECK_EQ(i + 1, gr[4][i]);
+    }
+  }
 }
 int main(int argc, char **argv) {
   doctest::Context context;

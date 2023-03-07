@@ -22,6 +22,7 @@
 #include <unordered_set>
 #include <vector>
 #define MAX(x, y) (x) > (y) ? (x) : (y)
+#define ABS(x) (x) < 0 ? -(x) : (x)
 static bool use_cpu, use_gpu, eager_execution = false;
 // converts c++ type to flint type
 
@@ -868,13 +869,15 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
   slice->start = safe_mal<long>(op->dimensions);
   slice->end = safe_mal<long>(op->dimensions);
   for (size_t i = 0; i < op->dimensions; i++) {
+    if (step[i] == 0)
+      flogging(F_ERROR, "Step may not be 0 for slicing!");
     slice->start[i] =
         (start[i] < 0) ? (long)a->operation->shape[i] + start[i] : start[i];
     slice->end[i] =
         (end[i] < 0) ? (long)a->operation->shape[i] + end[i] : end[i];
     slice->step[i] = step[i];
-    op->shape[i] = abs(slice->end[i] - slice->start[i]);
-    long step_abs = abs(step[i]);
+    op->shape[i] = ABS(slice->end[i] - slice->start[i]);
+    long step_abs = ABS(step[i]);
     // start element is always present
     if (op->shape[i] % step_abs == 0)
       op->shape[i] = op->shape[i] / step_abs;

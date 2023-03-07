@@ -261,6 +261,7 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       return nullptr;
   }
   case FREPEAT: {
+    // TODO i think this is wrong, we should sum up all repeated dimensions
     FGraphNode *a = y->predecessors[0];
     std::vector<long> start(y->operation->dimensions, 0);
     std::vector<long> end(y->operation->dimensions);
@@ -279,9 +280,19 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   case FSLICE: {
     const FGraphNode *a = y->predecessors[0];
     const FSlice *slice = (FSlice *)y->operation->additional_data;
-    return fextend_step(prev_adj, a->operation->shape,
-                        (unsigned long *)slice->start, slice->step);
+    std::vector<size_t> start(a->operation->dimensions);
+    for (int i = 0; i < a->operation->dimensions; i++) {
+      start[i] = slice->step[i] >= 0 ? slice->start[i] : slice->end[i] + 1;
+    }
+    return fextend_step(prev_adj, a->operation->shape, start.data(),
+                        slice->step);
   }
+  case FEXTEND:
+  case FSIGN:
+  case FEVEN:
+  case FLESS:
+  case FEQUAL:
+  case FGREATER:
   default:
     return nullptr;
   }
