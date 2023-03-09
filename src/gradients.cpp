@@ -261,17 +261,18 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       return nullptr;
   }
   case FREPEAT: {
-    // TODO i think this is wrong, we should sum up all repeated dimensions
     FGraphNode *a = y->predecessors[0];
     std::vector<long> start(y->operation->dimensions, 0);
     std::vector<long> end(y->operation->dimensions);
+    long rep_mul = 1;
     for (int i = 0; i < start.size(); i++) {
       if (y->operation->shape[i] != a->operation->shape[i])
         end[i] = y->operation->shape[i] / a->operation->shape[i];
       else
         end[i] = y->operation->shape[i];
+      rep_mul *= (y->operation->shape[i] / a->operation->shape[i]);
     }
-    return fslice(prev_adj, start.data(), end.data());
+    return fmul(fslice(prev_adj, start.data(), end.data()), rep_mul);
   }
   case FTRANSPOSE: {
     int *transp = ((int *)y->operation->additional_data);
