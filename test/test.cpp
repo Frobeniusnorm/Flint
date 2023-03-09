@@ -733,6 +733,7 @@ TEST_CASE("Eager Execution") {
   CHECK_EQ(20, t5[0]);
   disable_eager_execution();
 }
+#include "grad_test_cases.hpp"
 int main(int argc, char **argv) {
   bool doCPU = false, doGPU = false;
   for (int i = 0; i < argc; i++) {
