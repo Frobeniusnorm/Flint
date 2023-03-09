@@ -268,7 +268,7 @@ TEST_SUITE("Autodiff") {
       CHECK_EQ(0, gr[1][i]);
       CHECK_EQ(0, gr[2][i]);
       CHECK_EQ(0, gr[3][i]);
-      CHECK_EQ(i + 1, gr[4][i]);
+      CHECK_EQ((i + 1) * 2, gr[4][i]);
     }
   }
 }
