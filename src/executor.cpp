@@ -341,8 +341,12 @@ generateCode(FGraphNode *node,
                to_string(variable_index + 1) + ";\n" + code;
       }; break;
       case FABS: {
-        code = type + " " + name + " = abs(v" +
-               std::to_string(variable_index + 1) + ");\n" + code;
+        std::string par_name = "v" + std::to_string(variable_index + 1);
+        if (node->operation->data_type < F_FLOAT32)
+          code = type + " " + name + " = abs(" + par_name + ");\n" + code;
+        else
+          code = type + " " + name + " = " + par_name + "< 0 ? -" + par_name +
+                 " : " + par_name + ";\n" + code;
       } break;
       case FLOG: {
         code = type + " " + name + " = log(v" +
