@@ -28,5 +28,20 @@ int main(int argc, char **argv) {
     res = context.run();
     flintCleanup();
   }
+  /*
+   * TODO
+   * i already checked that before an reduce every instruction must exist,
+   * The problem is when two reduce operations are in parallel in an instruction
+   * that does not require it in such a case i can be sure that the result
+   * instruction is as large as the largest reduce_instruction, but the indices
+   * for the other one are not correct
+   *
+   * How to solve this problem:
+   * 1) batch reduces (or matmuls for that matter) only when their
+   * dimensionality is equal
+   *
+   * 2) (better) include a modulo for dimensionality fix
+   * in reduce operations
+   */
   return res;
 }

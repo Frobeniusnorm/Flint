@@ -403,8 +403,8 @@ generateCode(FGraphNode *node,
             (node->operation->op_type == FREDUCE_SUM ? " += " : " *= ") + par1 +
             "[(index / " + std::to_string(it_dim) + ") * " +
             std::to_string(it_dim) + " * " +
-            std::to_string(prev->operation->shape[red_dim]) + " + index % " +
-            std::to_string(it_dim) + " + i * " + std::to_string(it_dim) +
+            std::to_string(prev->operation->shape[red_dim]) + " + (index % " +
+            std::to_string(it_dim) + ") + i * " + std::to_string(it_dim) +
             "];\n}\n";
         code = reduce_code + code;
       } break;
