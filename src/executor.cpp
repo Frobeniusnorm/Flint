@@ -357,7 +357,7 @@ generateCode(FGraphNode *node,
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FLOG10: {
-        code = type + " " + name + " = log2(v" +
+        code = type + " " + name + " = log10(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FNEG: {
