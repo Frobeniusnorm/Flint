@@ -164,6 +164,8 @@ generateCode(FGraphNode *node,
     bool push_pred = true;
     // write code
     string type = typeString(node->operation->data_type);
+    const string opstr = string(fop_to_string[node->operation->op_type]);
+    code = "// end " + opstr + "\n" + code;
     // need to be outside switch to include result_data
     if (node->operation->op_type == FSTORE || node->result_data) {
       push_pred = false;
@@ -437,7 +439,8 @@ generateCode(FGraphNode *node,
         }
         index_defs += ";\n";
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-        variable_index--; // because we dont generate a variable
+        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+               ";\n" + code;
       } break;
       case FEXTEND: {
         FOperation *pred = node->predecessors[0]->operation;
@@ -501,7 +504,8 @@ generateCode(FGraphNode *node,
         code = set_zero_cond + ") v" + to_string(variable_index) + " = 0;\n" +
                code;
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-        variable_index--; // because we dont generate a variable
+        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+               ";\n" + code;
       } break;
       case FREPEAT: {
         const FOperation *op = node->operation;
@@ -533,7 +537,8 @@ generateCode(FGraphNode *node,
         }
         index_defs += "}\n";
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-        variable_index--; // because we dont generate a variable
+        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+               ";\n" + code;
       } break;
       case FTRANSPOSE: {
         const FOperation *op = node->operation;
@@ -565,11 +570,13 @@ generateCode(FGraphNode *node,
         }
         index_defs += "}\n";
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-        variable_index--; // because we dont generate a variable
+        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+               ";\n" + code;
       } break;
       default:
         break;
       }
+    code = "// " + opstr + "\n" + code;
     // push predecessors dfs
     if (push_pred)
       for (int i = 0; i < node->num_predecessor; i++)

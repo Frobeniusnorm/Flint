@@ -28,6 +28,7 @@ template <typename T> inline T *safe_mal(unsigned int count) {
   }
   return data;
 }
+extern const char *fop_to_string[];
 template <typename T>
 static inline std::string vectorString(const std::vector<T> &vec,
                                        std::string indentation = "") {
