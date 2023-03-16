@@ -376,6 +376,7 @@ generateCode(FGraphNode *node,
       case FREDUCE_MUL: {
         push_pred = false;
         FGraphNode *prev = node->predecessors[0];
+
         int red_dim = ((int *)node->operation->additional_data)[0];
         size_t it_dim =
             1; // iteration size <=> product of all dimensions along dim
@@ -398,14 +399,18 @@ generateCode(FGraphNode *node,
           parameters.push_back({prev, par1});
           assigned_params.insert({prev, par1});
         }
+        size_t total_el_size = 1;
+        for (int i = 0; i < prev->operation->dimensions; i++)
+          total_el_size *= prev->operation->shape[i];
+        std::string reduce_index = "(index % " + to_string(total_el_size) + ")";
         reduce_code +=
             " " + name +
             (node->operation->op_type == FREDUCE_SUM ? " += " : " *= ") + par1 +
-            "[(index / " + std::to_string(it_dim) + ") * " +
+            "[((" + reduce_index + " / " + std::to_string(it_dim) + ") * " +
             std::to_string(it_dim) + " * " +
-            std::to_string(prev->operation->shape[red_dim]) + " + (index % " +
-            std::to_string(it_dim) + ") + i * " + std::to_string(it_dim) +
-            "];\n}\n";
+            std::to_string(prev->operation->shape[red_dim]) + " + (" +
+            reduce_index + " % " + std::to_string(it_dim) + ") + i * " +
+            std::to_string(it_dim) + ")];\n}\n";
         code = reduce_code + code;
       } break;
       case FSLICE: {

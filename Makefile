@@ -45,7 +45,7 @@ test/benchmark: libflint.a $(BUILDDIR)/benchmark.o | $(BUILDDIR)
 $(BUILDDIR)/test.o: test/test.cpp flint.h flint.hpp 
 	$(COMPILER) -c -o $(BUILDDIR)/test.o test/test.cpp
 
-$(BUILDDIR)/test_gradients.o: test/test_gradients.cpp flint.h flint.hpp 
+$(BUILDDIR)/test_gradients.o: test/test_gradients.cpp test/grad_test_cases.hpp flint.h flint.hpp 
 	$(COMPILER) -c -o $(BUILDDIR)/test_gradients.o test/test_gradients.cpp
 
 $(BUILDDIR)/benchmark.o: test/benchmark.cpp flint.hpp

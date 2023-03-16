@@ -720,6 +720,29 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(0.0, c[3][5]);
     CHECK_EQ(0.0, c[3][6]);
   }
+  TEST_CASE("REPEAT, REDUCE") {
+    Tensor<int, 2> a{{1, 2}, {3, 4}};
+    Tensor<int, 1> b = a.repeat(2, 2).reduce_mul(1); //{6, 14, 6, 14}
+    CHECK_EQ(8, b[0]);
+    CHECK_EQ(1728, b[1]);
+    CHECK_EQ(8, b[2]);
+    CHECK_EQ(1728, b[3]);
+
+    b = a.reduce_mul(1).repeat(2); //{2, 12, 2, 12}
+    CHECK_EQ(2, b[0]);
+    CHECK_EQ(12, b[1]);
+    CHECK_EQ(2, b[2]);
+    CHECK_EQ(12, b[3]);
+    // this crashes
+    Tensor<int, 2> c = {{0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}, {0, 1, 2, 3}};
+    Tensor<int, 2> d = c + a.reduce_mul(1).repeat(1);
+    for (int i = 0; i < 4; i++) {
+      CHECK_EQ(2, d[i][0]);
+      CHECK_EQ(13, d[i][1]);
+      CHECK_EQ(4, d[i][2]);
+      CHECK_EQ(15, d[i][3]);
+    }
+  }
 }
 TEST_CASE("Eager Execution") {
   enable_eager_execution();
@@ -733,7 +756,6 @@ TEST_CASE("Eager Execution") {
   CHECK_EQ(20, t5[0]);
   disable_eager_execution();
 }
-#include "grad_test_cases.hpp"
 int main(int argc, char **argv) {
   bool doCPU = false, doGPU = false;
   for (int i = 0; i < argc; i++) {
