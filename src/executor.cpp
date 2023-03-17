@@ -152,15 +152,18 @@ generateCode(FGraphNode *node,
   unordered_map<FGraphNode *, std::string> assigned_params;
   int variable_index = 0;
   string code = "";
-
   // indexing logic
-  string index_defs = "int index = get_global_id(0);\n";
   unsigned int num_indices = 0;
   todo.push_front({node, "v0"});
   while (!todo.empty()) {
     // take from queue
     const auto [node, name] = todo.front();
     todo.pop_front();
+    string index_defs = "";
+    if (!node) {
+      code = name + code;
+      continue;
+    }
     bool push_pred = true;
     // write code
     string type = typeString(node->operation->data_type);
@@ -587,12 +590,14 @@ generateCode(FGraphNode *node,
       }
     code = "// " + opstr + "\n" + code;
     // push predecessors dfs
+    if (!index_defs.empty())
+      todo.push_front({nullptr, index_defs});
     if (push_pred)
       for (int i = 0; i < node->num_predecessor; i++)
         todo.push_front(
             {node->predecessors[i], "v" + to_string(++variable_index)});
   }
-  code = index_defs + code;
+  code = "int index = get_global_id(0);\n" + code;
   return code;
 }
 

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>
+    Flint Documentation
+  </title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+</head>
+
+<body>
+
+  <div id="header-bar">
+    <div class="left-spaced">
+      <img src="flint.png" style="width:5.5em; height:2.9em; display: inline-block; vertical-align: middle;" />
+      <a class="item" href="index.html">About</a>
+      <span class="item selected">Documentation</span>
+      <a class="item">Tutorial</a>
+    </div>
+  </div>
+  <center>
+    <div class="content">
+        <div style="display: block; height: 5em;"></div>
+        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types</span><ul><li><a href="#TensorRange">struct TensorRange </a></li></ul><span class="card_header" style="font-size:1.2em">Functions</span><ul><li><a href="#FLINT_HPP_HELPER">namespace FLINT_HPP_HELPER </a></li><li><a href="#<typename">template <typename T>
+static inline std::string vectorString(const std::vector<T> &vec,
+                                       std::string indentation = "") </a></li><li><a href="#<typename">template <typename T, size_t n>
+static inline std::string arrayString(const std::array<T, n> &vec) </a></li><li><a href="#Flint">namespace Flint </a></li><li><a href="#void">inline void setLoggingLevel(int level) </a></li><li><a href="#<typename">template <typename T, unsigned int dimensions> class TensorView</a></li><li><a href="#&operator[]">T &operator[](size_t index) </a></li><li><a href="#n">TensorView<T, n - 1> operator[](size_t index) </a></li></ul></div><div style="display: block; height: 2em;"></div><div id="FLINT_HPP_HELPER"></div><div class="card"><pre class="card_header_code">namespace FLINT_HPP_HELPER </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Useful helper functions used by the library itself.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="<typename"></div><div class="card"><pre class="card_header_code">template <typename T>
+static inline std::string vectorString(const std::vector<T> &vec,
+                                       std::string indentation = "") </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Transforms a vector of arbitrary recursive dimensions to a string
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="<typename"></div><div class="card"><pre class="card_header_code">template <typename T, size_t n>
+static inline std::string arrayString(const std::array<T, n> &vec) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Transforms an array of arbitrary recursive dimensions to a string
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="Flint"></div><div class="card"><pre class="card_header_code">namespace Flint </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Contains static methods to configure Flints behaviour-
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="void"></div><div class="card"><pre class="card_header_code">inline void setLoggingLevel(int level) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;"> Sets the Logging Level of the Flint Backend </div></div><div style="display: block; height: 2em;"></div>
+<div id="<typename"></div><div class="card"><pre class="card_header_code">template <typename T, unsigned int dimensions> class TensorView</pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Encapsulates the data of a tensor. Is only valid as long as the Tensor is
+ valid. Provides an interface for index operations on multidimensional data.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="&operator[]"></div><div class="card"><pre class="card_header_code">T &operator[](size_t index) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Returns a read-write-reference to the index data entry of the Tensor-data.
+ Only valid as long as the original Tensor is valid.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n"></div><div class="card"><pre class="card_header_code">TensorView<T, n - 1> operator[](size_t index) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Returns a new TensorView object with one more index for the current
+ dimension (i.e. the new TensorView has one dimension less). Only valid as
+ long as the original Tensor is valid.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="TensorRange"></div><div class="card"><pre class="card_header_code">struct TensorRange </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Describes a slice operation for one dimension.
+</div></div><div style="display: block; height: 2em;"></div>
+
+    </div>
+</center>
+  <div id="footer">
+    <center>
+    <div class="content">
+      <div class="row">
+        <div class="column">
+          © David Schwarzbeck, 2022</br>
+          Licensed under the <a href="https://github.com/Frobeniusnorm/Flint/blob/main/LICENCE">Apache License</a>, Version 2.0
+        </div>
+        <div class="column">&nbsp;</div>
+        <div class="column">&nbsp;</div>
+        <div class="column">
+          <a href="https://github.com/Frobeniusnorm/Flint/">Github</a>
+        </div>
+      </div>
+    </div>
+    </center>
+  </div>
+</body>
+</html>

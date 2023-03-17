@@ -15,8 +15,8 @@
 #ifndef FLINT_HPP
 #define FLINT_HPP
 
-/** \file flint.hpp
- * \brief This is the C++ implementation of Flint
+/* flint.hpp
+ * This is the C++ implementation of Flint
  *
  * The core class of the C++ implementation is Tensor which has a template that
  * describes the dimensionality and type of the Tensor. All C++ functions use
@@ -38,6 +38,9 @@
  * Useful helper functions used by the library itself.
  */
 namespace FLINT_HPP_HELPER {
+/**
+ * Transforms a vector of arbitrary recursive dimensions to a string
+ */
 template <typename T>
 static inline std::string vectorString(const std::vector<T> &vec,
                                        std::string indentation = "") {
@@ -60,6 +63,9 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
   }
   return res + "]";
 }
+/**
+ * Transforms an array of arbitrary recursive dimensions to a string
+ */
 template <typename T, size_t n>
 static inline std::string arrayString(const std::array<T, n> &vec) {
   std::string res = "[";
@@ -164,6 +170,7 @@ using to_float = typename std::conditional<isInt<T>(), double, T>::type;
  * Contains static methods to configure Flints behaviour-
  */
 namespace Flint {
+/** Sets the Logging Level of the Flint Backend */
 inline void setLoggingLevel(int level) { fSetLoggingLevel(level); }
 }; // namespace Flint
 /**
