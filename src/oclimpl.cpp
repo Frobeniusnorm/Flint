@@ -753,10 +753,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       chrono::high_resolution_clock::now() - start_par;
   // execute kernel
   const size_t global_size = total_size_node;
-  const size_t local_size = 1;
-  err_code = clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &global_size,
-                                    &local_size, writeEvents.size(),
-                                    writeEvents.data(), nullptr);
+  err_code =
+      clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &global_size, nullptr,
+                             writeEvents.size(), writeEvents.data(), nullptr);
   if (err_code != CL_SUCCESS) {
     string msg;
     switch (err_code) {
