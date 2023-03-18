@@ -405,7 +405,7 @@ generateCode(FGraphNode *node,
         size_t total_el_size = 1;
         for (int i = 0; i < prev->operation->dimensions; i++)
           total_el_size *= prev->operation->shape[i];
-        std::string reduce_index = "(index % " + to_string(total_el_size) + ")";
+        std::string reduce_index = "(index)";
         reduce_code +=
             " " + name +
             (node->operation->op_type == FREDUCE_SUM ? " += " : " *= ") + par1 +
@@ -413,7 +413,8 @@ generateCode(FGraphNode *node,
             std::to_string(it_dim) + " * " +
             std::to_string(prev->operation->shape[red_dim]) + " + (" +
             reduce_index + " % " + std::to_string(it_dim) + ") + i * " +
-            std::to_string(it_dim) + ")];\n}\n";
+            std::to_string(it_dim) + ") % " + to_string(total_el_size) +
+            "];\n}\n";
         code = reduce_code + code;
       } break;
       case FSLICE: {
