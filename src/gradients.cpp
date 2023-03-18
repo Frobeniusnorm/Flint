@@ -288,12 +288,26 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     return fextend_step(prev_adj, a->operation->shape, start.data(),
                         slice->step);
   }
-  case FEXTEND:
+  case FEXTEND: {
+    const FGraphNode *a = y->predecessors[0];
+    const FExtend *extend = (FExtend *)y->operation->additional_data;
+    std::vector<long> start(a->operation->dimensions);
+    std::vector<long> ends(a->operation->dimensions);
+    std::vector<long> steps(a->operation->dimensions);
+    for (int i = 0; i < a->operation->dimensions; i++) {
+      start[i] = extend->start[i];
+      ends[i] = a->operation->shape[i] * extend->step[i] + extend->start[i];
+      steps[i] = extend->step[i];
+    }
+    return fslice_step(prev_adj, start.data(), ends.data(), steps.data());
+  }
   case FSIGN:
   case FEVEN:
   case FLESS:
   case FEQUAL:
   case FGREATER:
+    return constant_tensor(0.0, F_FLOAT64, y->operation->shape,
+                           y->operation->dimensions);
   default:
     return nullptr;
   }
