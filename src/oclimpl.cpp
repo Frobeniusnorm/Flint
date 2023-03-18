@@ -614,6 +614,10 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (!initialized) {
     flintInit_gpu();
   }
+  // ensures all previous operations are finished
+  if (clFinish(queue) != CL_SUCCESS) {
+    flogging(F_ERROR, "OpenCL queue error!");
+  }
   auto start = std::chrono::high_resolution_clock::now();
   FResultData *resultData = new FResultData();
   FOperation *node_op = node->operation;
@@ -697,13 +701,12 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     flogging(F_ERROR, "Not enough memory to create buffer!");
   int index = 1;
   std::vector<cl_event> writeEvents;
+  auto start_par = chrono::high_resolution_clock::now();
   for (auto &[gn, name] : parameters) {
     FOperation *op = gn->operation;
     // TODO keep track of when data in Store is changed
     cl_mem mem_obj = nullptr;
-    bool doWrite =
-        op->op_type ==
-        FSTORE; // can always be changed, ResultData only changes with gpu data
+    bool doWrite = false;
     size_t type_size = typeSize(op->data_type);
     size_t total_size = op->op_type == FSTORE
                             ? ((FStore *)op->additional_data)->num_entries
@@ -746,6 +749,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&result_mem) !=
       CL_SUCCESS)
     flogging(F_ERROR, "Could not set Kernel Argument for the result!");
+  chrono::duration<double, std::milli> par_time =
+      chrono::high_resolution_clock::now() - start_par;
   // execute kernel
   const size_t global_size = total_size_node;
   const size_t local_size = 1;
@@ -772,9 +777,12 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (!resultData->data)
     flogging(F_ERROR, "Not enough memory to store result!");
   // wait for result
+  auto start_read = chrono::high_resolution_clock::now();
   err_code = clEnqueueReadBuffer(queue, result_mem, CL_TRUE, 0,
                                  total_size_node * type_size_node,
                                  (void *)resultData->data, 0, nullptr, nullptr);
+  chrono::duration<double, std::milli> read_time =
+      chrono::high_resolution_clock::now() - start_read;
   if (err_code != CL_SUCCESS) {
     string msg = "Unknown Error while reading the result!";
     if (err_code == CL_OUT_OF_HOST_MEMORY)
@@ -784,7 +792,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   elapsed = chrono::high_resolution_clock::now() - start;
   flogging(F_DEBUG, "compilation took " + to_string(compilation_time.count()) +
                         "ms, execution took " + to_string(elapsed.count()) +
-                        "ms");
+                        "ms (" + to_string(read_time.count()) +
+                        "ms read time, " + to_string(par_time.count()) +
+                        "ms parameter loading)");
   node->result_data = resultData;
   return node;
 }

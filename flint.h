@@ -195,8 +195,8 @@ struct FGraphNode {
   FResultData *result_data; // to store computational result
 };
 /** Result of an call to `fCreateGraph`, see `FResultData`.
- * Data of this Operation may always be changed, since the framework assumes
- * this. */
+ * Data of this Operation may not be changed manually when using a GPU Backend.
+ */
 struct FStore {
   // link to gpu data
   cl_mem mem_id = nullptr;
