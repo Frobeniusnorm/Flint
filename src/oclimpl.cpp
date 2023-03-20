@@ -18,6 +18,7 @@
 
 #include "../flint.h"
 #include "utils.hpp"
+#include <CL/cl.h>
 #include <list>
 #include <stdexcept>
 #include <stdio.h>
@@ -244,8 +245,8 @@ generateCode(FGraphNode *node,
         FOperation *y = node->predecessors[1]->operation;
         if ((x->data_type == F_FLOAT32 || x->data_type == F_FLOAT64) &&
             (y->data_type == F_FLOAT32 || y->data_type == F_FLOAT64))
-          code = type + " " + name + " = pow(v" +
-                 to_string(variable_index + 1) + ", v" +
+          code = type + " " + name + " = pow((" + type + ")v" +
+                 to_string(variable_index + 1) + ", (" + type + ")v" +
                  to_string(variable_index + 2) + ");\n" + code;
         else if (x->data_type == F_INT64 &&
                  (y->data_type == F_INT32 || y->data_type == F_INT64))
@@ -263,13 +264,15 @@ generateCode(FGraphNode *node,
                  to_string(variable_index + 2) + ");\n" + code;
       } break;
       case FMIN: {
-        code = type + " " + name + " = min(v" + to_string(variable_index + 1) +
-               ", v" + to_string(variable_index + 2) + ");\n" + code;
+        code = type + " " + name + " = min((" + type + ")v" +
+               to_string(variable_index + 1) + ", (" + type + ")v" +
+               to_string(variable_index + 2) + ");\n" + code;
 
       } break;
       case FMAX: {
-        code = type + " " + name + " = max(v" + to_string(variable_index + 1) +
-               ", v" + to_string(variable_index + 2) + ");\n" + code;
+        code = type + " " + name + " = max((" + type + ")v" +
+               to_string(variable_index + 1) + ", (" + type + ")v" +
+               to_string(variable_index + 2) + ");\n" + code;
 
       } break;
       case FLESS: {
@@ -609,12 +612,30 @@ generateCode(FGraphNode *node,
 static std::unordered_map<std::string, std::pair<cl_program, cl_kernel>>
     kernel_cache;
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
-  // TODO
+  // maybe there are still major optimizations we can do here
   return fExecuteGraph_gpu(node);
 }
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (!initialized) {
     flintInit_gpu();
+  }
+  if (node->result_data)
+    return node;
+  if (node->operation->op_type == FCONST) {
+    node->result_data = safe_mal<FResultData>(1);
+    node->result_data->num_entries = 1;
+    node->result_data->mem_id = nullptr;
+    node->result_data->data =
+        ((FConst *)node->operation->additional_data)->value;
+    return node;
+  }
+  if (node->operation->op_type == FSTORE) {
+    node->result_data = safe_mal<FResultData>(1);
+    FStore *store = (FStore *)node->operation->additional_data;
+    node->result_data->num_entries = store->num_entries;
+    node->result_data->mem_id = store->mem_id;
+    node->result_data->data = store->data;
+    return node;
   }
   // ensures all previous operations are finished
   if (clFinish(queue) != CL_SUCCESS) {
@@ -703,7 +724,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     flogging(F_ERROR, "Not enough memory to create buffer!");
   int index = 1;
   std::vector<cl_event> writeEvents;
-  auto start_par = chrono::high_resolution_clock::now();
   for (auto &[gn, name] : parameters) {
     FOperation *op = gn->operation;
     // TODO keep track of when data in Store is changed
@@ -751,8 +771,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&result_mem) !=
       CL_SUCCESS)
     flogging(F_ERROR, "Could not set Kernel Argument for the result!");
-  chrono::duration<double, std::milli> par_time =
-      chrono::high_resolution_clock::now() - start_par;
   // execute kernel
   const size_t global_size = total_size_node;
   err_code =
@@ -778,12 +796,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (!resultData->data)
     flogging(F_ERROR, "Not enough memory to store result!");
   // wait for result
-  auto start_read = chrono::high_resolution_clock::now();
   err_code = clEnqueueReadBuffer(queue, result_mem, CL_TRUE, 0,
                                  total_size_node * type_size_node,
                                  (void *)resultData->data, 0, nullptr, nullptr);
-  chrono::duration<double, std::milli> read_time =
-      chrono::high_resolution_clock::now() - start_read;
   if (err_code != CL_SUCCESS) {
     string msg = "Unknown Error while reading the result!";
     if (err_code == CL_OUT_OF_HOST_MEMORY)
@@ -792,10 +807,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   }
   elapsed = chrono::high_resolution_clock::now() - start;
   flogging(F_DEBUG, "compilation took " + to_string(compilation_time.count()) +
-                        "ms, execution took " + to_string(elapsed.count()) +
-                        "ms (" + to_string(read_time.count()) +
-                        "ms read time, " + to_string(par_time.count()) +
-                        "ms parameter loading)");
+                        "ms, execution took " + to_string(elapsed.count()));
   node->result_data = resultData;
   return node;
 }

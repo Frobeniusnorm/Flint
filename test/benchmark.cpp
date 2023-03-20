@@ -22,8 +22,7 @@ double matrix_multiplication(bool backend) {
   Tensor<float, 3> mat2(d2);
   timer.start();
   for (int i = 0; i < 1000; i++) {
-    Tensor<float, 1> res =
-        mat2.matmul(mat1).pow(3.141592f).reduce_mul(0).reduce_sum(0);
+    Tensor<float, 3> res = mat2.matmul(mat1).pow(3.141592f);
     if (backend)
       res.execute_gpu();
     else
@@ -31,18 +30,90 @@ double matrix_multiplication(bool backend) {
   }
   return timer.get_elapsed_ms();
 }
-
+double reduce_fun(bool backend) {
+  nanotimer timer;
+  vector<vector<float>> d1(64, vector<float>(64));
+  for (int i = 0; i < 64; i++)
+    for (int j = 0; j < 64; j++)
+      d1[i][j] = i / 16.0 + j / 16.0;
+  vector<vector<vector<float>>> d2(
+      16, vector<vector<float>>(64, vector<float>(64)));
+  for (int i = 0; i < 16; i++)
+    for (int j = 0; j < 64; j++)
+      for (int k = 0; k < 64; k++)
+        d2[i][j][k] = (16 - i) / 2.0 * (64 - j) / 8.0 + j / 16.0;
+  Tensor<float, 2> t1(d1);
+  Tensor<float, 3> t2(d2);
+  timer.start();
+  for (int i = 0; i < 1000; i++) {
+    Tensor<double, 1> res =
+        ((t2.reduce_mul(0) * (t2 - t1).reduce_sum(0)).reduce_sum(0) / 1000.0);
+    if (backend)
+      res.execute_gpu();
+    else
+      res.execute_cpu();
+  }
+  return timer.get_elapsed_ms();
+}
+double gradient_fun(bool backend) {
+  nanotimer timer;
+  vector<vector<float>> d1(64, vector<float>(64));
+  for (int i = 0; i < 64; i++)
+    for (int j = 0; j < 64; j++)
+      d1[i][j] = i / 16.0 + j / 16.0;
+  vector<vector<vector<float>>> d2(
+      16, vector<vector<float>>(64, vector<float>(64)));
+  for (int i = 0; i < 16; i++)
+    for (int j = 0; j < 64; j++)
+      for (int k = 0; k < 64; k++)
+        d2[i][j][k] = (16 - i) / 2.0 * (64 - j) / 8.0 + j / 16.0;
+  Tensor<float, 2> t1(d1);
+  Tensor<float, 3> t2(d2);
+  timer.start();
+  for (int i = 0; i < 100; i++) {
+    Tensor<double, 1> t3 =
+        (t1.matmul(t2).pow(3.141592) * (t2.reduce_sum(0) + t1.log10()))
+            .flattened()
+            .min(0);
+    Tensor<double, 2> g1 = t3.gradient(t1);
+    if (backend)
+      g1.execute_gpu();
+    else
+      g1.execute_cpu();
+    Tensor<double, 3> g2 = t3.gradient(t2);
+    if (backend)
+      g2.execute_gpu();
+    else
+      g2.execute_cpu();
+  }
+  return timer.get_elapsed_ms();
+}
 void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   unordered_map<string, pair<double, double>> times;
   flintInit(benchmarks);
-  // enable_eager_execution();
+  Flint::setLoggingLevel(3);
+  enable_eager_execution();
   long cpu_time = (benchmarks & FLINT_BACKEND_ONLY_CPU) != 0
                       ? matrix_multiplication(false)
                       : 0;
+  flogging(F_INFO, "Finished Matmul CPU");
   long gpu_time = (benchmarks & FLINT_BACKEND_ONLY_GPU) != 0
                       ? matrix_multiplication(true)
                       : 0;
+  flogging(F_INFO, "Finished Matmul GPU");
   times.insert({"matrix multiplication", pair{cpu_time, gpu_time}});
+  cpu_time = (benchmarks & FLINT_BACKEND_ONLY_CPU) != 0 ? reduce_fun(false) : 0;
+  flogging(F_INFO, "Finished Reduce CPU");
+  gpu_time = (benchmarks & FLINT_BACKEND_ONLY_GPU) != 0 ? reduce_fun(true) : 0;
+  flogging(F_INFO, "Finished Reduce GPU");
+  times.insert({"reduce fun", pair{cpu_time, gpu_time}});
+  cpu_time =
+      (benchmarks & FLINT_BACKEND_ONLY_CPU) != 0 ? gradient_fun(false) : 0;
+  flogging(F_INFO, "Finished Gradient CPU");
+  gpu_time =
+      (benchmarks & FLINT_BACKEND_ONLY_GPU) != 0 ? gradient_fun(true) : 0;
+  flogging(F_INFO, "Finished Reduce GPU");
+  times.insert({"gradient fun", pair{cpu_time, gpu_time}});
   flintCleanup();
   std::cout
       << "+------------------------+------------------+------------------+"

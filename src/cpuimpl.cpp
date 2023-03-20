@@ -540,7 +540,7 @@ static void threadRoutine() {
     sem->release();
   }
 }
-#define PARALLEL_EXECUTION_SIZE 100 // for debugging
+#define PARALLEL_EXECUTION_SIZE 1000 // for debugging
 template <typename T>
 inline void chooseExecutionMethod(FGraphNode *node,
                                   std::vector<CPUResultData> pred_data,
@@ -658,19 +658,24 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   if (!initialized)
     flintInit_cpu();
-  if (node->operation->op_type == FSTORE) {
-    // copy to result
-    FResultData *rd = new FResultData();
-    node->result_data = rd;
-    FStore *store = (FStore *)node->operation->additional_data;
-    rd->num_entries = store->num_entries;
-    rd->data = store->data;
-    rd->mem_id = store->mem_id;
-    return node;
-  }
   if (node->result_data)
     return node;
-  // TODO parallel execution
+  if (node->operation->op_type == FCONST) {
+    node->result_data = safe_mal<FResultData>(1);
+    node->result_data->num_entries = 1;
+    node->result_data->mem_id = nullptr;
+    node->result_data->data =
+        ((FConst *)node->operation->additional_data)->value;
+    return node;
+  }
+  if (node->operation->op_type == FSTORE) {
+    node->result_data = safe_mal<FResultData>(1);
+    FStore *store = (FStore *)node->operation->additional_data;
+    node->result_data->num_entries = store->num_entries;
+    node->result_data->mem_id = store->mem_id;
+    node->result_data->data = store->data;
+    return node;
+  }
   using namespace std;
   unordered_map<FGraphNode *, CPUResultData> results;
   unordered_set<FGraphNode *> inExecuteList;

@@ -39,6 +39,8 @@ void enable_eager_execution() { eager_execution = true; }
 void disable_eager_execution() { eager_execution = false; }
 int is_eager_execution() { return eager_execution; }
 static inline FGraphNode *execute_eagerly(FGraphNode *f) {
+  if (!use_cpu && !use_gpu)
+    flintInit(FLINT_BACKEND_BOTH);
   const FOperation *fop = f->operation;
   bool all_calculated = true;
   for (int i = 0; i < f->num_predecessor; i++) {
@@ -47,27 +49,17 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
       break;
     }
   }
-  if (all_calculated) {
+  if (all_calculated && use_cpu && use_gpu) {
     // since we only have one node the heuristics become constant
     unsigned int gpu_score = 0;
-    if (fop->op_type == FMATMUL) {
-      FOperation *pred0 = f->predecessors[0]->operation;
-      FOperation *pred1 = f->predecessors[1]->operation;
-      size_t total = 0;
-      for (FOperation *predop :
-           {pred0, pred1}) // FStore and FResultData have the same alignment so
-                           // casting is ok
-        total = MAX(total, ((FStore *)predop->additional_data)->num_entries);
-      gpu_score += total * pred0->shape[pred0->dimensions - 1];
-    } else if (fop->op_type == FREDUCE_SUM || fop->op_type == FREDUCE_MUL) {
-      FOperation *pred0 = f->predecessors[0]->operation;
-      gpu_score += ((FStore *)pred0->additional_data)->num_entries *
-                   pred0->shape[((int *)fop->additional_data)[0]];
-    }
+    // TODO
     return gpu_score > 2048 ? fExecuteGraph_gpu_eagerly(f)
                             : fExecuteGraph_cpu_eagerly(f);
   } else {
-    return fExecuteGraph(f);
+    if (use_gpu)
+      return fExecuteGraph_gpu(f);
+    if (use_cpu)
+      return fExecuteGraph_cpu(f);
   }
 }
 
@@ -184,7 +176,8 @@ void fFreeGraph(FGraphNode *graph) {
         } break;
         case FCONST: {
           FConst *c = (FConst *)gn->operation->additional_data;
-          free(c->value);
+          if (!freed_res)
+            free(c->value);
           delete c;
         } break;
         case FSLICE: {
