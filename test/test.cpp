@@ -743,6 +743,15 @@ TEST_SUITE("C++ Bindings") {
       CHECK_EQ(15, d[i][3]);
     }
   }
+  TEST_CASE("Total Reduce") {
+    Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
+    Tensor<float, 1> r1 = t1.flattened().reduce_sum();
+    CHECK_EQ(r1[0], 7);
+    std::cout << r1 << std::endl;
+    r1 = t1.flattened().reduce_mul();
+    CHECK_EQ(r1[0], -2);
+    std::cout << r1 << std::endl;
+  }
 }
 TEST_CASE("Eager Execution") {
   enable_eager_execution();

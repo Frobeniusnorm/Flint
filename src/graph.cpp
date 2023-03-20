@@ -836,13 +836,19 @@ static inline FGraphNode *reduce_operation(FGraphNode *x, const int dimension,
   foo->operation = op;
   op->data_type = other->data_type;
   op->op_type = type;
-  op->dimensions = other->dimensions - 1;
-  op->shape = safe_mal<size_t>(op->dimensions);
-  memcpy(op->shape, other->shape, sizeof(size_t) * dimension);
-  memcpy(op->shape + dimension, other->shape + (dimension + 1),
-         sizeof(size_t) * (other->dimensions - dimension - 1));
+  if (other->dimensions > 1) {
+    op->dimensions = other->dimensions - 1;
+    op->shape = safe_mal<size_t>(op->dimensions);
+    memcpy(op->shape, other->shape, sizeof(size_t) * dimension);
+    memcpy(op->shape + dimension, other->shape + (dimension + 1),
+           sizeof(size_t) * (other->dimensions - dimension - 1));
+  } else {
+    op->dimensions = 1;
+    op->shape = safe_mal<size_t>(1);
+    op->shape[0] = 1;
+  }
   op->additional_data = safe_mal<int>(1);
-  *(int *)op->additional_data = dimension;
+  ((int *)op->additional_data)[0] = dimension;
   return eager_execution ? execute_eagerly(foo) : foo;
 }
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],

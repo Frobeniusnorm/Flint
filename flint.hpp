@@ -316,6 +316,8 @@ template <typename T> struct Tensor<T, 1> {
     FGraphNode *node = fconstant(value, &size, 1);
     return Tensor(node, size);
   }
+  Tensor<T, 1> reduce_sum() { return Tensor<T, 1>(freduce_sum(node, 0), 1); }
+  Tensor<T, 1> reduce_mul() { return Tensor<T, 1>(freduce_mul(node, 0), 1); }
   const size_t get_shape() const { return shape[0]; }
   std::vector<T> operator*() {
     if (node->result_data) {
