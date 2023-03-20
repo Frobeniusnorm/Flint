@@ -73,7 +73,10 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
 
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
-  // TODO
+  if (!use_cpu && !use_gpu) {
+    use_cpu = true;
+    flintInit_cpu();
+  }
   if (use_gpu)
     return fExecuteGraph_gpu(node);
   if (use_cpu)
