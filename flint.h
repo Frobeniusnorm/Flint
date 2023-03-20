@@ -30,28 +30,25 @@ extern "C" {
   Flints Execution structure represents an AST, so that each Graph may be
   compiled to a specific OpenCL program
 */
-
-/** Initializes the cpu and the gpu backend. These functions are already
+#define FLINT_BACKEND_ONLY_CPU 1
+#define FLINT_BACKEND_ONLY_GPU 2
+#define FLINT_BACKEND_BOTH 3
+/** Initializes the cpu and the gpu backends. These functions are already
  * implicitly called by the execution functions if necessary. The method allows
- * disabling of the gpu backend (by passing 0 to its gpu parameter), the cpu
- * backend cannot be disabled (if a 0 is passed to the cpu backend in the first
- * method, it may still be started by `fExecuteGraph`, if it decides that the
- * cpu backend should be chosen). Only use those functions if you...
+ * disabling of the gpu backend (by passing `FLINT_BACKEND_ONLY_CPU`), disabling
+ * of the cpu backend (by passing `FLINT_BACKEND_BOTH`), initializing both
+ * backends explicitly (by passing `FLINT_BACKEND_BOTH`, which is recommended,
+ * since Flint is then allowed to choose the framework with heuristics). Only
+ * use those functions if you...
  * - ...want to explicitly decide where and when the initialization should take
  *      place
  * - ...want to only start one backend */
-void flintInit(int cpu, int gpu);
-/** Initializes the cpu backend. These functions are already implicitly called
- * by the execution functions if necessary. Only use those functions if you...
- * - ...want to explicitly decide where and when the initialization should take
- *      place
- * - ...want to only start one backend */
+void flintInit(int backends);
+/** Don't call this function explicitly if you intent to use Flint normally. Use
+ * `flintInit` */
 void flintInit_cpu();
-/** Initializes the gpu backend. These functions are already implicitly called
- * by the execution functions if necessary. Only use those functions if you...
- * - ...want to explicitly decide where and when the initialization should take
- *      place
- * - ...want to only start one backend */
+/** Don't call this function explicitly if you intent to use Flint normally. Use
+ * `flintInit` */
 void flintInit_gpu();
 
 /** Deallocates any resourced allocated by the corresponding backends.

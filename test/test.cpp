@@ -781,12 +781,12 @@ int main(int argc, char **argv) {
   context.applyCommandLine(argc, argv);
   int res;
   if (doCPU) {
-    flintInit(1, 0);
+    flintInit(FLINT_BACKEND_ONLY_CPU);
     res = context.run();
     flintCleanup();
   }
   if (doGPU) {
-    flintInit(0, 1);
+    flintInit(FLINT_BACKEND_ONLY_GPU);
     res = context.run();
     flintCleanup();
   }

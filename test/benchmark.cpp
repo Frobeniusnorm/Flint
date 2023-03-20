@@ -22,7 +22,8 @@ double matrix_multiplication(bool backend) {
   Tensor<float, 3> mat2(d2);
   timer.start();
   for (int i = 0; i < 1000; i++) {
-    Tensor<float, 2> res = mat2.matmul(mat1).pow(3.141592f).reduce_mul(0);
+    Tensor<float, 1> res =
+        mat2.matmul(mat1).pow(3.141592f).reduce_mul(0).reduce_sum(0);
     if (backend)
       res.execute_gpu();
     else
@@ -31,15 +32,16 @@ double matrix_multiplication(bool backend) {
   return timer.get_elapsed_ms();
 }
 
-// 0 = cpu, 1 = gpu, 2 = both
-void call_benchmarks(int benchmarks = 2) {
+void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   unordered_map<string, pair<double, double>> times;
-  flintInit(benchmarks == 0 || benchmarks == 2, benchmarks > 0);
+  flintInit(benchmarks);
   // enable_eager_execution();
-  fSetLoggingLevel(3);
-  long cpu_time =
-      benchmarks == 0 || benchmarks == 2 ? matrix_multiplication(false) : 0;
-  long gpu_time = benchmarks > 0 ? matrix_multiplication(true) : 0;
+  long cpu_time = (benchmarks & FLINT_BACKEND_ONLY_CPU) != 0
+                      ? matrix_multiplication(false)
+                      : 0;
+  long gpu_time = (benchmarks & FLINT_BACKEND_ONLY_GPU) != 0
+                      ? matrix_multiplication(true)
+                      : 0;
   times.insert({"matrix multiplication", pair{cpu_time, gpu_time}});
   flintCleanup();
   std::cout
@@ -79,23 +81,24 @@ void call_benchmarks(int benchmarks = 2) {
 }
 
 int main(int argc, char **argv) {
-  bool cpu = true, gpu = true;
+  int backends = 0;
   if (argc > 1) {
-    cpu = gpu = false;
     if (argc > 3)
       flogging(F_ERROR, "Invalid number of command line arguments! Call this "
                         "program like this: benchmark [cpu] [gpu]");
 
     for (int i = 1; i < argc; i++) {
       if (strcmp(argv[i], "cpu") == 0)
-        cpu = true;
-      else if (strcmp(argv[i], "gpu") == 0)
-        gpu = true;
-      else
+        backends |= FLINT_BACKEND_ONLY_CPU;
+      else if (strcmp(argv[i], "gpu") == 0) {
+        backends |= FLINT_BACKEND_ONLY_GPU;
+      } else
         flogging(F_ERROR,
                  "Invalid argument: " + std::string(argv[i]) +
                      "! Call this program like this: benchmark [cpu] [gpu]");
     }
   }
-  call_benchmarks(cpu && gpu ? 2 : cpu ? 0 : 1);
+  if (backends == 0)
+    backends = FLINT_BACKEND_BOTH;
+  call_benchmarks(backends);
 }

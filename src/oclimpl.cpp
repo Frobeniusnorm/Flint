@@ -148,11 +148,13 @@ static std::string
 generateCode(FGraphNode *node,
              std::list<std::pair<FGraphNode *, std::string>> &parameters) {
   using namespace std;
+  // we use breadth first search to traverse to operation graph
   list<tuple<FGraphNode *, string>> todo;
+  // some operations work on the parameters, allow them to keep track
   unordered_map<FGraphNode *, std::string> assigned_params;
   int variable_index = 0;
   string code = "";
-  // indexing logic
+  // indexing logic (we save the old index in old_index$i to restore it)
   unsigned int num_indices = 0;
   todo.push_front({node, "v0"});
   while (!todo.empty()) {
@@ -589,10 +591,10 @@ generateCode(FGraphNode *node,
       default:
         break;
       }
-    code = "// " + opstr + "\n" + code;
-    // push predecessors dfs
+    // insert our indexing logic into the queue after the children
     if (!index_defs.empty())
       todo.push_front({nullptr, index_defs});
+    // push predecessors dfs
     if (push_pred)
       for (int i = 0; i < node->num_predecessor; i++)
         todo.push_front(

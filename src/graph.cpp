@@ -73,10 +73,8 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
 
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
-  if (!use_cpu && !use_gpu) {
-    use_cpu = true;
-    flintInit_cpu();
-  }
+  if (!use_cpu && !use_gpu)
+    flintInit(FLINT_BACKEND_BOTH);
   if (use_gpu)
     return fExecuteGraph_gpu(node);
   if (use_cpu)
@@ -87,13 +85,13 @@ void flintCleanup() {
   flintCleanup_cpu();
   flintCleanup_gpu();
 }
-void flintInit(int cpu, int gpu) {
+void flintInit(int backends) {
   flogging(F_VERBOSE, "Initializing Flint");
-  use_cpu = cpu;
-  use_gpu = gpu;
-  if (cpu)
+  use_cpu = (backends & FLINT_BACKEND_ONLY_CPU) != 0;
+  use_gpu = (backends & FLINT_BACKEND_ONLY_GPU) != 0;
+  if (use_cpu)
     flintInit_cpu();
-  if (gpu)
+  if (use_gpu)
     flintInit_gpu();
 }
 // GRAPH METHODS
