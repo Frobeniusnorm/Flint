@@ -187,6 +187,12 @@ void fFreeGraph(FGraphNode *graph) {
           free(s->step);
           delete s;
         } break;
+        case FEXTEND: {
+          FExtend *s = (FExtend *)gn->operation->additional_data;
+          free(s->start);
+          free(s->step);
+          delete s;
+        } break;
         case FTRANSPOSE:
         case FREDUCE_SUM:
         case FREDUCE_MUL:
@@ -1032,7 +1038,7 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
   op->dimensions = dimensions;
   op->shape = safe_mal<size_t>(dimensions);
   memcpy(op->shape, new_shape, dimensions * sizeof(size_t));
-  op->additional_data = safe_mal<FExtend>(1);
+  op->additional_data = new FExtend();
   FExtend &extend = *(FExtend *)op->additional_data;
   extend.start = safe_mal<size_t>(dimensions);
   extend.step = safe_mal<long>(dimensions);

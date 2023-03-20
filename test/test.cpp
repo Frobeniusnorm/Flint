@@ -296,6 +296,8 @@ TEST_SUITE("Execution") {
     CHECK_EQ(-3, ((float *)rd2->data)[1]);
     CHECK_EQ(-2, ((float *)rd2->data)[2]);
     CHECK_EQ(-1, ((float *)rd2->data)[3]);
+    fFreeGraph(g1);
+    fFreeGraph(g2);
   }
   TEST_CASE("matmul") {
     using namespace std;

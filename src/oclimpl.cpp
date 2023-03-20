@@ -136,15 +136,6 @@ void flintInit_gpu() {
   flogging(F_VERBOSE, "Flint GPU backend was initialized!");
 }
 
-void flintCleanup_gpu() {
-  if (initialized) {
-    initialized = false;
-    clReleaseDevice(device);
-    clReleaseCommandQueue(queue);
-    clReleaseContext(context);
-  }
-}
-
 static std::string
 generateCode(FGraphNode *node,
              std::list<std::pair<FGraphNode *, std::string>> &parameters) {
@@ -622,7 +613,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (node->result_data)
     return node;
   if (node->operation->op_type == FCONST) {
-    node->result_data = safe_mal<FResultData>(1);
+    node->result_data = new FResultData();
     node->result_data->num_entries = 1;
     node->result_data->mem_id = nullptr;
     node->result_data->data =
@@ -630,7 +621,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     return node;
   }
   if (node->operation->op_type == FSTORE) {
-    node->result_data = safe_mal<FResultData>(1);
+    node->result_data = new FResultData();
     FStore *store = (FStore *)node->operation->additional_data;
     node->result_data->num_entries = store->num_entries;
     node->result_data->mem_id = store->mem_id;
@@ -810,4 +801,16 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
                         "ms, execution took " + to_string(elapsed.count()));
   node->result_data = resultData;
   return node;
+}
+void flintCleanup_gpu() {
+  if (initialized) {
+    initialized = false;
+    clReleaseDevice(device);
+    clReleaseCommandQueue(queue);
+    clReleaseContext(context);
+    for (auto &k : kernel_cache) {
+      clReleaseKernel(k.second.second);
+      clReleaseProgram(k.second.first);
+    }
+  }
 }

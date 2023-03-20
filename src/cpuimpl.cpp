@@ -661,7 +661,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   if (node->result_data)
     return node;
   if (node->operation->op_type == FCONST) {
-    node->result_data = safe_mal<FResultData>(1);
+    node->result_data = new FResultData();
     node->result_data->num_entries = 1;
     node->result_data->mem_id = nullptr;
     node->result_data->data =
@@ -669,7 +669,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
     return node;
   }
   if (node->operation->op_type == FSTORE) {
-    node->result_data = safe_mal<FResultData>(1);
+    node->result_data = new FResultData();
     FStore *store = (FStore *)node->operation->additional_data;
     node->result_data->num_entries = store->num_entries;
     node->result_data->mem_id = store->mem_id;
