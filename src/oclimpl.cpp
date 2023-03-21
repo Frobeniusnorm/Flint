@@ -162,7 +162,6 @@ generateCode(FGraphNode *node,
     // write code
     string type = typeString(node->operation->data_type);
     const string opstr = string(fop_to_string[node->operation->op_type]);
-    code = "// end " + opstr + "\n" + code;
     // need to be outside switch to include result_data
     if (node->operation->op_type == FSTORE || node->result_data) {
       push_pred = false;

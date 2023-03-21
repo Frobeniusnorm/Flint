@@ -88,31 +88,30 @@ double gradient_fun(bool backend) {
   }
   return timer.get_elapsed_ms();
 }
+
 void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
+  unordered_map<string, double (*)(bool)> benches;
+  benches.insert({"matrix_multiplication", matrix_multiplication});
+  benches.insert({"reduce_fun", reduce_fun});
+  benches.insert({"gradient_fun", gradient_fun});
+  /////////////////////////////////////////////////
   unordered_map<string, pair<double, double>> times;
-  flintInit(benchmarks);
   Flint::setLoggingLevel(3);
-  long cpu_time = (benchmarks & FLINT_BACKEND_ONLY_CPU) != 0
-                      ? matrix_multiplication(false)
-                      : 0;
-  flogging(F_INFO, "Finished Matmul CPU");
-  long gpu_time = (benchmarks & FLINT_BACKEND_ONLY_GPU) != 0
-                      ? matrix_multiplication(true)
-                      : 0;
-  flogging(F_INFO, "Finished Matmul GPU");
-  times.insert({"matrix multiplication", pair{cpu_time, gpu_time}});
-  cpu_time = (benchmarks & FLINT_BACKEND_ONLY_CPU) != 0 ? reduce_fun(false) : 0;
-  flogging(F_INFO, "Finished Reduce CPU");
-  gpu_time = (benchmarks & FLINT_BACKEND_ONLY_GPU) != 0 ? reduce_fun(true) : 0;
-  flogging(F_INFO, "Finished Reduce GPU");
-  times.insert({"reduce fun", pair{cpu_time, gpu_time}});
-  cpu_time =
-      (benchmarks & FLINT_BACKEND_ONLY_CPU) != 0 ? gradient_fun(false) : 0;
-  flogging(F_INFO, "Finished Gradient CPU");
-  gpu_time =
-      (benchmarks & FLINT_BACKEND_ONLY_GPU) != 0 ? gradient_fun(true) : 0;
-  flogging(F_INFO, "Finished Reduce GPU");
-  times.insert({"gradient fun", pair{cpu_time, gpu_time}});
+  // cpu tests
+  flintInit(FLINT_BACKEND_ONLY_CPU);
+  enable_eager_execution();
+  for (const auto &bench : benches) {
+    flogging(F_INFO, bench.first + "...");
+    times.insert({bench.first, {bench.second(false), 0}});
+  }
+  flintCleanup();
+  // gpu tests
+  flintInit(FLINT_BACKEND_ONLY_GPU);
+  disable_eager_execution();
+  for (const auto &bench : benches) {
+    flogging(F_INFO, bench.first + "...");
+    times[bench.first].second = bench.second(true);
+  }
   flintCleanup();
   std::cout
       << "+------------------------+------------------+------------------+"
