@@ -92,7 +92,6 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   unordered_map<string, pair<double, double>> times;
   flintInit(benchmarks);
   Flint::setLoggingLevel(3);
-  enable_eager_execution();
   long cpu_time = (benchmarks & FLINT_BACKEND_ONLY_CPU) != 0
                       ? matrix_multiplication(false)
                       : 0;
