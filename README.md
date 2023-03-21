@@ -3,7 +3,7 @@
 </div>
 
 # Flint
-Flint (_Frobeniusnorms Lightweight Implementation of Neural Tensors_) is a Tensor math framework based on OpenCL, allowing you to use Tensor operations, which are semi-lazily computed by the library. Once finished it will support gradient calculations for its operations including a feature rich gradient calculation algorithm with example implementations of the most popular optimization algorithms and loss functions for machine learning.
+Flint (_Frobeniusnorms Lightweight Implementation of Neural Tensors_) is a Tensor math framework based on OpenCL, allowing you to use Tensor operations, which are semi-lazily computed by the library. It supports gradient calculations for its operations including a gradient calculation algorithm. Once finished it will contain example implementations of the most popular optimization algorithms, loss functions and Neural Layers for machine learning.
 
 ## Motivation ##
 This library was created by the frustration resulting from the inflexibility of other tensor math frameworks and their target languages for large projects. To ensure a high portability Flint generates OpenCL kernels for acceleration devices like GPUs on the fly.
@@ -21,7 +21,6 @@ There is a documentation which is very much a work in progress: [https://frobeni
 
 ## Dependencies ##
 - OpenCL
-- OpenCL C++ headers
 - Clang C++ Compiler with C++20 feature implementations like e.g. semaphores
 
 ## Attribution to included libraries ##
