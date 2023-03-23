@@ -96,6 +96,7 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
   gn->result_data = nullptr;
   FOperation *op = new FOperation();
   FStore *store = new FStore();
+  store->mem_id = nullptr;
   op->dimensions = dimensions;
   op->shape = safe_mal<size_t>(dimensions);
   std::memcpy((void *)op->shape, (void *)shape, dimensions * sizeof(size_t));
@@ -727,10 +728,10 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
 FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b) {
   FGraphNode *x = a;
   FGraphNode *y = b;
-  if (x->operation->op_type != FSTORE && !x->result_data) {
+  if (!x->result_data && x->operation->op_type != FSTORE) {
     x = fExecuteGraph(x);
   }
-  if (y->operation->op_type != FSTORE && !y->result_data) {
+  if (!y->result_data && y->operation->op_type != FSTORE) {
     y = fExecuteGraph(y);
   }
   FOperation *ao = x->operation;

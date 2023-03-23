@@ -229,6 +229,24 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&res_mem) !=
       CL_SUCCESS)
     flogging(F_ERROR, "Could not load Argument to kernel!");
+  // push operation information on demand
+  if (node->operation->op_type == FMATMUL) {
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                       (void *)&total_size_node) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    flogging(F_DEBUG, "pushed res size: " + std::to_string(total_size_node));
+    const FGraphNode *gnp1 = node->predecessors[0],
+                     *gnp2 = node->predecessors[1];
+    size_t l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
+    size_t m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
+    size_t n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
+    for (size_t *mmd : {&l, &m, &n}) {
+      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)mmd) !=
+          CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      flogging(F_DEBUG, "pushed matmul index: " + std::to_string(*mmd));
+    }
+  }
   for (int i = 0; i < node->num_predecessor; i++) {
     FGraphNode *pred = node->predecessors[i];
     FOperation *op = pred->operation;
@@ -268,10 +286,19 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&mem_obj) !=
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
+    flogging(F_DEBUG, "pushed array");
     // push total element size
     if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
                        (void *)&total_size) != CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
+    flogging(F_DEBUG, "pushed total: " + std::to_string(total_size));
+    // push dimensions on demand
+    if (node->operation->op_type == FMATMUL) {
+      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                         (void *)&op->dimensions) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      flogging(F_DEBUG, "pushed dim: " + std::to_string(op->dimensions));
+    }
   }
   // execute it
   err_code = clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &total_size_node,

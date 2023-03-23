@@ -586,7 +586,7 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
     for (int i = 0; i < node->num_predecessor; i++) {
       FGraphNode *pred = node->predecessors[i];
       if (pred->operation->op_type == FSTORE) {
-        FStore *store = (FStore *)node->operation;
+        FStore *store = (FStore *)pred->operation->additional_data;
         pred_data[i].data = store->data;
         pred_data[i].num_entries = store->num_entries;
       } else if (pred->result_data) {
@@ -594,7 +594,7 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
         pred_data[i].num_entries = pred->result_data->num_entries;
       } else { // FConst
         pred_data[i].num_entries = 1;
-        pred_data[i].data = ((FConst *)node->operation)->value;
+        pred_data[i].data = ((FConst *)pred->operation)->value;
       }
       pred_data[i].type = pred->operation->data_type;
       pred_data[i].shape = std::vector<size_t>(pred->operation->shape,

@@ -497,13 +497,14 @@ static std::string generateEagerCode(FGraphNode *node) {
   case FNUM_OPERATION_TYPES:
     break; // should not happen
   case FMATMUL:
-    code += ", long l, long m, long n";
+    code += ", long num_entriesR, long l, long m, long n";
     for (int i = 0; i < 2; i++) {
       code += ", __constant " +
               typeString(node->predecessors[i]->operation->data_type) + "* P" +
               to_string(i) + ", long num_entries" + to_string(i) +
               ", long dimensions" + to_string(i);
     }
+    break;
   case FREDUCE_SUM:
   case FREDUCE_MUL:
   case FSLICE:
@@ -584,8 +585,9 @@ static std::string generateEagerCode(FGraphNode *node) {
     code += "if(index >= num_entries0) return;\n";
     code += "R[index] = "
             "P0[index] % 2 == 0 ? 1 : 0;";
+    break;
   case FMATMUL: {
-    code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
+    code += "if(index >= num_entriesR) return;\n";
     code += typeString(node->operation->data_type) + " res = 0;\n";
     code += "long j = (index % (l * n)) / n;\n";
     code += "long k = (index % (l * n)) % n;\n";
@@ -595,7 +597,8 @@ static std::string generateEagerCode(FGraphNode *node) {
         "long base_p1 = dimensions1 > 2 ? (index / (l * n)) * (m * n) : 0;\n";
     code += "for(int i = 0; i < m; i++){\n res += P0[base_p0 + j * m + i] * "
             "P1[base_p1 + i * n + k];\n}";
-    code += "R[index] = res";
+    code += "R[index] = res;\n";
+    break;
   }
   case FABS:
     code += "if(index >= num_entries0) return;\n";
