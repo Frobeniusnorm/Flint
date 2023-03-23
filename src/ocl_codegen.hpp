@@ -502,7 +502,7 @@ static std::string generateEagerCode(FGraphNode *node) {
       code += ", __constant " +
               typeString(node->predecessors[i]->operation->data_type) + "* P" +
               to_string(i) + ", long num_entries" + to_string(i) +
-              ", long dimensions" + to_string(i);
+              ", int dimensions" + to_string(i);
     }
     break;
   case FREDUCE_SUM:

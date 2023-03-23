@@ -156,7 +156,6 @@ static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
 #define MAX_NUMBER_PARAMS 2
 static std::unordered_map<long, std::pair<cl_program, cl_kernel>> eager_cache;
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
-  std::cout << "eager gpu execution" << std::endl;
   int hash =
       (node->operation->op_type << 2) |
       node->operation->data_type; // 4 types, 2 bits are enough to decode them
@@ -214,7 +213,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       flogging(F_ERROR, "kernel compilation failed!");
     eager_cache.insert({hash, {prog, kernel}});
   } else {
-    flogging(F_DEBUG, "eager kernel from cache");
     kernel = prog->second.second;
   }
   // result buffer
@@ -231,20 +229,19 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     flogging(F_ERROR, "Could not load Argument to kernel!");
   // push operation information on demand
   if (node->operation->op_type == FMATMUL) {
-    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                       (void *)&total_size_node) != CL_SUCCESS)
+    long total_size_puffer = total_size_node;
+    if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                       (void *)&total_size_puffer) != CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
-    flogging(F_DEBUG, "pushed res size: " + std::to_string(total_size_node));
     const FGraphNode *gnp1 = node->predecessors[0],
                      *gnp2 = node->predecessors[1];
-    size_t l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
-    size_t m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
-    size_t n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
-    for (size_t *mmd : {&l, &m, &n}) {
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)mmd) !=
+    long l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
+    long m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
+    long n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
+    for (long *mmd : {&l, &m, &n}) {
+      if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)mmd) !=
           CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
-      flogging(F_DEBUG, "pushed matmul index: " + std::to_string(*mmd));
     }
   }
   for (int i = 0; i < node->num_predecessor; i++) {
@@ -286,18 +283,15 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&mem_obj) !=
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
-    flogging(F_DEBUG, "pushed array");
     // push total element size
-    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+    if (clSetKernelArg(kernel, par_index++, sizeof(long),
                        (void *)&total_size) != CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
-    flogging(F_DEBUG, "pushed total: " + std::to_string(total_size));
     // push dimensions on demand
     if (node->operation->op_type == FMATMUL) {
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+      if (clSetKernelArg(kernel, par_index++, sizeof(int),
                          (void *)&op->dimensions) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
-      flogging(F_DEBUG, "pushed dim: " + std::to_string(op->dimensions));
     }
   }
   // execute it
@@ -344,7 +338,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (!initialized) {
     flintInit_gpu();
   }
-  std::cout << "uneager gpu execution" << std::endl;
   if (node->result_data)
     return node;
   if (node->operation->op_type == FCONST) {
