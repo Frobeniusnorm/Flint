@@ -212,7 +212,9 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     kernel = clCreateKernel(prog, "execute_graph", &err_code);
     if (err_code != CL_SUCCESS)
       flogging(F_ERROR, "kernel compilation failed!");
+    eager_cache.insert({hash, {prog, kernel}});
   } else {
+    flogging(F_DEBUG, "eager kernel from cache");
     kernel = prog->second.second;
   }
   // result buffer
@@ -223,7 +225,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   node->result_data->num_entries = total_size_node;
   // load parameters
   std::vector<cl_event> write_events;
-  write_events.reserve(node->num_predecessor + 1);
   int par_index = 0;
   if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&res_mem) !=
       CL_SUCCESS)
@@ -286,7 +287,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       msg = "Out of resources!";
       break;
     default:
-      msg = "Unknown Error during kernel execution!";
+      msg = "Unknown Error during kernel execution! code: " +
+            std::to_string(err_code);
       break;
     }
     flogging(F_ERROR, msg);
