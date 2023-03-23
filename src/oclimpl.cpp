@@ -19,6 +19,7 @@
 #include "ocl_codegen.hpp"
 #include "utils.hpp"
 #include <CL/cl.h>
+#include <iostream>
 #include <list>
 #include <stdexcept>
 #include <stdio.h>
@@ -134,19 +135,187 @@ void flintInit_gpu() {
   initialized = true;
   flogging(F_VERBOSE, "Flint GPU backend was initialized!");
 }
-
+static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
+                                size_t *total_size = nullptr) {
+  cl_int err_code;
+  size_t type_size_node = typeSize(node->operation->data_type);
+  size_t total_size_node = 1;
+  for (int i = 0; i < node->operation->dimensions; i++)
+    total_size_node *= node->operation->shape[i];
+  const cl_mem result_mem =
+      clCreateBuffer(context, memory_type, total_size_node * type_size_node,
+                     nullptr, &err_code);
+  if (err_code == CL_OUT_OF_HOST_MEMORY)
+    flogging(F_ERROR, "Not enough memory to create buffer!");
+  if (total_size)
+    *total_size = total_size_node;
+  return result_mem;
+}
 #include <chrono>
 #include <unordered_map>
+#define MAX_NUMBER_PARAMS 2
+static std::unordered_map<long, std::pair<cl_program, cl_kernel>> eager_cache;
+FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
+  std::cout << "eager gpu execution" << std::endl;
+  int hash =
+      (node->operation->op_type << 2) |
+      node->operation->data_type; // 4 types, 2 bits are enough to decode them
+  for (int i = 0; i < node->num_predecessor; i++)
+    hash = (hash << 2) | node->predecessors[i]->operation->data_type;
+  // because the operation type should be at the same position
+  for (int i = 0; i < MAX_NUMBER_PARAMS - node->num_predecessor; i++)
+    hash <<= 2;
+  if (clFinish(queue) != CL_SUCCESS)
+    flogging(F_ERROR, "OpenCL queue error!");
+  // meaning we have to left shift the opcode params + 1 times, for a maximum
+  // parameter number of 3 (for now) this makes 8 bits = 1 byte for the types
+  // leaving 3 bytes for the operation type. If the maximum number of parameters
+  // are increased this has to be adapted.
+  const auto prog = eager_cache.find(hash);
+  cl_kernel kernel;
+  cl_int err_code;
+  // check if the kernel already exists or if it has to be generated
+  if (prog == eager_cache.end()) {
+    // generate code
+    std::string code = generateEagerCode(node);
+    // generate kernel
+    const char *code_data = code.data();
+    const size_t code_length = code.length();
+    cl_program prog = clCreateProgramWithSource(context, 1, &code_data,
+                                                &code_length, &err_code);
+    if (err_code == CL_OUT_OF_RESOURCES)
+      flogging(F_ERROR, "Out of resources while creating program!");
+    if (err_code == CL_OUT_OF_HOST_MEMORY)
+      flogging(F_ERROR, "Not enough memory to create program!");
+    // build program
+    err_code = clBuildProgram(prog, 1, &device, nullptr, nullptr, nullptr);
+    if (err_code == CL_INVALID_PROGRAM)
+      flogging(F_ERROR,
+               "Invalid Program was generated! Generated code: \"\n" + code +
+                   "\"\nPlease contact a developer and/or file a bug report.");
+    else if (err_code == CL_COMPILER_NOT_AVAILABLE)
+      flogging(F_ERROR, "Compiler of your GPU driver is not available!");
+    else if (err_code == CL_OUT_OF_HOST_MEMORY)
+      flogging(F_ERROR, "Not enough memory to build program!");
+    else if (err_code != CL_SUCCESS) {
+      char build_log[4096];
+      size_t actual_size = 0;
+      clGetProgramBuildInfo(prog, device, CL_PROGRAM_BUILD_LOG, 4096,
+                            (void *)&build_log[0], &actual_size);
+      flogging(
+          F_ERROR,
+          "Unknown Error during program compilation! Generated code: \"\n" +
+              code + "\nBuild Log:\n" + std::string(&build_log[0]) +
+              "\"\nPlease contact a developer and/or file a bug report.");
+    }
+    // get kernel
+    kernel = clCreateKernel(prog, "execute_graph", &err_code);
+    if (err_code != CL_SUCCESS)
+      flogging(F_ERROR, "kernel compilation failed!");
+  } else {
+    kernel = prog->second.second;
+  }
+  // result buffer
+  size_t total_size_node;
+  cl_mem res_mem = create_gpu_memory(node, CL_MEM_READ_WRITE, &total_size_node);
+  node->result_data = new FResultData();
+  node->result_data->mem_id = res_mem;
+  node->result_data->num_entries = total_size_node;
+  // load parameters
+  std::vector<cl_event> write_events;
+  write_events.reserve(node->num_predecessor + 1);
+  int par_index = 0;
+  if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&res_mem) !=
+      CL_SUCCESS)
+    flogging(F_ERROR, "Could not load Argument to kernel!");
+  for (int i = 0; i < node->num_predecessor; i++) {
+    FGraphNode *pred = node->predecessors[i];
+    FOperation *op = pred->operation;
+    cl_mem mem_obj = nullptr;
+    bool do_write = false;
+    size_t type_size = typeSize(op->data_type);
+    size_t total_size = op->op_type == FSTORE
+                            ? ((FStore *)op->additional_data)->num_entries
+                            : pred->result_data->num_entries;
+    cl_mem mem_id = op->op_type == FSTORE
+                        ? ((FStore *)op->additional_data)->mem_id
+                        : pred->result_data->mem_id;
+    if (mem_id) {
+      mem_obj = mem_id;
+    } else {
+      mem_obj = create_gpu_memory(node, CL_MEM_READ_ONLY);
+      if (op->op_type == FSTORE)
+        ((FStore *)op->additional_data)->mem_id = mem_obj;
+      else
+        pred->result_data->mem_id = mem_obj;
+      do_write = true;
+    }
+    if (do_write) {
+      void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
+                                         : pred->result_data->data;
+      write_events.emplace_back();
+      err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_TRUE, 0,
+                                      total_size * type_size, data, 0, nullptr,
+                                      &write_events[write_events.size() - 1]);
+      if (err_code != CL_SUCCESS) {
+        std::string msg = "Unknown Error while loading data to GPU!";
+        if (err_code == CL_OUT_OF_HOST_MEMORY)
+          msg = "Not enough memory to load data to GPU!";
+        flogging(F_ERROR, msg);
+      }
+    }
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&mem_obj) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    // push total element size
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                       (void *)&total_size) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  }
+  // execute it
+  err_code = clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &total_size_node,
+                                    nullptr, write_events.size(),
+                                    write_events.data(), nullptr);
+  if (err_code != CL_SUCCESS) {
+    std::string msg;
+    switch (err_code) {
+    case CL_OUT_OF_HOST_MEMORY:
+      msg = "Not enough memory to execute kernel!";
+      break;
+    case CL_OUT_OF_RESOURCES:
+      msg = "Out of resources!";
+      break;
+    default:
+      msg = "Unknown Error during kernel execution!";
+      break;
+    }
+    flogging(F_ERROR, msg);
+  }
+  // read result to cpu
+  int type_size_node = typeSize(node->operation->data_type);
+  node->result_data->data = malloc(total_size_node * type_size_node);
+  node->result_data->num_entries = total_size_node;
+  if (!node->result_data->data)
+    flogging(F_ERROR, "Not enough memory to store result!");
+  // wait for result
+  err_code = clEnqueueReadBuffer(queue, node->result_data->mem_id, CL_TRUE, 0,
+                                 total_size_node * type_size_node,
+                                 node->result_data->data, 0, nullptr, nullptr);
+  if (err_code != CL_SUCCESS) {
+    std::string msg = "Unknown Error while reading the result!";
+    if (err_code == CL_OUT_OF_HOST_MEMORY)
+      msg = "Not enough memory to read result!";
+    flogging(F_ERROR, msg);
+  }
+  return node;
+}
 static std::unordered_map<std::string, std::pair<cl_program, cl_kernel>>
     kernel_cache;
-FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
-  // maybe there are still major optimizations we can do here
-  return fExecuteGraph_gpu(node);
-}
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (!initialized) {
     flintInit_gpu();
   }
+  std::cout << "uneager gpu execution" << std::endl;
   if (node->result_data)
     return node;
   if (node->operation->op_type == FCONST) {
@@ -256,7 +425,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     FOperation *op = gn->operation;
     // TODO keep track of when data in Store is changed
     cl_mem mem_obj = nullptr;
-    bool doWrite = false;
+    bool do_write = false;
     size_t type_size = typeSize(op->data_type);
     size_t total_size = op->op_type == FSTORE
                             ? ((FStore *)op->additional_data)->num_entries
@@ -275,10 +444,10 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
         ((FStore *)op->additional_data)->mem_id = mem_obj;
       else
         gn->result_data->mem_id = mem_obj;
-      doWrite = true;
+      do_write = true;
     }
     // actually write the buffer
-    if (doWrite) {
+    if (do_write) {
       void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
                                          : gn->result_data->data;
       writeEvents.emplace_back();

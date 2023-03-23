@@ -508,10 +508,10 @@ static std::string generateEagerCode(FGraphNode *node) {
     for (int i = 0; i < node->num_predecessor; i++)
       code += ", __constant " +
               typeString(node->predecessors[i]->operation->data_type) + "* P" +
-              to_string(i) + ", size_t num_entries" + to_string(i);
+              to_string(i) + ", long num_entries" + to_string(i);
     break;
   }
-  code += "){const index = get_global_id(0);";
+  code += "){\nconst int index = get_global_id(0);\n";
   // generate code
   switch (node->operation->op_type) {
   case FADD:
@@ -599,6 +599,9 @@ static std::string generateEagerCode(FGraphNode *node) {
   case FNUM_OPERATION_TYPES:
     break;
   }
+  code += "\n}";
+  flogging(F_DEBUG, std::string("Eager Kernel Generation for ") +
+                        fop_to_string[node->operation->op_type] + ": " + code);
   return code;
 }
 #endif

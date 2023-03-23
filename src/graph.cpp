@@ -41,20 +41,21 @@ int is_eager_execution() { return eager_execution; }
 static inline FGraphNode *execute_eagerly(FGraphNode *f) {
   if (!use_cpu && !use_gpu)
     flintInit(FLINT_BACKEND_BOTH);
-  const FOperation *fop = f->operation;
   bool all_calculated = true;
   for (int i = 0; i < f->num_predecessor; i++) {
-    if (fop->op_type != FSTORE && !f->result_data && fop->op_type != FCONST) {
+    if (f->predecessors[i]->operation->op_type != FSTORE &&
+        !f->predecessors[i]->result_data &&
+        f->predecessors[i]->operation->op_type != FCONST) {
       all_calculated = false;
       break;
     }
   }
-  if (all_calculated && use_cpu && use_gpu) {
+  if (all_calculated && (use_cpu || use_gpu)) {
     // since we only have one node the heuristics become constant
     unsigned int gpu_score = 0;
     // TODO
-    return gpu_score > 2048 ? fExecuteGraph_gpu_eagerly(f)
-                            : fExecuteGraph_cpu_eagerly(f);
+    return gpu_score > 2048 || !use_cpu ? fExecuteGraph_gpu_eagerly(f)
+                                        : fExecuteGraph_cpu_eagerly(f);
   } else {
     if (use_gpu)
       return fExecuteGraph_gpu(f);
