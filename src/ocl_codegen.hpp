@@ -497,6 +497,13 @@ static std::string generateEagerCode(FGraphNode *node) {
   case FNUM_OPERATION_TYPES:
     break; // should not happen
   case FMATMUL:
+    code += ", long l, long m, long n";
+    for (int i = 0; i < 2; i++) {
+      code += ", __constant " +
+              typeString(node->predecessors[i]->operation->data_type) + "* P" +
+              to_string(i) + ", long num_entries" + to_string(i) +
+              ", long dimensions" + to_string(i);
+    }
   case FREDUCE_SUM:
   case FREDUCE_MUL:
   case FSLICE:
@@ -515,87 +522,149 @@ static std::string generateEagerCode(FGraphNode *node) {
   // generate code
   switch (node->operation->op_type) {
   case FADD:
-    code +=
-        "R[index % (num_entries0 > num_entries1?num_entries0:num_entries1)] = "
-        "P0[index%num_entries0] + P1[index%num_entries1];";
+    code += "if(index >= num_entries0 && index >= num_entries1) "
+            "return;\nR[index] = "
+            "P0[index%num_entries0] + P1[index%num_entries1];";
     break;
   case FSUB:
-    code +=
-        "R[index % (num_entries0 > num_entries1?num_entries0:num_entries1)] = "
-        "P0[index%num_entries0] - P1[index%num_entries1];";
+    code += "if(index >= num_entries0 && index >= num_entries1) "
+            "return;\nR[index] = "
+            "P0[index%num_entries0] - P1[index%num_entries1];";
     break;
   case FMUL:
-    code +=
-        "R[index % (num_entries0 > num_entries1?num_entries0:num_entries1)] = "
-        "P0[index%num_entries0] * P1[index%num_entries1];";
+    code += "if(index >= num_entries0 && index >= num_entries1) "
+            "return;\nR[index] = "
+            "P0[index%num_entries0] * P1[index%num_entries1];";
     break;
   case FDIV:
-    code +=
-        "R[index % (num_entries0 > num_entries1?num_entries0:num_entries1)] = "
-        "P0[index%num_entries0] / P1[index%num_entries1];";
+    code += "if(index >= num_entries0 && index >= num_entries1) "
+            "return;\nR[index] = "
+            "P0[index%num_entries0] / P1[index%num_entries1];";
     break;
   case FPOW: {
+    code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
     FOperation *x = node->predecessors[0]->operation;
     FOperation *y = node->predecessors[1]->operation;
     string type = typeString(node->operation->data_type);
     if ((x->data_type == F_FLOAT32 || x->data_type == F_FLOAT64) &&
         (y->data_type == F_FLOAT32 || y->data_type == F_FLOAT64))
-      code += "R[index % (num_entries0 > "
-              "num_entries1?num_entries0:num_entries1)] = pow((" +
-              type + ")P0[index%num_entries0], (" + type +
+      code += "R[index] = pow((" + type + ")P0[index%num_entries0], (" + type +
               ")P1[index%num_entries1]);";
     else if (x->data_type == F_INT64 &&
              (y->data_type == F_INT32 || y->data_type == F_INT64))
-      code +=
-          "R[index % (num_entries0 > num_entries1?num_entries0:num_entries1)] "
-          "= (long)pown((double)P0[index%num_entries0], "
-          "(int)P1[index%num_entries1]);";
+      code += "R[index] "
+              "= (long)pown((double)P0[index%num_entries0], "
+              "(int)P1[index%num_entries1]);";
     else if (x->data_type == F_INT32 &&
              (y->data_type == F_INT32 || y->data_type == F_INT64))
-      code += "R[index % (num_entries0 > "
-              "num_entries1?num_entries0:num_entries1)] = "
+      code += "R[index] = "
               "(int)pown((float)P0[index%num_entries0], "
               "(int)P1[index%num_entries1]);";
     else
-      code += "R[index % (num_entries0 > "
-              "num_entries1?num_entries0:num_entries1)] = "
+      code += "R[index] = "
               "pow((double)P0[index%num_entries0], "
               "(double)P1[index%num_entries1]);";
   } break;
   case FNEG:
-    code +=
-        "R[index % (num_entries0 > num_entries1?num_entries0:num_entries1)] = "
-        "-P0[index%num_entries0];";
+    code += "if(index >= num_entries0) return;\n";
+    code += "R[index] = "
+            "-P0[index];";
     break;
   case FLOG:
-    code +=
-        "R[index % (num_entries0 > num_entries1?num_entries0:num_entries1)] = "
-        "log(P0[index%num_entries0]);";
+    code += "if(index >= num_entries0) return;\n";
+    code += "R[index] = "
+            "log(P0[index]);";
     break;
   case FSIGN:
-    code +=
-        "R[index % (num_entries0 > num_entries1?num_entries0:num_entries1)] = "
-        "P0[index%num_entries0] >= 0 ? 1 : -1;";
+    code += "if(index >= num_entries0) return;\n";
+    code += "R[index] = "
+            "P0[index] >= 0 ? 1 : -1;";
     break;
   case FEVEN:
+    code += "if(index >= num_entries0) return;\n";
+    code += "R[index] = "
+            "P0[index] % 2 == 0 ? 1 : 0;";
+  case FMATMUL: {
+    code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
+    code += typeString(node->operation->data_type) + " res = 0;\n";
+    code += "long j = (index % (l * n)) / n;\n";
+    code += "long k = (index % (l * n)) % n;\n";
+    code +=
+        "long base_p0 = dimensions0 > 2 ? (index / (l * n)) * (l * m) : 0;\n";
+    code +=
+        "long base_p1 = dimensions1 > 2 ? (index / (l * n)) * (m * n) : 0;\n";
+    code += "for(int i = 0; i < m; i++){\n res += P0[base_p0 + j * m + i] * "
+            "P1[base_p1 + i * n + k];\n}";
+    code += "R[index] = res";
+  }
+  case FABS:
+    code += "if(index >= num_entries0) return;\n";
+    code += "R[index] = "
+            "P0[index] < 0 ? -P0[index] : P0[index];";
+    break;
   case FLOG2:
+    code += "if(index >= num_entries0) return;\n";
+    code += "R[index] = "
+            "log2(P0[index]);";
+    break;
   case FLOG10:
-  case FLATTEN:
-  case FMATMUL:
+    code += "if(index >= num_entries0) return;\n";
+    code += "R[index] = "
+            "log10(P0[index]);";
+    break;
+  // case FLATTEN:
+  // case FRESHAPE:
   case FCONVERSION:
-  case FRESHAPE:
+    code += "if(index >= num_entries0) return;\n";
+    code +=
+        "R[index] = (" + typeString(node->operation->data_type) + ")P0[index];";
+    break;
   case FMIN:
+    code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
+    code += typeString(node->predecessors[0]->operation->data_type) +
+            " a = P0[index%num_entries0];\n";
+    code += typeString(node->predecessors[1]->operation->data_type) +
+            " b = P1[index%num_entries1];\n";
+    code += "R[index] = a < b ? a : b";
+    break;
   case FMAX:
+    code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
+    code += typeString(node->predecessors[0]->operation->data_type) +
+            " a = P0[index%num_entries0];\n";
+    code += typeString(node->predecessors[1]->operation->data_type) +
+            " b = P1[index%num_entries1];\n";
+    code += "R[index] = a > b ? a : b";
+    break;
+  case FLESS:
+    code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
+    code += typeString(node->predecessors[0]->operation->data_type) +
+            " a = P0[index%num_entries0];\n";
+    code += typeString(node->predecessors[1]->operation->data_type) +
+            " b = P1[index%num_entries1];\n";
+    code += "R[index] = a < b ? 1 : 0";
+    break;
+  case FEQUAL:
+    code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
+    code += typeString(node->predecessors[0]->operation->data_type) +
+            " a = P0[index%num_entries0];\n";
+    code += typeString(node->predecessors[1]->operation->data_type) +
+            " b = P1[index%num_entries1];\n";
+    code += "R[index] = a == b ? 1 : 0";
+    break;
+  case FGREATER:
+    code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
+    code += typeString(node->predecessors[0]->operation->data_type) +
+            " a = P0[index%num_entries0];\n";
+    code += typeString(node->predecessors[1]->operation->data_type) +
+            " b = P1[index%num_entries1];\n";
+    code += "R[index] = a > b ? 1 : 0";
+    break;
   case FREDUCE_SUM:
   case FREDUCE_MUL:
   case FSLICE:
-  case FABS:
   case FREPEAT:
   case FTRANSPOSE:
   case FEXTEND:
-  case FLESS:
-  case FEQUAL:
-  case FGREATER:
   case FNUM_OPERATION_TYPES:
     break;
   }
