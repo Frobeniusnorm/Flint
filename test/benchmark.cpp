@@ -99,7 +99,7 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   Flint::setLoggingLevel(3);
   // cpu tests
   flintInit(FLINT_BACKEND_ONLY_CPU);
-  enable_eager_execution();
+  //  enable_eager_execution();
   for (const auto &bench : benches) {
     flogging(F_INFO, bench.first + "...");
     times.insert({bench.first, {bench.second(false), 0}});

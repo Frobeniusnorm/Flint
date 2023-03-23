@@ -29,7 +29,6 @@
 #include <typeinfo>
 #include <unordered_map>
 #include <vector>
-
 static void openclCallback(const char *errinfo, const void *privateinfo,
                            size_t cb, void *user_data) {
   flogging(F_WARNING, "{OpenCL} " + std::string(errinfo));
