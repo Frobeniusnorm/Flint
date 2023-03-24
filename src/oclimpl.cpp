@@ -228,6 +228,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&res_mem) !=
       CL_SUCCESS)
     flogging(F_ERROR, "Could not load Argument to kernel!");
+  std::cout << "loading R" << std::endl;
   // push operation information on demand
   switch (node->operation->op_type) {
   case FMATMUL: {
@@ -248,10 +249,11 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   } break;
   case FREDUCE_MUL:
   case FREDUCE_SUM: {
-    int dim = ((int *)node->operation->additional_data)[0];
-    if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)&dim) !=
+    int *dim = ((int *)node->operation->additional_data);
+    if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)dim) !=
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
+    std::cout << "dim: " << *dim << std::endl;
   } break;
   default:
     break;
@@ -271,7 +273,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     if (mem_id) {
       mem_obj = mem_id;
     } else {
-      mem_obj = create_gpu_memory(node, CL_MEM_READ_ONLY);
+      mem_obj = create_gpu_memory(pred, CL_MEM_READ_ONLY);
       if (op->op_type == FSTORE)
         ((FStore *)op->additional_data)->mem_id = mem_obj;
       else
@@ -281,15 +283,14 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     if (do_write) {
       void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
                                          : pred->result_data->data;
-      write_events.emplace_back();
       err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_TRUE, 0,
                                       total_size * type_size, data, 0, nullptr,
-                                      &write_events[write_events.size() - 1]);
+                                      nullptr);
       if (err_code != CL_SUCCESS) {
-        std::string msg = "Unknown Error while loading data to GPU!";
+        std::string msg = "Unknown Error while loading data to GPU! Error: ";
         if (err_code == CL_OUT_OF_HOST_MEMORY)
           msg = "Not enough memory to load data to GPU!";
-        flogging(F_ERROR, msg);
+        flogging(F_ERROR, msg + std::to_string(err_code));
       }
     }
     if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&mem_obj) !=

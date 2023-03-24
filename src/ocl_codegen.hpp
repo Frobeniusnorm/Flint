@@ -676,14 +676,15 @@ static std::string generateEagerCode(FGraphNode *node) {
   case FREDUCE_SUM:
   case FREDUCE_MUL:
     // it_dim, shape_dim
-    code += "if(index >= num_entriesR) return;\n";
+    code += "if(index >= num_entries0) return;\n";
     code += typeString(node->operation->data_type) + " res = " +
             to_string(node->operation->op_type == FREDUCE_SUM ? 0 : 1) + ";\n";
 
-    code += "for(long i = 0; i < shape[reduce_dim]; i++){\n";
-    code += " const " + typeString(node->operation->data_type) +
-            " curr = P[(index / it_dim) * it_dim * shape_dim + index % it_dim "
-            "+ i * it_dim];\n";
+    code += "for(long i = 0; i < shape_dim0; i++){\n";
+    code +=
+        " const " + typeString(node->operation->data_type) +
+        " curr = P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % it_dim0 "
+        "+ i * it_dim0];\n";
     code += " res " +
             string(node->operation->op_type == FREDUCE_SUM ? "+=" : "*=") +
             "curr;\n}";
