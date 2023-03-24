@@ -173,6 +173,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   const auto prog = eager_cache.find(hash);
   cl_kernel kernel;
   cl_int err_code;
+  std::list<cl_mem> to_free;
   // check if the kernel already exists or if it has to be generated
   if (prog == eager_cache.end()) {
     // generate code
@@ -228,7 +229,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       CL_SUCCESS)
     flogging(F_ERROR, "Could not load Argument to kernel!");
   // push operation information on demand
-  if (node->operation->op_type == FMATMUL) {
+  switch (node->operation->op_type) {
+  case FMATMUL: {
     long total_size_puffer = total_size_node;
     if (clSetKernelArg(kernel, par_index++, sizeof(long),
                        (void *)&total_size_puffer) != CL_SUCCESS)
@@ -243,6 +245,16 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
           CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
     }
+  } break;
+  case FREDUCE_MUL:
+  case FREDUCE_SUM: {
+    int dim = ((int *)node->operation->additional_data)[0];
+    if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)&dim) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  } break;
+  default:
+    break;
   }
   for (int i = 0; i < node->num_predecessor; i++) {
     FGraphNode *pred = node->predecessors[i];
@@ -288,16 +300,72 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
                        (void *)&total_size) != CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
     // push dimensions on demand
-    if (node->operation->op_type == FMATMUL) {
+    switch (node->operation->op_type) {
+    case FMATMUL:
       if (clSetKernelArg(kernel, par_index++, sizeof(int),
                          (void *)&op->dimensions) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
+      break;
+    case FREDUCE_SUM:
+    case FREDUCE_MUL: {
+      int dim = ((int *)node->operation->additional_data)[0];
+      const FOperation *pred = node->predecessors[0]->operation;
+      long it_dim = 1; // iteration size <=> product of all dimensions along dim
+      for (size_t d = dim + 1; d < pred->dimensions; d++)
+        it_dim *= pred->shape[d];
+      const long shape_dim = pred->shape[dim];
+      if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                         (void *)&op->dimensions) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&it_dim) !=
+          CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                         (void *)&shape_dim) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+    } break;
+    case FTRANSPOSE: {
+      if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                         (void *)&op->dimensions) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      const FOperation *pred = node->predecessors[0]->operation;
+      std::vector<long> acc_sizes_d(op->dimensions);
+      std::vector<long> acc_sizes_s(op->dimensions);
+      acc_sizes_d[op->dimensions - 1] = 1;
+      acc_sizes_s[op->dimensions - 1] = 1;
+      for (int dim = op->dimensions - 2; dim >= 0; dim--) {
+        acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
+        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred->shape[dim + 1];
+      }
+      cl_mem asd_mem = clCreateBuffer(context, CL_MEM_READ_ONLY,
+                                      op->dimensions * sizeof(long),
+                                      acc_sizes_d.data(), &err_code);
+      if (!asd_mem)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                         (void *)&asd_mem) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      cl_mem ass_mem = clCreateBuffer(context, CL_MEM_READ_ONLY,
+                                      op->dimensions * sizeof(long),
+                                      acc_sizes_s.data(), &err_code);
+      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                         (void *)&ass_mem) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      if (!ass_mem)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      to_free.push_back(asd_mem);
+      to_free.push_back(ass_mem);
+    } break;
+    default:
+      break;
     }
   }
   // execute it
   err_code = clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &total_size_node,
                                     nullptr, write_events.size(),
                                     write_events.data(), nullptr);
+  for (cl_event ev : write_events)
+    clReleaseEvent(ev);
   if (err_code != CL_SUCCESS) {
     std::string msg;
     switch (err_code) {
@@ -324,6 +392,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   err_code = clEnqueueReadBuffer(queue, node->result_data->mem_id, CL_TRUE, 0,
                                  total_size_node * type_size_node,
                                  node->result_data->data, 0, nullptr, nullptr);
+  for (cl_mem tfn : to_free)
+    clReleaseMemObject(tfn);
   if (err_code != CL_SUCCESS) {
     std::string msg = "Unknown Error while reading the result!";
     if (err_code == CL_OUT_OF_HOST_MEMORY)
@@ -495,6 +565,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   err_code =
       clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &global_size, nullptr,
                              writeEvents.size(), writeEvents.data(), nullptr);
+  for (cl_event ev : writeEvents)
+    clReleaseEvent(ev);
   if (err_code != CL_SUCCESS) {
     string msg;
     switch (err_code) {

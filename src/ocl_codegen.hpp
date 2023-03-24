@@ -507,9 +507,20 @@ static std::string generateEagerCode(FGraphNode *node) {
     break;
   case FREDUCE_SUM:
   case FREDUCE_MUL:
+    code += ", int reduce_dim";
+    code += ", __constant " +
+            typeString(node->predecessors[0]->operation->data_type) +
+            "* P0, const long num_entries0, const int dimensions0, const long "
+            "it_dim0, const long shape_dim0";
+    break;
   case FSLICE:
   case FREPEAT:
-  case FTRANSPOSE:
+  case FTRANSPOSE: {
+    code += ", __constant " +
+            typeString(node->predecessors[0]->operation->data_type) +
+            "* P0, const long num_entries0, const int dimensions0, __constant "
+            "long* acc_sizes_d, __constant long* acc_sizes_s";
+  } break;
   case FEXTEND:
     // TODO
   default:
@@ -664,9 +675,33 @@ static std::string generateEagerCode(FGraphNode *node) {
     break;
   case FREDUCE_SUM:
   case FREDUCE_MUL:
+    // it_dim, shape_dim
+    code += "if(index >= num_entriesR) return;\n";
+    code += typeString(node->operation->data_type) + " res = " +
+            to_string(node->operation->op_type == FREDUCE_SUM ? 0 : 1) + ";\n";
+
+    code += "for(long i = 0; i < shape[reduce_dim]; i++){\n";
+    code += " const " + typeString(node->operation->data_type) +
+            " curr = P[(index / it_dim) * it_dim * shape_dim + index % it_dim "
+            "+ i * it_dim];\n";
+    code += " res " +
+            string(node->operation->op_type == FREDUCE_SUM ? "+=" : "*=") +
+            "curr;\n}";
+    code += "R[index] = res;\n";
+    break;
+  case FTRANSPOSE:
+    code += "if(index >= num_entries0) return;\n";
+    code += "long src_index = 0;\n";
+    code += "int i = index";
+    code += "for(int dim = 0; dim < dimensions0; dim++){\n";
+    code += " int curr_idx = i / acc_sizes_d[dim];\n";
+    code += " i %= acc_sizes_d[dim];\n";
+    code += " src_index += curr_idx * acc_sizes_s[dim];\n}\n";
+    code += "R[index] = P0[src_index];\n";
+    break;
+    break;
   case FSLICE:
   case FREPEAT:
-  case FTRANSPOSE:
   case FEXTEND:
   case FNUM_OPERATION_TYPES:
     break;
