@@ -264,14 +264,13 @@ static void executeNode(FGraphNode *node,
     }
     // calculate start and step size in flattened array
     size_t start = 0;
-    std::vector<size_t> step(node->operation->dimensions);
-    for (long d = 0; d < step.size(); d++) {
+    for (unsigned int d = 0; d < node->operation->dimensions; d++) {
       start += slice->start[d] * acc_sizes_pred[d];
     }
     // calculate for each entry corresponding element
     for (size_t i = from; i < from + size; i++) {
       size_t j = start;
-      for (size_t d = 0; d < step.size(); d++) {
+      for (unsigned int d = 0; d < node->operation->dimensions; d++) {
         // get dimension index
         size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
         // reproject

@@ -513,7 +513,13 @@ static std::string generateEagerCode(FGraphNode *node) {
             "* P0, const long num_entries0, const int dimensions0, const long "
             "it_dim0, const long shape_dim0";
     break;
-  case FSLICE:
+  case FSLICE: {
+    code += ", const long num_entriesR, __constant " +
+            typeString(node->predecessors[0]->operation->data_type) + "* P0";
+    code += ", const long num_entries0, const int dimensions0";
+    code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
+    code += ", __constant int* steps, const long start";
+  } break;
   case FREPEAT:
   case FTRANSPOSE: {
     code += ", __constant " +
@@ -700,8 +706,15 @@ static std::string generateEagerCode(FGraphNode *node) {
     code += " src_index += curr_idx * acc_sizes_s[dim];\n}\n";
     code += "R[index] = P0[src_index];\n";
     break;
-    break;
   case FSLICE:
+    code += "if(index >= num_entriesR) return;\n";
+    code += "long j = start;\n";
+    code += "for (int d = 0; d < dimensions0; d++){\n";
+    code += " long di = (d == 0 ? index : index % acc_sizes[d - 1]) / "
+            "acc_sizes[d];\n";
+    code += " j += di * step[d] * acc_sizes_pred[d];\n}\n";
+    code += "R[index] = P0[j];\n";
+    break;
   case FREPEAT:
   case FEXTEND:
   case FNUM_OPERATION_TYPES:

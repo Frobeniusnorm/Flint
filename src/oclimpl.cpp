@@ -362,6 +362,61 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       to_free.push_back(asd_mem);
       to_free.push_back(ass_mem);
     } break;
+    case FSLICE: {
+      if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                         (void *)&op->dimensions) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      FSlice *slice = (FSlice *)node->operation->additional_data;
+      // flattened shape data
+      std::vector<size_t> acc_sizes(node->operation->dimensions);
+      std::vector<size_t> acc_sizes_pred(acc_sizes.size());
+      for (long d = node->operation->dimensions - 1; d >= 0; d--) {
+        if (d == node->operation->dimensions - 1) {
+          acc_sizes[d] = 1;
+          acc_sizes_pred[d] = 1;
+        } else {
+          acc_sizes_pred[d] =
+              acc_sizes_pred[d + 1] * pred->operation->shape[d + 1];
+          acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
+        }
+      }
+      cl_mem acc_mem = clCreateBuffer(
+          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+          op->dimensions * sizeof(long), acc_sizes.data(), &err_code);
+      if (!acc_mem)
+        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                              std::to_string(err_code));
+      cl_mem acc_pred_mem = clCreateBuffer(
+          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+          op->dimensions * sizeof(long), acc_sizes_pred.data(), &err_code);
+      if (!acc_pred_mem)
+        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                              std::to_string(err_code));
+      // allocate steps
+      cl_mem steps =
+          clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                         op->dimensions * sizeof(long), slice->step, &err_code);
+      if (!steps)
+        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                              std::to_string(err_code));
+      // calculate start and step size in flattened array
+      long start = 0;
+      for (unsigned int d = 0; d < node->operation->dimensions; d++) {
+        start += slice->start[d] * acc_sizes_pred[d];
+      }
+      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                         (void *)&acc_mem) != CL_SUCCESS ||
+          clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                         (void *)&acc_pred_mem) != CL_SUCCESS ||
+          clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&steps) !=
+              CL_SUCCESS ||
+          clSetKernelArg(kernel, par_index++, sizeof(long), (void *)start) !=
+              CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      to_free.push_back(acc_mem);
+      to_free.push_back(acc_pred_mem);
+      to_free.push_back(steps);
+    } break;
     default:
       break;
     }
