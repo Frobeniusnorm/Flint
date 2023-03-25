@@ -693,7 +693,7 @@ static std::string generateEagerCode(FGraphNode *node) {
   case FTRANSPOSE:
     code += "if(index >= num_entries0) return;\n";
     code += "long src_index = 0;\n";
-    code += "int i = index";
+    code += "int i = index;\n";
     code += "for(int dim = 0; dim < dimensions0; dim++){\n";
     code += " int curr_idx = i / acc_sizes_d[dim];\n";
     code += " i %= acc_sizes_d[dim];\n";

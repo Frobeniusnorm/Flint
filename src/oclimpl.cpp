@@ -228,7 +228,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&res_mem) !=
       CL_SUCCESS)
     flogging(F_ERROR, "Could not load Argument to kernel!");
-  std::cout << "loading R" << std::endl;
   // push operation information on demand
   switch (node->operation->op_type) {
   case FMATMUL: {
@@ -253,7 +252,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)dim) !=
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
-    std::cout << "dim: " << *dim << std::endl;
   } break;
   default:
     break;
@@ -335,20 +333,27 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       acc_sizes_d[op->dimensions - 1] = 1;
       acc_sizes_s[op->dimensions - 1] = 1;
       for (int dim = op->dimensions - 2; dim >= 0; dim--) {
-        acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
+        acc_sizes_d[dim] =
+            acc_sizes_d[dim + 1] * node->operation->shape[dim + 1];
         acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred->shape[dim + 1];
       }
-      cl_mem asd_mem = clCreateBuffer(context, CL_MEM_READ_ONLY,
-                                      op->dimensions * sizeof(long),
-                                      acc_sizes_d.data(), &err_code);
+      const int *transpositions = (int *)node->operation->additional_data;
+      std::vector<long> acc_sizes_st(op->dimensions);
+      for (int i = 0; i < op->dimensions; i++) {
+        acc_sizes_st[i] = acc_sizes_s[transpositions[i]];
+      }
+      cl_mem asd_mem = clCreateBuffer(
+          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+          op->dimensions * sizeof(long), acc_sizes_d.data(), &err_code);
       if (!asd_mem)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
+        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                              std::to_string(err_code));
       if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
                          (void *)&asd_mem) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
-      cl_mem ass_mem = clCreateBuffer(context, CL_MEM_READ_ONLY,
-                                      op->dimensions * sizeof(long),
-                                      acc_sizes_s.data(), &err_code);
+      cl_mem ass_mem = clCreateBuffer(
+          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+          op->dimensions * sizeof(long), acc_sizes_st.data(), &err_code);
       if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
                          (void *)&ass_mem) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
