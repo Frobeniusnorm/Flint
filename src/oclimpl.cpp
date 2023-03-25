@@ -156,6 +156,9 @@ static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
 #define MAX_NUMBER_PARAMS 2
 static std::unordered_map<long, std::pair<cl_program, cl_kernel>> eager_cache;
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
+  if (node->result_data || node->operation->op_type == FSTORE ||
+      node->operation->op_type == FCONST)
+    return node;
   int hash =
       (node->operation->op_type << 2) |
       node->operation->data_type; // 4 types, 2 bits are enough to decode them
@@ -253,6 +256,12 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
   } break;
+  case FSLICE: {
+    long total_size_puffer = total_size_node;
+    if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                       (void *)&total_size_puffer) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  }
   default:
     break;
   }
@@ -327,7 +336,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       if (clSetKernelArg(kernel, par_index++, sizeof(int),
                          (void *)&op->dimensions) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
-      const FOperation *pred = node->predecessors[0]->operation;
       std::vector<long> acc_sizes_d(op->dimensions);
       std::vector<long> acc_sizes_s(op->dimensions);
       acc_sizes_d[op->dimensions - 1] = 1;
@@ -335,7 +343,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       for (int dim = op->dimensions - 2; dim >= 0; dim--) {
         acc_sizes_d[dim] =
             acc_sizes_d[dim + 1] * node->operation->shape[dim + 1];
-        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred->shape[dim + 1];
+        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op->shape[dim + 1];
       }
       const int *transpositions = (int *)node->operation->additional_data;
       std::vector<long> acc_sizes_st(op->dimensions);
@@ -367,6 +375,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
                          (void *)&op->dimensions) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
       FSlice *slice = (FSlice *)node->operation->additional_data;
+      std::cout << slice->step[1] << std::endl;
       // flattened shape data
       std::vector<size_t> acc_sizes(node->operation->dimensions);
       std::vector<size_t> acc_sizes_pred(acc_sizes.size());
@@ -375,8 +384,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
           acc_sizes[d] = 1;
           acc_sizes_pred[d] = 1;
         } else {
-          acc_sizes_pred[d] =
-              acc_sizes_pred[d + 1] * pred->operation->shape[d + 1];
+          acc_sizes_pred[d] = acc_sizes_pred[d + 1] * op->shape[d + 1];
           acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
         }
       }
@@ -410,7 +418,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
                          (void *)&acc_pred_mem) != CL_SUCCESS ||
           clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&steps) !=
               CL_SUCCESS ||
-          clSetKernelArg(kernel, par_index++, sizeof(long), (void *)start) !=
+          clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&start) !=
               CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
       to_free.push_back(acc_mem);
