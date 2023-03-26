@@ -520,7 +520,13 @@ static std::string generateEagerCode(FGraphNode *node) {
     code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
     code += ", __constant long* steps, const long start";
   } break;
-  case FREPEAT:
+  case FREPEAT: {
+    code += ", const long num_entriesR, __constant " +
+            typeString(node->predecessors[0]->operation->data_type) + "* P0";
+    code += ", const long num_entries0, const int dimensions0";
+    code += ", __constant long* acc_sizes_d, __constant long* acc_sizes_s";
+    code += ", __constant long* pred_shape";
+  } break;
   case FTRANSPOSE: {
     code += ", __constant " +
             typeString(node->predecessors[0]->operation->data_type) +
@@ -584,52 +590,52 @@ static std::string generateEagerCode(FGraphNode *node) {
               "(double)P1[index%num_entries1]);";
   } break;
   case FNEG:
-    code += "if(index >= num_entries0) return;\n";
-    code += "R[index] = "
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
             "-P0[index];";
     break;
   case FLOG:
-    code += "if(index >= num_entries0) return;\n";
-    code += "R[index] = "
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
             "log(P0[index]);";
     break;
   case FSIGN:
-    code += "if(index >= num_entries0) return;\n";
-    code += "R[index] = "
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
             "P0[index] >= 0 ? 1 : -1;";
     break;
   case FEVEN:
-    code += "if(index >= num_entries0) return;\n";
-    code += "R[index] = "
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
             "P0[index] % 2 == 0 ? 1 : 0;";
     break;
   case FMATMUL: {
-    code += "if(index >= num_entriesR) return;\n";
-    code += typeString(node->operation->data_type) + " res = 0;\n";
-    code += "long j = (index % (l * n)) / n;\n";
-    code += "long k = (index % (l * n)) % n;\n";
     code +=
-        "long base_p0 = dimensions0 > 2 ? (index / (l * n)) * (l * m) : 0;\n";
-    code +=
-        "long base_p1 = dimensions1 > 2 ? (index / (l * n)) * (m * n) : 0;\n";
-    code += "for(int i = 0; i < m; i++){\n res += P0[base_p0 + j * m + i] * "
-            "P1[base_p1 + i * n + k];\n}";
-    code += "R[index] = res;\n";
+        "if(index >= num_entriesR) return;\n" +
+        typeString(node->operation->data_type) +
+        " res = 0;\n"
+        "long j = (index % (l * n)) / n;\n"
+        "long k = (index % (l * n)) % n;\n"
+        "long base_p0 = dimensions0 > 2 ? (index / (l * n)) * (l * m) : 0;\n"
+        "long base_p1 = dimensions1 > 2 ? (index / (l * n)) * (m * n) : 0;\n"
+        "for(int i = 0; i < m; i++){\n res += P0[base_p0 + j * m + i] * "
+        "P1[base_p1 + i * n + k];\n}"
+        "R[index] = res;\n";
     break;
   }
   case FABS:
-    code += "if(index >= num_entries0) return;\n";
-    code += "R[index] = "
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
             "P0[index] < 0 ? -P0[index] : P0[index];";
     break;
   case FLOG2:
-    code += "if(index >= num_entries0) return;\n";
-    code += "R[index] = "
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
             "log2(P0[index]);";
     break;
   case FLOG10:
-    code += "if(index >= num_entries0) return;\n";
-    code += "R[index] = "
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
             "log10(P0[index]);";
     break;
   // case FLATTEN:
@@ -686,9 +692,10 @@ static std::string generateEagerCode(FGraphNode *node) {
     code += typeString(node->operation->data_type) + " res = " +
             to_string(node->operation->op_type == FREDUCE_SUM ? 0 : 1) + ";\n";
 
-    code += "for(long i = 0; i < shape_dim0; i++){\n";
     code +=
-        " const " + typeString(node->operation->data_type) +
+        "for(long i = 0; i < shape_dim0; i++){\n"
+        " const " +
+        typeString(node->operation->data_type) +
         " curr = P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % it_dim0 "
         "+ i * it_dim0];\n";
     code += " res " +
@@ -697,25 +704,33 @@ static std::string generateEagerCode(FGraphNode *node) {
     code += "R[index] = res;\n";
     break;
   case FTRANSPOSE:
-    code += "if(index >= num_entries0) return;\n";
-    code += "long src_index = 0;\n";
-    code += "int i = index;\n";
-    code += "for(int dim = 0; dim < dimensions0; dim++){\n";
-    code += " int curr_idx = i / acc_sizes_d[dim];\n";
-    code += " i %= acc_sizes_d[dim];\n";
-    code += " src_index += curr_idx * acc_sizes_s[dim];\n}\n";
-    code += "R[index] = P0[src_index];\n";
+    code += "if(index >= num_entries0) return;\n"
+            "long src_index = 0;\n"
+            "int i = index;\n"
+            "for(int dim = 0; dim < dimensions0; dim++){\n"
+            " int curr_idx = i / acc_sizes_d[dim];\n"
+            " i %= acc_sizes_d[dim];\n"
+            " src_index += curr_idx * acc_sizes_s[dim];\n}\n"
+            "R[index] = P0[src_index];\n";
     break;
   case FSLICE:
-    code += "if(index >= num_entriesR) return;\n";
-    code += "long j = start;\n";
-    code += "for (int d = 0; d < dimensions0; d++){\n";
-    code += " long di = (d == 0 ? index : index % acc_sizes[d - 1]) / "
-            "acc_sizes[d];\n";
-    code += " j += di * steps[d] * acc_sizes_pred[d];\n}\n";
-    code += "R[index] = P0[j];\n";
+    code += "if(index >= num_entriesR) return;\n"
+            "long j = start;\n"
+            "for (int d = 0; d < dimensions0; d++){\n"
+            " long di = (d == 0 ? index : index % acc_sizes[d - 1]) /"
+            "acc_sizes[d];\n"
+            " j += di * steps[d] * acc_sizes_pred[d];\n}\n"
+            "R[index] = P0[j];\n";
     break;
   case FREPEAT:
+    code += "if(index >= num_entriesR) return;\n"
+            "long src_index = 0;\n"
+            "int i = index;\n"
+            "for (int dim = 0; dim < dimensions0; dim++){\n"
+            " int curr = i / acc_sizes_d[dim];\n"
+            " i %= acc_sizes_d[dim];\n"
+            " src_index += (curr % pred_shape[dim]) * acc_sizes_s[dim];\n}\n"
+            "R[index] = P0[src_index];\n";
   case FEXTEND:
   case FNUM_OPERATION_TYPES:
     break;
