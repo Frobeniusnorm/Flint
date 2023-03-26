@@ -179,6 +179,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   std::list<cl_mem> to_free;
   // check if the kernel already exists or if it has to be generated
   if (prog == eager_cache.end()) {
+    auto start = std::chrono::high_resolution_clock::now();
     // generate code
     std::string code = generateEagerCode(node);
     // generate kernel
@@ -216,6 +217,10 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     if (err_code != CL_SUCCESS)
       flogging(F_ERROR, "kernel compilation failed!");
     eager_cache.insert({hash, {prog, kernel}});
+    const std::chrono::duration<double, std::milli> elapsed =
+        std::chrono::high_resolution_clock::now() - start;
+    flogging(F_DEBUG,
+             "Compilation took " + std::to_string(elapsed.count()) + "ms");
   } else {
     kernel = prog->second.second;
   }
@@ -439,11 +444,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
             acc_sizes_d[dim + 1] * node->operation->shape[dim + 1];
         acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op->shape[dim + 1];
       }
-      const int *transpositions = (int *)node->operation->additional_data;
-      std::vector<long> acc_sizes_st(op->dimensions);
-      for (int i = 0; i < op->dimensions; i++) {
-        acc_sizes_st[i] = acc_sizes_s[transpositions[i]];
-      }
       cl_mem asd_mem = clCreateBuffer(
           context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
           op->dimensions * sizeof(long), acc_sizes_d.data(), &err_code);
@@ -455,7 +455,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
         flogging(F_ERROR, "Could not load Argument to kernel!");
       cl_mem ass_mem = clCreateBuffer(
           context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-          op->dimensions * sizeof(long), acc_sizes_st.data(), &err_code);
+          op->dimensions * sizeof(long), acc_sizes_s.data(), &err_code);
       if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
                          (void *)&ass_mem) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
