@@ -261,6 +261,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
   } break;
+  case FEXTEND:
   case FREPEAT:
   case FSLICE: {
     long total_size_puffer = total_size_node;
@@ -460,6 +461,59 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
                          (void *)&ass_mem) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
       if (!ass_mem)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      cl_mem predshape_mem =
+          clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                         op->dimensions * sizeof(long), op->shape, &err_code);
+      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                         (void *)&predshape_mem) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      to_free.push_back(asd_mem);
+      to_free.push_back(ass_mem);
+      to_free.push_back(predshape_mem);
+    } break;
+    case FEXTEND: {
+      if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                         (void *)&op->dimensions) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      std::vector<long> acc_sizes_d(op->dimensions);
+      std::vector<long> acc_sizes_s(op->dimensions);
+      acc_sizes_d[op->dimensions - 1] = 1;
+      acc_sizes_s[op->dimensions - 1] = 1;
+      for (int dim = op->dimensions - 2; dim >= 0; dim--) {
+        acc_sizes_d[dim] =
+            acc_sizes_d[dim + 1] * node->operation->shape[dim + 1];
+        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op->shape[dim + 1];
+      }
+      cl_mem asd_mem = clCreateBuffer(
+          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+          op->dimensions * sizeof(long), acc_sizes_d.data(), &err_code);
+      if (!asd_mem)
+        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                              std::to_string(err_code));
+      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                         (void *)&asd_mem) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      cl_mem ass_mem = clCreateBuffer(
+          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+          op->dimensions * sizeof(long), acc_sizes_s.data(), &err_code);
+      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                         (void *)&ass_mem) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      if (!ass_mem)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      const FExtend *extend = (FExtend *)node->operation->additional_data;
+      cl_mem steps_mem = clCreateBuffer(
+          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+          op->dimensions * sizeof(long), extend->step, &err_code);
+      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                         (void *)&steps_mem) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      cl_mem start_mem = clCreateBuffer(
+          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+          op->dimensions * sizeof(long), extend->start, &err_code);
+      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                         (void *)&start_mem) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
       cl_mem predshape_mem =
           clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
@@ -724,6 +778,10 @@ void flintCleanup_gpu() {
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
     for (auto &k : kernel_cache) {
+      clReleaseKernel(k.second.second);
+      clReleaseProgram(k.second.first);
+    }
+    for (auto &k : eager_cache) {
       clReleaseKernel(k.second.second);
       clReleaseProgram(k.second.first);
     }

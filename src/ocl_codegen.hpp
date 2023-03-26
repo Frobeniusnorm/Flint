@@ -533,8 +533,14 @@ static std::string generateEagerCode(FGraphNode *node) {
             "* P0, const long num_entries0, const int dimensions0, __constant "
             "long* acc_sizes_d, __constant long* acc_sizes_s";
   } break;
-  case FEXTEND:
-    // TODO
+  case FEXTEND: {
+    code += ", const long num_entriesR, __constant " +
+            typeString(node->predecessors[0]->operation->data_type) + "* P0";
+    code += ", const long num_entries0, const int dimensions0";
+    code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
+    code += ", __constant long* steps, __constant long* start, __constant "
+            "long* pred_shape";
+  } break;
   default:
     for (int i = 0; i < node->num_predecessor; i++)
       code += ", __constant " +
@@ -731,7 +737,28 @@ static std::string generateEagerCode(FGraphNode *node) {
             " i %= acc_sizes_d[dim];\n"
             " src_index += (curr % pred_shape[dim]) * acc_sizes_s[dim];\n}\n"
             "R[index] = P0[src_index];\n";
+    break;
   case FEXTEND:
+    code += "if(index >= num_entriesR) return;\n"
+            "long j = 0;\n"
+            "int set_zero = 0;\n"
+            "for(int d = 0; d < dimensions0; d++){\n"
+            " long step = steps[d];\n"
+            " int inv = step < 0;\n"
+            " if(inv) step = -step;\n"
+            " long di = (d == 0 ? index : index % acc_sizes[d - 1]) / "
+            "acc_sizes[d];\n"
+            " if(di < start[d]){\n"
+            "  set_zero = 1;\n  break;\n }\n"
+            " di -= start[d];\n"
+            " if(di % step != 0){\n  set_zero = 1;\n  break;\n }\n"
+            " di /= step;\n"
+            " if(di >= pred_shape[d]){\n"
+            "  set_zero = 1;\n  break;\n }\n"
+            " if(inv) di = pred_shape[d] - di - 1;\n"
+            " j += di * acc_sizes_pred[d];\n}\n"
+            "R[index] = set_zero ? 0 : P0[j];\n";
+    break;
   case FNUM_OPERATION_TYPES:
     break;
   }
