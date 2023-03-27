@@ -24,12 +24,12 @@
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
 const char *fop_to_string[] = {
-    "FSTORE",      "FCONST",   "FADD",   "FSUB",     "FMUL",
-    "FDIV",        "FPOW",     "FNEG",   "FLOG",     "FSIGN",
-    "FEVEN",       "FLOG2",    "FLOG10", "FLATTEN",  "FMATMUL",
-    "FCONVERSION", "FRESHAPE", "FMIN",   "FMAX",     "FREDUCE_SUM",
-    "FREDUCE_MUL", "FSLICE",   "FABS",   "FREPEAT",  "FTRANSPOSE",
-    "FEXTEND",     "FLESS",    "FEQUAL", "FGREATER",
+    "FSTORE",   "FADD",   "FSUB",     "FMUL",        "FDIV",
+    "FPOW",     "FNEG",   "FLOG",     "FSIGN",       "FEVEN",
+    "FLOG2",    "FLOG10", "FLATTEN",  "FMATMUL",     "FCONVERSION",
+    "FRESHAPE", "FMIN",   "FMAX",     "FREDUCE_SUM", "FREDUCE_MUL",
+    "FSLICE",   "FABS",   "FREPEAT",  "FTRANSPOSE",  "FEXTEND",
+    "FLESS",    "FEQUAL", "FGREATER",
 };
 static bool use_cpu, use_gpu, eager_execution = false;
 // converts c++ type to flint type

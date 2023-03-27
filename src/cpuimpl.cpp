@@ -591,7 +591,7 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
         pred_data[i].data = store->data;
         pred_data[i].num_entries = store->num_entries;
       } else if (pred->result_data) {
-        pred_data[i].data = pred->result_data;
+        pred_data[i].data = pred->result_data->data;
         pred_data[i].num_entries = pred->result_data->num_entries;
       } else { // FConst
         pred_data[i].num_entries = 1;
