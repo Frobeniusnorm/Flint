@@ -156,8 +156,7 @@ static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
 #define MAX_NUMBER_PARAMS 2
 static std::unordered_map<long, std::pair<cl_program, cl_kernel>> eager_cache;
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
-  if (node->result_data || node->operation->op_type == FSTORE ||
-      node->operation->op_type == FCONST)
+  if (node->result_data || node->operation->op_type == FSTORE)
     return node;
   int hash =
       (node->operation->op_type << 2) |
@@ -167,8 +166,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   // because the operation type should be at the same position
   for (int i = 0; i < MAX_NUMBER_PARAMS - node->num_predecessor; i++)
     hash <<= 2;
-  if (clFinish(queue) != CL_SUCCESS)
-    flogging(F_ERROR, "OpenCL queue error!");
   // meaning we have to left shift the opcode params + 1 times, for a maximum
   // parameter number of 3 (for now) this makes 8 bits = 1 byte for the types
   // leaving 3 bytes for the operation type. If the maximum number of parameters
@@ -177,6 +174,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   cl_kernel kernel;
   cl_int err_code;
   std::list<cl_mem> to_free;
+  if (clFinish(queue) != CL_SUCCESS)
+    flogging(F_ERROR, "OpenCL queue error!");
   // check if the kernel already exists or if it has to be generated
   if (prog == eager_cache.end()) {
     auto start = std::chrono::high_resolution_clock::now();
@@ -272,26 +271,31 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   default:
     break;
   }
+  // process parameters i.e. predecessors
   for (int i = 0; i < node->num_predecessor; i++) {
     FGraphNode *pred = node->predecessors[i];
     FOperation *op = pred->operation;
     cl_mem mem_obj = nullptr;
     bool do_write = false;
     size_t type_size = typeSize(op->data_type);
-    size_t total_size = op->op_type == FSTORE
-                            ? ((FStore *)op->additional_data)->num_entries
-                            : pred->result_data->num_entries;
-    cl_mem mem_id = op->op_type == FSTORE
-                        ? ((FStore *)op->additional_data)->mem_id
-                        : pred->result_data->mem_id;
+    size_t total_size;
+    cl_mem mem_id;
+    if (op->op_type == FSTORE) {
+      total_size = ((FStore *)op->additional_data)->num_entries;
+      mem_id = ((FStore *)op->additional_data)->mem_id;
+    } else {
+      total_size = pred->result_data->num_entries;
+      mem_id = pred->result_data->mem_id;
+    }
     if (mem_id) {
       mem_obj = mem_id;
     } else {
       mem_obj = create_gpu_memory(pred, CL_MEM_READ_ONLY);
       if (op->op_type == FSTORE)
         ((FStore *)op->additional_data)->mem_id = mem_obj;
-      else
+      else {
         pred->result_data->mem_id = mem_obj;
+      }
       do_write = true;
     }
     if (do_write) {
@@ -579,14 +583,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   }
   if (node->result_data)
     return node;
-  if (node->operation->op_type == FCONST) {
-    node->result_data = new FResultData();
-    node->result_data->num_entries = 1;
-    node->result_data->mem_id = nullptr;
-    node->result_data->data =
-        ((FConst *)node->operation->additional_data)->value;
-    return node;
-  }
   if (node->operation->op_type == FSTORE) {
     node->result_data = new FResultData();
     FStore *store = (FStore *)node->operation->additional_data;

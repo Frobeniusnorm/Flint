@@ -44,8 +44,7 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
   bool all_calculated = true;
   for (int i = 0; i < f->num_predecessor; i++) {
     if (f->predecessors[i]->operation->op_type != FSTORE &&
-        !f->predecessors[i]->result_data &&
-        f->predecessors[i]->operation->op_type != FCONST) {
+        !f->predecessors[i]->result_data) {
       all_calculated = false;
       break;
     }
@@ -176,12 +175,6 @@ void fFreeGraph(FGraphNode *graph) {
           }
           delete st;
         } break;
-        case FCONST: {
-          FConst *c = (FConst *)gn->operation->additional_data;
-          if (!freed_res)
-            free(c->value);
-          delete c;
-        } break;
         case FSLICE: {
           FSlice *s = (FSlice *)gn->operation->additional_data;
           free(s->end);
@@ -296,14 +289,6 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
       src = ord->data;
       data = &crd->data;
     } break;
-    case FCONST: {
-      FConst *ord = (FConst *)node->operation->additional_data;
-      FConst *crd = new FConst();
-      op->additional_data = (void *)crd;
-      num_entries = 1;
-      src = ord->value;
-      data = &crd->value;
-    } break;
     case FSLICE: {
       FSlice *osl = (FSlice *)node->operation->additional_data;
       FSlice *csl = new FSlice();
@@ -346,6 +331,16 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
   }
   return foo;
 }
+static inline FType higher_type(const FType a, const FType b) {
+  FType highest = F_INT32;
+  if (a == F_FLOAT64 || (b == F_FLOAT64))
+    highest = F_FLOAT64;
+  else if (a == F_FLOAT32 || (b == F_FLOAT32))
+    highest = F_FLOAT32;
+  else if (a == F_INT64 || (b == F_INT64))
+    highest = F_INT64;
+  return highest;
+}
 static inline void initShape_keep(FOperation *op, FOperation *a,
                                   FOperation *b) {
   size_t *src = nullptr;
@@ -378,14 +373,7 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
   op->shape = (size_t *)malloc(sizeof(size_t) * op->dimensions);
   memcpy((void *)op->shape, src, sizeof(size_t) * op->dimensions);
   // determine type
-  FType highest = F_INT32;
-  if (a->data_type == F_FLOAT64 || (b && b->data_type == F_FLOAT64))
-    highest = F_FLOAT64;
-  else if (a->data_type == F_FLOAT32 || (b && b->data_type == F_FLOAT32))
-    highest = F_FLOAT32;
-  else if (a->data_type == F_INT64 || (b && b->data_type == F_INT64))
-    highest = F_INT64;
-  op->data_type = highest;
+  op->data_type = b ? higher_type(a->data_type, b->data_type) : a->data_type;
 }
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
@@ -438,38 +426,36 @@ FGraphNode *fmax_g(FGraphNode *a, FGraphNode *b) {
 }
 template <typename T>
 static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, const T b) {
-  FConst *cons = new FConst();
+  FStore *store = new FStore();
   T *cons_val = (T *)malloc(sizeof(T));
-  *cons_val = b;
-  cons->value = (void *)cons_val;
+  cons_val[0] = b;
+  store->data = cons_val;
+  store->num_entries = 1;
+  store->mem_id = nullptr;
   FOperation *cop = new FOperation();
-  cop->op_type = FCONST;
+  cop->op_type = FSTORE;
   cop->dimensions = 1;
   cop->shape = safe_mal<size_t>(1);
   cop->shape[0] = 1;
-  cop->additional_data = (void *)cons;
-  if (typeid(T) == typeid(int))
-    cop->data_type = F_INT32;
-  else if (typeid(T) == typeid(long))
-    cop->data_type = F_INT64;
-  else if (typeid(T) == typeid(float))
-    cop->data_type = F_FLOAT32;
-  else if (typeid(T) == typeid(double))
-    cop->data_type = F_FLOAT64;
+  cop->additional_data = (void *)store;
+  cop->data_type = toFlintType<T>();
+  op->data_type = higher_type(a->operation->data_type, toFlintType<T>());
   return addNode(op, {a, addNode(cop, {})});
 }
 template <typename T>
 static FGraphNode *addConstWithNode(FOperation *op, const T b, FGraphNode *a) {
-  FConst *cons = new FConst();
+  FStore *store = new FStore();
   T *cons_val = (T *)malloc(sizeof(T));
   *cons_val = b;
-  cons->value = (void *)cons_val;
+  store->data = (void *)cons_val;
+  store->num_entries = 1;
+  store->mem_id = nullptr;
   FOperation *cop = new FOperation();
-  cop->op_type = FCONST;
+  cop->op_type = FSTORE;
   cop->dimensions = 1;
   cop->shape = safe_mal<size_t>(1);
   cop->shape[0] = 1;
-  cop->additional_data = (void *)cons;
+  cop->additional_data = (void *)store;
   if (typeid(T) == typeid(int))
     cop->data_type = F_INT32;
   else if (typeid(T) == typeid(long))
@@ -527,7 +513,8 @@ template <typename T> static inline FGraphNode *add(FGraphNode *a, const T b) {
   op->additional_data = nullptr;
   op->op_type = FADD;
   initShape_keep(op, a->operation, nullptr);
-  return addNodeWithConst(op, a, b);
+  FGraphNode *foo = addNodeWithConst(op, a, b);
+  return foo;
 }
 FGraphNode *fadd_cd(FGraphNode *a, const double b) { return add<double>(a, b); }
 FGraphNode *fadd_cf(FGraphNode *a, const float b) { return add<float>(a, b); }
@@ -539,6 +526,7 @@ template <typename T> static inline FGraphNode *sub(FGraphNode *a, const T b) {
   op->op_type = FSUB;
   op->additional_data = nullptr;
   initShape_keep(op, a->operation, nullptr);
+  op->data_type = higher_type(a->operation->data_type, toFlintType<T>());
   return addNodeWithConst(op, a, b);
 }
 template <typename T> static inline FGraphNode *sub(const T b, FGraphNode *a) {

@@ -331,10 +331,6 @@ template <typename T> struct Tensor<T, 1> {
       return std::vector<T>((T *)store->data,
                             (T *)store->data + store->num_entries);
     }
-    case FCONST: {
-      FConst *store = (FConst *)node->operation->additional_data;
-      return std::vector<T>(*(T *)store->value);
-    }
     default: {
       execute();
       FResultData *store = node->result_data;
@@ -345,7 +341,7 @@ template <typename T> struct Tensor<T, 1> {
   }
   void execute() {
     const FOperation *op = node->operation;
-    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
+    if (op->op_type != FSTORE && !node->result_data) {
       node->reference_counter--;
       node = fExecuteGraph(node);
       node->reference_counter++;
@@ -353,7 +349,7 @@ template <typename T> struct Tensor<T, 1> {
   }
   void execute_cpu() {
     const FOperation *op = node->operation;
-    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
+    if (op->op_type != FSTORE && !node->result_data) {
       node->reference_counter--;
       node = fExecuteGraph_cpu(node);
       node->reference_counter++;
@@ -361,7 +357,7 @@ template <typename T> struct Tensor<T, 1> {
   }
   void execute_gpu() {
     const FOperation *op = node->operation;
-    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
+    if (op->op_type != FSTORE && !node->result_data) {
       node->reference_counter--;
       node = fExecuteGraph_gpu(node);
       node->reference_counter++;
@@ -378,7 +374,7 @@ template <typename T> struct Tensor<T, 1> {
                        : op->data_type == F_FLOAT32 ? std::string("FLOAT32")
                                                     : std::string("FLOAT64")) +
                       ", shape: " + std::to_string(shape[0]) + ">(";
-    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST)
+    if (op->op_type != FSTORE && !node->result_data)
       foo += "<not yet executed>";
     else {
       if (node->result_data) {
@@ -391,11 +387,6 @@ template <typename T> struct Tensor<T, 1> {
           FStore *store = (FStore *)node->operation->additional_data;
           foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
               (T *)store->data, (T *)store->data + store->num_entries));
-          break;
-        }
-        case FCONST: {
-          FConst *store = (FConst *)node->operation->additional_data;
-          foo += std::to_string(((T *)store->value)[0]);
           break;
         }
         default: // to make the compiler shut up
@@ -646,19 +637,19 @@ template <typename T, unsigned int n> struct Tensor {
 
   void execute() {
     FOperation *op = node->operation;
-    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
+    if (op->op_type != FSTORE && !node->result_data) {
       node = fExecuteGraph(node);
     }
   }
   void execute_cpu() {
     FOperation *op = node->operation;
-    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
+    if (op->op_type != FSTORE && !node->result_data) {
       node = fExecuteGraph_cpu(node);
     }
   }
   void execute_gpu() {
     FOperation *op = node->operation;
-    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST) {
+    if (op->op_type != FSTORE && !node->result_data) {
       node = fExecuteGraph_gpu(node);
     }
   }
@@ -708,7 +699,7 @@ template <typename T, unsigned int n> struct Tensor {
                        : op->data_type == F_FLOAT32 ? std::string("FLOAT32")
                                                     : std::string("FLOAT64")) +
                       ", shape: " + FLINT_HPP_HELPER::arrayString(shape) + ">(";
-    if (op->op_type != FSTORE && !node->result_data && op->op_type != FCONST)
+    if (op->op_type != FSTORE && !node->result_data)
       foo += "<not yet executed>";
     else {
       foo += "\n" + FLINT_HPP_HELPER::vectorString(this->operator*(), " ");

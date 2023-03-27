@@ -66,30 +66,6 @@ generateCode(FGraphNode *node,
              to_string(num_entries) + "];\n" + code;
     } else
       switch (node->operation->op_type) {
-      case FCONST:
-        switch (node->operation->data_type) {
-        case F_INT32: {
-          FConst *actcst = (FConst *)node->operation->additional_data;
-          code = type + " " + name + " = " +
-                 to_string(*((int *)actcst->value)) + ";\n" + code;
-        } break;
-        case F_INT64: {
-          FConst *actcst = (FConst *)node->operation->additional_data;
-          code = type + " " + name + " = " +
-                 to_string(*((long *)actcst->value)) + ";\n" + code;
-        } break;
-        case F_FLOAT64: {
-          FConst *actcst = (FConst *)node->operation->additional_data;
-          code = type + " " + name + " = " +
-                 to_string(*((double *)actcst->value)) + ";\n" + code;
-        } break;
-        case F_FLOAT32: {
-          FConst *actcst = (FConst *)node->operation->additional_data;
-          code = type + " " + name + " = " +
-                 to_string(*((float *)actcst->value)) + ";\n" + code;
-        } break;
-        }
-        break;
       // Binary Operators
       case FADD:
       case FSUB:
@@ -491,7 +467,6 @@ static std::string generateEagerCode(FGraphNode *node) {
   // generate parameters
   switch (node->operation->op_type) {
   case FSTORE:
-  case FCONST:
   case FLATTEN:
   case FRESHAPE:
   case FNUM_OPERATION_TYPES:
@@ -553,8 +528,8 @@ static std::string generateEagerCode(FGraphNode *node) {
   switch (node->operation->op_type) {
   case FADD:
     code += "if(index >= num_entries0 && index >= num_entries1) "
-            "return;\nR[index] = "
-            "P0[index%num_entries0] + P1[index%num_entries1];";
+            " return;\n"
+            "R[index] = P0[index%num_entries0] + P1[index%num_entries1];";
     break;
   case FSUB:
     code += "if(index >= num_entries0 && index >= num_entries1) "

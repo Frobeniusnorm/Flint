@@ -63,8 +63,9 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
                              int index_man_2, FGraphNode *curr) {
   switch (op) {
   case FADD:
-    for (size_t i = from; i < from + size; i++)
+    for (size_t i = from; i < from + size; i++) {
       result[i] = data1[i % index_man_1] + data2[i % index_man_2];
+    }
     break;
   case FSUB:
     for (size_t i = from; i < from + size; i++)
@@ -572,9 +573,9 @@ inline void chooseExecutionMethod(FGraphNode *node,
 FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
   if (!initialized)
     flintInit_cpu();
-  bool is_data_node = node->operation->op_type == FSTORE || node->result_data ||
-                      node->operation->op_type == FCONST;
-
+  if (node->result_data)
+    return node;
+  bool is_data_node = node->operation->op_type == FSTORE;
   std::vector<CPUResultData> pred_data(node->num_predecessor);
   size_t total = 1;
   for (int i = 0; i < node->operation->dimensions; i++)
@@ -639,13 +640,7 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
       byte_size = sizeof(double) * total;
       break;
     }
-    if (node->operation->op_type == FCONST)
-      memcpy(data, ((FConst *)node->operation->additional_data)->value,
-             byte_size);
-    else {
-      memcpy(data, ((FStore *)node->operation->additional_data)->data,
-             byte_size);
-    }
+    memcpy(data, ((FStore *)node->operation->additional_data)->data, byte_size);
   }
   FResultData *rd = new FResultData();
   rd->data = data;
@@ -660,14 +655,6 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
     flintInit_cpu();
   if (node->result_data)
     return node;
-  if (node->operation->op_type == FCONST) {
-    node->result_data = new FResultData();
-    node->result_data->num_entries = 1;
-    node->result_data->mem_id = nullptr;
-    node->result_data->data =
-        ((FConst *)node->operation->additional_data)->value;
-    return node;
-  }
   if (node->operation->op_type == FSTORE) {
     node->result_data = new FResultData();
     FStore *store = (FStore *)node->operation->additional_data;
@@ -705,8 +692,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
     size_t size = 1;
     for (int j = 0; j < curr->operation->dimensions; j++)
       size *= curr->operation->shape[j];
-    if (curr->operation->op_type == FSTORE || curr->result_data ||
-        curr->operation->op_type == FCONST) {
+    if (curr->operation->op_type == FSTORE) {
       CPUResultData foo;
       foo.shape =
           vector<size_t>(curr->operation->shape,
@@ -717,19 +703,10 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
         foo.num_entries = store->num_entries;
         foo.data = store->data;
       } else {
-        switch (curr->operation->op_type) {
-        case FSTORE: {
+        if (curr->operation->op_type == FSTORE) {
           FStore *store = (FStore *)curr->operation->additional_data;
           foo.num_entries = store->num_entries;
           foo.data = store->data;
-        } break;
-        case FCONST: {
-          FConst *cdata = (FConst *)curr->operation->additional_data;
-          foo.num_entries = 1;
-          foo.data = cdata->value;
-        } break;
-        default: // idc
-          break;
         }
       }
       results.insert({curr, foo});
@@ -791,14 +768,12 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   if (!is_eager_execution()) {
     // free all other data
     for (auto &[gn, rd] : results) {
-      if (gn != node && gn->operation->op_type != FSTORE && !gn->result_data &&
-          gn->operation->op_type != FCONST)
+      if (gn != node && gn->operation->op_type != FSTORE && !gn->result_data)
         free(rd.data);
     }
   } else {
     for (auto &[gn, rd] : results) {
-      if (gn != node && gn->operation->op_type != FSTORE && !gn->result_data &&
-          gn->operation->op_type != FCONST) {
+      if (gn != node && gn->operation->op_type != FSTORE && !gn->result_data) {
         FResultData *result = new FResultData();
         result->data = rd.data;
         result->num_entries = rd.num_entries;

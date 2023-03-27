@@ -334,8 +334,7 @@ FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
     if (curr == dx) {
       sol = adjoints[curr];
     }
-    if (curr->operation->op_type == FSTORE ||
-        curr->operation->op_type == FCONST)
+    if (curr->operation->op_type == FSTORE)
       continue;
     FGraphNode *adj = adjoints[curr];
     for (int i = 0; i < curr->num_predecessor; i++) {

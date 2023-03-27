@@ -54,7 +54,7 @@ TEST_SUITE("Graph implementation") {
       vector<size_t> shape = {10, 10};
       FGraphNode *gn2 =
           fCreateGraph(v1.data(), v1.size(), F_INT64, shape.data(), 2);
-      gn2 = fsub(gn2, 7.0);
+      gn2 = fsub(gn2, 7);
       FGraphNode *gn21 =
           fCreateGraph(v2.data(), v2.size(), F_INT32, shape.data(), 2);
       gn2 = fdiv(gn2, gn21);
@@ -72,7 +72,7 @@ TEST_SUITE("Graph implementation") {
       CHECK_EQ(store2->num_entries, 100);
       FGraphNode *left1 = gn2->predecessors[0];
       FGraphNode *const1 = left1->predecessors[1];
-      CHECK_EQ(const1->operation->op_type, FCONST);
+      CHECK_EQ(const1->operation->op_type, FSTORE);
       fFreeGraph(gn2);
     }
   }
@@ -758,12 +758,15 @@ TEST_SUITE("C++ Bindings") {
 TEST_CASE("Eager Execution") {
   enable_eager_execution();
   Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
-  t1 = t1 + 3.0f;
+  Tensor<float, 1> c1{4.0f, 4.0f};
+  t1 = t1 + c1 - 1.0f;
   Tensor<double, 3> t2{{{0.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
   Tensor<double, 3> t3 = t2.matmul(t1);
   Tensor<double, 3> t4 =
       t3.slice(TensorRange(0, 1), TensorRange(0, 1), TensorRange(0, 2));
+  std::cout << t4 << std::endl;
   Tensor<double, 1> t5 = t4.reduce_mul(2).flattened();
+  std::cout << t5 << std::endl;
   CHECK_EQ(20, t5[0]);
   disable_eager_execution();
 }

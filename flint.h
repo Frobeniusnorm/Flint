@@ -111,7 +111,6 @@ int is_eager_execution();
 enum FType { F_INT32, F_INT64, F_FLOAT32, F_FLOAT64 };
 enum FOperationType {
   FSTORE,
-  FCONST,
   FADD,
   FSUB,
   FMUL,
