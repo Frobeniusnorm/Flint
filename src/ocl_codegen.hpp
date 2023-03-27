@@ -460,12 +460,16 @@ generateCode(FGraphNode *node,
   code = "int index = get_global_id(0);\n" + code;
   return code;
 }
-static std::string generateEagerCode(FGraphNode *node) {
+static std::string generateEagerCode(FOperationType operation, FType res_type,
+                                     std::vector<FType> parameter_types) {
   using namespace std;
-  string code = "__kernel void execute_graph(__global " +
-                typeString(node->operation->data_type) + "* R";
+  std::string type_info = to_string(res_type);
+  for (FType t : parameter_types)
+    type_info += to_string(t);
+  string code = "__kernel void " + string(fop_to_string[operation]) +
+                type_info + "(__global " + typeString(res_type) + "* R";
   // generate parameters
-  switch (node->operation->op_type) {
+  switch (operation) {
   case FSTORE:
   case FLATTEN:
   case FRESHAPE:
@@ -474,8 +478,7 @@ static std::string generateEagerCode(FGraphNode *node) {
   case FMATMUL:
     code += ", long num_entriesR, long l, long m, long n";
     for (int i = 0; i < 2; i++) {
-      code += ", __constant " +
-              typeString(node->predecessors[i]->operation->data_type) + "* P" +
+      code += ", __constant " + typeString(parameter_types[i]) + "* P" +
               to_string(i) + ", long num_entries" + to_string(i) +
               ", int dimensions" + to_string(i);
     }
@@ -483,49 +486,46 @@ static std::string generateEagerCode(FGraphNode *node) {
   case FREDUCE_SUM:
   case FREDUCE_MUL:
     code += ", int reduce_dim";
-    code += ", __constant " +
-            typeString(node->predecessors[0]->operation->data_type) +
+    code += ", __constant " + typeString(parameter_types[0]) +
             "* P0, const long num_entries0, const int dimensions0, const long "
             "it_dim0, const long shape_dim0";
     break;
   case FSLICE: {
     code += ", const long num_entriesR, __constant " +
-            typeString(node->predecessors[0]->operation->data_type) + "* P0";
+            typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
     code += ", __constant long* steps, const long start";
   } break;
   case FREPEAT: {
     code += ", const long num_entriesR, __constant " +
-            typeString(node->predecessors[0]->operation->data_type) + "* P0";
+            typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes_d, __constant long* acc_sizes_s";
     code += ", __constant long* pred_shape";
   } break;
   case FTRANSPOSE: {
-    code += ", __constant " +
-            typeString(node->predecessors[0]->operation->data_type) +
+    code += ", __constant " + typeString(parameter_types[0]) +
             "* P0, const long num_entries0, const int dimensions0, __constant "
             "long* acc_sizes_d, __constant long* acc_sizes_s";
   } break;
   case FEXTEND: {
     code += ", const long num_entriesR, __constant " +
-            typeString(node->predecessors[0]->operation->data_type) + "* P0";
+            typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
     code += ", __constant long* steps, __constant long* start, __constant "
             "long* pred_shape";
   } break;
   default:
-    for (int i = 0; i < node->num_predecessor; i++)
-      code += ", __constant " +
-              typeString(node->predecessors[i]->operation->data_type) + "* P" +
+    for (int i = 0; i < parameter_types.size(); i++)
+      code += ", __constant " + typeString(parameter_types[i]) + "* P" +
               to_string(i) + ", long num_entries" + to_string(i);
     break;
   }
   code += "){\nconst int index = get_global_id(0);\n";
   // generate code
-  switch (node->operation->op_type) {
+  switch (operation) {
   case FADD:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             " return;\n"
@@ -548,20 +548,18 @@ static std::string generateEagerCode(FGraphNode *node) {
     break;
   case FPOW: {
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    FOperation *x = node->predecessors[0]->operation;
-    FOperation *y = node->predecessors[1]->operation;
-    string type = typeString(node->operation->data_type);
-    if ((x->data_type == F_FLOAT32 || x->data_type == F_FLOAT64) &&
-        (y->data_type == F_FLOAT32 || y->data_type == F_FLOAT64))
+    string type = typeString(res_type);
+    if ((parameter_types[0] == F_FLOAT32 || parameter_types[0] == F_FLOAT64) &&
+        (parameter_types[1] == F_FLOAT32 || parameter_types[1] == F_FLOAT64))
       code += "R[index] = pow((" + type + ")P0[index%num_entries0], (" + type +
               ")P1[index%num_entries1]);";
-    else if (x->data_type == F_INT64 &&
-             (y->data_type == F_INT32 || y->data_type == F_INT64))
+    else if (parameter_types[0] == F_INT64 &&
+             (parameter_types[1] == F_INT32 || parameter_types[1] == F_INT64))
       code += "R[index] "
               "= (long)pown((double)P0[index%num_entries0], "
               "(int)P1[index%num_entries1]);";
-    else if (x->data_type == F_INT32 &&
-             (y->data_type == F_INT32 || y->data_type == F_INT64))
+    else if (parameter_types[0] == F_INT32 &&
+             (parameter_types[1] == F_INT32 || parameter_types[1] == F_INT64))
       code += "R[index] = "
               "(int)pown((float)P0[index%num_entries0], "
               "(int)P1[index%num_entries1]);";
@@ -592,8 +590,7 @@ static std::string generateEagerCode(FGraphNode *node) {
     break;
   case FMATMUL: {
     code +=
-        "if(index >= num_entriesR) return;\n" +
-        typeString(node->operation->data_type) +
+        "if(index >= num_entriesR) return;\n" + typeString(res_type) +
         " res = 0;\n"
         "long j = (index % (l * n)) / n;\n"
         "long k = (index % (l * n)) % n;\n"
@@ -623,65 +620,53 @@ static std::string generateEagerCode(FGraphNode *node) {
   // case FRESHAPE:
   case FCONVERSION:
     code += "if(index >= num_entries0) return;\n";
-    code +=
-        "R[index] = (" + typeString(node->operation->data_type) + ")P0[index];";
+    code += "R[index] = (" + typeString(res_type) + ")P0[index];";
     break;
   case FMIN:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(node->predecessors[0]->operation->data_type) +
-            " a = P0[index%num_entries0];\n";
-    code += typeString(node->predecessors[1]->operation->data_type) +
-            " b = P1[index%num_entries1];\n";
-    code += "R[index] = a < b ? a : b";
+    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
+    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += "R[index] = a < b ? a : b;";
     break;
   case FMAX:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(node->predecessors[0]->operation->data_type) +
-            " a = P0[index%num_entries0];\n";
-    code += typeString(node->predecessors[1]->operation->data_type) +
-            " b = P1[index%num_entries1];\n";
-    code += "R[index] = a > b ? a : b";
+    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
+    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += "R[index] = a > b ? a : b;";
     break;
   case FLESS:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(node->predecessors[0]->operation->data_type) +
-            " a = P0[index%num_entries0];\n";
-    code += typeString(node->predecessors[1]->operation->data_type) +
-            " b = P1[index%num_entries1];\n";
-    code += "R[index] = a < b ? 1 : 0";
+    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
+    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += "R[index] = a < b ? 1 : 0;";
     break;
   case FEQUAL:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(node->predecessors[0]->operation->data_type) +
-            " a = P0[index%num_entries0];\n";
-    code += typeString(node->predecessors[1]->operation->data_type) +
-            " b = P1[index%num_entries1];\n";
-    code += "R[index] = a == b ? 1 : 0";
+    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
+    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += "R[index] = a == b ? 1 : 0;";
     break;
   case FGREATER:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(node->predecessors[0]->operation->data_type) +
-            " a = P0[index%num_entries0];\n";
-    code += typeString(node->predecessors[1]->operation->data_type) +
-            " b = P1[index%num_entries1];\n";
-    code += "R[index] = a > b ? 1 : 0";
+    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
+    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += "R[index] = a > b ? 1 : 0;";
     break;
   case FREDUCE_SUM:
   case FREDUCE_MUL:
     // it_dim, shape_dim
     code += "if(index >= num_entries0) return;\n";
-    code += typeString(node->operation->data_type) + " res = " +
-            to_string(node->operation->op_type == FREDUCE_SUM ? 0 : 1) + ";\n";
+    code += typeString(res_type) +
+            " res = " + to_string(operation == FREDUCE_SUM ? 0 : 1) + ";\n";
 
     code +=
         "for(long i = 0; i < shape_dim0; i++){\n"
         " const " +
-        typeString(node->operation->data_type) +
+        typeString(res_type) +
         " curr = P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % it_dim0 "
         "+ i * it_dim0];\n";
-    code += " res " +
-            string(node->operation->op_type == FREDUCE_SUM ? "+=" : "*=") +
-            "curr;\n}";
+    code +=
+        " res " + string(operation == FREDUCE_SUM ? "+=" : "*=") + "curr;\n}";
     code += "R[index] = res;\n";
     break;
   case FTRANSPOSE:
@@ -734,12 +719,10 @@ static std::string generateEagerCode(FGraphNode *node) {
             " j += di * acc_sizes_pred[d];\n}\n"
             "R[index] = set_zero ? 0 : P0[j];\n";
     break;
-  case FNUM_OPERATION_TYPES:
-    break;
   }
   code += "\n}";
   flogging(F_DEBUG, std::string("Eager Kernel Generation for ") +
-                        fop_to_string[node->operation->op_type] + ": " + code);
+                        fop_to_string[operation] + ": " + code);
   return code;
 }
 #endif

@@ -154,10 +154,40 @@ static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
 #include <chrono>
 #include <unordered_map>
 #define MAX_NUMBER_PARAMS 2
-static std::unordered_map<long, std::pair<cl_program, cl_kernel>> eager_cache;
+static std::list<cl_program> eager_programs;
+static std::unordered_map<long, cl_kernel> eager_cache;
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   if (node->result_data || node->operation->op_type == FSTORE)
     return node;
+  if (node->operation->op_type == FLATTEN ||
+      node->operation->op_type == FRESHAPE) {
+    // just copy previous data
+    const FGraphNode *prev = node->predecessors[0];
+    void const *data;
+    size_t num_elems;
+    if (prev->result_data) {
+      data = prev->result_data->data;
+      num_elems = prev->result_data->num_entries;
+    } else {
+      const FStore *store = (FStore *)prev->operation->additional_data;
+      data = store->data;
+      num_elems = store->num_entries;
+    }
+    FResultData *rd = new FResultData();
+    rd->data = nullptr;
+    rd->num_entries = num_elems;
+    rd->mem_id = nullptr;
+    int type_size = typeSize(node->operation->data_type);
+    // TODO !data && memory
+    if (data) {
+      rd->data = malloc(type_size * num_elems);
+      if (!rd->data)
+        flogging(F_ERROR, "Not enough memory to store result!");
+      memcpy(rd->data, data, type_size * num_elems);
+    }
+    node->result_data = rd;
+    return node;
+  }
   int hash =
       (node->operation->op_type << 2) |
       node->operation->data_type; // 4 types, 2 bits are enough to decode them
@@ -180,7 +210,11 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   if (prog == eager_cache.end()) {
     auto start = std::chrono::high_resolution_clock::now();
     // generate code
-    std::string code = generateEagerCode(node);
+    std::vector<FType> par_types(node->num_predecessor);
+    for (int i = 0; i < node->num_predecessor; i++)
+      par_types[i] = node->predecessors[i]->operation->data_type;
+    std::string code = generateEagerCode(node->operation->op_type,
+                                         node->operation->data_type, par_types);
     // generate kernel
     const char *code_data = code.data();
     const size_t code_length = code.length();
@@ -215,13 +249,15 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     kernel = clCreateKernel(prog, "execute_graph", &err_code);
     if (err_code != CL_SUCCESS)
       flogging(F_ERROR, "kernel compilation failed!");
-    eager_cache.insert({hash, {prog, kernel}});
+    eager_programs.push_back(prog);
+    eager_cache.insert({hash, kernel});
     const std::chrono::duration<double, std::milli> elapsed =
         std::chrono::high_resolution_clock::now() - start;
     flogging(F_DEBUG,
              "Compilation took " + std::to_string(elapsed.count()) + "ms");
   } else {
-    kernel = prog->second.second;
+    kernel = prog->second;
+    flogging(F_DEBUG, "Loaded existing eager kernel");
   }
   // result buffer
   size_t total_size_node;
@@ -386,7 +422,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
                          (void *)&op->dimensions) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
       FSlice *slice = (FSlice *)node->operation->additional_data;
-      std::cout << slice->step[1] << std::endl;
       // flattened shape data
       std::vector<size_t> acc_sizes(node->operation->dimensions);
       std::vector<size_t> acc_sizes_pred(acc_sizes.size());
@@ -778,8 +813,9 @@ void flintCleanup_gpu() {
       clReleaseProgram(k.second.first);
     }
     for (auto &k : eager_cache) {
-      clReleaseKernel(k.second.second);
-      clReleaseProgram(k.second.first);
+      clReleaseKernel(k.second);
     }
+    for (auto &p : eager_programs)
+      clReleaseProgram(p);
   }
 }

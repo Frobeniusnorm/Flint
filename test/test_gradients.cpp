@@ -25,6 +25,7 @@ int main(int argc, char **argv) {
   }
   if (doGPU) {
     flintInit(FLINT_BACKEND_ONLY_GPU);
+    enable_eager_execution();
     res = context.run();
     flintCleanup();
   }

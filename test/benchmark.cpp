@@ -91,28 +91,32 @@ double gradient_fun(bool backend) {
 
 void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   unordered_map<string, double (*)(bool)> benches;
+  benches.insert({"gradient_fun", gradient_fun});
   benches.insert({"matrix_multiplication", matrix_multiplication});
   benches.insert({"reduce_fun", reduce_fun});
-  benches.insert({"gradient_fun", gradient_fun});
   /////////////////////////////////////////////////
   unordered_map<string, pair<double, double>> times;
-  Flint::setLoggingLevel(3);
-  // cpu tests
-  flintInit(FLINT_BACKEND_ONLY_CPU);
-  //  enable_eager_execution();
-  for (const auto &bench : benches) {
-    flogging(F_INFO, bench.first + "...");
-    times.insert({bench.first, {bench.second(false), 0}});
+  Flint::setLoggingLevel(5);
+  if (benchmarks & FLINT_BACKEND_ONLY_CPU) {
+    // cpu tests
+    flintInit(FLINT_BACKEND_ONLY_CPU);
+    enable_eager_execution();
+    for (const auto &bench : benches) {
+      flogging(F_INFO, bench.first + "...");
+      times.insert({bench.first, {bench.second(false), 0}});
+    }
+    flintCleanup();
   }
-  flintCleanup();
-  // gpu tests
-  flintInit(FLINT_BACKEND_ONLY_GPU);
-  disable_eager_execution();
-  for (const auto &bench : benches) {
-    flogging(F_INFO, bench.first + "...");
-    times[bench.first].second = bench.second(true);
+  if (benchmarks & FLINT_BACKEND_ONLY_GPU) {
+    // gpu tests
+    flintInit(FLINT_BACKEND_ONLY_GPU);
+    enable_eager_execution();
+    for (const auto &bench : benches) {
+      flogging(F_INFO, bench.first + "...");
+      times[bench.first].second = bench.second(true);
+    }
+    flintCleanup();
   }
-  flintCleanup();
   std::cout
       << "+------------------------+------------------+------------------+"
       << std::endl;

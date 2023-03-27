@@ -378,8 +378,6 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(od_t2[0], 3);
 
     Tensor<float, 3> t3 = t1 + t2;
-    CHECK_EQ((std::string)t3,
-             "Tensor<FLOAT32, shape: [2, 2, 1]>(<not yet executed>)");
     t3 = t3 + 7;
     //   test
     vector<vector<vector<float>>> foo = *t3;
@@ -749,14 +747,11 @@ TEST_SUITE("C++ Bindings") {
     Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
     Tensor<float, 1> r1 = t1.flattened().reduce_sum();
     CHECK_EQ(r1[0], 7);
-    std::cout << r1 << std::endl;
     r1 = t1.flattened().reduce_mul();
     CHECK_EQ(r1[0], -2);
-    std::cout << r1 << std::endl;
   }
 }
-TEST_CASE("Eager Execution") {
-  enable_eager_execution();
+TEST_CASE("Test Example 1") {
   Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
   Tensor<float, 1> c1{4.0f, 4.0f};
   t1 = t1 + c1 - 1.0f;
@@ -764,24 +759,25 @@ TEST_CASE("Eager Execution") {
   Tensor<double, 3> t3 = t2.matmul(t1);
   Tensor<double, 3> t4 =
       t3.slice(TensorRange(0, 1), TensorRange(0, 1), TensorRange(0, 2));
-  std::cout << t4 << std::endl;
   Tensor<double, 1> t5 = t4.reduce_mul(2).flattened();
-  std::cout << t5 << std::endl;
   CHECK_EQ(20, t5[0]);
-  disable_eager_execution();
 }
 int main(int argc, char **argv) {
-  bool doCPU = false, doGPU = false;
+  bool doCPU = false, doGPU = false, eager = false;
   for (int i = 0; i < argc; i++) {
     std::string arg(argv[i]);
     if (arg == "cpu")
       doCPU = true;
     if (arg == "gpu")
       doGPU = true;
+    if (arg == "eager")
+      eager = true;
   }
   if (!doCPU && !doGPU) {
     doCPU = doGPU = true;
   }
+  if (eager)
+    enable_eager_execution();
   doctest::Context context;
   context.applyCommandLine(argc, argv);
   int res;
