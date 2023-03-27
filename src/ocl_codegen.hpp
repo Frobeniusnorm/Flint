@@ -211,15 +211,24 @@ generateCode(FGraphNode *node,
                  " : " + par_name + ";\n" + code;
       } break;
       case FLOG: {
-        code = type + " " + name + " = log(v" +
+        std::string conv = node->operation->data_type == F_INT32   ? "(float)"
+                           : node->operation->data_type == F_INT64 ? "(double)"
+                                                                   : "";
+        code = type + " " + name + " = " + conv + "log(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FLOG2: {
-        code = type + " " + name + " = log2(v" +
+        std::string conv = node->operation->data_type == F_INT32   ? "(float)"
+                           : node->operation->data_type == F_INT64 ? "(double)"
+                                                                   : "";
+        code = type + " " + name + " = " + conv + "log2(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FLOG10: {
-        code = type + " " + name + " = log10(v" +
+        std::string conv = node->operation->data_type == F_INT32   ? "(float)"
+                           : node->operation->data_type == F_INT64 ? "(double)"
+                                                                   : "";
+        code = type + " " + name + " = " + conv + "log10(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FNEG: {
@@ -480,7 +489,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   case FMATMUL:
     code += ", long num_entriesR, long l, long m, long n";
     for (int i = 0; i < 2; i++) {
-      code += ", __global " + typeString(parameter_types[i]) + "* P" +
+      code += ", const __global " + typeString(parameter_types[i]) + "* P" +
               to_string(i) + ", long num_entries" + to_string(i) +
               ", int dimensions" + to_string(i);
     }
@@ -488,31 +497,31 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   case FREDUCE_SUM:
   case FREDUCE_MUL:
     code += ", int reduce_dim";
-    code += ", __global " + typeString(parameter_types[0]) +
+    code += ", const __global " + typeString(parameter_types[0]) +
             "* P0, const long num_entries0, const int dimensions0, const long "
             "it_dim0, const long shape_dim0";
     break;
   case FSLICE: {
-    code += ", const long num_entriesR, __global " +
+    code += ", const long num_entriesR, const __global " +
             typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
     code += ", __constant long* steps, const long start";
   } break;
   case FREPEAT: {
-    code += ", const long num_entriesR, __global " +
+    code += ", const long num_entriesR, const __global " +
             typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes_d, __constant long* acc_sizes_s";
     code += ", __constant long* pred_shape";
   } break;
   case FTRANSPOSE: {
-    code += ", __global " + typeString(parameter_types[0]) +
+    code += ", const __global " + typeString(parameter_types[0]) +
             "* P0, const long num_entries0, const int dimensions0, __constant "
             "long* acc_sizes_d, __constant long* acc_sizes_s";
   } break;
   case FEXTEND: {
-    code += ", const long num_entriesR, __global " +
+    code += ", const long num_entriesR, const __global " +
             typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
@@ -521,7 +530,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   } break;
   default:
     for (int i = 0; i < parameter_types.size(); i++)
-      code += ", __global " + typeString(parameter_types[i]) + "* P" +
+      code += ", const __global " + typeString(parameter_types[i]) + "* P" +
               to_string(i) + ", long num_entries" + to_string(i);
     break;
   }
@@ -575,11 +584,15 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "R[index] = "
             "-P0[index];";
     break;
-  case FLOG:
+  case FLOG: {
+    std::string conv = parameter_types[0] == F_INT32   ? "(float)"
+                       : parameter_types[0] == F_INT64 ? "(double)"
+                                                       : "";
     code += "if(index >= num_entries0) return;\n"
             "R[index] = "
-            "log(P0[index]);";
-    break;
+            "log(" +
+            conv + "P0[index]);";
+  } break;
   case FSIGN:
     code += "if(index >= num_entries0) return;\n"
             "R[index] = "
@@ -608,16 +621,24 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "R[index] = "
             "P0[index] < 0 ? -P0[index] : P0[index];";
     break;
-  case FLOG2:
+  case FLOG2: {
+    std::string conv = parameter_types[0] == F_INT32   ? "(float)"
+                       : parameter_types[0] == F_INT64 ? "(double)"
+                                                       : "";
     code += "if(index >= num_entries0) return;\n"
             "R[index] = "
-            "log2(P0[index]);";
-    break;
-  case FLOG10:
+            "log2(" +
+            conv + "P0[index]);";
+  } break;
+  case FLOG10: {
+    std::string conv = parameter_types[0] == F_INT32   ? "(float)"
+                       : parameter_types[0] == F_INT64 ? "(double)"
+                                                       : "";
     code += "if(index >= num_entries0) return;\n"
             "R[index] = "
-            "log10(P0[index]);";
-    break;
+            "log10(" +
+            conv + "P0[index]);";
+  } break;
   // case FLATTEN:
   // case FRESHAPE:
   case FCONVERSION:

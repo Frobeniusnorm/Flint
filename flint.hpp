@@ -277,19 +277,12 @@ template <typename T> struct Tensor<T, 1> {
     node->reference_counter++;
   }
   T &operator[](const size_t index) {
-    if (node->result_data)
-      return ((T *)node->result_data->data)[index];
-    switch (node->operation->op_type) {
-    case FSTORE: {
-      FStore *store = (FStore *)node->operation->additional_data;
-      return ((T *)store->data)[index];
+    if (node->result_data && !node->result_data->data) {
+      fExecuteGraph_gpu(node);
     }
-    default: {
+    if (!node->result_data)
       execute();
-      FResultData *store = node->result_data;
-      return ((T *)store->data)[index];
-    }
-    }
+    return ((T *)node->result_data->data)[index];
   }
   // move
   Tensor(Tensor &&other) {
@@ -320,47 +313,28 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<T, 1> reduce_mul() { return Tensor<T, 1>(freduce_mul(node, 0), 1); }
   const size_t get_shape() const { return shape[0]; }
   std::vector<T> operator*() {
-    if (node->result_data) {
-      return std::vector<T>((T *)node->result_data->data,
-                            (T *)node->result_data->data +
-                                node->result_data->num_entries);
+    if (node->result_data && !node->result_data->data) {
+      fExecuteGraph_gpu(node);
     }
-    switch (node->operation->op_type) {
-    case FSTORE: {
-      FStore *store = (FStore *)node->operation->additional_data;
-      return std::vector<T>((T *)store->data,
-                            (T *)store->data + store->num_entries);
-    }
-    default: {
+    if (!node->result_data)
       execute();
-      FResultData *store = node->result_data;
-      return std::vector<T>((T *)store->data,
-                            (T *)store->data + store->num_entries);
-    }
-    }
+    return std::vector<T>((T *)node->result_data->data,
+                          (T *)node->result_data->data +
+                              node->result_data->num_entries);
   }
   void execute() {
-    const FOperation *op = node->operation;
-    if (op->op_type != FSTORE && !node->result_data) {
-      node->reference_counter--;
+    if (!node->result_data || !node->result_data->data) {
       node = fExecuteGraph(node);
-      node->reference_counter++;
     }
   }
   void execute_cpu() {
-    const FOperation *op = node->operation;
-    if (op->op_type != FSTORE && !node->result_data) {
-      node->reference_counter--;
+    if (!node->result_data || !node->result_data->data) {
       node = fExecuteGraph_cpu(node);
-      node->reference_counter++;
     }
   }
   void execute_gpu() {
-    const FOperation *op = node->operation;
-    if (op->op_type != FSTORE && !node->result_data) {
-      node->reference_counter--;
+    if (!node->result_data || !node->result_data->data) {
       node = fExecuteGraph_gpu(node);
-      node->reference_counter++;
     }
   }
   Tensor<int, 1> operator-() const { return Tensor<int, 1>(fneg(node), shape); }
@@ -606,50 +580,31 @@ template <typename T, unsigned int n> struct Tensor {
   // to copy the complete data, because of that we recommend the builtin index
   // access of the Tensor.
   storage_type operator*() {
-    if (node->result_data) {
-      FResultData *store = node->result_data;
-      storage_type result(shape[0]);
-      const std::vector<T> src = std::vector<T>(
-          (T *)store->data, (T *)store->data + store->num_entries);
-      bringIntoShape(result, src, 0, 0, total_size);
-      return result;
+    if (node->result_data && !node->result_data->data) {
+      fExecuteGraph_gpu(node);
     }
-    switch (node->operation->op_type) {
-    case FSTORE: {
-      FStore *store = (FStore *)node->operation->additional_data;
-      storage_type result(shape[0]);
-      const std::vector<T> src = std::vector<T>(
-          (T *)store->data, (T *)store->data + store->num_entries);
-      bringIntoShape(result, src, 0, 0, total_size);
-      return result;
-    }
-    default: {
+    if (!node->result_data)
       execute();
-      FResultData *store = node->result_data;
-      storage_type result(shape[0]);
-      const std::vector<T> src = std::vector<T>(
-          (T *)store->data, (T *)store->data + store->num_entries);
-      bringIntoShape(result, src, 0, 0, total_size);
-      return result;
-    }
-    }
+    FResultData *store = node->result_data;
+    storage_type result(shape[0]);
+    const std::vector<T> src =
+        std::vector<T>((T *)store->data, (T *)store->data + store->num_entries);
+    bringIntoShape(result, src, 0, 0, total_size);
+    return result;
   }
 
   void execute() {
-    FOperation *op = node->operation;
-    if (op->op_type != FSTORE && !node->result_data) {
+    if (!node->result_data || !node->result_data->data) {
       node = fExecuteGraph(node);
     }
   }
   void execute_cpu() {
-    FOperation *op = node->operation;
-    if (op->op_type != FSTORE && !node->result_data) {
+    if (!node->result_data || !node->result_data->data) {
       node = fExecuteGraph_cpu(node);
     }
   }
   void execute_gpu() {
-    FOperation *op = node->operation;
-    if (op->op_type != FSTORE && !node->result_data) {
+    if (!node->result_data || !node->result_data->data) {
       node = fExecuteGraph_gpu(node);
     }
   }
@@ -657,39 +612,19 @@ template <typename T, unsigned int n> struct Tensor {
   Tensor<int, n> sign() const { return Tensor<int, n>(fsign(node), shape); }
   Tensor<int, n> even() const { return Tensor<int, n>(feven(node), shape); }
   TensorView<T, n - 1> operator[](const size_t index) {
-    if (node->result_data) {
-      FResultData *store = node->result_data;
-      size_t alrdindx = index;
-      std::vector<size_t> ns(shape.size() - 1);
-      for (size_t i = 1; i < shape.size(); i++) {
-        ns[i - 1] = shape[i];
-        alrdindx *= shape[i];
-      }
-      return TensorView<T, n - 1>((T *)store->data, ns, alrdindx);
+    if (node->result_data && !node->result_data->data) {
+      fExecuteGraph_gpu(node);
     }
-    switch (node->operation->op_type) {
-    case FSTORE: {
-      FStore *store = (FStore *)node->operation->additional_data;
-      size_t alrdindx = index;
-      std::vector<size_t> ns(shape.size() - 1);
-      for (size_t i = 1; i < shape.size(); i++) {
-        ns[i - 1] = shape[i];
-        alrdindx *= shape[i];
-      }
-      return TensorView<T, n - 1>((T *)store->data, ns, alrdindx);
-    }
-    default: {
+    if (!node->result_data)
       execute();
-      FResultData *store = node->result_data;
-      size_t alrdindx = index;
-      std::vector<size_t> ns(shape.size() - 1);
-      for (size_t i = 1; i < shape.size(); i++) {
-        ns[i - 1] = shape[i];
-        alrdindx *= shape[i];
-      }
-      return TensorView<T, n - 1>((T *)store->data, ns, alrdindx);
+    FResultData *store = node->result_data;
+    size_t alrdindx = index;
+    std::vector<size_t> ns(shape.size() - 1);
+    for (size_t i = 1; i < shape.size(); i++) {
+      ns[i - 1] = shape[i];
+      alrdindx *= shape[i];
     }
-    }
+    return TensorView<T, n - 1>((T *)store->data, ns, alrdindx);
   }
   operator std::string() {
     FOperation *op = node->operation;

@@ -176,13 +176,16 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     // just copy previous data
     const FGraphNode *prev = node->predecessors[0];
     void const *data;
+    cl_mem gpu_data;
     size_t num_elems;
     if (prev->result_data) {
       data = prev->result_data->data;
+      gpu_data = prev->result_data->mem_id;
       num_elems = prev->result_data->num_entries;
     } else {
       const FStore *store = (FStore *)prev->operation->additional_data;
       data = store->data;
+      gpu_data = store->mem_id;
       num_elems = store->num_entries;
     }
     FResultData *rd = new FResultData();
@@ -196,6 +199,10 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       if (!rd->data)
         flogging(F_ERROR, "Not enough memory to store result!");
       memcpy(rd->data, data, type_size * num_elems);
+    } else if (gpu_data) {
+      rd->mem_id = create_gpu_memory(node, CL_MEM_READ_ONLY);
+      clEnqueueCopyBuffer(queue, gpu_data, rd->mem_id, 0, 0,
+                          type_size * num_elems, 0, nullptr, nullptr);
     }
     node->result_data = rd;
     return node;
@@ -664,24 +671,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     }
     flogging(F_ERROR, msg);
   }
-  // read result to cpu
-  int type_size_node = typeSize(node->operation->data_type);
-  node->result_data->data = malloc(total_size_node * type_size_node);
-  node->result_data->num_entries = total_size_node;
-  if (!node->result_data->data)
-    flogging(F_ERROR, "Not enough memory to store result!");
-  // wait for result
-  err_code = clEnqueueReadBuffer(queue, node->result_data->mem_id, CL_TRUE, 0,
-                                 total_size_node * type_size_node,
-                                 node->result_data->data, 0, nullptr, nullptr);
   for (cl_mem tfn : to_free)
     clReleaseMemObject(tfn);
-  if (err_code != CL_SUCCESS) {
-    std::string msg = "Unknown Error while reading the result!";
-    if (err_code == CL_OUT_OF_HOST_MEMORY)
-      msg = "Not enough memory to read result!";
-    flogging(F_ERROR, msg);
-  }
   return node;
 }
 static std::unordered_map<std::string, std::pair<cl_program, cl_kernel>>
@@ -690,19 +681,39 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (!initialized) {
     flintInit_gpu();
   }
-  if (node->result_data)
-    return node;
-  if (node->operation->op_type == FSTORE) {
-    node->result_data = new FResultData();
-    FStore *store = (FStore *)node->operation->additional_data;
-    node->result_data->num_entries = store->num_entries;
-    node->result_data->mem_id = store->mem_id;
-    node->result_data->data = store->data;
-    return node;
-  }
   // ensures all previous operations are finished
   if (clFinish(queue) != CL_SUCCESS) {
     flogging(F_ERROR, "OpenCL queue error!");
+  }
+  {
+    if (node->operation->op_type == FSTORE) {
+      node->result_data = new FResultData();
+      FStore *store = (FStore *)node->operation->additional_data;
+      node->result_data->num_entries = store->num_entries;
+      node->result_data->mem_id = store->mem_id;
+      node->result_data->data = store->data;
+    }
+    const FResultData *res = node->result_data;
+    if (res && res->mem_id && !res->data) {
+      // read result to cpu
+      int type_size_node = typeSize(node->operation->data_type);
+      node->result_data->data = malloc(res->num_entries * type_size_node);
+      node->result_data->num_entries = res->num_entries;
+      if (!node->result_data->data)
+        flogging(F_ERROR, "Not enough memory to store result!");
+      // wait for result
+      cl_int err_code = clEnqueueReadBuffer(
+          queue, node->result_data->mem_id, CL_TRUE, 0,
+          res->num_entries * type_size_node, res->data, 0, nullptr, nullptr);
+      if (err_code != CL_SUCCESS) {
+        std::string msg = "Unknown Error while reading the result!";
+        if (err_code == CL_OUT_OF_HOST_MEMORY)
+          msg = "Not enough memory to read result!";
+        flogging(F_ERROR, msg);
+      }
+    }
+    if (res)
+      return node;
   }
   auto start = std::chrono::high_resolution_clock::now();
   FResultData *resultData = new FResultData();
