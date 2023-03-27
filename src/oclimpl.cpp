@@ -147,6 +147,8 @@ static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
                      nullptr, &err_code);
   if (err_code == CL_OUT_OF_HOST_MEMORY)
     flogging(F_ERROR, "Not enough memory to create buffer!");
+  if (err_code != CL_SUCCESS)
+    flogging(F_ERROR, "Unknown Error while creating gpu memory!");
   if (total_size)
     *total_size = total_size_node;
   return result_mem;
@@ -205,7 +207,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   int hash = generateKernelHash(node->operation->op_type,
                                 node->operation->data_type, params_types);
   const auto prog = eager_cache.find(hash);
-  cl_kernel kernel;
+  cl_kernel kernel = nullptr;
   cl_int err_code;
   std::list<cl_mem> to_free;
   if (clFinish(queue) != CL_SUCCESS)
@@ -314,8 +316,9 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
         flogging(F_ERROR, "kernel compilation failed!");
 
       eager_cache.insert({kernel_name.first, curr});
-      if (kernel_name.first == hash)
+      if (kernel_name.first == hash) {
         kernel = curr;
+      }
     }
     if (!kernel)
       flogging(F_ERROR,
@@ -397,7 +400,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     if (mem_id) {
       mem_obj = mem_id;
     } else {
-      mem_obj = create_gpu_memory(pred, CL_MEM_READ_ONLY);
+      mem_obj = create_gpu_memory(pred, CL_MEM_READ_ONLY, &total_size);
       if (op->op_type == FSTORE)
         ((FStore *)op->additional_data)->mem_id = mem_obj;
       else {

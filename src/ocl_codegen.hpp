@@ -480,7 +480,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   case FMATMUL:
     code += ", long num_entriesR, long l, long m, long n";
     for (int i = 0; i < 2; i++) {
-      code += ", __constant " + typeString(parameter_types[i]) + "* P" +
+      code += ", __global " + typeString(parameter_types[i]) + "* P" +
               to_string(i) + ", long num_entries" + to_string(i) +
               ", int dimensions" + to_string(i);
     }
@@ -488,31 +488,31 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   case FREDUCE_SUM:
   case FREDUCE_MUL:
     code += ", int reduce_dim";
-    code += ", __constant " + typeString(parameter_types[0]) +
+    code += ", __global " + typeString(parameter_types[0]) +
             "* P0, const long num_entries0, const int dimensions0, const long "
             "it_dim0, const long shape_dim0";
     break;
   case FSLICE: {
-    code += ", const long num_entriesR, __constant " +
+    code += ", const long num_entriesR, __global " +
             typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
     code += ", __constant long* steps, const long start";
   } break;
   case FREPEAT: {
-    code += ", const long num_entriesR, __constant " +
+    code += ", const long num_entriesR, __global " +
             typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes_d, __constant long* acc_sizes_s";
     code += ", __constant long* pred_shape";
   } break;
   case FTRANSPOSE: {
-    code += ", __constant " + typeString(parameter_types[0]) +
+    code += ", __global " + typeString(parameter_types[0]) +
             "* P0, const long num_entries0, const int dimensions0, __constant "
             "long* acc_sizes_d, __constant long* acc_sizes_s";
   } break;
   case FEXTEND: {
-    code += ", const long num_entriesR, __constant " +
+    code += ", const long num_entriesR, __global " +
             typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
@@ -521,7 +521,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   } break;
   default:
     for (int i = 0; i < parameter_types.size(); i++)
-      code += ", __constant " + typeString(parameter_types[i]) + "* P" +
+      code += ", __global " + typeString(parameter_types[i]) + "* P" +
               to_string(i) + ", long num_entries" + to_string(i);
     break;
   }
@@ -722,7 +722,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "R[index] = set_zero ? 0 : P0[j];\n";
     break;
   }
-  code += "\n}";
+  code += "\n}\n";
   return code;
 }
 #endif

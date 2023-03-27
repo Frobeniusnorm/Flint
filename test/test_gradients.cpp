@@ -4,13 +4,15 @@
 #include "doctest.h"
 #include "grad_test_cases.hpp"
 int main(int argc, char **argv) {
-  bool doCPU = false, doGPU = false;
+  bool doCPU = false, doGPU = false, eager = false;
   for (int i = 0; i < argc; i++) {
     std::string arg(argv[i]);
     if (arg == "cpu")
       doCPU = true;
     if (arg == "gpu")
       doGPU = true;
+    if (arg == "eager")
+      eager = true;
   }
   if (!doCPU && !doGPU) {
     doCPU = doGPU = true;
@@ -20,12 +22,15 @@ int main(int argc, char **argv) {
   int res;
   if (doCPU) {
     flintInit(FLINT_BACKEND_ONLY_CPU);
+    if (eager)
+      enable_eager_execution();
     res = context.run();
     flintCleanup();
   }
   if (doGPU) {
     flintInit(FLINT_BACKEND_ONLY_GPU);
-    enable_eager_execution();
+    if (eager)
+      enable_eager_execution();
     res = context.run();
     flintCleanup();
   }
