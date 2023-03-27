@@ -461,13 +461,15 @@ generateCode(FGraphNode *node,
   return code;
 }
 static std::string generateEagerCode(FOperationType operation, FType res_type,
-                                     std::vector<FType> parameter_types) {
+                                     std::vector<FType> parameter_types,
+                                     std::string &kernel_name) {
   using namespace std;
   std::string type_info = to_string(res_type);
   for (FType t : parameter_types)
     type_info += to_string(t);
-  string code = "__kernel void " + string(fop_to_string[operation]) +
-                type_info + "(__global " + typeString(res_type) + "* R";
+  kernel_name = string(fop_to_string[operation]) + type_info;
+  string code = "__kernel void " + kernel_name + "(__global " +
+                typeString(res_type) + "* R";
   // generate parameters
   switch (operation) {
   case FSTORE:
@@ -721,8 +723,6 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     break;
   }
   code += "\n}";
-  flogging(F_DEBUG, std::string("Eager Kernel Generation for ") +
-                        fop_to_string[operation] + ": " + code);
   return code;
 }
 #endif

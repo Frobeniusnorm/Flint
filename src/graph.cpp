@@ -331,16 +331,6 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
   }
   return foo;
 }
-static inline FType higher_type(const FType a, const FType b) {
-  FType highest = F_INT32;
-  if (a == F_FLOAT64 || (b == F_FLOAT64))
-    highest = F_FLOAT64;
-  else if (a == F_FLOAT32 || (b == F_FLOAT32))
-    highest = F_FLOAT32;
-  else if (a == F_INT64 || (b == F_INT64))
-    highest = F_INT64;
-  return highest;
-}
 static inline void initShape_keep(FOperation *op, FOperation *a,
                                   FOperation *b) {
   size_t *src = nullptr;
@@ -373,7 +363,7 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
   op->shape = (size_t *)malloc(sizeof(size_t) * op->dimensions);
   memcpy((void *)op->shape, src, sizeof(size_t) * op->dimensions);
   // determine type
-  op->data_type = b ? higher_type(a->data_type, b->data_type) : a->data_type;
+  op->data_type = b ? higherType(a->data_type, b->data_type) : a->data_type;
 }
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
@@ -439,7 +429,7 @@ static FGraphNode *addNodeWithConst(FOperation *op, FGraphNode *a, const T b) {
   cop->shape[0] = 1;
   cop->additional_data = (void *)store;
   cop->data_type = toFlintType<T>();
-  op->data_type = higher_type(a->operation->data_type, toFlintType<T>());
+  op->data_type = higherType(a->operation->data_type, toFlintType<T>());
   return addNode(op, {a, addNode(cop, {})});
 }
 template <typename T>
@@ -526,7 +516,7 @@ template <typename T> static inline FGraphNode *sub(FGraphNode *a, const T b) {
   op->op_type = FSUB;
   op->additional_data = nullptr;
   initShape_keep(op, a->operation, nullptr);
-  op->data_type = higher_type(a->operation->data_type, toFlintType<T>());
+  op->data_type = higherType(a->operation->data_type, toFlintType<T>());
   return addNodeWithConst(op, a, b);
 }
 template <typename T> static inline FGraphNode *sub(const T b, FGraphNode *a) {

@@ -151,9 +151,19 @@ static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
     *total_size = total_size_node;
   return result_mem;
 }
+#define MAX_NUMBER_PARAMS 2
+static int generateKernelHash(FOperationType operation, FType return_type,
+                              std::vector<FType> params) {
+  int hash = (operation << 3) |
+             return_type; // 4 types, 2 bits are enough to decode them
+  for (int i = 0; i < params.size(); i++)
+    hash = (hash << 3) | params[i];
+  for (int i = 0; i < MAX_NUMBER_PARAMS - params.size(); i++)
+    hash = hash << 3;
+  return hash;
+}
 #include <chrono>
 #include <unordered_map>
-#define MAX_NUMBER_PARAMS 2
 static std::list<cl_program> eager_programs;
 static std::unordered_map<long, cl_kernel> eager_cache;
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
@@ -188,18 +198,12 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     node->result_data = rd;
     return node;
   }
-  int hash =
-      (node->operation->op_type << 2) |
-      node->operation->data_type; // 4 types, 2 bits are enough to decode them
+  std::vector<FType> params_types(node->num_predecessor);
   for (int i = 0; i < node->num_predecessor; i++)
-    hash = (hash << 2) | node->predecessors[i]->operation->data_type;
+    params_types[i] = node->predecessors[i]->operation->data_type;
   // because the operation type should be at the same position
-  for (int i = 0; i < MAX_NUMBER_PARAMS - node->num_predecessor; i++)
-    hash <<= 2;
-  // meaning we have to left shift the opcode params + 1 times, for a maximum
-  // parameter number of 3 (for now) this makes 8 bits = 1 byte for the types
-  // leaving 3 bytes for the operation type. If the maximum number of parameters
-  // are increased this has to be adapted.
+  int hash = generateKernelHash(node->operation->op_type,
+                                node->operation->data_type, params_types);
   const auto prog = eager_cache.find(hash);
   cl_kernel kernel;
   cl_int err_code;
@@ -209,12 +213,69 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   // check if the kernel already exists or if it has to be generated
   if (prog == eager_cache.end()) {
     auto start = std::chrono::high_resolution_clock::now();
-    // generate code
+    // generate code for this operation for all datatypes
     std::vector<FType> par_types(node->num_predecessor);
-    for (int i = 0; i < node->num_predecessor; i++)
-      par_types[i] = node->predecessors[i]->operation->data_type;
-    std::string code = generateEagerCode(node->operation->op_type,
-                                         node->operation->data_type, par_types);
+    std::string code;
+    std::string our_kernel;
+    std::vector<std::pair<int, std::string>> all_kernels;
+    switch (node->operation->op_type) {
+    case FEVEN:
+    case FCONVERSION: { // depends on operation TODO
+      for (int i = 0; i < node->num_predecessor; i++)
+        par_types[i] = node->predecessors[i]->operation->data_type;
+      code =
+          generateEagerCode(node->operation->op_type,
+                            node->operation->data_type, par_types, our_kernel);
+      all_kernels.push_back({hash, our_kernel});
+    } break;
+    case FSIGN:
+    case FEQUAL:
+    case FLESS:
+    case FGREATER: { // result is always FINT32
+      std::vector<std::vector<FType>> par_poss =
+          allTypePermutations(node->num_predecessor);
+      for (std::vector<FType> &params : par_poss) {
+        std::string kernel_name;
+        code += generateEagerCode(node->operation->op_type, F_INT32, params,
+                                  kernel_name);
+        bool correct_one = true;
+        for (int i = 0; i < node->num_predecessor; i++)
+          if (params[i] != node->predecessors[i]->operation->data_type) {
+            correct_one = false;
+            break;
+          }
+        if (correct_one)
+          our_kernel = kernel_name;
+        all_kernels.push_back(
+            {generateKernelHash(node->operation->op_type, F_INT32, params),
+             kernel_name});
+      }
+    } break;
+    default: {
+      std::vector<std::vector<FType>> par_poss =
+          allTypePermutations(node->num_predecessor);
+      for (std::vector<FType> &params : par_poss) {
+        std::string kernel_name;
+        FType highest = F_INT32;
+        bool correct_one = true;
+        for (int i = 0; i < node->num_predecessor; i++) {
+          if (params[i] != node->predecessors[i]->operation->data_type)
+            correct_one = false;
+          highest = higherType(params[i], highest);
+        }
+        code += generateEagerCode(node->operation->op_type, highest, params,
+                                  kernel_name);
+        if (correct_one)
+          our_kernel = kernel_name;
+        all_kernels.push_back(
+            {generateKernelHash(node->operation->op_type, highest, params),
+             kernel_name});
+      }
+    } break;
+    }
+    flogging(F_DEBUG, std::string("Eager Kernel Generation for ") +
+                          fop_to_string[node->operation->op_type] + ": " +
+                          code);
     // generate kernel
     const char *code_data = code.data();
     const size_t code_length = code.length();
@@ -246,11 +307,21 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
               "\"\nPlease contact a developer and/or file a bug report.");
     }
     // get kernel
-    kernel = clCreateKernel(prog, "execute_graph", &err_code);
-    if (err_code != CL_SUCCESS)
-      flogging(F_ERROR, "kernel compilation failed!");
+    for (const auto &kernel_name : all_kernels) {
+      cl_kernel curr =
+          clCreateKernel(prog, kernel_name.second.c_str(), &err_code);
+      if (err_code != CL_SUCCESS)
+        flogging(F_ERROR, "kernel compilation failed!");
+
+      eager_cache.insert({kernel_name.first, curr});
+      if (kernel_name.first == hash)
+        kernel = curr;
+    }
+    if (!kernel)
+      flogging(F_ERROR,
+               "something went horrible wrong for operation: " +
+                   std::string(fop_to_string[node->operation->op_type]));
     eager_programs.push_back(prog);
-    eager_cache.insert({hash, kernel});
     const std::chrono::duration<double, std::milli> elapsed =
         std::chrono::high_resolution_clock::now() - start;
     flogging(F_DEBUG,
