@@ -10,7 +10,7 @@ add_library(flint STATIC ${SRCFILES})
 set_property(TARGET flint PROPERTY CXX_STANDARD 20)
 target_include_directories(flint PRIVATE .)
 target_link_libraries(flint OpenCL::OpenCL)
-set_target_properties(flint PROPERTIES VERSION ${PROJECT_VERSION} PUBLIC_HEADER "flint.h;flint.hpp")
+set_target_properties(flint PROPERTIES VERSION ${PROJECT_VERSION} PUBLIC_HEADER "flint.h;flint.hpp;flint_helper.hpp")
 install(TARGETS flint 
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
