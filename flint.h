@@ -63,7 +63,7 @@ void flintCleanup_cpu();
 void flintCleanup_gpu();
 /** Sets the logging level of the framework. Adjust this for debugging purposes,
  * or if you release software in which Flint is contained.
- * See also: `flog`, `FLogType`
+ * See also: `flogging`, `FLogType`
  *
  * Levels:
  * - 0: No logging
@@ -76,7 +76,7 @@ void flintCleanup_gpu();
 void fSetLoggingLevel(int);
 
 /**
- * See also: `flog`, `FLogType`
+ * See also: `flogging`, `FLogType`
  * - `F_DEBUG` (only internal debugging informations of the framework),
  * - `F_VERBOSE` (verbose information, may be helpful to users of the
  *    library),
@@ -417,7 +417,18 @@ FGraphNode *flog(FGraphNode *a);
 FGraphNode *flog2(FGraphNode *a);
 /** Takes the elementwise logarithm of `a` to the basis of 10 */
 FGraphNode *flog10(FGraphNode *a);
-
+/** Takes the elementwise sinus of a */
+FGraphNode *fsin(FGraphNode *a);
+/** Takes the elementwise cosinus of a */
+FGraphNode *fcos(FGraphNode *a);
+/** Takes the elementwise tangents of a */
+FGraphNode *ftan(FGraphNode *a);
+/** Takes the elementwise inverse sinus of a */
+FGraphNode *fasin(FGraphNode *a);
+/** Takes the elementwise inverse cosinus of a */
+FGraphNode *facos(FGraphNode *a);
+/** Takes the elementwise inverse tangents of a */
+FGraphNode *fatan(FGraphNode *a);
 /** Negates the elements of `a`, i.e. `-a[i]` */
 FGraphNode *fneg(FGraphNode *a);
 /** Returns a tensor x with the shape of a with `x[i] = 1` if `a[i] >= 0` else

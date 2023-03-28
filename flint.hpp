@@ -235,6 +235,24 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<to_float<T>, 1> log10() {
     return Tensor<to_float<T>, 1>(flog10(node), shape);
   }
+  Tensor<to_float<T>, 1> sin() {
+    return Tensor<to_float<T>, 1>(fsin(node), shape);
+  }
+  Tensor<to_float<T>, 1> cos() {
+    return Tensor<to_float<T>, 1>(fcos(node), shape);
+  }
+  Tensor<to_float<T>, 1> tan() {
+    return Tensor<to_float<T>, 1>(ftan(node), shape);
+  }
+  Tensor<to_float<T>, 1> asin() {
+    return Tensor<to_float<T>, 1>(fasin(node), shape);
+  }
+  Tensor<to_float<T>, 1> acos() {
+    return Tensor<to_float<T>, 1>(facos(node), shape);
+  }
+  Tensor<to_float<T>, 1> atan() {
+    return Tensor<to_float<T>, 1>(fatan(node), shape);
+  }
   template <typename K> Tensor<K, 1> convert() const {
     return Tensor<K, 1>(fconvert(node, toFlintType<K>()), shape);
   }
@@ -522,7 +540,24 @@ template <typename T, unsigned int n> struct Tensor {
   Tensor<to_float<T>, n> log10() {
     return Tensor<to_float<T>, n>(flog10(node), shape);
   }
-
+  Tensor<to_float<T>, n> sin() {
+    return Tensor<to_float<T>, n>(fsin(node), shape);
+  }
+  Tensor<to_float<T>, n> cos() {
+    return Tensor<to_float<T>, n>(fcos(node), shape);
+  }
+  Tensor<to_float<T>, n> tan() {
+    return Tensor<to_float<T>, n>(ftan(node), shape);
+  }
+  Tensor<to_float<T>, n> asin() {
+    return Tensor<to_float<T>, n>(fasin(node), shape);
+  }
+  Tensor<to_float<T>, n> acos() {
+    return Tensor<to_float<T>, n>(facos(node), shape);
+  }
+  Tensor<to_float<T>, n> atan() {
+    return Tensor<to_float<T>, n>(fatan(node), shape);
+  }
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n> matmul(Tensor<K, k> &other) {
     int x = shape[shape.size() - 2];
