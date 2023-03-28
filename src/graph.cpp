@@ -630,7 +630,60 @@ FGraphNode *flog(FGraphNode *a) { return log_impl(a, FLOG); }
 FGraphNode *flog2(FGraphNode *a) { return log_impl(a, FLOG2); }
 /** Takes the elementwise logarithm of a to the basis of 10*/
 FGraphNode *flog10(FGraphNode *a) { return log_impl(a, FLOG10); }
-
+/** Takes the elementwise sinus of a */
+FGraphNode *fsin(FGraphNode *a) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->data_type = a->operation->data_type;
+  op->op_type = FSIN;
+  initShape_keep(op, a->operation, nullptr);
+  return addNode(op, {a});
+}
+/** Takes the elementwise cosinus of a */
+FGraphNode *fcos(FGraphNode *a) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->data_type = a->operation->data_type;
+  op->op_type = FCOS;
+  initShape_keep(op, a->operation, nullptr);
+  return addNode(op, {a});
+}
+/** Takes the elementwise tangents of a */
+FGraphNode *ftan(FGraphNode *a) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->data_type = a->operation->data_type;
+  op->op_type = FTAN;
+  initShape_keep(op, a->operation, nullptr);
+  return addNode(op, {a});
+}
+/** Takes the elementwise inverse sinus of a */
+FGraphNode *fasin(FGraphNode *a) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->data_type = a->operation->data_type;
+  op->op_type = FASIN;
+  initShape_keep(op, a->operation, nullptr);
+  return addNode(op, {a});
+}
+/** Takes the elementwise inverse cosinus of a */
+FGraphNode *facos(FGraphNode *a) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->data_type = a->operation->data_type;
+  op->op_type = FACOS;
+  initShape_keep(op, a->operation, nullptr);
+  return addNode(op, {a});
+}
+/** Takes the elementwise inverse tangents of a */
+FGraphNode *fatan(FGraphNode *a) {
+  FOperation *op = new FOperation();
+  op->additional_data = nullptr;
+  op->data_type = a->operation->data_type;
+  op->op_type = FATAN;
+  initShape_keep(op, a->operation, nullptr);
+  return addNode(op, {a});
+}
 /** Negates the elements of the tensor */
 FGraphNode *fneg(FGraphNode *a) {
   FOperation *op = new FOperation();
