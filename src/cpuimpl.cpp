@@ -409,6 +409,36 @@ static void executeNode(FGraphNode *node,
     for (size_t i = from; i < from + size; i++)
       result[i] = log10(((T *)pred.data)[i]);
   } break;
+  case FSIN: {
+    CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = sin(((T *)pred.data)[i]);
+  } break;
+  case FCOS: {
+    CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = cos(((T *)pred.data)[i]);
+  } break;
+  case FTAN: {
+    CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = tan(((T *)pred.data)[i]);
+  } break;
+  case FASIN: {
+    CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = asin(((T *)pred.data)[i]);
+  } break;
+  case FACOS: {
+    CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = acos(((T *)pred.data)[i]);
+  } break;
+  case FATAN: {
+    CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = atan(((T *)pred.data)[i]);
+  } break;
   default: { // binary operations
     CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];
     size_t im1 = p1.num_entries, im2 = p2.num_entries;

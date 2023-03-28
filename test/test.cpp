@@ -662,6 +662,35 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(1, e12[1][2]);
     CHECK_EQ(1, e12[1][3]);
   }
+  TEST_CASE("sin, cos, tan") {
+    Tensor<int, 1> t1 = {0, 1, 2, 3};
+    Tensor<double, 1> s1 = t1.convert<double>().sin();
+    CHECK_EQ(0.0, s1[0]);
+    CHECK_EQ(0.8414709848078965, s1[1]);
+    CHECK_EQ(0.9092974268256817, s1[2]);
+    CHECK_EQ(0.1411200080598672, s1[3]);
+    Tensor<double, 1> c1 = t1.convert<double>().cos();
+    CHECK_EQ(1.000000, c1[0]);
+    CHECK_EQ(0.540302, c1[1]);
+    CHECK_EQ(-0.416147, c1[2]);
+    CHECK_EQ(-0.989992, c1[3]);
+    Tensor<double, 1> tan1 = t1.convert<double>().tan();
+    CHECK_EQ(0.000000, tan1[0]);
+    CHECK_EQ(1.557408, tan1[1]);
+    CHECK_EQ(-2.185040, tan1[2]);
+    CHECK_EQ(-0.142547, tan1[3]);
+    Tensor<float, 2> t2 = {{-5., 3.745, -1234}, {0, 7, 3.14159218}};
+    Tensor<float, 2> s2 = t2.sin().asin();
+    Tensor<float, 2> c2 = t2.cos().acos();
+    Tensor<float, 2> tan2 = t2.tan().atan();
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 3; j++) {
+        CHECK_EQ(doctest::Approx(t2[i][j]).epsilon(0.0000001f), s2[i][j]);
+        CHECK_EQ(doctest::Approx(t2[i][j]).epsilon(0.0000001f), c2[i][j]);
+        CHECK_EQ(doctest::Approx(t2[i][j]).epsilon(0.0000001f), tan2[i][j]);
+      }
+    }
+  }
   TEST_CASE("FEXTEND") {
     Tensor<float, 2> a{{1, 2}, {3, 4}};
     a = a.extend(std::array<size_t, 2>{4, 4}, std::array<size_t, 2>{1, 2});
