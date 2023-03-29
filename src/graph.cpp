@@ -620,8 +620,10 @@ static inline FGraphNode *log_impl(FGraphNode *a,
   op->shape = safe_mal<size_t>(op->dimensions * sizeof(size_t));
   memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
   op->data_type = a->operation->data_type;
-  if (op->data_type == F_INT32 || op->data_type == F_INT64)
+  if (op->data_type == F_INT32 || op->data_type == F_INT64) {
+    a = fconvert(a, F_FLOAT64);
     op->data_type = F_FLOAT64;
+  }
   return addNode(op, {a});
 }
 /** Takes the elementwise natural logarithm of a */

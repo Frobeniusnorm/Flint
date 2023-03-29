@@ -828,7 +828,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
                                          : gn->result_data->data;
       writeEvents.emplace_back();
-      err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_TRUE, 0,
+      err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_FALSE, 0,
                                       total_size * type_size, data, 0, nullptr,
                                       &writeEvents[writeEvents.size() - 1]);
       if (err_code != CL_SUCCESS) {
@@ -847,6 +847,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     flogging(F_ERROR, "Could not set Kernel Argument for the result!");
   // execute kernel
   const size_t global_size = total_size_node;
+
   err_code =
       clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &global_size, nullptr,
                              writeEvents.size(), writeEvents.data(), nullptr);
