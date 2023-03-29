@@ -49,7 +49,7 @@ TEST_SUITE("Graph implementation") {
     }
     {
       vector<long> v1(100);
-      vector<int> v2(100);
+      vector<int> v2(100, 1);
       // construct graph 2
       vector<size_t> shape = {10, 10};
       FGraphNode *gn2 =
