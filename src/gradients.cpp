@@ -211,6 +211,13 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     } else
       return nullptr;
   }
+  case FSQRT: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx) {
+      return fdiv(prev_adj, fmul_ci(y, 2));
+    } else
+      return nullptr;
+  }
   case FSIN: {
     FGraphNode *a = y->predecessors[0];
     if (a == dx) {
@@ -235,14 +242,14 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   case FASIN: {
     FGraphNode *a = y->predecessors[0];
     if (a == dx) {
-      return fdiv(prev_adj, fpow(fsub_icd(1.0, fmul(a, a)), 0.5));
+      return fdiv(prev_adj, fsqrt_g(fsub_icd(1.0, fmul(a, a))));
     } else
       return nullptr;
   }
   case FACOS: {
     FGraphNode *a = y->predecessors[0];
     if (a == dx) {
-      return fdiv(prev_adj, fneg(fpow(fsub_icd(1.0, fmul(a, a)), 0.5)));
+      return fdiv(prev_adj, fneg(fsqrt_g(fsub_icd(1.0, fmul(a, a)))));
     } else
       return nullptr;
   }

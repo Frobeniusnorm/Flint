@@ -270,6 +270,15 @@ TEST_SUITE("Autodiff") {
       CHECK_EQ((i + 1) * 2, gr[4][i]);
     }
   }
+  TEST_CASE("SQRT") {
+    Tensor<long, 1> y = {9, 7, 13};
+    Tensor<float, 1> z = (y * 0.5f).sqrt();
+    Tensor<double, 1> dy = z.gradient(y);
+    using doctest::Approx;
+    CHECK_EQ(Approx(0.11785114).epsilon(0.000001), dy[0]);
+    CHECK_EQ(Approx(0.13363062).epsilon(0.000001), dy[1]);
+    CHECK_EQ(Approx(0.09805807).epsilon(0.000001), dy[2]);
+  }
   TEST_CASE("SIN, COS, TAN") {
     Tensor<int, 2> x = {{0, 1, -2}, {2, -3, 4}};
     Tensor<long, 1> y = {-9, 7, 13};
