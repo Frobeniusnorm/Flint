@@ -621,6 +621,36 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "R[index] = "
             "P0[index] < 0 ? -P0[index] : P0[index];";
     break;
+  case FSIN:
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
+            "sin(P0[index]);";
+    break;
+  case FCOS:
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
+            "cos(P0[index]);";
+    break;
+  case FTAN:
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
+            "tan(P0[index]);";
+    break;
+  case FASIN:
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
+            "asin(P0[index]);";
+    break;
+  case FACOS:
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
+            "acos(P0[index]);";
+    break;
+  case FATAN:
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
+            "atan(P0[index]);";
+    break;
   case FLOG2: {
     std::string conv = parameter_types[0] == F_INT32   ? "(float)"
                        : parameter_types[0] == F_INT64 ? "(double)"

@@ -260,6 +260,33 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
              kernel_name});
       }
     } break;
+    case FLOG:
+    case FLOG2:
+    case FLOG10:
+    case FSIN:
+    case FCOS:
+    case FTAN:
+    case FASIN:
+    case FACOS:
+    case FATAN: {
+      for (FType param : {F_FLOAT32, F_FLOAT64}) {
+        std::string kernel_name;
+        code += generateEagerCode(node->operation->op_type, param, {param},
+                                  kernel_name);
+        bool correct_one = true;
+        for (int i = 0; i < node->num_predecessor; i++)
+          if (param != node->predecessors[i]->operation->data_type) {
+            correct_one = false;
+            break;
+          }
+        if (correct_one)
+          our_kernel = kernel_name;
+        all_kernels.push_back(
+            {generateKernelHash(node->operation->op_type, param, {param}),
+             kernel_name});
+      }
+      break;
+    }
     default: {
       std::vector<std::vector<FType>> par_poss =
           allTypePermutations(node->num_predecessor);
