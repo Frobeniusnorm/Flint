@@ -210,6 +210,10 @@ generateCode(FGraphNode *node,
           code = type + " " + name + " = " + par_name + "< 0 ? -" + par_name +
                  " : " + par_name + ";\n" + code;
       } break;
+      case FSQRT: {
+        code = type + " " + name + " = sqrt(v" +
+               std::to_string(variable_index + 1) + ");\n" + code;
+      } break;
       case FSIN: {
         code = type + " " + name + " = sin(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
@@ -635,6 +639,11 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     code += "if(index >= num_entries0) return;\n"
             "R[index] = "
             "P0[index] < 0 ? -P0[index] : P0[index];";
+    break;
+  case FSQRT:
+    code += "if(index >= num_entries0) return;\n"
+            "R[index] = "
+            "sqrt(P0[index]);";
     break;
   case FSIN:
     code += "if(index >= num_entries0) return;\n"

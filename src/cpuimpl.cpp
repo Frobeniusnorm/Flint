@@ -414,6 +414,11 @@ static void executeNode(FGraphNode *node,
     for (size_t i = from; i < from + size; i++)
       result[i] = sin(((T *)pred.data)[i]);
   } break;
+  case FSQRT: {
+    CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = sqrt(((T *)pred.data)[i]);
+  } break;
   case FCOS: {
     CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)

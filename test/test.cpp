@@ -585,6 +585,27 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(1, t3[0]);
     CHECK_EQ(3, t3[1]);
   }
+  TEST_CASE("SQRT") {
+    Tensor<long, 1> t1 = Tensor<long, 1>({12 * 12, 42 * 42, 420000l * 420000l})
+                             .sqrt()
+                             .convert<long>();
+    CHECK_EQ(t1[0], 12);
+    CHECK_EQ(t1[1], 42);
+    CHECK_EQ(t1[2], 420000);
+    Tensor<float, 4> t2 = Tensor<float, 4>{
+        {{{0}, {1}}, {{2}, {3}}},
+        {{{4}, {5}},
+         {{6}, {7}}}}.sqrt();
+    using doctest::Approx;
+    CHECK_EQ(t2[0][0][0][0], 0);
+    CHECK_EQ(t2[0][0][1][0], 1);
+    CHECK_EQ(Approx(t2[0][1][0][0]).epsilon(0.00001), 1.41421);
+    CHECK_EQ(Approx(t2[0][1][1][0]).epsilon(0.00001), 1.73205);
+    CHECK_EQ(t2[1][0][0][0], 2);
+    CHECK_EQ(Approx(t2[1][0][1][0]).epsilon(0.00001), 2.23607);
+    CHECK_EQ(Approx(t2[1][1][0][0]).epsilon(0.00001), 2.44949);
+    CHECK_EQ(Approx(t2[1][1][1][0]).epsilon(0.00001), 2.64575);
+  }
   TEST_CASE("FABS") {
     Tensor<int, 2> t1{{-1, 3}, {-7, 9}};
     Tensor<int, 1> t2 = t1.abs().flattened();

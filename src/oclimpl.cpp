@@ -260,6 +260,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
              kernel_name});
       }
     } break;
+    case FSQRT:
     case FLOG:
     case FLOG2:
     case FLOG10:

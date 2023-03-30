@@ -235,6 +235,9 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<to_float<T>, 1> log10() {
     return Tensor<to_float<T>, 1>(flog10(node), shape);
   }
+  Tensor<to_float<T>, 1> sqrt() {
+    return Tensor<to_float<T>, 1>(fsqrt_g(node), shape);
+  }
   Tensor<to_float<T>, 1> sin() {
     return Tensor<to_float<T>, 1>(fsin(node), shape);
   }
@@ -539,6 +542,9 @@ template <typename T, unsigned int n> struct Tensor {
   }
   Tensor<to_float<T>, n> log10() {
     return Tensor<to_float<T>, n>(flog10(node), shape);
+  }
+  Tensor<to_float<T>, n> sqrt() {
+    return Tensor<to_float<T>, n>(fsqrt_g(node), shape);
   }
   Tensor<to_float<T>, n> sin() {
     return Tensor<to_float<T>, n>(fsin(node), shape);
