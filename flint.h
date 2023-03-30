@@ -145,6 +145,7 @@ enum FOperationType {
   FLESS,
   FEQUAL,
   FGREATER,
+  FCONVOLVE,
   FNUM_OPERATION_TYPES
 };
 /**
@@ -635,6 +636,22 @@ FGraphNode *frepeat(FGraphNode *a, int *repititions);
  * corresponds to the former size in dimension `transpositions[i]`.
  */
 FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
+/** Convolves the `n`-dimensional input tensor `a` with a `n`-dimensional filter
+ * kernel `kernel` and a per dimensional step size `steps` with size of `n-1`.
+ * It is expected that `a` and `kernel` have the same size in their last
+ * dimension (which will be completly reduced by the convolution). In all other
+ * dimensions the size of `a` should be larger or equal to the size of `kernel`.
+ * The `kernel` will be 'slid' over `a` in each dimension, multiplying all
+ * values of `kernel` with the corresponding ones in `a` and moving the kernel
+ * further by the value given in `steps` in that corresponding dimension. The
+ * implementation does not care about padding (if `a` is in a dimension not
+ * divisable by the step size, the remainder is truncated). If you want to
+ * include it use `fextend` or similar.
+ *
+ * The resulting Tensor will therefor have a shape with dimensionality `n - 1`
+ * and size of `resulting_shape[i] = a->operation->shape[i] / steps[i]`
+ */
+FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
 #ifdef __cplusplus
 }
 // no c++ bindings, but function overloading for c++ header

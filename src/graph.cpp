@@ -31,6 +31,7 @@ const char *fop_to_string[] = {
     "FMATMUL",     "FCONVERSION", "FRESHAPE", "FMIN",   "FMAX",
     "FREDUCE_SUM", "FREDUCE_MUL", "FSLICE",   "FABS",   "FREPEAT",
     "FTRANSPOSE",  "FEXTEND",     "FLESS",    "FEQUAL", "FGREATER",
+    "FCONVOLVE",
 };
 static bool use_cpu, use_gpu, eager_execution = false;
 // converts c++ type to flint type
@@ -1047,4 +1048,26 @@ FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
   const int dimensions = a->operation->dimensions;
   std::vector<long> steps(dimensions, 1);
   return fextend_step(a, new_shape, insert_at, steps.data());
+}
+FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
+  const FOperation *ao = a->operation;
+  const FOperation *bo = kernel->operation;
+  if (ao->dimensions != bo->dimensions)
+    flogging(F_ERROR, "For a convolution the original Tensor and the filter "
+                      "Kernel have to have to same number of dimensions!");
+  if (ao->shape[ao->dimensions - 1] != bo->shape[bo->dimensions - 1])
+    flogging(F_ERROR, "For a convolution the size of the last dimension of the "
+                      "Tensor must match that of the kernel!");
+  std::vector<size_t> new_shape(ao->dimensions - 1);
+  for (int i = 0; i < ao->dimensions - 1; i++)
+    new_shape[i] = ao->shape[i] / steps[i];
+  FOperation *op = new FOperation();
+  op->dimensions = ao->dimensions - 1;
+  op->shape = safe_mal<size_t>(op->dimensions);
+  memcpy(op->shape, new_shape.data(), op->dimensions * sizeof(size_t));
+  op->data_type = higherType(ao->data_type, bo->data_type);
+  op->op_type = FCONVOLVE;
+  op->additional_data = safe_mal<unsigned int>(op->dimensions);
+  memcpy(op->additional_data, steps, op->dimensions * sizeof(unsigned int));
+  return addNode(op, {a, kernel});
 }
