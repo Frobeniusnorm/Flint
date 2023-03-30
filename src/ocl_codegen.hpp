@@ -210,25 +210,40 @@ generateCode(FGraphNode *node,
           code = type + " " + name + " = " + par_name + "< 0 ? -" + par_name +
                  " : " + par_name + ";\n" + code;
       } break;
+      case FSIN: {
+        code = type + " " + name + " = sin(v" +
+               std::to_string(variable_index + 1) + ");\n" + code;
+      } break;
+      case FCOS: {
+        code = type + " " + name + " = cos(v" +
+               std::to_string(variable_index + 1) + ");\n" + code;
+      } break;
+      case FTAN: {
+        code = type + " " + name + " = tan(v" +
+               std::to_string(variable_index + 1) + ");\n" + code;
+      } break;
+      case FASIN: {
+        code = type + " " + name + " = asin(v" +
+               std::to_string(variable_index + 1) + ");\n" + code;
+      } break;
+      case FACOS: {
+        code = type + " " + name + " = acos(v" +
+               std::to_string(variable_index + 1) + ");\n" + code;
+      } break;
+      case FATAN: {
+        code = type + " " + name + " = atan(v" +
+               std::to_string(variable_index + 1) + ");\n" + code;
+      } break;
       case FLOG: {
-        std::string conv = node->operation->data_type == F_INT32   ? "(float)"
-                           : node->operation->data_type == F_INT64 ? "(double)"
-                                                                   : "";
-        code = type + " " + name + " = " + conv + "log(v" +
+        code = type + " " + name + " = log(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FLOG2: {
-        std::string conv = node->operation->data_type == F_INT32   ? "(float)"
-                           : node->operation->data_type == F_INT64 ? "(double)"
-                                                                   : "";
-        code = type + " " + name + " = " + conv + "log2(v" +
+        code = type + " " + name + " = log2(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FLOG10: {
-        std::string conv = node->operation->data_type == F_INT32   ? "(float)"
-                           : node->operation->data_type == F_INT64 ? "(double)"
-                                                                   : "";
-        code = type + " " + name + " = " + conv + "log10(v" +
+        code = type + " " + name + " = log10(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FNEG: {
