@@ -50,14 +50,17 @@ module CPPParser where
             replace (pack $ '`':fn_name ++ ['`']) (pack $ " <a href=\"#" ++ fn_name ++ "\">`" ++ fn_name ++ "`</a>") curr) 
             (pack str) fn_names)
     highlightDoc str fn_names= inlineCode (functionNameHighlighting (bulletpointHighlight str) fn_names)
+    stripFctname str = do
+                let foo = takeWhile (\x -> x /= '(' && x /= ' ') (drop 1 $ dropWhile (/= ' ') str)
+                if not (null foo) && head foo == '*' then
+                    drop 1 foo else foo
 
-    compileCppToHtml str = do
+    compileTOCForCPP str = do
         let fcts_defs = parseCpp str
-        let ovw_fcts = concatMap (\a -> "<li><a href=\"#" ++ strip_fctname (snd a) ++ "\">" ++ snd a ++ "</a></li>")
+        let ovw_fcts = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (snd a) ++ "\">" ++ snd a ++ "</a></li>")
                 (filter (\a -> not ("enum" `isPrefixOf` snd a) && not ("struct" `isPrefixOf` snd a)) fcts_defs)
-        let ovw_types = concatMap (\a -> "<li><a href=\"#" ++ strip_fctname (snd a) ++ "\">" ++ snd a ++ "</a></li>")
+        let ovw_types = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (snd a) ++ "\">" ++ snd a ++ "</a></li>")
                 (filter (\a -> ("enum" `isPrefixOf` snd a) || ("struct" `isPrefixOf` snd a)) fcts_defs)
-        let fct_names = sortOn (\a -> -length a) (map (strip_fctname . snd) fcts_defs)
         "<div class=\"card\">" ++
             "    <span class=\"card_header\">Overview</span>" ++
             "</div><br /><div class=\"card\">\
@@ -66,23 +69,23 @@ module CPPParser where
             "</ul>\
             \<span class=\"card_header\" style=\"font-size:1.2em\">Functions</span><ul>"
             ++ ovw_fcts ++
-            "</ul></div><div style=\"display: block; height: 2em;\"></div>" ++
-            concatMap (\a ->
-                "<div id=\""
-                    ++ strip_fctname (snd a) ++
-                    "\"></div><div class=\"card\"><pre class=\"card_header_code\">"
-                    ++ snd a ++
-                    "</pre></div>\n<br />\n<div class=\"card\"><div style=\"padding: 5px;\">"
-                    ++ highlightDoc (parseDoc (fst a) "") fct_names ++
-                    "</div></div><div style=\"display: block; height: 2em;\"></div>\n") fcts_defs
+            "</ul></div>"
+        
+
+    compileCppToHtml str = do
+        let fcts_defs = parseCpp str
+        let fct_names = sortOn (\a -> -length a) (map (stripFctname . snd) fcts_defs)
+        concatMap (\a ->
+            "<div id=\""
+                ++ stripFctname (snd a) ++
+                "\"></div><div class=\"card\"><pre class=\"card_header_code\">"
+                ++ snd a ++
+                "</pre></div>\n<br />\n<div class=\"card\"><div style=\"padding: 5px;\">"
+                ++ highlightDoc (parseDoc (fst a) "") fct_names ++
+                "</div></div><div style=\"display: block; height: 2em;\"></div>\n") fcts_defs
         where
             parseDoc ('\n':t) res = do
                 let stripped = dropWhile (\x -> x == ' ' || x == '\t') t
                 parseDoc (if not (null stripped) && head stripped == '*' then drop 1 stripped else stripped) (res ++ "\n")
             parseDoc (x:t) res = parseDoc t (res ++ [x])
             parseDoc [] res = res
-
-            strip_fctname str = do
-                let foo = takeWhile (\x -> x /= '(' && x /= ' ') (drop 1 $ dropWhile (/= ' ') str)
-                if not (null foo) && head foo == '*' then
-                    drop 1 foo else foo
