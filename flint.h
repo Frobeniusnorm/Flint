@@ -128,6 +128,7 @@ enum FOperationType {
   FASIN,
   FACOS,
   FATAN,
+  FSQRT,
   FLATTEN,
   FMATMUL,
   FCONVERSION,
@@ -419,6 +420,8 @@ FGraphNode *flog2(FGraphNode *a);
 FGraphNode *flog10(FGraphNode *a);
 /** Takes the elementwise sinus of a */
 FGraphNode *fsin(FGraphNode *a);
+/** Takes the elementwise square root of a */
+FGraphNode *fsqrt(FGraphNode *a);
 /** Takes the elementwise cosinus of a */
 FGraphNode *fcos(FGraphNode *a);
 /** Takes the elementwise tangents of a */

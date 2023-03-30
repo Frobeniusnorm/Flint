@@ -645,6 +645,8 @@ FGraphNode *fasin(FGraphNode *a) { return log_impl(a, FASIN); }
 FGraphNode *facos(FGraphNode *a) { return log_impl(a, FACOS); }
 /** Takes the elementwise inverse tangents of a */
 FGraphNode *fatan(FGraphNode *a) { return log_impl(a, FATAN); }
+/** Takes the elementwise square root of a */
+FGraphNode *fsqrt(FGraphNode *a) { return log_impl(a, FSQRT); }
 /** Negates the elements of the tensor */
 FGraphNode *fneg(FGraphNode *a) {
   FOperation *op = new FOperation();
