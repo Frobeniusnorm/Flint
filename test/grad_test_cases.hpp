@@ -1,6 +1,7 @@
 #include "../flint.h"
 #include "../flint.hpp"
 #include "doctest.h"
+#include <cmath>
 TEST_SUITE("Autodiff") {
   TEST_CASE("Two Times Matmul") {
     Flint::setLoggingLevel(2);
@@ -268,5 +269,36 @@ TEST_SUITE("Autodiff") {
       CHECK_EQ(0, gr[3][i]);
       CHECK_EQ((i + 1) * 2, gr[4][i]);
     }
+  }
+  TEST_CASE("SIN, COS, TAN") {
+    Tensor<int, 2> x = {{0, 1, -2}, {2, -3, 4}};
+    Tensor<long, 1> y = {-9, 7, 13};
+    Tensor<double, 2> z1 = (x.sin() * y.cos()).tan();
+    Tensor<double, 2> dx = z1.gradient(x);
+    std::vector<double> res = {-0.91113025, 0.6279001,  -0.8204005,
+                               0.8297475,   -0.7548697, -0.99188167};
+    dx.execute();
+    using doctest::Approx;
+    for (int i = 0; i < 2; i++)
+      for (int j = 0; j < 3; j++)
+        CHECK_EQ(Approx(res[i * 3 + j]).epsilon(0.001), dx[i][j]);
+    Tensor<double, 1> dy = z1.gradient(y);
+    res = {0.8200625, -0.75841457, 1.3617588};
+    for (int j = 0; j < 3; j++)
+      CHECK_EQ(Approx(res[j]).epsilon(0.001), dy[j]);
+    Tensor<double, 2> z2 = (x.cos().asin() * y.tan().acos()).atan();
+    dx = z2.gradient(x);
+    res = {0, -0.4722158, 0.89395535, -0.9002461, 0.3335778, 0.67989904};
+    CHECK(std::isnan(dx[0][0]));
+    for (int i = 0; i < 2; i++)
+      for (int j = 0; j < 3; j++) {
+        if (i == 0 && j == 0)
+          continue;
+        CHECK_EQ(Approx(res[i * 3 + j]).epsilon(0.001), dx[i][j]);
+      }
+    dy = z2.gradient(y);
+    res = {-0.05746716, 1.4498911, 1.0917134};
+    for (int j = 0; j < 3; j++)
+      CHECK_EQ(Approx(res[j]).epsilon(0.001), dy[j]);
   }
 }

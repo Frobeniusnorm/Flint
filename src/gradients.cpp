@@ -211,6 +211,48 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     } else
       return nullptr;
   }
+  case FSIN: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx) {
+      return fmul(prev_adj, fcos(a));
+    } else
+      return nullptr;
+  }
+  case FCOS: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx) {
+      return fmul(prev_adj, fneg(fsin(a)));
+    } else
+      return nullptr;
+  }
+  case FTAN: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx) {
+      return fmul(prev_adj, fpow(fcos(a), -2));
+    } else
+      return nullptr;
+  }
+  case FASIN: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx) {
+      return fdiv(prev_adj, fpow(fsub_icd(1.0, fmul(a, a)), 0.5));
+    } else
+      return nullptr;
+  }
+  case FACOS: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx) {
+      return fdiv(prev_adj, fneg(fpow(fsub_icd(1.0, fmul(a, a)), 0.5)));
+    } else
+      return nullptr;
+  }
+  case FATAN: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx) {
+      return fdiv(prev_adj, fadd_ci(fmul(a, a), 1));
+    } else
+      return nullptr;
+  }
   case FREDUCE_SUM: {
     FGraphNode *a = y->predecessors[0];
     if (a == dx) {
