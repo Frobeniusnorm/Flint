@@ -421,7 +421,7 @@ FGraphNode *flog10(FGraphNode *a);
 /** Takes the elementwise sinus of a */
 FGraphNode *fsin(FGraphNode *a);
 /** Takes the elementwise square root of a */
-FGraphNode *fsqrt(FGraphNode *a);
+FGraphNode *fsqrt_g(FGraphNode *a);
 /** Takes the elementwise cosinus of a */
 FGraphNode *fcos(FGraphNode *a);
 /** Takes the elementwise tangents of a */

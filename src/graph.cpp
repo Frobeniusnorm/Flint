@@ -24,13 +24,13 @@
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
 const char *fop_to_string[] = {
-    "FSTORE",      "FADD",     "FSUB",   "FMUL",     "FDIV",
-    "FPOW",        "FNEG",     "FLOG",   "FSIGN",    "FEVEN",
-    "FLOG2",       "FLOG10",   "FSIN",   "FCOS",     "FTAN",
-    "FASIN",       "FACOS",    "FATAN",  "FLATTEN",  "FMATMUL",
-    "FCONVERSION", "FRESHAPE", "FMIN",   "FMAX",     "FREDUCE_SUM",
-    "FREDUCE_MUL", "FSLICE",   "FABS",   "FREPEAT",  "FTRANSPOSE",
-    "FEXTEND",     "FLESS",    "FEQUAL", "FGREATER",
+    "FSTORE",      "FADD",        "FSUB",     "FMUL",   "FDIV",
+    "FPOW",        "FNEG",        "FLOG",     "FSIGN",  "FEVEN",
+    "FLOG2",       "FLOG10",      "FSIN",     "FCOS",   "FTAN",
+    "FASIN",       "FACOS",       "FATAN",    "FSQRT",  "FLATTEN",
+    "FMATMUL",     "FCONVERSION", "FRESHAPE", "FMIN",   "FMAX",
+    "FREDUCE_SUM", "FREDUCE_MUL", "FSLICE",   "FABS",   "FREPEAT",
+    "FTRANSPOSE",  "FEXTEND",     "FLESS",    "FEQUAL", "FGREATER",
 };
 static bool use_cpu, use_gpu, eager_execution = false;
 // converts c++ type to flint type
@@ -646,7 +646,7 @@ FGraphNode *facos(FGraphNode *a) { return log_impl(a, FACOS); }
 /** Takes the elementwise inverse tangents of a */
 FGraphNode *fatan(FGraphNode *a) { return log_impl(a, FATAN); }
 /** Takes the elementwise square root of a */
-FGraphNode *fsqrt(FGraphNode *a) { return log_impl(a, FSQRT); }
+FGraphNode *fsqrt_g(FGraphNode *a) { return log_impl(a, FSQRT); }
 /** Negates the elements of the tensor */
 FGraphNode *fneg(FGraphNode *a) {
   FOperation *op = new FOperation();
