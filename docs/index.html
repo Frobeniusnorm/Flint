@@ -12,7 +12,7 @@
 
   <div id="header-bar">
     <div class="left-spaced">
-      <img src="flint.png" style="width:5.5em; height:2.9em; display: inline-block; vertical-align: middle;" />
+      <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
       <a class="item selected">About</a>
       <a class="item" href="documentation.html">Documentation</a>
       <a class="item">Tutorial</a>
@@ -63,8 +63,7 @@
         <span class="card_header">Example</span>
       </div>
       <br />
-      <pre class="card code">
-
+<pre class="card code" style="margin: 5px;">
 <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; t1{{{<span style="color: #30F0FF">0</span>}, {<span style="color: #30F0FF">1</span>}}, {{<span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">3</span>}}};
 <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; t2 = t1.repeat(<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>).flattened(<span style="color: #30F0FF">2</span>);
 std::cout &lt;&lt; t2 &lt;&lt; std::endl;
@@ -72,8 +71,7 @@ std::cout &lt;&lt; t2 &lt;&lt; std::endl;
  *  [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>], 
  *   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>], 
  *   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>], 
- *   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]]) */</span>
-      </pre>
+ *   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]]) */</span></pre>
       <div style="display: block; height: 2em"></div>
       <div class="card">
         <span class="card_header">Efficiency</span>

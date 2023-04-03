@@ -1,22 +1,28 @@
 @include("header.html")
   <div id="header-bar">
     <div class="left-spaced">
-      <img src="flint.png" style="width:5.5em; height:2.9em; display: inline-block; vertical-align: middle;" />
+      <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
       <a class="item" href="index.html">About</a>
-      <span class="item selected">Documentation</span>
+      <a class="item selected" href="documentation.html">Documentation</a>
       <a class="item">Tutorial</a>
     </div>
   </div>
+  <div id="showcase_background" style="min-height: 18em; background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(214,103,61,1) 0%, rgba(159,33,228,1) 100%);">
+    <center style="margin-top:2em">
+      <h1>
+        Documentation <u>flint.hpp</u>
+      </h1>
+    </center>
+  </div>
   <center>
-    <div class="content">
-        <div style="display: block; height: 5em;"></div>
+    <div class="content" style="margin-top: -3.1em">
         <div class="card">
           <span class="card_header">Overview</span>
         </div><br />
-        <div class="card">
+        <div class="card" style="padding: 20px 15px">
           The C++ Documentation (contained completly in <pre class="inline_code">flint.hpp</pre>) is splitted into two parts:
           <ul>
-            <li>The 1-dimensional implementation of the <pre class="inline_code">Tensor</pre> template <a href="#_typename_T__struct_Tensor">template &lt;typename T&gt; Tensor&lt;T, 1&gt;</a></li>
+            <li>The 1-dimensional implementation of the <pre class="inline_code">Tensor</pre> template <a href="#_typename_T__struct_Tensor_T__1__">template &lt;typename T&gt; Tensor&lt;T, 1&gt;</a></li>
             <li>The n-dimensional implementation of the <pre class="inline_code">Tensor</pre> template <a href="#_typename_T__unsigned_int_n__struct_Tensor">template &lt;typename T, unsigned int n&gt; Tensor&lt;T, n&gt;</a></li>
           </ul>
           For the most operations the interface and implementation is the same and exists twice just for type safety,

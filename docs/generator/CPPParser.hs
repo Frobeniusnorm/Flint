@@ -1,18 +1,37 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Redundant bracket" #-}
 module CPPParser where
-    import Data.List (isPrefixOf, foldl', sortOn)
+    import Data.List (isPrefixOf, foldl', sortOn, isInfixOf)
     import Data.Text (replace, unpack, pack)
+    -- A documentation is either a symbol with documentation or a structure with a symbol and documentation and a list of sub-documentations
+    data DeclDoc = SymDoc {name::String, docu::String} | StructDoc {name::String, docu::String, children::[DeclDoc]}
     -- parses a cpp file to a list of documentations and function declerations
-    parseCpp :: String -> [(String, String)]
+    parseCpp :: String -> [DeclDoc]
     parseCpp = parseHelper
         where
             parseHelper ('/':'*':'*':l) = do
                 let doc = map fst (takeWhile (\a -> fst a /= '*' || snd a /= '/') (zip l (drop 1 l)))
-                let func = takeWhile (\a -> a /= ';' && a /= '{')
-                        (dropWhile (\a -> a == ' ' || a == '\t' || a == '\n' || a == '\r') (drop (length doc + 2) l))
-                let r = drop (length doc + length func) l
-                (doc, func) : parseHelper r
+                let afterDoc = (dropWhile (\a -> a == ' ' || a == '\t' || a == '\n' || a == '\r') (drop (length doc + 2) l))
+                let func = takeWhile (\a -> a /= ';' && a /= '{') afterDoc
+                let r = drop (length func) afterDoc
+                if head r == '{' then
+                    do
+                        let contained = selectBlock (tail r) 0
+                        let rek = parseHelper contained
+                        let rest = drop (1 + length contained) r
+                        if not (null rek) then
+                            StructDoc func doc rek  : parseHelper rest
+                        else
+                            SymDoc func doc  : parseHelper rest
+                else
+                    SymDoc func doc : parseHelper r
             parseHelper (x:t) = parseHelper t
             parseHelper [] = []
+            selectBlock [] n = []
+            selectBlock ('}':r) 0 = []
+            selectBlock ('{':r) n = '{':(selectBlock r (n + 1))
+            selectBlock ('}':r) n = '}':(selectBlock r (n - 1))
+            selectBlock (x:r) n = x:(selectBlock r n)
 
     removeIllegal ('<':t) = "&lt;" ++ removeIllegal t
     removeIllegal ('>':t) = "&gt;" ++ removeIllegal t
@@ -35,12 +54,8 @@ module CPPParser where
     bulletpointHighlight (x:str) = removeIllegal [x] ++ bulletpointHighlight str
     bulletpointHighlight [] = []
 
-    removeLinebreak ('\n':t) = removeLinebreak t
-    removeLinebreak ('\r':t) = removeLinebreak t
-    removeLinebreak (x:t) = x:removeLinebreak t
-    removeLinebreak [] = []
 
-    inlineCode ('`':t) = "<pre class=\"inline_code\">" ++ removeLinebreak (takeWhile (/= '`') t) ++ "</pre>" ++ inlineCode (drop 1 (dropWhile (/= '`') t))
+    inlineCode ('`':t) = "<pre class=\"inline_code\">" ++ takeWhile (/= '`') t ++ "</pre>" ++ inlineCode (drop 1 (dropWhile (/= '`') t))
     inlineCode (x:t) = x:inlineCode t
     inlineCode [] = []
 
@@ -64,10 +79,10 @@ module CPPParser where
 
     compileTOCForCPP str = do
         let fcts_defs = parseCpp str
-        let ovw_fcts = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (snd a) ++ "\">" ++ removeIllegal (snd a) ++ "</a></li>")
-                (filter (\a -> not ("enum" `isPrefixOf` snd a) && not ("struct" `isPrefixOf` snd a)) fcts_defs)
-        let ovw_types = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (snd a) ++ "\">" ++ removeIllegal (snd a) ++ "</a></li>")
-                (filter (\a -> ("enum" `isPrefixOf` snd a) || ("struct" `isPrefixOf` snd a)) fcts_defs)
+        let ovw_fcts = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ removeIllegal (name a) ++ "</a></li>")
+                (filter (\x -> not (isDataNode $ name x)) fcts_defs)
+        let ovw_types = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ removeIllegal (name a) ++ "</a></li>")
+                (filter (isDataNode . name) fcts_defs)
         "<div class=\"card\">" ++
             "    <span class=\"card_header\">Overview</span>" ++
             "</div><br /><div class=\"card\">\
@@ -77,18 +92,20 @@ module CPPParser where
             \<span class=\"card_header\" style=\"font-size:1.2em\">Functions</span><ul>"
             ++ ovw_fcts ++
             "</ul></div>"
-
+        where
+            isDataNode::[Char] -> Bool
+            isDataNode x = "struct " `isInfixOf` x || "enum " `isInfixOf` x || "class " `isInfixOf` x
 
     compileCppToHtml str = do
         let fcts_defs = parseCpp str
-        let fct_names = sortOn (\a -> -length a) (map (stripFctname . snd) fcts_defs)
+        let fct_names = sortOn (\a -> -length a) (map (stripFctname . name) fcts_defs)
         concatMap (\a ->
             "<div id=\""
-                ++ stripFctname (snd a) ++
+                ++ stripFctname (name a) ++
                 "\"></div><div class=\"card\"><pre class=\"card_header_code\">"
-                ++ removeIllegal (snd a) ++
+                ++ removeIllegal (name a) ++
                 "</pre></div>\n<br />\n<div class=\"card\"><div style=\"padding: 5px;\">"
-                ++ highlightDoc (parseDoc (fst a) "") fct_names ++
+                ++ highlightDoc (parseDoc (docu a) "") fct_names ++
                 "</div></div><div style=\"display: block; height: 2em;\"></div>\n") fcts_defs
         where
             parseDoc ('\n':t) res = do

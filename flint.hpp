@@ -45,7 +45,7 @@
  * `operator[]` or `slice`.
  *
  * When using it it behaves like a single Tensor representation (i.e. operations
- * can be called on it, its data may be queries), but internally it may rather
+ * can be called on it, its data may be queried), but internally it may rather
  * store applied operations and parameters for later lazy execution.
  *
  * When you apply an operation to an instance it usually returns a new `Tensor`
@@ -415,6 +415,20 @@ template <typename T, unsigned int n> struct Tensor {
       fFreeGraph(node);
     }
   }
+  /**
+   * Generates a Tensor containing the single given value in every entry.
+   * The resulting Tensor will have a dimensionality of `sizeof...(args)` and a
+   * shape denoted by each entry in `sizes`. e.g.
+   * @code{
+   * Tensor<double, 3> foo = Tensor<double, 3>::constant(3.141592, 2, 2, 2);
+   * std::cout << foo << std::endl;
+   * // Tensor<FLOAT64, shape: [2, 2, 2]>(
+   * // [[[3.141592, 3.141592],
+   * //  [3.141592, 3.141592]],
+   * // [[3.141592, 3.141592],
+   * //  [3.141592, 3.141592]]])
+   * }
+   */
   template <typename... args>
   static Tensor<T, n> constant(T value, args... sizes) {
     constexpr size_t dimensions = sizeof...(args);

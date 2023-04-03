@@ -48,7 +48,9 @@ module HtmlParser where
             transformCode str = concatMap (\x -> do
                     let code = map fst x
                     if snd (head x) then
-                        highlightCode $ highlightLiterals $ replaceIllegal code
+                        "<pre class=\"card code\" style=\"margin: 5px;\">" 
+                        ++ reverse (dropWhile (\c -> c == '\r' || c == '\n' || c == ' ') (reverse (highlightCode (highlightLiterals $ replaceIllegal code)))) 
+                        ++ "</pre>"
                     else code)
                 (groupBy (\a b -> snd a == snd b) (markCode str 0 False))
             markCode "" n _ = []
@@ -74,7 +76,7 @@ module HtmlParser where
             highlightCode ('T':'e':'n':'s':'o':'r':t) =
                     "<span style=\"color: " ++ highType ++ "\">Tensor</span>" ++ highlightCode t
             highlightCode ('/':'/':t) =
-                    "<span style=\"color: #D0D0D0\">//" ++ takeWhile (/= '\n') t ++ "</span>" ++ highlightCode (dropWhile (/= '\n') t)
+                    "<span style=\"color: #D0D0D0\">//" ++ takeWhile (\c -> c /= '\n' && c /= '\r') t ++ "</span>" ++ highlightCode (dropWhile (\c -> c /= '\n' && c /= '\r') t)
             highlightCode ('/':'*':t) = do
                     -- char and following char zipped together to detect /*
                     let interleaved = zip t (drop 1 t)

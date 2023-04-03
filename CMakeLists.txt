@@ -13,7 +13,7 @@ target_link_libraries(flint OpenCL::OpenCL)
 set_target_properties(flint PROPERTIES VERSION ${PROJECT_VERSION} PUBLIC_HEADER "flint.h;flint.hpp;flint_helper.hpp")
 install(TARGETS flint 
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/flint)
 if(${BUILD_TEST})
   project(test)
   add_executable(test test/test.cpp)

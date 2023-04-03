@@ -1,7 +1,7 @@
 @include("header.html")
   <div id="header-bar">
     <div class="left-spaced">
-      <img src="flint.png" style="width:5.5em; height:2.9em; display: inline-block; vertical-align: middle;" />
+      <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
       <a class="item" href="index.html">About</a>
       <span class="item selected">Documentation</span>
       <a class="item">Tutorial</a>
