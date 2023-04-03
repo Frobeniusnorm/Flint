@@ -14,18 +14,18 @@ module CPPParser where
             parseHelper (x:t) = parseHelper t
             parseHelper [] = []
 
-    removeIllegal ('<':t) = "&lt;" ++ removeIllegal t 
+    removeIllegal ('<':t) = "&lt;" ++ removeIllegal t
     removeIllegal ('>':t) = "&gt;" ++ removeIllegal t
-    removeIllegal (x:t) = x : removeIllegal t  
+    removeIllegal (x:t) = x : removeIllegal t
     removeIllegal [] = []
 
-    bulletpointHighlight ('\n':'\n':str) = "<br />" ++ bulletpointHighlight ('\n':str)
+    bulletpointHighlight ('\r':'\n':'\r':'\n':str) = "<div style=\"display:block; height: 0.5em\"></div>" ++ bulletpointHighlight ('\n':str)
     bulletpointHighlight ('\n':' ':'-':str) = do
         let (subpoints, rest) = highlightpoints ('\n':' ':'-':str)
         "<ul>" ++ subpoints ++ "</ul>" ++ bulletpointHighlight rest
         where
             highlightpoints ('\n':' ':'-':str) = do
-                let point = map (\(a,b,c) -> b) (takeWhile (\(a,b,c) -> (a /= '\n' || ((b == '\t' || b == ' ') && (c == '\t' || c == ' '))) &&
+                let point = map (\(a,b,c) -> b) (takeWhile (\(a,b,c) -> (a /= '\n' || (b == '\t' || b == ' ') && (c == '\t' || c == ' ')) &&
                                                         not (a == '\n' && (b == ' ' || b == '\t') && c == '-'))
                                                         (zip3 str (drop 1 str) (drop 2 str)))
                 let (rek, rest) = highlightpoints (drop (length point) str)
@@ -44,22 +44,29 @@ module CPPParser where
     inlineCode (x:t) = x:inlineCode t
     inlineCode [] = []
 
-    functionNameHighlighting :: String -> [String] -> String
     functionNameHighlighting str fn_names =
-        unpack (foldl (\curr fn_name -> 
-            replace (pack $ '`':fn_name ++ ['`']) (pack $ " <a href=\"#" ++ fn_name ++ "\">`" ++ fn_name ++ "`</a>") curr) 
+        unpack (foldl (\curr fn_name ->
+            replace (pack $ '`':fn_name ++ ['`']) (pack $ " <a href=\"#" ++ fn_name ++ "\">`" ++ fn_name ++ "`</a>") curr)
             (pack str) fn_names)
     highlightDoc str fn_names= inlineCode (functionNameHighlighting (bulletpointHighlight str) fn_names)
     stripFctname str = do
-                let foo = takeWhile (\x -> x /= '(' && x /= ' ') (drop 1 $ dropWhile (/= ' ') str)
-                if not (null foo) && head foo == '*' then
-                    drop 1 foo else foo
+                let foo = takeWhile (\x -> x /= '(' && x /= '{' && x /= ';') (drop 1 $ dropWhile (/= ' ') str)
+                replaceIllegal $
+                    if not (null foo) && head foo == '*' then
+                        drop 1 foo else foo
+        where
+            replaceIllegal [] = []
+            replaceIllegal ('<':x) = '_' : replaceIllegal x
+            replaceIllegal ('>':x) = '_' : replaceIllegal x
+            replaceIllegal (' ':x) = '_' : replaceIllegal x
+            replaceIllegal (',':x) = '_' : replaceIllegal x
+            replaceIllegal (a:x) = a : replaceIllegal x
 
     compileTOCForCPP str = do
         let fcts_defs = parseCpp str
-        let ovw_fcts = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (snd a) ++ "\">" ++ snd a ++ "</a></li>")
+        let ovw_fcts = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (snd a) ++ "\">" ++ removeIllegal (snd a) ++ "</a></li>")
                 (filter (\a -> not ("enum" `isPrefixOf` snd a) && not ("struct" `isPrefixOf` snd a)) fcts_defs)
-        let ovw_types = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (snd a) ++ "\">" ++ snd a ++ "</a></li>")
+        let ovw_types = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (snd a) ++ "\">" ++ removeIllegal (snd a) ++ "</a></li>")
                 (filter (\a -> ("enum" `isPrefixOf` snd a) || ("struct" `isPrefixOf` snd a)) fcts_defs)
         "<div class=\"card\">" ++
             "    <span class=\"card_header\">Overview</span>" ++
@@ -70,7 +77,7 @@ module CPPParser where
             \<span class=\"card_header\" style=\"font-size:1.2em\">Functions</span><ul>"
             ++ ovw_fcts ++
             "</ul></div>"
-        
+
 
     compileCppToHtml str = do
         let fcts_defs = parseCpp str
@@ -79,7 +86,7 @@ module CPPParser where
             "<div id=\""
                 ++ stripFctname (snd a) ++
                 "\"></div><div class=\"card\"><pre class=\"card_header_code\">"
-                ++ snd a ++
+                ++ removeIllegal (snd a) ++
                 "</pre></div>\n<br />\n<div class=\"card\"><div style=\"padding: 5px;\">"
                 ++ highlightDoc (parseDoc (fst a) "") fct_names ++
                 "</div></div><div style=\"display: block; height: 2em;\"></div>\n") fcts_defs

@@ -46,10 +46,8 @@ double reduce_fun(bool backend) {
   Tensor<float, 3> t2(d2);
   timer.start();
   for (int i = 0; i < 1000; i++) {
-    enable_eager_execution();
     Tensor<double, 1> res =
         ((t2.reduce_mul(0) * (t2 - t1).reduce_sum(0)).reduce_sum(0) / 1000.0);
-    disable_eager_execution();
     if (backend)
       res.execute_gpu();
     else

@@ -34,9 +34,40 @@
 #include <sys/types.h>
 #include <tuple>
 #include <vector>
-template <typename T, unsigned int dimensions> struct Tensor;
+/**
+ * This is the base class of the C++ implementation of Flint.
+ *
+ * Instances of a implementation of this template wrap around the `FGraphNode`
+ * struct by providing C++ style operations and a template representing the
+ * underlying datatype of the node (adding type safety) and its dimensionality
+ * (sometimes refered to as rank). That allows conversion to STL objects like
+ * the `operator*` does and dimensionality safety for operations like
+ * `operator[]` or `slice`.
+ *
+ * When using it it behaves like a single Tensor representation (i.e. operations
+ * can be called on it, its data may be queries), but internally it may rather
+ * store applied operations and parameters for later lazy execution.
+ *
+ * When you apply an operation to an instance it usually returns a new `Tensor`
+ * object, representing that operation applied to the old object. If eager
+ * execution is enabled (see `Flint::enable_eager_execution()`) the operation is
+ * directly executed with the generation of the new object, else it only
+ * executes if you query its data (with `operator*` or `operator[]`) or if a
+ * previous operation requires its data (keep in mind that some operations have
+ * to execute the operations of their parameters directly, because their data
+ * is already completly needed during execution e.g. reduce operations or matrix
+ * multiplication).
+ *
+ * The template is recursively defined on the dimensionality `n`. Meaning there
+ * are two implementations: one for the basis case `n=1` and one for the general
+ * case `n>1`. The interface should not differ much, except that some operations
+ * that are dimension specific behave differently.
+ */
+template <typename T, unsigned int n> struct Tensor;
 
-// one dimensional
+/**
+ * The 1 dimensional implementation of `Tensor`.
+ */
 template <typename T> struct Tensor<T, 1> {
   template <typename K, unsigned int k> friend struct Tensor;
   typedef std::vector<T> storage_type;
@@ -313,7 +344,9 @@ protected:
   std::array<size_t, 1> shape;
 };
 
-// multi dimensional
+/**
+ * The multi dimensional implementation of `Tensor`.
+ */
 template <typename T, unsigned int n> struct Tensor {
   template <typename K, unsigned int k> friend struct Tensor;
   // storage type is the vector of the recursive type

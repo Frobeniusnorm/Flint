@@ -710,9 +710,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     flintInit_gpu();
   }
   // ensures all previous operations are finished
-  if (clFinish(queue) != CL_SUCCESS) {
-    flogging(F_ERROR, "OpenCL queue error!");
-  }
+  // if (clFinish(queue) != CL_SUCCESS) {
+  //   flogging(F_ERROR, "OpenCL queue error!");
+  // }
   {
     if (node->operation->op_type == FSTORE) {
       node->result_data = new FResultData();
