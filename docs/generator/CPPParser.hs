@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Redundant bracket" #-}
+{-# HLINT ignore "Use lambda-case" #-}
 module CPPParser where
     import Data.List (isPrefixOf, foldl', sortOn, isInfixOf)
     import Data.Text (replace, unpack, pack)
@@ -79,37 +80,48 @@ module CPPParser where
 
     compileTOCForCPP str = do
         let fcts_defs = parseCpp str
-        let ovw_fcts = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ removeIllegal (name a) ++ "</a></li>")
-                (filter (\x -> not (isDataNode $ name x)) fcts_defs)
-        let ovw_types = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ removeIllegal (name a) ++ "</a></li>")
-                (filter (isDataNode . name) fcts_defs)
-        "<div class=\"card\">" ++
-            "    <span class=\"card_header\">Overview</span>" ++
-            "</div><br /><div class=\"card\">\
-            \<span class=\"card_header\" style=\"font-size:1.2em\">Types</span><ul>"
-            ++ ovw_types ++
-            "</ul>\
-            \<span class=\"card_header\" style=\"font-size:1.2em\">Functions</span><ul>"
-            ++ ovw_fcts ++
-            "</ul></div>"
+        helperTOC fcts_defs
         where
             isDataNode::[Char] -> Bool
             isDataNode x = "struct " `isInfixOf` x || "enum " `isInfixOf` x || "class " `isInfixOf` x
+            helperTOC::[DeclDoc] -> [[Char]]
+            helperTOC fct_def = do
+                let ovw_fcts = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ removeIllegal (name a) ++ "</a></li>") (filter (\x -> not (isDataNode $ name x)) fct_def)
+                let ovw_types = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ removeIllegal (name a) ++ "</a></li>")
+                        (filter (isDataNode . name) fct_def)
+                ("<div class=\"card\">" ++
+                    "    <span class=\"card_header\">Overview</span>" ++
+                    "</div><br /><div class=\"card\">\
+                    \<span class=\"card_header\" style=\"font-size:1.2em\">Types</span><ul>"
+                    ++ ovw_types ++
+                    "</ul>\
+                    \<span class=\"card_header\" style=\"font-size:1.2em\">Functions</span><ul>"
+                    ++ ovw_fcts ++
+                    "</ul></div>") : (concatMap (helperTOC . (\x -> case x of
+                          StructDoc name decl children -> children
+                          other -> []
+                        )) fct_def)
 
-    compileCppToHtml str = do
+    compileCppToHtml str outline_expand = do
         let fcts_defs = parseCpp str
-        let fct_names = sortOn (\a -> -length a) (map (stripFctname . name) fcts_defs)
-        concatMap (\a ->
-            "<div id=\""
-                ++ stripFctname (name a) ++
-                "\"></div><div class=\"card\"><pre class=\"card_header_code\">"
-                ++ removeIllegal (name a) ++
-                "</pre></div>\n<br />\n<div class=\"card\"><div style=\"padding: 5px;\">"
-                ++ highlightDoc (parseDoc (docu a) "") fct_names ++
-                "</div></div><div style=\"display: block; height: 2em;\"></div>\n") fcts_defs
+        helperCompile fcts_defs
         where
             parseDoc ('\n':t) res = do
                 let stripped = dropWhile (\x -> x == ' ' || x == '\t') t
                 parseDoc (if not (null stripped) && head stripped == '*' then drop 1 stripped else stripped) (res ++ "\n")
             parseDoc (x:t) res = parseDoc t (res ++ [x])
             parseDoc [] res = res
+            helperCompile fcts_defs = do
+                let fct_names = sortOn (\a -> -length a) (map (stripFctname . name) fcts_defs)
+                (concatMap (\a ->
+                    "<div id=\""
+                        ++ stripFctname (name a) ++
+                        "\"></div><div class=\"card\"><pre class=\"card_header_code\">"
+                        ++ removeIllegal (name a) ++
+                        "</pre></div>\n<br />\n<div class=\"card\"><div style=\"padding: 5px;\">"
+                        ++ highlightDoc (parseDoc (docu a) "") fct_names ++
+                        "</div></div><div style=\"display: block; height: 2em;\"></div>\n") fcts_defs)
+                : (concatMap (helperCompile . (\x -> case x of
+                          StructDoc name decl children -> children
+                          other -> []
+                        )) fcts_defs)

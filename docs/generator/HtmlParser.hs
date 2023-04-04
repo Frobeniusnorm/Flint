@@ -1,7 +1,7 @@
 module HtmlParser where
     import Data.Char (isDigit, isAlpha)
     import Data.List
-    import CPPParser (parseCpp, compileCppToHtml, compileTOCForCPP)
+    import CPPParser (compileCppToHtml, compileTOCForCPP)
     highKeyword = "#F030FF"
     highType = "#FFF030"
     highLiteral = "#30F0FF"
@@ -29,7 +29,10 @@ module HtmlParser where
     includeFiles ('@':'f':'r':'o':'m':'_':'c':'o':'d':'e':'(':'"':t) = do
         let path = takeWhile (/= '"') t
         inc_file <- readFile path
-        includeFiles $ compileCppToHtml inc_file ++ drop 1 ( dropWhile (/= ')') t)
+        let rest_path = takeWhile (/= ')') (dropWhile (/= '"') t)
+        let outline_expand =
+                ',' == head (dropWhile (== ' ') rest_path) && "expand_out" `isInfixOf` rest_path
+        includeFiles $ compileCppToHtml inc_file outline_expand ++ drop 1 ( dropWhile (/= ')') t)
     includeFiles ('@':'g':'e':'n':'_':'t':'o':'c':'(':'"':t) = do
         let path = takeWhile (/= '"') t
         inc_file <- readFile path
@@ -48,8 +51,8 @@ module HtmlParser where
             transformCode str = concatMap (\x -> do
                     let code = map fst x
                     if snd (head x) then
-                        "<pre class=\"card code\" style=\"margin: 5px;\">" 
-                        ++ reverse (dropWhile (\c -> c == '\r' || c == '\n' || c == ' ') (reverse (highlightCode (highlightLiterals $ replaceIllegal code)))) 
+                        "<pre class=\"card code\" style=\"margin: 5px;\">"
+                        ++ reverse (dropWhile (\c -> c == '\r' || c == '\n' || c == ' ') (reverse (highlightCode (highlightLiterals $ replaceIllegal code))))
                         ++ "</pre>"
                     else code)
                 (groupBy (\a b -> snd a == snd b) (markCode str 0 False))
