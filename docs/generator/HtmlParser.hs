@@ -32,7 +32,8 @@ module HtmlParser where
         let rest_path = takeWhile (/= ')') (dropWhile (/= '"') t)
         let outline_expand =
                 ',' == head (dropWhile (== ' ') rest_path) && "expand_out" `isInfixOf` rest_path
-        includeFiles $ compileCppToHtml inc_file outline_expand ++ drop 1 ( dropWhile (/= ')') t)
+        -- TODO: in outline expand code which struct should be expanded and expand that one!
+        includeFiles $ compileCppToHtml inc_file ++ drop 1 ( dropWhile (/= ')') t)
     includeFiles ('@':'g':'e':'n':'_':'t':'o':'c':'(':'"':t) = do
         let path = takeWhile (/= '"') t
         inc_file <- readFile path
