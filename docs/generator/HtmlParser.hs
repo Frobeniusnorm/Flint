@@ -1,7 +1,9 @@
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 module HtmlParser where
     import Data.Char (isDigit, isAlpha)
     import Data.List
-    import CPPParser (compileCppToHtml, compileTOCForCPP)
+
+    import CPPParser (compileCppToHtml, compileTOCForCPP, parseCpp)
     highKeyword = "#F030FF"
     highType = "#FFF030"
     highLiteral = "#30F0FF"
@@ -10,6 +12,11 @@ module HtmlParser where
     replaceIllegal ('>':s) = "&gt;" ++ replaceIllegal s
     replaceIllegal (x:s) = x : replaceIllegal s
     replaceIllegal [] = []
+
+    splitBy delimiter = foldr f [[]] 
+          where f c l@(x:xs) | c == delimiter = []:l
+                             | otherwise = (c:x):xs
+
 
     highlightLiterals str =
         helper str True
@@ -29,15 +36,16 @@ module HtmlParser where
     includeFiles ('@':'f':'r':'o':'m':'_':'c':'o':'d':'e':'(':'"':t) = do
         let path = takeWhile (/= '"') t
         inc_file <- readFile path
-        let rest_path = takeWhile (/= ')') (dropWhile (/= '"') t)
-        let outline_expand =
-                ',' == head (dropWhile (== ' ') rest_path) && "expand_out" `isInfixOf` rest_path
-        -- TODO: in outline expand code which struct should be expanded and expand that one!
-        includeFiles $ compileCppToHtml inc_file ++ drop 1 ( dropWhile (/= ')') t)
+        let rest_path = filter (/= ' ') (takeWhile (/= ')') (drop 1 (dropWhile (/= '"') t)))
+        let select_expand = filter (/= "") (splitBy ',' rest_path)
+        print (parseCpp inc_file)
+        includeFiles $ compileCppToHtml inc_file select_expand ++ drop 1 ( dropWhile (/= ')') t)
     includeFiles ('@':'g':'e':'n':'_':'t':'o':'c':'(':'"':t) = do
         let path = takeWhile (/= '"') t
         inc_file <- readFile path
-        includeFiles $ compileTOCForCPP inc_file ++ drop 1 ( dropWhile (/= ')') t)
+        let rest_path = takeWhile (/= ')') (drop 1 (dropWhile (/= '"') t))
+        let select_expand = filter (/= "") (splitBy ',' rest_path)
+        includeFiles $ compileTOCForCPP inc_file select_expand ++ drop 1 ( dropWhile (/= ')') t)
     includeFiles (x:t) = do
         rek <- includeFiles t
         return (x : rek)

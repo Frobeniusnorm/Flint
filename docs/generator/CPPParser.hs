@@ -4,7 +4,7 @@ module CPPParser where
     import Data.List (isPrefixOf, foldl', sortOn, isInfixOf)
     import Data.Text (replace, unpack, pack)
     -- A documentation is either a symbol with documentation or a structure with a symbol and documentation and a list of sub-documentations
-    data DeclDoc = SymDoc {name::String, docu::String} | StructDoc {name::String, docu::String, children::[DeclDoc]}
+    data DeclDoc = SymDoc {name::String, docu::String} | StructDoc {name::String, docu::String, children::[DeclDoc]} deriving Show
     -- parses a cpp file to a list of documentations and function declerations
     parseCpp :: String -> [DeclDoc]
     parseCpp = parseHelper
@@ -54,10 +54,20 @@ module CPPParser where
     bulletpointHighlight (x:str) = removeIllegal [x] ++ bulletpointHighlight str
     bulletpointHighlight [] = []
 
-
     inlineCode ('`':t) = "<pre class=\"inline_code\">" ++ takeWhile (/= '`') t ++ "</pre>" ++ inlineCode (drop 1 (dropWhile (/= '`') t))
     inlineCode (x:t) = x:inlineCode t
     inlineCode [] = []
+
+    selectFcts dd sel = 
+        -- "." enables that all top level definitions are included
+        selectHelper dd sel ("." `elem` sel)
+        where 
+            selectHelper sd@(SymDoc name doc) selection all = 
+                [sd | (stripFctname name) `elem` selection || null selection || all]
+            selectHelper sd@(StructDoc name doc c) selection all = do
+                let contains = (stripFctname name) `elem` selection
+                if contains || null selection || all then 
+                    (sd : (concatMap (\x -> selectHelper x (selection) contains) c)) else []
 
     functionNameHighlighting str fn_names =
         unpack (foldl (\curr fn_name ->
@@ -77,8 +87,9 @@ module CPPParser where
             replaceIllegal (',':x) = '_' : replaceIllegal x
             replaceIllegal (a:x) = a : replaceIllegal x
 
-    compileTOCForCPP str = do
-        let fcts_defs = parseCpp str
+    compileTOCForCPP str selection = do
+        let fcts_tree = parseCpp str
+        let fcts_defs = concatMap (`selectFcts` selection) fcts_tree
         let ovw_fcts = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ removeIllegal (name a) ++ "</a></li>")
                 (filter (\x -> not (isDataNode $ name x)) fcts_defs)
         let ovw_types = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ removeIllegal (name a) ++ "</a></li>")
@@ -96,8 +107,9 @@ module CPPParser where
             isDataNode::[Char] -> Bool
             isDataNode x = "struct " `isInfixOf` x || "enum " `isInfixOf` x || "class " `isInfixOf` x
 
-    compileCppToHtml str = do
-        let fcts_defs = parseCpp str
+    compileCppToHtml str selection = do
+        let fcts_tree = parseCpp str
+        let fcts_defs = concatMap (`selectFcts` selection) fcts_tree
         let fct_names = sortOn (\a -> -length a) (map (stripFctname . name) fcts_defs)
         concatMap (\a ->
             "<div id=\""
