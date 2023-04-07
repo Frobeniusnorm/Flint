@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>
+    Flint Documentation
+  </title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+</head>
+
+<body>
+
+  <div id="header-bar">
+    <div class="left-spaced">
+      <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
+      <a class="item" href="index.html">About</a>
+      <a class="item selected" href="documentation.html">Documentation</a>
+      <a class="item">Tutorial</a>
+    </div>
+  </div>
+  <div id="showcase_background" style="min-height: 18em; background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(214,103,61,1) 0%, rgba(159,33,228,1) 100%);">
+    <center style="margin-top:2em">
+      <h1>
+        Documentation <u>flint.hpp</u>
+      </h1>
+      <div style="display: block; height: 0.5em;"></div>
+      <h2>
+        Tensor&lt;T, 1&gt;
+      </h2>
+    </center>
+  </div>
+  <center>
+<div class="content" style="margin-top: -3.1em">
+        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types</span><ul><li><a href="#_typename_T__unsigned_int_n__struct_Tensor_">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></a></li></ul><span class="card_header" style="font-size:1.2em">Functions</span><ul><li><a href="#_typename..._args_
+__static_Tensor_T__n__constant">template &lt;typename... args&gt;
+  static Tensor&lt;T, n&gt; <b>constant</b>(T value, args... sizes) </a></li></ul></div>
+        <div style="display: block; height: 2em;"></div>
+        <div id="_typename_T__unsigned_int_n__struct_Tensor_"></div><div class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ The multi dimensional implementation of <pre class="inline_code">Tensor</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename..._args_
+__static_Tensor_T__n__constant"></div><div class="card"><pre class="card_header_code">template &lt;typename... args&gt;
+  static Tensor&lt;T, n&gt; <b>constant</b>(T value, args... sizes) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Generates a Tensor containing the single given value in every entry.
+ The resulting Tensor will have a dimensionality of <pre class="inline_code">sizeof...(args)</pre> and a
+ shape denoted by each entry in <pre class="inline_code">sizes</pre>. e.g.
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt; foo = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>);
+ std::cout &lt;&lt; foo &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>]],</span>
+ <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>]]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+
+    </div>
+</center>
+  <div id="footer">
+    <center>
+    <div class="content">
+      <div class="row">
+        <div class="column">
+          © David Schwarzbeck, 2022</br>
+          Licensed under the <a href="https://github.com/Frobeniusnorm/Flint/blob/main/LICENCE">Apache License</a>, Version 2.0
+        </div>
+        <div class="column">&nbsp;</div>
+        <div class="column">&nbsp;</div>
+        <div class="column">
+          <a href="https://github.com/Frobeniusnorm/Flint/">Github</a>
+        </div>
+      </div>
+    </div>
+    </center>
+  </div>
+</body>
+</html>

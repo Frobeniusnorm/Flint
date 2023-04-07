@@ -5,6 +5,22 @@ module CPPParser where
     import Data.Text (replace, unpack, pack)
     -- A documentation is either a symbol with documentation or a structure with a symbol and documentation and a list of sub-documentations
     data DeclDoc = SymDoc {name::String, docu::String} | StructDoc {name::String, docu::String, children::[DeclDoc]} deriving Show
+    highlightName decl = 
+        highlightHelper decl ""
+        where
+            highlightHelper ('(':t) prev = "<b>" ++ prev ++ "</b>(" ++ t
+            highlightHelper (' ':t) prev = prev ++ " " ++ (highlightHelper t "")
+            highlightHelper s@(x:t) prev = do
+                if "class " `isPrefixOf` s then
+                    "class <b>" ++ takeWhile (/= '<') (drop 6 s) ++ "</b>"
+                else if "struct " `isPrefixOf` s then
+                    "struct <b>" ++ takeWhile (/= '<') (drop 7 s) ++ "</b>"
+                else if "enum " `isPrefixOf` s then
+                    "enum <b>" ++ takeWhile (/= '<') (drop 5 s) ++ "</b>"
+                else
+                    highlightHelper t (prev ++ [x])
+            highlightHelper [] prev = prev
+
     -- parses a cpp file to a list of documentations and function declerations
     parseCpp :: String -> [DeclDoc]
     parseCpp = parseHelper
@@ -90,9 +106,9 @@ module CPPParser where
     compileTOCForCPP str selection = do
         let fcts_tree = parseCpp str
         let fcts_defs = concatMap (`selectFcts` selection) fcts_tree
-        let ovw_fcts = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ removeIllegal (name a) ++ "</a></li>")
+        let ovw_fcts = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ highlightName (removeIllegal (name a)) ++ "</a></li>")
                 (filter (\x -> not (isDataNode $ name x)) fcts_defs)
-        let ovw_types = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ removeIllegal (name a) ++ "</a></li>")
+        let ovw_types = concatMap (\a -> "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ highlightName (removeIllegal (name a)) ++ "</a></li>")
                 (filter (isDataNode . name) fcts_defs)
         "<div class=\"card\">" ++
             "    <span class=\"card_header\">Overview</span>" ++
@@ -115,7 +131,7 @@ module CPPParser where
             "<div id=\""
                 ++ stripFctname (name a) ++
                 "\"></div><div class=\"card\"><pre class=\"card_header_code\">"
-                ++ removeIllegal (name a) ++
+                ++ highlightName (removeIllegal (name a)) ++
                 "</pre></div>\n<br />\n<div class=\"card\"><div style=\"padding: 5px;\">"
                 ++ highlightDoc (parseDoc (docu a) "") fct_names ++
                 "</div></div><div style=\"display: block; height: 2em;\"></div>\n") fcts_defs

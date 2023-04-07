@@ -27,19 +27,19 @@
   </div>
   <center>
     <div class="content" style="margin-top: -3.1em">
-        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types</span><ul><li><a href="#FLogType_">enum FLogType </a></li><li><a href="#FType_">enum FType </a></li><li><a href="#FOperation_">struct FOperation </a></li><li><a href="#FResultData_">struct FResultData </a></li><li><a href="#FGraphNode_">struct FGraphNode </a></li><li><a href="#FStore_">struct FStore </a></li></ul><span class="card_header" style="font-size:1.2em">Functions</span><ul><li><a href="#flintInit">void flintInit(int backends)</a></li><li><a href="#flintInit_cpu">void flintInit_cpu()</a></li><li><a href="#flintInit_gpu">void flintInit_gpu()</a></li><li><a href="#flintCleanup">void flintCleanup()</a></li><li><a href="#flintCleanup_cpu">void flintCleanup_cpu()</a></li><li><a href="#flintCleanup_gpu">void flintCleanup_gpu()</a></li><li><a href="#fSetLoggingLevel">void fSetLoggingLevel(int)</a></li><li><a href="#flogging">void flogging(FLogType type, const char *msg)</a></li><li><a href="#enable_eager_execution">void enable_eager_execution()</a></li><li><a href="#disable_eager_execution">void disable_eager_execution()</a></li><li><a href="#is_eager_execution">int is_eager_execution()</a></li><li><a href="#fCreateGraph">FGraphNode *fCreateGraph(const void *data, const int num_entries,
+        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types</span><ul><li><a href="#FLogType_">enum <b>FLogType </b></a></li><li><a href="#FType_">enum <b>FType </b></a></li><li><a href="#FOperation_">struct <b>FOperation </b></a></li><li><a href="#FResultData_">struct <b>FResultData </b></a></li><li><a href="#FGraphNode_">struct <b>FGraphNode </b></a></li><li><a href="#FStore_">struct <b>FStore </b></a></li></ul><span class="card_header" style="font-size:1.2em">Functions</span><ul><li><a href="#flintInit">void <b>flintInit</b>(int backends)</a></li><li><a href="#flintInit_cpu">void <b>flintInit_cpu</b>()</a></li><li><a href="#flintInit_gpu">void <b>flintInit_gpu</b>()</a></li><li><a href="#flintCleanup">void <b>flintCleanup</b>()</a></li><li><a href="#flintCleanup_cpu">void <b>flintCleanup_cpu</b>()</a></li><li><a href="#flintCleanup_gpu">void <b>flintCleanup_gpu</b>()</a></li><li><a href="#fSetLoggingLevel">void <b>fSetLoggingLevel</b>(int)</a></li><li><a href="#flogging">void <b>flogging</b>(FLogType type, const char *msg)</a></li><li><a href="#enable_eager_execution">void <b>enable_eager_execution</b>()</a></li><li><a href="#disable_eager_execution">void <b>disable_eager_execution</b>()</a></li><li><a href="#is_eager_execution">int <b>is_eager_execution</b>()</a></li><li><a href="#fCreateGraph">FGraphNode <b>*fCreateGraph</b>(const void *data, const int num_entries,
                          const FType data_type, const size_t *shape,
-                         const int dimensions)</a></li><li><a href="#fconstant_i">FGraphNode *fconstant_i(const int value, const size_t *shape,
-                        const int dimensions)</a></li><li><a href="#fconstant_l">FGraphNode *fconstant_l(const long value, const size_t *shape,
-                        const int dimensions)</a></li><li><a href="#fconstant_f">FGraphNode *fconstant_f(const float value, const size_t *shape,
-                        const int dimensions)</a></li><li><a href="#fconstant_d">FGraphNode *fconstant_d(const double value, const size_t *shape,
-                        const int dimensions)</a></li><li><a href="#fFreeGraph">void fFreeGraph(FGraphNode *graph)</a></li><li><a href="#fCopyGraph">FGraphNode *fCopyGraph(const FGraphNode *graph)</a></li><li><a href="#fExecuteGraph">FGraphNode *fExecuteGraph(FGraphNode *node)</a></li><li><a href="#fExecuteGraph_cpu">FGraphNode *fExecuteGraph_cpu(FGraphNode *node)</a></li><li><a href="#fExecuteGraph_gpu">FGraphNode *fExecuteGraph_gpu(FGraphNode *node)</a></li><li><a href="#fExecuteGraph_cpu_eagerly">FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node)</a></li><li><a href="#fExecuteGraph_gpu_eagerly">FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node)</a></li><li><a href="#fCalculateGradient">FGraphNode *fCalculateGradient(FGraphNode *outputfct, const FGraphNode *dx)</a></li><li><a href="#fadd_g">FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fsub_g">FGraphNode *fsub_g(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fdiv_g">FGraphNode *fdiv_g(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fmul_g">FGraphNode *fmul_g(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fpow_g">FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fadd_ci">FGraphNode *fadd_ci(FGraphNode *a, const int b)</a></li><li><a href="#fadd_cl">FGraphNode *fadd_cl(FGraphNode *a, const long b)</a></li><li><a href="#fadd_cf">FGraphNode *fadd_cf(FGraphNode *a, const float b)</a></li><li><a href="#fadd_cd">FGraphNode *fadd_cd(FGraphNode *a, const double b)</a></li><li><a href="#fsub_ci">FGraphNode *fsub_ci(FGraphNode *a, const int b)</a></li><li><a href="#fsub_cl">FGraphNode *fsub_cl(FGraphNode *a, const long b)</a></li><li><a href="#fsub_cf">FGraphNode *fsub_cf(FGraphNode *a, const float b)</a></li><li><a href="#fsub_cd">FGraphNode *fsub_cd(FGraphNode *a, const double b)</a></li><li><a href="#fsub_ici">FGraphNode *fsub_ici(const int a, FGraphNode *b)</a></li><li><a href="#fsub_icl">FGraphNode *fsub_icl(const long a, FGraphNode *b)</a></li><li><a href="#fsub_icf">FGraphNode *fsub_icf(const float a, FGraphNode *b)</a></li><li><a href="#fsub_icd">FGraphNode *fsub_icd(const double a, FGraphNode *b)</a></li><li><a href="#fdiv_ci">FGraphNode *fdiv_ci(FGraphNode *a, const int b)</a></li><li><a href="#fdiv_cl">FGraphNode *fdiv_cl(FGraphNode *a, const long b)</a></li><li><a href="#fdiv_cf">FGraphNode *fdiv_cf(FGraphNode *a, const float b)</a></li><li><a href="#fdiv_cd">FGraphNode *fdiv_cd(FGraphNode *a, const double b)</a></li><li><a href="#fdiv_ici">FGraphNode *fdiv_ici(const int a, FGraphNode *b)</a></li><li><a href="#fdiv_icl">FGraphNode *fdiv_icl(const long a, FGraphNode *b)</a></li><li><a href="#fdiv_icf">FGraphNode *fdiv_icf(const float a, FGraphNode *b)</a></li><li><a href="#fdiv_icd">FGraphNode *fdiv_icd(const double a, FGraphNode *b)</a></li><li><a href="#fmul_ci">FGraphNode *fmul_ci(FGraphNode *a, const int b)</a></li><li><a href="#fmul_cl">FGraphNode *fmul_cl(FGraphNode *a, const long b)</a></li><li><a href="#fmul_cf">FGraphNode *fmul_cf(FGraphNode *a, const float b)</a></li><li><a href="#fmul_cd">FGraphNode *fmul_cd(FGraphNode *a, const double b)</a></li><li><a href="#fpow_ci">FGraphNode *fpow_ci(FGraphNode *a, const int b)</a></li><li><a href="#fpow_cl">FGraphNode *fpow_cl(FGraphNode *a, const long b)</a></li><li><a href="#fpow_cf">FGraphNode *fpow_cf(FGraphNode *a, const float b)</a></li><li><a href="#fpow_cd">FGraphNode *fpow_cd(FGraphNode *a, const double b)</a></li><li><a href="#flog">FGraphNode *flog(FGraphNode *a)</a></li><li><a href="#flog2">FGraphNode *flog2(FGraphNode *a)</a></li><li><a href="#flog10">FGraphNode *flog10(FGraphNode *a)</a></li><li><a href="#fsin">FGraphNode *fsin(FGraphNode *a)</a></li><li><a href="#fsqrt_g">FGraphNode *fsqrt_g(FGraphNode *a)</a></li><li><a href="#fcos">FGraphNode *fcos(FGraphNode *a)</a></li><li><a href="#ftan">FGraphNode *ftan(FGraphNode *a)</a></li><li><a href="#fasin">FGraphNode *fasin(FGraphNode *a)</a></li><li><a href="#facos">FGraphNode *facos(FGraphNode *a)</a></li><li><a href="#fatan">FGraphNode *fatan(FGraphNode *a)</a></li><li><a href="#fneg">FGraphNode *fneg(FGraphNode *a)</a></li><li><a href="#fsign">FGraphNode *fsign(FGraphNode *a)</a></li><li><a href="#feven">FGraphNode *feven(FGraphNode *a)</a></li><li><a href="#fless_g">FGraphNode *fless_g(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fgreater_g">FGraphNode *fgreater_g(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fequal_g">FGraphNode *fequal_g(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fless_ci">FGraphNode *fless_ci(FGraphNode *a, const int b)</a></li><li><a href="#fless_cl">FGraphNode *fless_cl(FGraphNode *a, const long b)</a></li><li><a href="#fless_cf">FGraphNode *fless_cf(FGraphNode *a, const float b)</a></li><li><a href="#fless_cd">FGraphNode *fless_cd(FGraphNode *a, const double b)</a></li><li><a href="#fgreater_ci">FGraphNode *fgreater_ci(FGraphNode *a, const int b)</a></li><li><a href="#fgreater_cl">FGraphNode *fgreater_cl(FGraphNode *a, const long b)</a></li><li><a href="#fgreater_cf">FGraphNode *fgreater_cf(FGraphNode *a, const float b)</a></li><li><a href="#fgreater_cd">FGraphNode *fgreater_cd(FGraphNode *a, const double b)</a></li><li><a href="#fequal_ci">FGraphNode *fequal_ci(FGraphNode *a, const int b)</a></li><li><a href="#fequal_cl">FGraphNode *fequal_cl(FGraphNode *a, const long b)</a></li><li><a href="#fequal_cf">FGraphNode *fequal_cf(FGraphNode *a, const float b)</a></li><li><a href="#fequal_cd">FGraphNode *fequal_cd(FGraphNode *a, const double b)</a></li><li><a href="#fmatmul">FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fflatten">FGraphNode *fflatten(FGraphNode *a)</a></li><li><a href="#fflatten_dimension">FGraphNode *fflatten_dimension(FGraphNode *a, int dimension)</a></li><li><a href="#fconvert">FGraphNode *fconvert(FGraphNode *a, FType newtype)</a></li><li><a href="#freshape">FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions)</a></li><li><a href="#fmin_g">FGraphNode *fmin_g(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fmin_ci">FGraphNode *fmin_ci(FGraphNode *a, const int b)</a></li><li><a href="#fmin_cl">FGraphNode *fmin_cl(FGraphNode *a, const long b)</a></li><li><a href="#fmin_cf">FGraphNode *fmin_cf(FGraphNode *a, const float b)</a></li><li><a href="#fmin_cd">FGraphNode *fmin_cd(FGraphNode *a, const double b)</a></li><li><a href="#fmax_g">FGraphNode *fmax_g(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fmax_ci">FGraphNode *fmax_ci(FGraphNode *a, const int b)</a></li><li><a href="#fmax_cl">FGraphNode *fmax_cl(FGraphNode *a, const long b)</a></li><li><a href="#fmax_cf">FGraphNode *fmax_cf(FGraphNode *a, const float b)</a></li><li><a href="#fmax_cd">FGraphNode *fmax_cd(FGraphNode *a, const double b)</a></li><li><a href="#freduce_sum">FGraphNode *freduce_sum(FGraphNode *a,
-                        const int dimension)</a></li><li><a href="#freduce_mul">FGraphNode *freduce_mul(FGraphNode *a, const int dimension)</a></li><li><a href="#fslice">FGraphNode *fslice(FGraphNode *a, const long *start, const long *end)</a></li><li><a href="#fslice_step">FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
-                        const long *step)</a></li><li><a href="#fextend">FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
-                    const size_t *insert_at)</a></li><li><a href="#fextend_step">FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
-                         const size_t *insert_at, const long *step_size)</a></li><li><a href="#fabs_g">FGraphNode *fabs_g(FGraphNode *a)</a></li><li><a href="#frepeat">FGraphNode *frepeat(FGraphNode *a, int *repititions)</a></li><li><a href="#ftranspose">FGraphNode *ftranspose(FGraphNode *a, int *transpositions)</a></li><li><a href="#fconvolve">FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps)</a></li></ul></div>
+                         const int dimensions)</a></li><li><a href="#fconstant_i">FGraphNode <b>*fconstant_i</b>(const int value, const size_t *shape,
+                        const int dimensions)</a></li><li><a href="#fconstant_l">FGraphNode <b>*fconstant_l</b>(const long value, const size_t *shape,
+                        const int dimensions)</a></li><li><a href="#fconstant_f">FGraphNode <b>*fconstant_f</b>(const float value, const size_t *shape,
+                        const int dimensions)</a></li><li><a href="#fconstant_d">FGraphNode <b>*fconstant_d</b>(const double value, const size_t *shape,
+                        const int dimensions)</a></li><li><a href="#fFreeGraph">void <b>fFreeGraph</b>(FGraphNode *graph)</a></li><li><a href="#fCopyGraph">FGraphNode <b>*fCopyGraph</b>(const FGraphNode *graph)</a></li><li><a href="#fExecuteGraph">FGraphNode <b>*fExecuteGraph</b>(FGraphNode *node)</a></li><li><a href="#fExecuteGraph_cpu">FGraphNode <b>*fExecuteGraph_cpu</b>(FGraphNode *node)</a></li><li><a href="#fExecuteGraph_gpu">FGraphNode <b>*fExecuteGraph_gpu</b>(FGraphNode *node)</a></li><li><a href="#fExecuteGraph_cpu_eagerly">FGraphNode <b>*fExecuteGraph_cpu_eagerly</b>(FGraphNode *node)</a></li><li><a href="#fExecuteGraph_gpu_eagerly">FGraphNode <b>*fExecuteGraph_gpu_eagerly</b>(FGraphNode *node)</a></li><li><a href="#fCalculateGradient">FGraphNode <b>*fCalculateGradient</b>(FGraphNode *outputfct, const FGraphNode *dx)</a></li><li><a href="#fadd_g">FGraphNode <b>*fadd_g</b>(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fsub_g">FGraphNode <b>*fsub_g</b>(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fdiv_g">FGraphNode <b>*fdiv_g</b>(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fmul_g">FGraphNode <b>*fmul_g</b>(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fpow_g">FGraphNode <b>*fpow_g</b>(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fadd_ci">FGraphNode <b>*fadd_ci</b>(FGraphNode *a, const int b)</a></li><li><a href="#fadd_cl">FGraphNode <b>*fadd_cl</b>(FGraphNode *a, const long b)</a></li><li><a href="#fadd_cf">FGraphNode <b>*fadd_cf</b>(FGraphNode *a, const float b)</a></li><li><a href="#fadd_cd">FGraphNode <b>*fadd_cd</b>(FGraphNode *a, const double b)</a></li><li><a href="#fsub_ci">FGraphNode <b>*fsub_ci</b>(FGraphNode *a, const int b)</a></li><li><a href="#fsub_cl">FGraphNode <b>*fsub_cl</b>(FGraphNode *a, const long b)</a></li><li><a href="#fsub_cf">FGraphNode <b>*fsub_cf</b>(FGraphNode *a, const float b)</a></li><li><a href="#fsub_cd">FGraphNode <b>*fsub_cd</b>(FGraphNode *a, const double b)</a></li><li><a href="#fsub_ici">FGraphNode <b>*fsub_ici</b>(const int a, FGraphNode *b)</a></li><li><a href="#fsub_icl">FGraphNode <b>*fsub_icl</b>(const long a, FGraphNode *b)</a></li><li><a href="#fsub_icf">FGraphNode <b>*fsub_icf</b>(const float a, FGraphNode *b)</a></li><li><a href="#fsub_icd">FGraphNode <b>*fsub_icd</b>(const double a, FGraphNode *b)</a></li><li><a href="#fdiv_ci">FGraphNode <b>*fdiv_ci</b>(FGraphNode *a, const int b)</a></li><li><a href="#fdiv_cl">FGraphNode <b>*fdiv_cl</b>(FGraphNode *a, const long b)</a></li><li><a href="#fdiv_cf">FGraphNode <b>*fdiv_cf</b>(FGraphNode *a, const float b)</a></li><li><a href="#fdiv_cd">FGraphNode <b>*fdiv_cd</b>(FGraphNode *a, const double b)</a></li><li><a href="#fdiv_ici">FGraphNode <b>*fdiv_ici</b>(const int a, FGraphNode *b)</a></li><li><a href="#fdiv_icl">FGraphNode <b>*fdiv_icl</b>(const long a, FGraphNode *b)</a></li><li><a href="#fdiv_icf">FGraphNode <b>*fdiv_icf</b>(const float a, FGraphNode *b)</a></li><li><a href="#fdiv_icd">FGraphNode <b>*fdiv_icd</b>(const double a, FGraphNode *b)</a></li><li><a href="#fmul_ci">FGraphNode <b>*fmul_ci</b>(FGraphNode *a, const int b)</a></li><li><a href="#fmul_cl">FGraphNode <b>*fmul_cl</b>(FGraphNode *a, const long b)</a></li><li><a href="#fmul_cf">FGraphNode <b>*fmul_cf</b>(FGraphNode *a, const float b)</a></li><li><a href="#fmul_cd">FGraphNode <b>*fmul_cd</b>(FGraphNode *a, const double b)</a></li><li><a href="#fpow_ci">FGraphNode <b>*fpow_ci</b>(FGraphNode *a, const int b)</a></li><li><a href="#fpow_cl">FGraphNode <b>*fpow_cl</b>(FGraphNode *a, const long b)</a></li><li><a href="#fpow_cf">FGraphNode <b>*fpow_cf</b>(FGraphNode *a, const float b)</a></li><li><a href="#fpow_cd">FGraphNode <b>*fpow_cd</b>(FGraphNode *a, const double b)</a></li><li><a href="#flog">FGraphNode <b>*flog</b>(FGraphNode *a)</a></li><li><a href="#flog2">FGraphNode <b>*flog2</b>(FGraphNode *a)</a></li><li><a href="#flog10">FGraphNode <b>*flog10</b>(FGraphNode *a)</a></li><li><a href="#fsin">FGraphNode <b>*fsin</b>(FGraphNode *a)</a></li><li><a href="#fsqrt_g">FGraphNode <b>*fsqrt_g</b>(FGraphNode *a)</a></li><li><a href="#fcos">FGraphNode <b>*fcos</b>(FGraphNode *a)</a></li><li><a href="#ftan">FGraphNode <b>*ftan</b>(FGraphNode *a)</a></li><li><a href="#fasin">FGraphNode <b>*fasin</b>(FGraphNode *a)</a></li><li><a href="#facos">FGraphNode <b>*facos</b>(FGraphNode *a)</a></li><li><a href="#fatan">FGraphNode <b>*fatan</b>(FGraphNode *a)</a></li><li><a href="#fneg">FGraphNode <b>*fneg</b>(FGraphNode *a)</a></li><li><a href="#fsign">FGraphNode <b>*fsign</b>(FGraphNode *a)</a></li><li><a href="#feven">FGraphNode <b>*feven</b>(FGraphNode *a)</a></li><li><a href="#fless_g">FGraphNode <b>*fless_g</b>(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fgreater_g">FGraphNode <b>*fgreater_g</b>(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fequal_g">FGraphNode <b>*fequal_g</b>(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fless_ci">FGraphNode <b>*fless_ci</b>(FGraphNode *a, const int b)</a></li><li><a href="#fless_cl">FGraphNode <b>*fless_cl</b>(FGraphNode *a, const long b)</a></li><li><a href="#fless_cf">FGraphNode <b>*fless_cf</b>(FGraphNode *a, const float b)</a></li><li><a href="#fless_cd">FGraphNode <b>*fless_cd</b>(FGraphNode *a, const double b)</a></li><li><a href="#fgreater_ci">FGraphNode <b>*fgreater_ci</b>(FGraphNode *a, const int b)</a></li><li><a href="#fgreater_cl">FGraphNode <b>*fgreater_cl</b>(FGraphNode *a, const long b)</a></li><li><a href="#fgreater_cf">FGraphNode <b>*fgreater_cf</b>(FGraphNode *a, const float b)</a></li><li><a href="#fgreater_cd">FGraphNode <b>*fgreater_cd</b>(FGraphNode *a, const double b)</a></li><li><a href="#fequal_ci">FGraphNode <b>*fequal_ci</b>(FGraphNode *a, const int b)</a></li><li><a href="#fequal_cl">FGraphNode <b>*fequal_cl</b>(FGraphNode *a, const long b)</a></li><li><a href="#fequal_cf">FGraphNode <b>*fequal_cf</b>(FGraphNode *a, const float b)</a></li><li><a href="#fequal_cd">FGraphNode <b>*fequal_cd</b>(FGraphNode *a, const double b)</a></li><li><a href="#fmatmul">FGraphNode <b>*fmatmul</b>(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fflatten">FGraphNode <b>*fflatten</b>(FGraphNode *a)</a></li><li><a href="#fflatten_dimension">FGraphNode <b>*fflatten_dimension</b>(FGraphNode *a, int dimension)</a></li><li><a href="#fconvert">FGraphNode <b>*fconvert</b>(FGraphNode *a, FType newtype)</a></li><li><a href="#freshape">FGraphNode <b>*freshape</b>(FGraphNode *a, size_t *newshape, int dimensions)</a></li><li><a href="#fmin_g">FGraphNode <b>*fmin_g</b>(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fmin_ci">FGraphNode <b>*fmin_ci</b>(FGraphNode *a, const int b)</a></li><li><a href="#fmin_cl">FGraphNode <b>*fmin_cl</b>(FGraphNode *a, const long b)</a></li><li><a href="#fmin_cf">FGraphNode <b>*fmin_cf</b>(FGraphNode *a, const float b)</a></li><li><a href="#fmin_cd">FGraphNode <b>*fmin_cd</b>(FGraphNode *a, const double b)</a></li><li><a href="#fmax_g">FGraphNode <b>*fmax_g</b>(FGraphNode *a, FGraphNode *b)</a></li><li><a href="#fmax_ci">FGraphNode <b>*fmax_ci</b>(FGraphNode *a, const int b)</a></li><li><a href="#fmax_cl">FGraphNode <b>*fmax_cl</b>(FGraphNode *a, const long b)</a></li><li><a href="#fmax_cf">FGraphNode <b>*fmax_cf</b>(FGraphNode *a, const float b)</a></li><li><a href="#fmax_cd">FGraphNode <b>*fmax_cd</b>(FGraphNode *a, const double b)</a></li><li><a href="#freduce_sum">FGraphNode <b>*freduce_sum</b>(FGraphNode *a,
+                        const int dimension)</a></li><li><a href="#freduce_mul">FGraphNode <b>*freduce_mul</b>(FGraphNode *a, const int dimension)</a></li><li><a href="#fslice">FGraphNode <b>*fslice</b>(FGraphNode *a, const long *start, const long *end)</a></li><li><a href="#fslice_step">FGraphNode <b>*fslice_step</b>(FGraphNode *a, const long *start, const long *end,
+                        const long *step)</a></li><li><a href="#fextend">FGraphNode <b>*fextend</b>(FGraphNode *a, const size_t *new_shape,
+                    const size_t *insert_at)</a></li><li><a href="#fextend_step">FGraphNode <b>*fextend_step</b>(FGraphNode *a, const size_t *new_shape,
+                         const size_t *insert_at, const long *step_size)</a></li><li><a href="#fabs_g">FGraphNode <b>*fabs_g</b>(FGraphNode *a)</a></li><li><a href="#frepeat">FGraphNode <b>*frepeat</b>(FGraphNode *a, int *repititions)</a></li><li><a href="#ftranspose">FGraphNode <b>*ftranspose</b>(FGraphNode *a, int *transpositions)</a></li><li><a href="#fconvolve">FGraphNode <b>*fconvolve</b>(FGraphNode *a, FGraphNode *kernel, unsigned int *steps)</a></li></ul></div>
         <div style="display: block; height: 2em;"></div>
-        <div id="flintInit"></div><div class="card"><pre class="card_header_code">void flintInit(int backends)</pre></div>
+        <div id="flintInit"></div><div class="card"><pre class="card_header_code">void <b>flintInit</b>(int backends)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Initializes the cpu and the gpu backends. These functions are already
  implicitly called by the execution functions if necessary. The method allows
@@ -50,28 +50,28 @@
  use those functions if you...<ul><li>...want to explicitly decide where and when the initialization should take
       place
 </li><li>...want to only start one backend</li></ul> </div></div><div style="display: block; height: 2em;"></div>
-<div id="flintInit_cpu"></div><div class="card"><pre class="card_header_code">void flintInit_cpu()</pre></div>
+<div id="flintInit_cpu"></div><div class="card"><pre class="card_header_code">void <b>flintInit_cpu</b>()</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Don't call this function explicitly if you intent to use Flint normally. Use
   <a href="#flintInit"><pre class="inline_code">flintInit</pre></a> </div></div><div style="display: block; height: 2em;"></div>
-<div id="flintInit_gpu"></div><div class="card"><pre class="card_header_code">void flintInit_gpu()</pre></div>
+<div id="flintInit_gpu"></div><div class="card"><pre class="card_header_code">void <b>flintInit_gpu</b>()</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Don't call this function explicitly if you intent to use Flint normally. Use
   <a href="#flintInit"><pre class="inline_code">flintInit</pre></a> </div></div><div style="display: block; height: 2em;"></div>
-<div id="flintCleanup"></div><div class="card"><pre class="card_header_code">void flintCleanup()</pre></div>
+<div id="flintCleanup"></div><div class="card"><pre class="card_header_code">void <b>flintCleanup</b>()</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Deallocates any resourced allocated by the corresponding backends.
 This method calls the other two (following) which are only executed if the
 framework was initialized, else they do nothing. </div></div><div style="display: block; height: 2em;"></div>
-<div id="flintCleanup_cpu"></div><div class="card"><pre class="card_header_code">void flintCleanup_cpu()</pre></div>
+<div id="flintCleanup_cpu"></div><div class="card"><pre class="card_header_code">void <b>flintCleanup_cpu</b>()</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Deallocates any resourced allocated by the cpu backend, if it was
  initialized, else it does nothing. </div></div><div style="display: block; height: 2em;"></div>
-<div id="flintCleanup_gpu"></div><div class="card"><pre class="card_header_code">void flintCleanup_gpu()</pre></div>
+<div id="flintCleanup_gpu"></div><div class="card"><pre class="card_header_code">void <b>flintCleanup_gpu</b>()</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Deallocates any resourced allocated by the gpu backend, if it was
  initialized, else it does nothing. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fSetLoggingLevel"></div><div class="card"><pre class="card_header_code">void fSetLoggingLevel(int)</pre></div>
+<div id="fSetLoggingLevel"></div><div class="card"><pre class="card_header_code">void <b>fSetLoggingLevel</b>(int)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Sets the logging level of the framework. Adjust this for debugging purposes,
  or if you release software in which Flint is contained.
@@ -83,7 +83,7 @@ framework was initialized, else they do nothing. </div></div><div style="display
 </li><li>4: Logging level 3 + <pre class="inline_code">F_VERBOSE</pre> (for library developement)
 </li><li>5: Logging level 4 + <pre class="inline_code">F_DEBUG</pre> (when a bug in the library has been found)</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="FLogType_"></div><div class="card"><pre class="card_header_code">enum FLogType </pre></div>
+<div id="FLogType_"></div><div class="card"><pre class="card_header_code">enum <b>FLogType </b></pre></div>
 <br />
 <div class="card"><div style="padding: 5px;">
  See also:  <a href="#flogging"><pre class="inline_code">flogging</pre></a>, <pre class="inline_code">FLogType</pre><ul><li><pre class="inline_code">F_DEBUG</pre> (only internal debugging informations of the framework),
@@ -97,30 +97,30 @@ framework was initialized, else they do nothing. </div></div><div style="display
 </li><li><pre class="inline_code">F_WARNING</pre> (probably unwanted behaviour or undefined behaviour caused
     by missuse of functions).</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="flogging"></div><div class="card"><pre class="card_header_code">void flogging(FLogType type, const char *msg)</pre></div>
+<div id="flogging"></div><div class="card"><pre class="card_header_code">void <b>flogging</b>(FLogType type, const char *msg)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Logs a NULL terminated string with the given logging level.
  See also:  <a href="#fSetLoggingLevel"><pre class="inline_code">fSetLoggingLevel</pre></a> </div></div><div style="display: block; height: 2em;"></div>
-<div id="enable_eager_execution"></div><div class="card"><pre class="card_header_code">void enable_eager_execution()</pre></div>
+<div id="enable_eager_execution"></div><div class="card"><pre class="card_header_code">void <b>enable_eager_execution</b>()</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> All graph nodes that represent actual operations are after this call
  executed eagerly, i.e. they are executed during graph construction. </div></div><div style="display: block; height: 2em;"></div>
-<div id="disable_eager_execution"></div><div class="card"><pre class="card_header_code">void disable_eager_execution()</pre></div>
+<div id="disable_eager_execution"></div><div class="card"><pre class="card_header_code">void <b>disable_eager_execution</b>()</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Disable eager execution, i.e. the graph is constructed without execution of
  the nodes until a operation makes the execution of a parent graph necessary
  or the user calls  <a href="#fExecuteGraph"><pre class="inline_code">fExecuteGraph</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="is_eager_execution"></div><div class="card"><pre class="card_header_code">int is_eager_execution()</pre></div>
+<div id="is_eager_execution"></div><div class="card"><pre class="card_header_code">int <b>is_eager_execution</b>()</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Returns 1 if eager execution has been enabled, else 0 </div></div><div style="display: block; height: 2em;"></div>
-<div id="FType_"></div><div class="card"><pre class="card_header_code">enum FType </pre></div>
+<div id="FType_"></div><div class="card"><pre class="card_header_code">enum <b>FType </b></pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> The 4 allowed data types:<ul><li><pre class="inline_code">F_INT32</pre>(integer, 32bit)
 </li><li><pre class="inline_code">F_INT64</pre>(integer, 64bit)
 </li><li><pre class="inline_code">F_FLOAT32</pre> (floating point, 32bit)
 </li><li><pre class="inline_code">F_FLOAT64</pre> (floating point, 64bit)</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="FOperation_"></div><div class="card"><pre class="card_header_code">struct FOperation </pre></div>
+<div id="FOperation_"></div><div class="card"><pre class="card_header_code">struct <b>FOperation </b></pre></div>
 <br />
 <div class="card"><div style="padding: 5px;">
  Describes one operation. An operation always has a shape, described by
@@ -129,7 +129,7 @@ framework was initialized, else they do nothing. </div></div><div style="display
  corresponding dimension. <pre class="inline_code">FOperation.op_type</pre> denotes the type of
  operation, <pre class="inline_code">FOperation.data_type</pre> the type of the underlying data,
  <pre class="inline_code">FOperation.additional_data</pre> is operation specific.</div></div><div style="display: block; height: 2em;"></div>
-<div id="FResultData_"></div><div class="card"><pre class="card_header_code">struct FResultData </pre></div>
+<div id="FResultData_"></div><div class="card"><pre class="card_header_code">struct <b>FResultData </b></pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Stores the resulting data after an execution of  <a href="#fExecuteGraph"><pre class="inline_code">fExecuteGraph</pre></a> (or implicit
  execution). The data can be found in <pre class="inline_code">FResultData.data</pre>, the datatype in
@@ -141,7 +141,7 @@ framework was initialized, else they do nothing. </div></div><div style="display
 </li><li>...the data was not already loaded to the gpu (i.e. the result must be the
         return value of  <a href="#fExecuteGraph_cpu"><pre class="inline_code">fExecuteGraph_cpu</pre></a>)</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="FGraphNode_"></div><div class="card"><pre class="card_header_code">struct FGraphNode </pre></div>
+<div id="FGraphNode_"></div><div class="card"><pre class="card_header_code">struct <b>FGraphNode </b></pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Describes one node in the Graph. Stores the corresponding operation in
  <pre class="inline_code">FGraphNode.operation</pre>, an array of predecessors (the arguments of
@@ -152,12 +152,12 @@ framework was initialized, else they do nothing. </div></div><div style="display
  from them. The nodes are allocated by the operation functions, they and their
  members should neither be manually created, edited or freed except by the
  corresponding flint methods. </div></div><div style="display: block; height: 2em;"></div>
-<div id="FStore_"></div><div class="card"><pre class="card_header_code">struct FStore </pre></div>
+<div id="FStore_"></div><div class="card"><pre class="card_header_code">struct <b>FStore </b></pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Result of an call to  <a href="#fCreateGraph"><pre class="inline_code">fCreateGraph</pre></a>, see <pre class="inline_code">FResultData</pre>.
  Data of this Operation may not be changed manually when using a GPU Backend.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fCreateGraph"></div><div class="card"><pre class="card_header_code">FGraphNode *fCreateGraph(const void *data, const int num_entries,
+<div id="fCreateGraph"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fCreateGraph</b>(const void *data, const int num_entries,
                          const FType data_type, const size_t *shape,
                          const int dimensions)</pre></div>
 <br />
@@ -174,7 +174,7 @@ framework was initialized, else they do nothing. </div></div><div style="display
  Creates a Graph with a single store instruction, the data is
  copied to intern memory, so after return of the function, <pre class="inline_code">data</pre> and <pre class="inline_code">shape</pre>
  may be deleted. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fconstant_i"></div><div class="card"><pre class="card_header_code">FGraphNode *fconstant_i(const int value, const size_t *shape,
+<div id="fconstant_i"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fconstant_i</b>(const int value, const size_t *shape,
                         const int dimensions)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Creates a tensor that contains the single given values in all entries<div style="display:block; height: 0.5em"></div><ul><li><pre class="inline_code">value</pre>: the value this tensor should consist of
@@ -182,7 +182,7 @@ framework was initialized, else they do nothing. </div></div><div style="display
     of the corresponding dimension.
 </li><li><pre class="inline_code">dimensions</pre>: the number of dimensions</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fconstant_l"></div><div class="card"><pre class="card_header_code">FGraphNode *fconstant_l(const long value, const size_t *shape,
+<div id="fconstant_l"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fconstant_l</b>(const long value, const size_t *shape,
                         const int dimensions)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Creates a tensor that contains the single given values in all entries<div style="display:block; height: 0.5em"></div><ul><li><pre class="inline_code">value</pre>: the value this tensor should consist of
@@ -190,7 +190,7 @@ framework was initialized, else they do nothing. </div></div><div style="display
     of the corresponding dimension.
 </li><li><pre class="inline_code">dimensions</pre>: the number of dimensions</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fconstant_f"></div><div class="card"><pre class="card_header_code">FGraphNode *fconstant_f(const float value, const size_t *shape,
+<div id="fconstant_f"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fconstant_f</b>(const float value, const size_t *shape,
                         const int dimensions)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Creates a tensor that contains the single given values in all entries<div style="display:block; height: 0.5em"></div><ul><li><pre class="inline_code">value</pre>: the value this tensor should consist of
@@ -198,7 +198,7 @@ framework was initialized, else they do nothing. </div></div><div style="display
     of the corresponding dimension.
 </li><li><pre class="inline_code">dimensions</pre>: the number of dimensions</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fconstant_d"></div><div class="card"><pre class="card_header_code">FGraphNode *fconstant_d(const double value, const size_t *shape,
+<div id="fconstant_d"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fconstant_d</b>(const double value, const size_t *shape,
                         const int dimensions)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Creates a tensor that contains the single given values in all entries<div style="display:block; height: 0.5em"></div><ul><li><pre class="inline_code">value</pre>: the value this tensor should consist of
@@ -206,7 +206,7 @@ framework was initialized, else they do nothing. </div></div><div style="display
     of the corresponding dimension.
 </li><li><pre class="inline_code">dimensions</pre>: the number of dimensions</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fFreeGraph"></div><div class="card"><pre class="card_header_code">void fFreeGraph(FGraphNode *graph)</pre></div>
+<div id="fFreeGraph"></div><div class="card"><pre class="card_header_code">void <b>fFreeGraph</b>(FGraphNode *graph)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Decrements <pre class="inline_code">FGraphNode.reference_counter</pre> of <pre class="inline_code">graph</pre> (for reference
  counting) and deallocates the node and its corresponding data, if the counter
@@ -214,12 +214,12 @@ framework was initialized, else they do nothing. </div></div><div style="display
  predecessors. So you can safely connect nodes multiple times and have only to
  free the leaf nodes (i.e. the results), without caring about cross-reference,
  since those are handled by the reference counting system.</div></div><div style="display: block; height: 2em;"></div>
-<div id="fCopyGraph"></div><div class="card"><pre class="card_header_code">FGraphNode *fCopyGraph(const FGraphNode *graph)</pre></div>
+<div id="fCopyGraph"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fCopyGraph</b>(const FGraphNode *graph)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Copies the graph node, the corresponding operation and additional data and
  the predecessors (their <pre class="inline_code">FGraphNode.reference_counter</pre> is
  incremented) </div></div><div style="display: block; height: 2em;"></div>
-<div id="fExecuteGraph"></div><div class="card"><pre class="card_header_code">FGraphNode *fExecuteGraph(FGraphNode *node)</pre></div>
+<div id="fExecuteGraph"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fExecuteGraph</b>(FGraphNode *node)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Executes the graph node operations from all yet to be executed predecessors
  to <pre class="inline_code">node</pre> and returns a node with a <pre class="inline_code">FResultData</pre> operation in
@@ -231,12 +231,12 @@ framework was initialized, else they do nothing. </div></div><div style="display
  necessary the same nodes, but the same combination of nodes), since then the
  backend can reuse already compiled kernels. If the CPU backend is chosen, it
  does not matter, since every operation is executed independently.</div></div><div style="display: block; height: 2em;"></div>
-<div id="fExecuteGraph_cpu"></div><div class="card"><pre class="card_header_code">FGraphNode *fExecuteGraph_cpu(FGraphNode *node)</pre></div>
+<div id="fExecuteGraph_cpu"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fExecuteGraph_cpu</b>(FGraphNode *node)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Executes the graph node operations from all yet to be executed predecessors
  to <pre class="inline_code">node</pre> and returns a node with a <pre class="inline_code">FResultData</pre> operation in
  which the resulting data is stored. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fExecuteGraph_gpu"></div><div class="card"><pre class="card_header_code">FGraphNode *fExecuteGraph_gpu(FGraphNode *node)</pre></div>
+<div id="fExecuteGraph_gpu"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fExecuteGraph_gpu</b>(FGraphNode *node)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Executes the graph node operations from all yet to be executed predecessors
  to <pre class="inline_code">node</pre> and returns a node with a <pre class="inline_code">FResultData</pre> operation in
@@ -247,12 +247,12 @@ framework was initialized, else they do nothing. </div></div><div style="display
  performance of a program if the same graph-structures are reused (not
  necessary the same nodes, but the same combination of nodes), since then the
  backend can reuse already compiled kernels. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fExecuteGraph_cpu_eagerly"></div><div class="card"><pre class="card_header_code">FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node)</pre></div>
+<div id="fExecuteGraph_cpu_eagerly"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fExecuteGraph_cpu_eagerly</b>(FGraphNode *node)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Executes the graph node operations from all yet to be executed predecessors
  to <pre class="inline_code">node</pre> and returns a node with a <pre class="inline_code">FResultData</pre> operation in
  which the resulting data is stored. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fExecuteGraph_gpu_eagerly"></div><div class="card"><pre class="card_header_code">FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node)</pre></div>
+<div id="fExecuteGraph_gpu_eagerly"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fExecuteGraph_gpu_eagerly</b>(FGraphNode *node)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Executes the graph node operations from all yet to be executed predecessors
  to <pre class="inline_code">node</pre> and returns a node with a <pre class="inline_code">FResultData</pre> operation in
@@ -263,213 +263,213 @@ framework was initialized, else they do nothing. </div></div><div style="display
  performance of a program if the same graph-structures are reused (not
  necessary the same nodes, but the same combination of nodes), since then the
  backend can reuse already compiled kernels. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fCalculateGradient"></div><div class="card"><pre class="card_header_code">FGraphNode *fCalculateGradient(FGraphNode *outputfct, const FGraphNode *dx)</pre></div>
+<div id="fCalculateGradient"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fCalculateGradient</b>(FGraphNode *outputfct, const FGraphNode *dx)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Calculates the overall gradient of an output node to a variable.<div style="display:block; height: 0.5em"></div><ul><li><pre class="inline_code">outputfct</pre>: the Node which represents the chain of functions of which
     the gradient is to be computed.
 </li><li><pre class="inline_code">dx</pre>: the variable for which outputfct is derived for</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fadd_g"></div><div class="card"><pre class="card_header_code">FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b)</pre></div>
+<div id="fadd_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fadd_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise addition of <pre class="inline_code">a</pre> and <pre class="inline_code">b</pre>, i.e. <pre class="inline_code">a[i] + b[i]</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fsub_g"></div><div class="card"><pre class="card_header_code">FGraphNode *fsub_g(FGraphNode *a, FGraphNode *b)</pre></div>
+<div id="fsub_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsub_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise substraction of <pre class="inline_code">a</pre> and <pre class="inline_code">b</pre>, i.e. <pre class="inline_code">a[i] - b[i]</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fdiv_g"></div><div class="card"><pre class="card_header_code">FGraphNode *fdiv_g(FGraphNode *a, FGraphNode *b)</pre></div>
+<div id="fdiv_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fdiv_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise division of <pre class="inline_code">a</pre> and <pre class="inline_code">b</pre>, i.e. <pre class="inline_code">a[i] / b[i]</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmul_g"></div><div class="card"><pre class="card_header_code">FGraphNode *fmul_g(FGraphNode *a, FGraphNode *b)</pre></div>
+<div id="fmul_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmul_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise multiplication of <pre class="inline_code">a</pre> and <pre class="inline_code">b</pre>, i.e. <pre class="inline_code">a[i] * b[i]</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fpow_g"></div><div class="card"><pre class="card_header_code">FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b)</pre></div>
+<div id="fpow_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fpow_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise power of <pre class="inline_code">a</pre> and <pre class="inline_code">b</pre>, i.e. <pre class="inline_code">pow(a[i], b[i])</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fadd_ci"></div><div class="card"><pre class="card_header_code">FGraphNode *fadd_ci(FGraphNode *a, const int b)</pre></div>
+<div id="fadd_ci"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fadd_ci</b>(FGraphNode *a, const int b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise addition of a and b, i.e. <pre class="inline_code">a[i] + b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fadd_cl"></div><div class="card"><pre class="card_header_code">FGraphNode *fadd_cl(FGraphNode *a, const long b)</pre></div>
+<div id="fadd_cl"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fadd_cl</b>(FGraphNode *a, const long b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise addition of a and b, i.e. <pre class="inline_code">a[i] + b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fadd_cf"></div><div class="card"><pre class="card_header_code">FGraphNode *fadd_cf(FGraphNode *a, const float b)</pre></div>
+<div id="fadd_cf"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fadd_cf</b>(FGraphNode *a, const float b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise addition of a and b, i.e. <pre class="inline_code">a[i] + b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fadd_cd"></div><div class="card"><pre class="card_header_code">FGraphNode *fadd_cd(FGraphNode *a, const double b)</pre></div>
+<div id="fadd_cd"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fadd_cd</b>(FGraphNode *a, const double b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise addition of a and b, i.e. <pre class="inline_code">a[i] + b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fsub_ci"></div><div class="card"><pre class="card_header_code">FGraphNode *fsub_ci(FGraphNode *a, const int b)</pre></div>
+<div id="fsub_ci"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsub_ci</b>(FGraphNode *a, const int b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise subtraction of a and b, i.e. <pre class="inline_code">a[i] - b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fsub_cl"></div><div class="card"><pre class="card_header_code">FGraphNode *fsub_cl(FGraphNode *a, const long b)</pre></div>
+<div id="fsub_cl"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsub_cl</b>(FGraphNode *a, const long b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise subtraction of a and b, i.e. <pre class="inline_code">a[i] - b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fsub_cf"></div><div class="card"><pre class="card_header_code">FGraphNode *fsub_cf(FGraphNode *a, const float b)</pre></div>
+<div id="fsub_cf"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsub_cf</b>(FGraphNode *a, const float b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise subtraction of a and b, i.e. <pre class="inline_code">a[i] - b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fsub_cd"></div><div class="card"><pre class="card_header_code">FGraphNode *fsub_cd(FGraphNode *a, const double b)</pre></div>
+<div id="fsub_cd"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsub_cd</b>(FGraphNode *a, const double b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise subtraction of a and b, i.e. <pre class="inline_code">a[i] - b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fsub_ici"></div><div class="card"><pre class="card_header_code">FGraphNode *fsub_ici(const int a, FGraphNode *b)</pre></div>
+<div id="fsub_ici"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsub_ici</b>(const int a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise subtraction of a and b, i.e. <pre class="inline_code">a - b[i]</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fsub_icl"></div><div class="card"><pre class="card_header_code">FGraphNode *fsub_icl(const long a, FGraphNode *b)</pre></div>
+<div id="fsub_icl"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsub_icl</b>(const long a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise subtraction of a and b, i.e. <pre class="inline_code">a - b[i]</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fsub_icf"></div><div class="card"><pre class="card_header_code">FGraphNode *fsub_icf(const float a, FGraphNode *b)</pre></div>
+<div id="fsub_icf"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsub_icf</b>(const float a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise subtraction of a and b, i.e. <pre class="inline_code">a - b[i]</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fsub_icd"></div><div class="card"><pre class="card_header_code">FGraphNode *fsub_icd(const double a, FGraphNode *b)</pre></div>
+<div id="fsub_icd"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsub_icd</b>(const double a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise subtraction of a and b, i.e. <pre class="inline_code">a - b[i]</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fdiv_ci"></div><div class="card"><pre class="card_header_code">FGraphNode *fdiv_ci(FGraphNode *a, const int b)</pre></div>
+<div id="fdiv_ci"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fdiv_ci</b>(FGraphNode *a, const int b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise division of a and b, i.e. <pre class="inline_code">a[i] / b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fdiv_cl"></div><div class="card"><pre class="card_header_code">FGraphNode *fdiv_cl(FGraphNode *a, const long b)</pre></div>
+<div id="fdiv_cl"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fdiv_cl</b>(FGraphNode *a, const long b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise division of a and b, i.e. <pre class="inline_code">a[i] / b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fdiv_cf"></div><div class="card"><pre class="card_header_code">FGraphNode *fdiv_cf(FGraphNode *a, const float b)</pre></div>
+<div id="fdiv_cf"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fdiv_cf</b>(FGraphNode *a, const float b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise division of a and b, i.e. <pre class="inline_code">a[i] / b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fdiv_cd"></div><div class="card"><pre class="card_header_code">FGraphNode *fdiv_cd(FGraphNode *a, const double b)</pre></div>
+<div id="fdiv_cd"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fdiv_cd</b>(FGraphNode *a, const double b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise division of a and b, i.e. <pre class="inline_code">a[i] / b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fdiv_ici"></div><div class="card"><pre class="card_header_code">FGraphNode *fdiv_ici(const int a, FGraphNode *b)</pre></div>
+<div id="fdiv_ici"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fdiv_ici</b>(const int a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise division of a and b, i.e. <pre class="inline_code">a / b[i]</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fdiv_icl"></div><div class="card"><pre class="card_header_code">FGraphNode *fdiv_icl(const long a, FGraphNode *b)</pre></div>
+<div id="fdiv_icl"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fdiv_icl</b>(const long a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise division of a and b, i.e. <pre class="inline_code">a / b[i]</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fdiv_icf"></div><div class="card"><pre class="card_header_code">FGraphNode *fdiv_icf(const float a, FGraphNode *b)</pre></div>
+<div id="fdiv_icf"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fdiv_icf</b>(const float a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise division of a and b, i.e. <pre class="inline_code">a / b[i]</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fdiv_icd"></div><div class="card"><pre class="card_header_code">FGraphNode *fdiv_icd(const double a, FGraphNode *b)</pre></div>
+<div id="fdiv_icd"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fdiv_icd</b>(const double a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise division of a and b, i.e. <pre class="inline_code">a / b[i]</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmul_ci"></div><div class="card"><pre class="card_header_code">FGraphNode *fmul_ci(FGraphNode *a, const int b)</pre></div>
+<div id="fmul_ci"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmul_ci</b>(FGraphNode *a, const int b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise multiplication of a and b, i.e. <pre class="inline_code">a[i] * b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmul_cl"></div><div class="card"><pre class="card_header_code">FGraphNode *fmul_cl(FGraphNode *a, const long b)</pre></div>
+<div id="fmul_cl"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmul_cl</b>(FGraphNode *a, const long b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise multiplication of a and b, i.e. <pre class="inline_code">a[i] * b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmul_cf"></div><div class="card"><pre class="card_header_code">FGraphNode *fmul_cf(FGraphNode *a, const float b)</pre></div>
+<div id="fmul_cf"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmul_cf</b>(FGraphNode *a, const float b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise multiplication of a and b, i.e. <pre class="inline_code">a[i] * b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmul_cd"></div><div class="card"><pre class="card_header_code">FGraphNode *fmul_cd(FGraphNode *a, const double b)</pre></div>
+<div id="fmul_cd"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmul_cd</b>(FGraphNode *a, const double b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Elementwise multiplication of a and b, i.e. <pre class="inline_code">a[i] * b</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fpow_ci"></div><div class="card"><pre class="card_header_code">FGraphNode *fpow_ci(FGraphNode *a, const int b)</pre></div>
+<div id="fpow_ci"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fpow_ci</b>(FGraphNode *a, const int b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise power of a to b, i.e. <pre class="inline_code">pow(a[i], b)</pre>.</div></div><div style="display: block; height: 2em;"></div>
-<div id="fpow_cl"></div><div class="card"><pre class="card_header_code">FGraphNode *fpow_cl(FGraphNode *a, const long b)</pre></div>
+<div id="fpow_cl"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fpow_cl</b>(FGraphNode *a, const long b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise power of a to b, i.e. <pre class="inline_code">pow(a[i], b)</pre>.</div></div><div style="display: block; height: 2em;"></div>
-<div id="fpow_cf"></div><div class="card"><pre class="card_header_code">FGraphNode *fpow_cf(FGraphNode *a, const float b)</pre></div>
+<div id="fpow_cf"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fpow_cf</b>(FGraphNode *a, const float b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise power of a to b, i.e. <pre class="inline_code">pow(a[i], b)</pre>.</div></div><div style="display: block; height: 2em;"></div>
-<div id="fpow_cd"></div><div class="card"><pre class="card_header_code">FGraphNode *fpow_cd(FGraphNode *a, const double b)</pre></div>
+<div id="fpow_cd"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fpow_cd</b>(FGraphNode *a, const double b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise power of a to b, i.e. <pre class="inline_code">pow(a[i], b)</pre>.</div></div><div style="display: block; height: 2em;"></div>
-<div id="flog"></div><div class="card"><pre class="card_header_code">FGraphNode *flog(FGraphNode *a)</pre></div>
+<div id="flog"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*flog</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise natural logarithm of <pre class="inline_code">a</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="flog2"></div><div class="card"><pre class="card_header_code">FGraphNode *flog2(FGraphNode *a)</pre></div>
+<div id="flog2"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*flog2</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise logarithm of <pre class="inline_code">a</pre> to the basis of 2 </div></div><div style="display: block; height: 2em;"></div>
-<div id="flog10"></div><div class="card"><pre class="card_header_code">FGraphNode *flog10(FGraphNode *a)</pre></div>
+<div id="flog10"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*flog10</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise logarithm of <pre class="inline_code">a</pre> to the basis of 10 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fsin"></div><div class="card"><pre class="card_header_code">FGraphNode *fsin(FGraphNode *a)</pre></div>
+<div id="fsin"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsin</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise sinus of a </div></div><div style="display: block; height: 2em;"></div>
-<div id="fsqrt_g"></div><div class="card"><pre class="card_header_code">FGraphNode *fsqrt_g(FGraphNode *a)</pre></div>
+<div id="fsqrt_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsqrt_g</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise square root of a </div></div><div style="display: block; height: 2em;"></div>
-<div id="fcos"></div><div class="card"><pre class="card_header_code">FGraphNode *fcos(FGraphNode *a)</pre></div>
+<div id="fcos"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fcos</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise cosinus of a </div></div><div style="display: block; height: 2em;"></div>
-<div id="ftan"></div><div class="card"><pre class="card_header_code">FGraphNode *ftan(FGraphNode *a)</pre></div>
+<div id="ftan"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*ftan</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise tangents of a </div></div><div style="display: block; height: 2em;"></div>
-<div id="fasin"></div><div class="card"><pre class="card_header_code">FGraphNode *fasin(FGraphNode *a)</pre></div>
+<div id="fasin"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fasin</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise inverse sinus of a </div></div><div style="display: block; height: 2em;"></div>
-<div id="facos"></div><div class="card"><pre class="card_header_code">FGraphNode *facos(FGraphNode *a)</pre></div>
+<div id="facos"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*facos</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise inverse cosinus of a </div></div><div style="display: block; height: 2em;"></div>
-<div id="fatan"></div><div class="card"><pre class="card_header_code">FGraphNode *fatan(FGraphNode *a)</pre></div>
+<div id="fatan"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fatan</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise inverse tangents of a </div></div><div style="display: block; height: 2em;"></div>
-<div id="fneg"></div><div class="card"><pre class="card_header_code">FGraphNode *fneg(FGraphNode *a)</pre></div>
+<div id="fneg"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fneg</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Negates the elements of <pre class="inline_code">a</pre>, i.e. <pre class="inline_code">-a[i]</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="fsign"></div><div class="card"><pre class="card_header_code">FGraphNode *fsign(FGraphNode *a)</pre></div>
+<div id="fsign"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsign</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Returns a tensor x with the shape of a with <pre class="inline_code">x[i] = 1</pre> if <pre class="inline_code">a[i] &gt;= 0</pre> else
  <pre class="inline_code">x[i] = -1</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="feven"></div><div class="card"><pre class="card_header_code">FGraphNode *feven(FGraphNode *a)</pre></div>
+<div id="feven"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*feven</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Returns a tensor <pre class="inline_code">x</pre> with the shape of <pre class="inline_code">a</pre> with <pre class="inline_code">x[i] = 1</pre> if <pre class="inline_code">a[i] % 2 =
  0</pre> else <pre class="inline_code">x[i] = 0</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="fless_g"></div><div class="card"><pre class="card_header_code">FGraphNode *fless_g(FGraphNode *a, FGraphNode *b)</pre></div>
+<div id="fless_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fless_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares two tensors elementwise by <pre class="inline_code">a &lt; b</pre> and returns a 0,1 INT32 Tensor
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fgreater_g"></div><div class="card"><pre class="card_header_code">FGraphNode *fgreater_g(FGraphNode *a, FGraphNode *b)</pre></div>
+<div id="fgreater_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fgreater_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares two tensors elementwise by <pre class="inline_code">a &gt; b</pre> and returns a 0,1 INT32 Tensor
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fequal_g"></div><div class="card"><pre class="card_header_code">FGraphNode *fequal_g(FGraphNode *a, FGraphNode *b)</pre></div>
+<div id="fequal_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fequal_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares two tensors elementwise by <pre class="inline_code">a = b</pre><pre class="inline_code"> and returns a 0,1 INT32 Tensor
 </pre></div></div><div style="display: block; height: 2em;"></div>
-<div id="fless_ci"></div><div class="card"><pre class="card_header_code">FGraphNode *fless_ci(FGraphNode *a, const int b)</pre></div>
+<div id="fless_ci"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fless_ci</b>(FGraphNode *a, const int b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares a tensor and a constant elementwise by <pre class="inline_code">a &lt; b</pre> and returns a 0,1
  <pre class="inline_code">INT32</pre> Tensor. See  <a href="#fless_g"><pre class="inline_code">fless_g</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fless_cl"></div><div class="card"><pre class="card_header_code">FGraphNode *fless_cl(FGraphNode *a, const long b)</pre></div>
+<div id="fless_cl"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fless_cl</b>(FGraphNode *a, const long b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares a tensor and a constant elementwise by <pre class="inline_code">a &lt; b</pre> and returns a 0,1
  <pre class="inline_code">INT32</pre> Tensor. See  <a href="#fless_g"><pre class="inline_code">fless_g</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fless_cf"></div><div class="card"><pre class="card_header_code">FGraphNode *fless_cf(FGraphNode *a, const float b)</pre></div>
+<div id="fless_cf"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fless_cf</b>(FGraphNode *a, const float b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares a tensor and a constant elementwise by <pre class="inline_code">a &lt; b</pre> and returns a 0,1
  <pre class="inline_code">INT32</pre> Tensor. See  <a href="#fless_g"><pre class="inline_code">fless_g</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fless_cd"></div><div class="card"><pre class="card_header_code">FGraphNode *fless_cd(FGraphNode *a, const double b)</pre></div>
+<div id="fless_cd"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fless_cd</b>(FGraphNode *a, const double b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares a tensor and a constant elementwise by <pre class="inline_code">a &lt; b</pre> and returns a 0,1
  <pre class="inline_code">INT32</pre> Tensor. See  <a href="#fless_g"><pre class="inline_code">fless_g</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fgreater_ci"></div><div class="card"><pre class="card_header_code">FGraphNode *fgreater_ci(FGraphNode *a, const int b)</pre></div>
+<div id="fgreater_ci"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fgreater_ci</b>(FGraphNode *a, const int b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares a tensor and a constant elementwise by <pre class="inline_code">a &gt; b</pre> and returns a 0,1
  <pre class="inline_code">INT32</pre> Tensor. See  <a href="#fgreater_g"><pre class="inline_code">fgreater_g</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fgreater_cl"></div><div class="card"><pre class="card_header_code">FGraphNode *fgreater_cl(FGraphNode *a, const long b)</pre></div>
+<div id="fgreater_cl"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fgreater_cl</b>(FGraphNode *a, const long b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares a tensor and a constant elementwise by <pre class="inline_code">a &gt; b</pre> and returns a 0,1
  <pre class="inline_code">INT32</pre> Tensor. See  <a href="#fgreater_g"><pre class="inline_code">fgreater_g</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fgreater_cf"></div><div class="card"><pre class="card_header_code">FGraphNode *fgreater_cf(FGraphNode *a, const float b)</pre></div>
+<div id="fgreater_cf"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fgreater_cf</b>(FGraphNode *a, const float b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares a tensor and a constant elementwise by <pre class="inline_code">a &gt; b</pre> and returns a 0,1
  <pre class="inline_code">INT32</pre> Tensor. See  <a href="#fgreater_g"><pre class="inline_code">fgreater_g</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fgreater_cd"></div><div class="card"><pre class="card_header_code">FGraphNode *fgreater_cd(FGraphNode *a, const double b)</pre></div>
+<div id="fgreater_cd"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fgreater_cd</b>(FGraphNode *a, const double b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares a tensor and a constant elementwise by <pre class="inline_code">a &gt; b</pre> and returns a 0,1
  <pre class="inline_code">INT32</pre> Tensor. See  <a href="#fgreater_g"><pre class="inline_code">fgreater_g</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fequal_ci"></div><div class="card"><pre class="card_header_code">FGraphNode *fequal_ci(FGraphNode *a, const int b)</pre></div>
+<div id="fequal_ci"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fequal_ci</b>(FGraphNode *a, const int b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares a tensor and a constant elementwise by <pre class="inline_code">a = b</pre> and returns a 0,1
  <pre class="inline_code">INT32</pre> Tensor. See  <a href="#fequal_g"><pre class="inline_code">fequal_g</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fequal_cl"></div><div class="card"><pre class="card_header_code">FGraphNode *fequal_cl(FGraphNode *a, const long b)</pre></div>
+<div id="fequal_cl"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fequal_cl</b>(FGraphNode *a, const long b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares a tensor and a constant elementwise by <pre class="inline_code">a = b</pre> and returns a 0,1
  <pre class="inline_code">INT32</pre> Tensor. See  <a href="#fequal_g"><pre class="inline_code">fequal_g</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fequal_cf"></div><div class="card"><pre class="card_header_code">FGraphNode *fequal_cf(FGraphNode *a, const float b)</pre></div>
+<div id="fequal_cf"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fequal_cf</b>(FGraphNode *a, const float b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares a tensor and a constant elementwise by <pre class="inline_code">a = b</pre> and returns a 0,1
  <pre class="inline_code">INT32</pre> Tensor. See  <a href="#fequal_g"><pre class="inline_code">fequal_g</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fequal_cd"></div><div class="card"><pre class="card_header_code">FGraphNode *fequal_cd(FGraphNode *a, const double b)</pre></div>
+<div id="fequal_cd"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fequal_cd</b>(FGraphNode *a, const double b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Compares a tensor and a constant elementwise by <pre class="inline_code">a = b</pre> and returns a 0,1
  <pre class="inline_code">INT32</pre> Tensor. See  <a href="#fequal_g"><pre class="inline_code">fequal_g</pre></a>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmatmul"></div><div class="card"><pre class="card_header_code">FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b)</pre></div>
+<div id="fmatmul"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmatmul</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Carries out matrix multiplication on the last two dimensions of the tensors.<div style="display:block; height: 0.5em"></div>
  E.g. a matrix multiplication of two tensors with shapes <pre class="inline_code">(64, 32, 16)</pre> and
@@ -479,14 +479,14 @@ framework was initialized, else they do nothing. </div></div><div style="display
  to be executed first. Therefor the method will implicitly (or eagerly)
  execute the two parameter nodes <pre class="inline_code">a</pre> and <pre class="inline_code">b</pre> if their data is not allready
  present, the given pointers will be overwritten with the results. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fflatten"></div><div class="card"><pre class="card_header_code">FGraphNode *fflatten(FGraphNode *a)</pre></div>
+<div id="fflatten"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fflatten</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Flattens the complete tensor to a tensor with one
 dimension.
 E.g.<pre class="inline_code">flattened([[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]) = [3, 1, 4, 2,
 1, 5, 0, 4, 2, 4, 7, 9]</pre>.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fflatten_dimension"></div><div class="card"><pre class="card_header_code">FGraphNode *fflatten_dimension(FGraphNode *a, int dimension)</pre></div>
+<div id="fflatten_dimension"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fflatten_dimension</b>(FGraphNode *a, int dimension)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Flattens a tensor <pre class="inline_code">a</pre> with <pre class="inline_code">n</pre> dimensions along
 <pre class="inline_code">dimension</pre>, resulting in a tensor with <pre class="inline_code">n-1</pre> dimensions.
@@ -495,56 +495,56 @@ not possible to flatten the dimension 0.
 A Tensor <pre class="inline_code">[[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]</pre> flattened
 along dimension 1 will result in <pre class="inline_code">[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]</pre>.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fconvert"></div><div class="card"><pre class="card_header_code">FGraphNode *fconvert(FGraphNode *a, FType newtype)</pre></div>
+<div id="fconvert"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fconvert</b>(FGraphNode *a, FType newtype)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Converts the data of <pre class="inline_code">a</pre> to the type given by <pre class="inline_code">newtype</pre></div></div><div style="display: block; height: 2em;"></div>
-<div id="freshape"></div><div class="card"><pre class="card_header_code">FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions)</pre></div>
+<div id="freshape"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*freshape</b>(FGraphNode *a, size_t *newshape, int dimensions)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Reshapes the underlying data of the tensor to the new shape. The product of
 each dimension of the new shape must be the same as the product of the
 dimensions of the previous shape (i.e. it must describe the same number of
 entries of the tensor).</div></div><div style="display: block; height: 2em;"></div>
-<div id="fmin_g"></div><div class="card"><pre class="card_header_code">FGraphNode *fmin_g(FGraphNode *a, FGraphNode *b)</pre></div>
+<div id="fmin_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmin_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the minimum of two tensors element wise along the last dimension of
  each, i.e. <pre class="inline_code">a[i]</pre> if <pre class="inline_code">a[i] &lt; b[i]</pre> else <pre class="inline_code">b[i]</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmin_ci"></div><div class="card"><pre class="card_header_code">FGraphNode *fmin_ci(FGraphNode *a, const int b)</pre></div>
+<div id="fmin_ci"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmin_ci</b>(FGraphNode *a, const int b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the minimum of two tensors element wise along the last dimension of
  each, i.e. <pre class="inline_code">a[i]</pre> if <pre class="inline_code">a[i] &lt; b</pre> else <pre class="inline_code">b</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmin_cl"></div><div class="card"><pre class="card_header_code">FGraphNode *fmin_cl(FGraphNode *a, const long b)</pre></div>
+<div id="fmin_cl"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmin_cl</b>(FGraphNode *a, const long b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the minimum of two tensors element wise along the last dimension of
  each, i.e. <pre class="inline_code">a[i]</pre> if <pre class="inline_code">a[i] &lt; b</pre> else <pre class="inline_code">b</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmin_cf"></div><div class="card"><pre class="card_header_code">FGraphNode *fmin_cf(FGraphNode *a, const float b)</pre></div>
+<div id="fmin_cf"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmin_cf</b>(FGraphNode *a, const float b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the minimum of two tensors element wise along the last dimension of
  each, i.e. <pre class="inline_code">a[i]</pre> if <pre class="inline_code">a[i] &lt; b</pre> else <pre class="inline_code">b</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmin_cd"></div><div class="card"><pre class="card_header_code">FGraphNode *fmin_cd(FGraphNode *a, const double b)</pre></div>
+<div id="fmin_cd"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmin_cd</b>(FGraphNode *a, const double b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the minimum of two tensors element wise along the last dimension of
  each, i.e. <pre class="inline_code">a[i]</pre> if <pre class="inline_code">a[i] &lt; b</pre> else <pre class="inline_code">b</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmax_g"></div><div class="card"><pre class="card_header_code">FGraphNode *fmax_g(FGraphNode *a, FGraphNode *b)</pre></div>
+<div id="fmax_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmax_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the maximum of two tensors element wise along the last dimension of
  each, i.e. <pre class="inline_code">a[i]</pre> if <pre class="inline_code">a[i] &gt; b[i]</pre> else <pre class="inline_code">b[i]</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmax_ci"></div><div class="card"><pre class="card_header_code">FGraphNode *fmax_ci(FGraphNode *a, const int b)</pre></div>
+<div id="fmax_ci"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmax_ci</b>(FGraphNode *a, const int b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the maximum of two tensors element wise along the last dimension of
  each, i.e. <pre class="inline_code">a[i]</pre> if <pre class="inline_code">a[i] &gt; b</pre> else <pre class="inline_code">b</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmax_cl"></div><div class="card"><pre class="card_header_code">FGraphNode *fmax_cl(FGraphNode *a, const long b)</pre></div>
+<div id="fmax_cl"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmax_cl</b>(FGraphNode *a, const long b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the maximum of two tensors element wise along the last dimension of
  each, i.e. <pre class="inline_code">a[i]</pre> if <pre class="inline_code">a[i] &gt; b</pre> else <pre class="inline_code">b</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmax_cf"></div><div class="card"><pre class="card_header_code">FGraphNode *fmax_cf(FGraphNode *a, const float b)</pre></div>
+<div id="fmax_cf"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmax_cf</b>(FGraphNode *a, const float b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the maximum of two tensors element wise along the last dimension of
  each, i.e. <pre class="inline_code">a[i]</pre> if <pre class="inline_code">a[i] &gt; b</pre> else <pre class="inline_code">b</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="fmax_cd"></div><div class="card"><pre class="card_header_code">FGraphNode *fmax_cd(FGraphNode *a, const double b)</pre></div>
+<div id="fmax_cd"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fmax_cd</b>(FGraphNode *a, const double b)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the maximum of two tensors element wise along the last dimension of
  each, i.e. <pre class="inline_code">a[i]</pre> if <pre class="inline_code">a[i] &gt; b</pre> else <pre class="inline_code">b</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="freduce_sum"></div><div class="card"><pre class="card_header_code">FGraphNode *freduce_sum(FGraphNode *a,
+<div id="freduce_sum"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*freduce_sum</b>(FGraphNode *a,
                         const int dimension)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Reduces one dimension of the tensor by additive folding e.g.<div style="display:block; height: 0.5em"></div>
@@ -553,7 +553,7 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
  The results of the predecessor node must be available, to
  ensure that the method may execute the parameter node. The corresponding
  result is then stored in the memory pointed to by <pre class="inline_code">a</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="freduce_mul"></div><div class="card"><pre class="card_header_code">FGraphNode *freduce_mul(FGraphNode *a, const int dimension)</pre></div>
+<div id="freduce_mul"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*freduce_mul</b>(FGraphNode *a, const int dimension)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Reduces one dimension of the tensor by multiplicative folding e.g.<div style="display:block; height: 0.5em"></div>
  <pre class="inline_code">freduce_mul([[1,2,3], [4,5,6]], 0) = [4,10,18]</pre>,
@@ -561,7 +561,7 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
  The results of the predecessor node must be available; to
  ensure that the method may execute the parameter node. The corresponding
  result is then stored in the memory pointed to by a. </div></div><div style="display: block; height: 2em;"></div>
-<div id="fslice"></div><div class="card"><pre class="card_header_code">FGraphNode *fslice(FGraphNode *a, const long *start, const long *end)</pre></div>
+<div id="fslice"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fslice</b>(FGraphNode *a, const long *start, const long *end)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Selects a slice of the tensor with a dimension wise start and end index.
  <pre class="inline_code">start</pre> and <pre class="inline_code">end</pre> are arrays with as many entries
@@ -571,7 +571,7 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
  selection per dimension and <pre class="inline_code">end</pre> describes the end index per dimension
  and is exclusive.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fslice_step"></div><div class="card"><pre class="card_header_code">FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
+<div id="fslice_step"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fslice_step</b>(FGraphNode *a, const long *start, const long *end,
                         const long *step)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Selects a slice of the tensor with a dimension wise start index, end index
@@ -587,7 +587,7 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
  <pre class="inline_code">start &gt; end</pre> must hold (for a positive of course <pre class="inline_code">end &gt;
  start</pre>) for each dimension.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fextend"></div><div class="card"><pre class="card_header_code">FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
+<div id="fextend"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fextend</b>(FGraphNode *a, const size_t *new_shape,
                     const size_t *insert_at)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;">
@@ -598,7 +598,7 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
 </li><li><pre class="inline_code">insert_at</pre> array with indices per dimension denoting where <pre class="inline_code">a</pre> is to be
     placed in the resulting tensor</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fextend_step"></div><div class="card"><pre class="card_header_code">FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
+<div id="fextend_step"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fextend_step</b>(FGraphNode *a, const size_t *new_shape,
                          const size_t *insert_at, const long *step_size)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;">
@@ -611,10 +611,10 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
 </li><li><pre class="inline_code">step_size</pre> allows to pull apart <pre class="inline_code">a</pre>, emplacing <pre class="inline_code">step_size[i]</pre> 0 between
     each value of <pre class="inline_code">a</pre>. Has a value per dimension.</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fabs_g"></div><div class="card"><pre class="card_header_code">FGraphNode *fabs_g(FGraphNode *a)</pre></div>
+<div id="fabs_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fabs_g</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Takes the elementwise absolute value of <pre class="inline_code">a</pre>, i.e. <pre class="inline_code">|a[i]|</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="frepeat"></div><div class="card"><pre class="card_header_code">FGraphNode *frepeat(FGraphNode *a, int *repititions)</pre></div>
+<div id="frepeat"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*frepeat</b>(FGraphNode *a, int *repititions)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Repeats dimensions of a tensor multiple times<div style="display:block; height: 0.5em"></div><ul><li><pre class="inline_code">a</pre>: the node in which dimensions are to be repeated
 </li><li><pre class="inline_code">repititions</pre>: array with the same number of entries as the tensor has
@@ -622,7 +622,7 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
 </li></ul> e.g. <pre class="inline_code">repeat([[0,1], [2,3]], [2, 3]) = [[0,1,0,1,0,1],
  [2,3,2,3,2,3], [0,1,0,1,0,1], [2,3,2,3,2,3]]</pre>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="ftranspose"></div><div class="card"><pre class="card_header_code">FGraphNode *ftranspose(FGraphNode *a, int *transpositions)</pre></div>
+<div id="ftranspose"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*ftranspose</b>(FGraphNode *a, int *transpositions)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Transposes this tensor along multiple dimensions<div style="display:block; height: 0.5em"></div><ul><li><pre class="inline_code">a</pre>: the node which should be transposed
 </li><li><pre class="inline_code">transpositions</pre>: an array with the same number of entries as the tensor
@@ -630,7 +630,7 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
 </li></ul> The tensor will have a resulting shape in which the size in dimension <pre class="inline_code">i</pre>
  corresponds to the former size in dimension <pre class="inline_code">transpositions[i]</pre>.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="fconvolve"></div><div class="card"><pre class="card_header_code">FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps)</pre></div>
+<div id="fconvolve"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fconvolve</b>(FGraphNode *a, FGraphNode *kernel, unsigned int *steps)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Convolves the <pre class="inline_code">n</pre>-dimensional input tensor <pre class="inline_code">a</pre> with a <pre class="inline_code">n</pre>-dimensional filter
  kernel <pre class="inline_code">kernel</pre> and a per dimensional step size <pre class="inline_code">steps</pre> with size of <pre class="inline_code">n-1</pre>.

@@ -3,7 +3,7 @@ module HtmlParser where
     import Data.Char (isDigit, isAlpha)
     import Data.List
 
-    import CPPParser (compileCppToHtml, compileTOCForCPP, parseCpp)
+    import CPPParser (compileCppToHtml, compileTOCForCPP, parseCpp, selectFcts)
     highKeyword = "#F030FF"
     highType = "#FFF030"
     highLiteral = "#30F0FF"
@@ -38,12 +38,11 @@ module HtmlParser where
         inc_file <- readFile path
         let rest_path = filter (/= ' ') (takeWhile (/= ')') (drop 1 (dropWhile (/= '"') t)))
         let select_expand = filter (/= "") (splitBy ',' rest_path)
-        print (parseCpp inc_file)
         includeFiles $ compileCppToHtml inc_file select_expand ++ drop 1 ( dropWhile (/= ')') t)
     includeFiles ('@':'g':'e':'n':'_':'t':'o':'c':'(':'"':t) = do
         let path = takeWhile (/= '"') t
         inc_file <- readFile path
-        let rest_path = takeWhile (/= ')') (drop 1 (dropWhile (/= '"') t))
+        let rest_path = filter (/= ' ') (takeWhile (/= ')') (drop 1 (dropWhile (/= '"') t)))
         let select_expand = filter (/= "") (splitBy ',' rest_path)
         includeFiles $ compileTOCForCPP inc_file select_expand ++ drop 1 ( dropWhile (/= ')') t)
     includeFiles (x:t) = do
