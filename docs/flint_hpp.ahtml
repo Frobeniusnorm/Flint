@@ -22,8 +22,8 @@
         <div class="card" style="padding: 20px 15px">
           The C++ Documentation (contained completly in <pre class="inline_code">flint.hpp</pre>) is splitted into two parts:
           <ul>
-            <li>The 1-dimensional implementation of the <pre class="inline_code">Tensor</pre> template <a href="#_typename_T__struct_Tensor_T__1__">template &lt;typename T&gt; Tensor&lt;T, 1&gt;</a></li>
-            <li>The n-dimensional implementation of the <pre class="inline_code">Tensor</pre> template <a href="#_typename_T__unsigned_int_n__struct_Tensor">template &lt;typename T, unsigned int n&gt; Tensor&lt;T, n&gt;</a></li>
+            <li>The 1-dimensional implementation of the <pre class="inline_code">Tensor</pre> template <a href="flint_tensor_1.html">template &lt;typename T&gt; Tensor&lt;T, 1&gt;</a></li>
+            <li>The n-dimensional implementation of the <pre class="inline_code">Tensor</pre> template <a href="flint_tensor_n.html">template &lt;typename T, unsigned int n&gt; Tensor&lt;T, n&gt;</a></li>
           </ul>
           For the most operations the interface and implementation is the same and exists twice just for type safety,
           so it should suffice to have a look at 
@@ -31,7 +31,7 @@
           the implementation may differ slightly.
         </div>
         <div style="display: block; height: 2em;"></div>
-        @from_code("../flint.hpp", .)
+        @from_code("../flint.hpp", _typename_T__unsigned_int_n__struct_Tensor)
     </div>
 </center>
 @include("footer.html")
