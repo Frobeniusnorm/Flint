@@ -435,19 +435,23 @@ FGraphNode *facos(FGraphNode *a);
 FGraphNode *fatan(FGraphNode *a);
 /** Negates the elements of `a`, i.e. `-a[i]` */
 FGraphNode *fneg(FGraphNode *a);
-/** Returns a tensor x with the shape of a with `x[i] = 1` if `a[i] >= 0` else
- * `x[i] = -1` */
+/** Returns a `F_INT32` tensor x with the shape of a with `x[i] = 1` if `a[i] >=
+ * 0` else `x[i] = -1`. `a` needs to have a integer data type.*/
 FGraphNode *fsign(FGraphNode *a);
-/** Returns a tensor `x` with the shape of `a` with `x[i] = 1` if `a[i] % 2 =
- * 0` else `x[i] = 0` */
+/** Returns a `F_INT32` tensor `x` with the shape of `a` with `x[i] = 1` if
+ * `a[i] % 2 = 0` else `x[i] = 0`.
+ */
 FGraphNode *feven(FGraphNode *a);
-/** Compares two tensors elementwise by `a < b` and returns a 0,1 INT32 Tensor
+/** Compares two tensors elementwise by `a < b` and returns a 0,1 `F_INT32`
+ * Tensor
  */
 FGraphNode *fless_g(FGraphNode *a, FGraphNode *b);
-/** Compares two tensors elementwise by `a > b` and returns a 0,1 INT32 Tensor
+/** Compares two tensors elementwise by `a > b` and returns a 0,1 `F_INT32`
+ * Tensor
  */
 FGraphNode *fgreater_g(FGraphNode *a, FGraphNode *b);
-/** Compares two tensors elementwise by `a = b`` and returns a 0,1 INT32 Tensor
+/** Compares two tensors elementwise by `a = b`` and returns a 0,1 `F_INT32`
+ * Tensor
  */
 FGraphNode *fequal_g(FGraphNode *a, FGraphNode *b);
 /** Compares a tensor and a constant elementwise by `a < b` and returns a 0,1

@@ -31,14 +31,86 @@
   </div>
   <center>
 <div class="content" style="margin-top: -3.1em">
-        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types</span><ul><li><a href="#_typename_T__unsigned_int_n__struct_Tensor_">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></a></li></ul><span class="card_header" style="font-size:1.2em">Functions</span><ul><li><a href="#_typename..._args_
+        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types</span><ul><li><a href="#_typename_T__unsigned_int_n__struct_Tensor_">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></a></li></ul><span class="card_header" style="font-size:1.2em">Functions</span><ul><li><a href="#data)_"><b>Tensor</b>(init_type data) </a></li><li><a href="#data)_"><b>Tensor</b>(storage_type data) </a></li><li><a href="#Tensor_&other)_"><b>Tensor</b>(const Tensor &other) </a></li><li><a href="#n__&operator=">Tensor&lt;T, n&gt; <b>&operator=</b>(const Tensor &other) </a></li><li><a href="#&&other)_"><b>Tensor</b>(Tensor &&other) </a></li><li><a href="#n__get_shape">std::array&lt;size_t, n&gt; <b>get_shape</b>() const </a></li><li><a href="#n__&operator=">Tensor&lt;T, n&gt; <b>&operator=</b>(Tensor &&other) </a></li><li><a href="#"><b>~Tensor</b>() </a></li><li><a href="#_typename..._args_
 __static_Tensor_T__n__constant">template &lt;typename... args&gt;
-  static Tensor&lt;T, n&gt; <b>constant</b>(T value, args... sizes) </a></li></ul></div>
+  static Tensor&lt;T, n&gt; <b>constant</b>(T value, args... sizes) </a></li><li><a href="#operator*">storage_type <b>operator*</b>() </a></li><li><a href="#execute">void <b>execute</b>() </a></li><li><a href="#execute_cpu">void <b>execute_cpu</b>() </a></li><li><a href="#execute_gpu">void <b>execute_gpu</b>() </a></li><li><a href="#n__&operator">Tensor&lt;T, n&gt; <b>&operator</b>()() </a></li><li><a href="#n__operator-">Tensor&lt;T, n&gt; <b>operator-</b>() const </a></li><li><a href="#n__sign">Tensor&lt;int, n&gt; <b>sign</b>() const </a></li></ul></div>
         <div style="display: block; height: 2em;"></div>
         <div id="_typename_T__unsigned_int_n__struct_Tensor_"></div><div class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></pre></div>
 <br />
 <div class="card"><div style="padding: 5px;">
  The multi dimensional implementation of <pre class="inline_code">Tensor</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="data)_"></div><div class="card"><pre class="card_header_code"><b>Tensor</b>(init_type data) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Creates a Tensor from a <pre class="inline_code">n</pre>-times nested <pre class="inline_code">std::initializer_list</pre>
+ (<pre class="inline_code">init_type</pre> is a recursive defined type definition).
+ E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; t1{{-<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">0</span>.}, {<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">2</span>.}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">3</span>&gt; t2 = {{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>}}, {{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}, {<span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">6</span>}}};</pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="data)_"></div><div class="card"><pre class="card_header_code"><b>Tensor</b>(storage_type data) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Creates a Tensor from a <pre class="inline_code">n</pre>-times nested <pre class="inline_code">std::vector</pre>
+ (<pre class="inline_code">storage_type</pre> is a recursive defined type definition).
+ E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ std::vector&lt;std::vector&lt;<span style="color: #FFF030">float</span>&gt;&gt; s1 = {{-<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">0</span>.}, {<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">2</span>.}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; t1(s1);</pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="Tensor_&other)_"></div><div class="card"><pre class="card_header_code"><b>Tensor</b>(const Tensor &other) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Copy constructor. Copies the underlying Graph structure by creating a new
+ node with the same operation, shape and data types. The new predecessor
+ array points to the same predecessors (memory safety is ensured with
+ reference counting).<div style="display:block; height: 0.5em"></div>
+ If <pre class="inline_code">other</pre> has result data or if it is a storage node, the complete CPU
+ data is directly copied. Since this operation is expensive it is advised to
+ only use it if it is completly necessary.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__&operator="></div><div class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>&operator=</b>(const Tensor &other) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Copy operator. Copies the underlying Graph structure by creating a new
+ node with the same operation, shape and data types. If there was any
+ previous allocated operation node allocated by this Tensor it is cleaned
+ up. The new predecessor array points to the same predecessors (memory
+ safety is ensured with reference counting).<div style="display:block; height: 0.5em"></div>
+ If <pre class="inline_code">other</pre> has result data or if it is a storage node, the complete CPU
+ data is directly copied. Since this operation is expensive it is advised to
+ only use it if it is completly necessary.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="&&other)_"></div><div class="card"><pre class="card_header_code"><b>Tensor</b>(Tensor &&other) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Move constructor. Moves every important field from <pre class="inline_code">other</pre> to this Tensor.
+ <pre class="inline_code">other</pre> is invalidated after this operation.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__get_shape"></div><div class="card"><pre class="card_header_code">std::array&lt;size_t, n&gt; <b>get_shape</b>() const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Returns the shape of this Tensor as a array with <pre class="inline_code">n</pre> entries.
+ Each entry describes the size of the corresponding dimension.
+ E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; t1{{-<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">0</span>.}, {<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">2</span>.}};
+ std::array&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">2</span>&gt; shape1 = t1.get_shape();
+ <span style="color: #D0D0D0">// shape1 = {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>}</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__&operator="></div><div class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>&operator=</b>(Tensor &&other) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Move operator. Moves every important field from <pre class="inline_code">other</pre> to this Tensor.
+ <pre class="inline_code">other</pre> is invalidated after this operation. If there was any previous
+ allocated operation node allocated by this Tensor it is cleaned up.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id=""></div><div class="card"><pre class="card_header_code"><b>~Tensor</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Cleans up this tensor and frees all underlying data by reference counting.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="_typename..._args_
 __static_Tensor_T__n__constant"></div><div class="card"><pre class="card_header_code">template &lt;typename... args&gt;
@@ -56,6 +128,77 @@ __static_Tensor_T__n__constant"></div><div class="card"><pre class="card_header_
  <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>]],</span>
  <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
  <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>]]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="operator*"></div><div class="card"><pre class="card_header_code">storage_type <b>operator*</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Retrieves the data of the current node and converts it into a
+ multidimensional vector. Executes the node if necessary (if it was not
+ executed prior). This operation has to duplicate the complete data.
+ Since that is a memory heavy and slow operation, it is recommended to use
+ the index operator <pre class="inline_code">operator[]</pre> whenever possible instead.
+ E.g.
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; foo = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>);
+ std::vector&lt;std::vector&lt;std::vector&lt;<span style="color: #FFF030">int</span>&gt;&gt;&gt; foo_res = *foo;
+ <span style="color: #D0D0D0">// foo_res = {{{<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>}}, {{<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>}}}</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="execute"></div><div class="card"><pre class="card_header_code">void <b>execute</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Executes the underlying operation (and lazily the operations of the parents
+ if needed) if it was not already executed prior (in that case the operation
+ does nothing).
+ If Flint was initiallized implicitly (without ever calling <pre class="inline_code">flintInit</pre>) or
+ with <pre class="inline_code">FLINT_BACKEND_BOTH</pre> the backend is chosen automatically by heuristics
+ and initialized if it was not prior.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="execute_cpu"></div><div class="card"><pre class="card_header_code">void <b>execute_cpu</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Executes the underlying operation (and lazily the operations of the parents
+ if needed) if it was not already executed prior (in that case the operation
+ does nothing).
+ Uses the CPU backend and initializes it if it was not initialized.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="execute_gpu"></div><div class="card"><pre class="card_header_code">void <b>execute_gpu</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Executes the underlying operation (and lazily the operations of the parents
+ if needed) if it was not already executed prior (in that case the operation
+ does nothing).
+ Uses the CPU backend and initializes it if it was not initialized.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__&operator"></div><div class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>&operator</b>()() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Convenience Method that calls  <a href="#execute"><pre class="inline_code">execute</pre></a> and returns the Tensor object
+ (the same, no new node is created!).
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__operator-"></div><div class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>operator-</b>() const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Negates the elements of this Tensor.
+ E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; foo = {{-<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">7</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">8</span>, -<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">3</span>}};
+ std::cout &lt;&lt; (-foo)() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//   [-<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">7</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">8</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">3</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__sign"></div><div class="card"><pre class="card_header_code">Tensor&lt;int, n&gt; <b>sign</b>() const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Returns a tensor x with the shape of a with <pre class="inline_code">x[i] = 1</pre> if <pre class="inline_code">a[i] &gt;= 0</pre> else
+ <pre class="inline_code">x[i] = -1</pre>. If you need to distinguish additionally for 0 values, take a
+ look at <pre class="inline_code">equal</pre>- E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; foo = {{-<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">7</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">8</span>, -<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">3</span>}};
+ std::cout &lt;&lt; (foo.sign())() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">//  [[-<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">1</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span>, -<span style="color: #30F0FF">1</span>]])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
 
     </div>

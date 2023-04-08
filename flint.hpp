@@ -161,7 +161,15 @@ template <typename T> struct Tensor<T, 1> {
       node = fExecuteGraph_gpu(node);
     }
   }
-  Tensor<int, 1> operator-() const { return Tensor<int, 1>(fneg(node), shape); }
+  /**
+   * Convenience Method that calls `execute` and returns the Tensor object
+   * (the same, no new node is created!).
+   */
+  Tensor<T, 1> &operator()() {
+    execute();
+    return *this;
+  }
+  Tensor<T, 1> operator-() const { return Tensor<T, 1>(fneg(node), shape); }
   Tensor<int, 1> sign() const { return Tensor<int, 1>(fsign(node), shape); }
   Tensor<int, 1> even() const { return Tensor<int, 1>(feven(node), shape); }
   operator std::string() {
@@ -352,6 +360,16 @@ template <typename T, unsigned int n> struct Tensor {
   // storage type is the vector of the recursive type
   typedef std::vector<typename Tensor<T, n - 1>::storage_type> storage_type;
   typedef std::initializer_list<typename Tensor<T, n - 1>::init_type> init_type;
+  /**
+   * Creates a Tensor from a `n`-times nested `std::initializer_list`
+   * (`init_type` is a recursive defined type definition).
+   * E.g.
+   *
+   * @code{
+   * Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
+   * Tensor<float, 3> t2 = {{{0, 1}, {1, 2}}, {{3, 4}, {5, 6}}};
+   * }
+   */
   Tensor(init_type data) {
     isTensorType<T>();
     static_assert(n > 1, "Dimension must be at least 1");
@@ -362,6 +380,16 @@ template <typename T, unsigned int n> struct Tensor {
     // the node which is currently hold is always referenced
     node->reference_counter = 1;
   }
+  /**
+   * Creates a Tensor from a `n`-times nested `std::vector`
+   * (`storage_type` is a recursive defined type definition).
+   * E.g.
+   *
+   * @code{
+   * std::vector<std::vector<float>> s1 = {{-1., 0.}, {1., 2.}};
+   * Tensor<float, 2> t1(s1);
+   * }
+   */
   Tensor(storage_type data) {
     isTensorType<T>();
     static_assert(n > 1, "Dimension must be at least 1");
@@ -372,13 +400,33 @@ template <typename T, unsigned int n> struct Tensor {
     // the node which is currently hold is always referenced
     node->reference_counter = 1;
   }
-  // copy
+  /**
+   * Copy constructor. Copies the underlying Graph structure by creating a new
+   * node with the same operation, shape and data types. The new predecessor
+   * array points to the same predecessors (memory safety is ensured with
+   * reference counting).
+   *
+   * If `other` has result data or if it is a storage node, the complete CPU
+   * data is directly copied. Since this operation is expensive it is advised to
+   * only use it if it is completly necessary.
+   */
   Tensor(const Tensor &other) {
     shape = other.shape;
     total_size = other.total_size;
     node = fCopyGraph(other.node);
     node->reference_counter++;
   }
+  /**
+   * Copy operator. Copies the underlying Graph structure by creating a new
+   * node with the same operation, shape and data types. If there was any
+   * previous allocated operation node allocated by this Tensor it is cleaned
+   * up. The new predecessor array points to the same predecessors (memory
+   * safety is ensured with reference counting).
+   *
+   * If `other` has result data or if it is a storage node, the complete CPU
+   * data is directly copied. Since this operation is expensive it is advised to
+   * only use it if it is completly necessary.
+   */
   Tensor<T, n> &operator=(const Tensor &other) {
     if (node) {
       node->reference_counter--;
@@ -390,14 +438,33 @@ template <typename T, unsigned int n> struct Tensor {
     node->reference_counter++;
     return *this;
   }
-  // move
+  /**
+   * Move constructor. Moves every important field from `other` to this Tensor.
+   * `other` is invalidated after this operation.
+   */
   Tensor(Tensor &&other) {
     shape = other.shape;
     total_size = other.total_size;
     node = other.node; // was held by previous tensor -> no increment necessary
     other.node = nullptr;
   }
+  /**
+   * Returns the shape of this Tensor as a array with `n` entries.
+   * Each entry describes the size of the corresponding dimension.
+   * E.g.
+   *
+   * @code{
+   * Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
+   * std::array<size_t, 2> shape1 = t1.get_shape();
+   * // shape1 = {2, 2}
+   * }
+   */
   std::array<size_t, n> get_shape() const { return shape; }
+  /**
+   * Move operator. Moves every important field from `other` to this Tensor.
+   * `other` is invalidated after this operation. If there was any previous
+   * allocated operation node allocated by this Tensor it is cleaned up.
+   */
   Tensor<T, n> &operator=(Tensor &&other) {
     if (node) {
       node->reference_counter--;
@@ -409,6 +476,9 @@ template <typename T, unsigned int n> struct Tensor {
     other.node = nullptr;
     return *this;
   }
+  /**
+   * Cleans up this tensor and frees all underlying data by reference counting.
+   */
   ~Tensor() {
     if (node) {
       node->reference_counter--;
@@ -436,10 +506,19 @@ template <typename T, unsigned int n> struct Tensor {
     FGraphNode *node = fconstant(value, shape.data(), dimensions);
     return Tensor(node, shape);
   }
-  // retrieves the data of the current node and converts it into a possible
-  // multidimensional vector, executes the node if necessary. The conversion has
-  // to copy the complete data, because of that we recommend the builtin index
-  // access of the Tensor.
+  /**
+   * Retrieves the data of the current node and converts it into a
+   * multidimensional vector. Executes the node if necessary (if it was not
+   * executed prior). This operation has to duplicate the complete data.
+   * Since that is a memory heavy and slow operation, it is recommended to use
+   * the index operator `operator[]` whenever possible instead.
+   * E.g.
+   * @code{
+   * Tensor<int, 3> foo = Tensor<int, 3>::constant(42, 2, 2, 1);
+   * std::vector<std::vector<std::vector<int>>> foo_res = *foo;
+   * // foo_res = {{{42}, {42}}, {{42}, {42}}}
+   * }
+   */
   storage_type operator*() {
     if (node->result_data && !node->result_data->data) {
       fExecuteGraph_gpu(node);
@@ -453,25 +532,93 @@ template <typename T, unsigned int n> struct Tensor {
     bringIntoShape(result, src, 0, 0, total_size);
     return result;
   }
-
+  /**
+   * Executes the underlying operation (and lazily the operations of the parents
+   * if needed) if it was not already executed prior (in that case the operation
+   * does nothing).
+   * If Flint was initiallized implicitly (without ever calling `flintInit`) or
+   * with `FLINT_BACKEND_BOTH` the backend is chosen automatically by heuristics
+   * and initialized if it was not prior.
+   */
   void execute() {
     if (!node->result_data || !node->result_data->data) {
       node = fExecuteGraph(node);
     }
   }
+  /**
+   * Executes the underlying operation (and lazily the operations of the parents
+   * if needed) if it was not already executed prior (in that case the operation
+   * does nothing).
+   * Uses the CPU backend and initializes it if it was not initialized.
+   */
   void execute_cpu() {
     if (!node->result_data || !node->result_data->data) {
       node = fExecuteGraph_cpu(node);
     }
   }
+  /**
+   * Executes the underlying operation (and lazily the operations of the parents
+   * if needed) if it was not already executed prior (in that case the operation
+   * does nothing).
+   * Uses the CPU backend and initializes it if it was not initialized.
+   */
   void execute_gpu() {
     if (!node->result_data || !node->result_data->data) {
       node = fExecuteGraph_gpu(node);
     }
   }
+  /**
+   * Convenience Method that calls `execute` and returns the Tensor object
+   * (the same, no new node is created!).
+   */
+  Tensor<T, n> &operator()() {
+    execute();
+    return *this;
+  }
+  /**
+   * Negates the elements of this Tensor.
+   * E.g.
+   *
+   * @code{
+   * Tensor<float, 2> foo = {{-3, 3.141592}, {42.0798, -4.3}};
+   * std::cout << (-foo)() << std::endl;
+   * // Tensor<FLOAT32, shape: [2, 2]>(
+   * //  [[3.000000, -3.141592],
+   * //   [-42.079800, 4.300000]])
+   * }
+   */
   Tensor<T, n> operator-() const { return Tensor<T, n>(fneg(node), shape); }
+  /**
+   * Returns a tensor `x` with the shape of a with `x[i] = 1` if `a[i] >= 0`
+   * else `x[i] = -1`. If you need to distinguish additionally for 0 values,
+   * take a look at `equal`. E.g.
+   *
+   * @code{
+   * Tensor<float, 2> foo = {{-3, 3.141592}, {42.0798, -4.3}};
+   * std::cout << (foo.sign())() << std::endl;
+   * // Tensor<INT32, shape: [2, 2]>(
+   * //  [[-1, 1],
+   * //   [1, -1]])
+   * }
+   */
   Tensor<int, n> sign() const { return Tensor<int, n>(fsign(node), shape); }
-  Tensor<int, n> even() const { return Tensor<int, n>(feven(node), shape); }
+  /**
+   * Returns a int tensor `x` with the shape of `this` with `x[i] = 1` if
+   * `this[i] % 2 = 0` else `x[i] = 0`. `a` needs to have a integer type. E.g.
+   *
+   * @code{
+   * Tensor<int, 2> foo = {{2, 3}, {42, 7}};
+   * std::cout << (foo.even())() << std::endl;
+   * // Tensor<INT32, shape: [2, 2]>(
+   * //  [[1, 0],
+   * //   [1, 0]])
+   * }
+   */
+  Tensor<int, n> even() const {
+    static_assert(std::is_same<T, int>() || std::is_same<T, long>());
+    return Tensor<int, n>(feven(node), shape);
+  }
+
   TensorView<T, n - 1> operator[](const size_t index) {
     if (node->result_data && !node->result_data->data) {
       fExecuteGraph_gpu(node);

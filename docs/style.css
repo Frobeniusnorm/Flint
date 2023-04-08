@@ -119,11 +119,12 @@ pre{
   padding: 5px 10px;
 }
 .code{
-  background: #002030; 
+  background: #103040; 
   color: white; 
   padding: 10px 20px;
   font-size: 1.3em;
   text-align: left;
+  border-radius: 0.5em;
 }
 .button1{
   background-color: #66cc7a;
