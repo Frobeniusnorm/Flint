@@ -618,7 +618,23 @@ template <typename T, unsigned int n> struct Tensor {
     static_assert(std::is_same<T, int>() || std::is_same<T, long>());
     return Tensor<int, n>(feven(node), shape);
   }
-
+  /**
+   * Indexes the Tensor in its last dimension by `index`.
+   * The returned type `TensorView` stores the underlying data of this Tensor
+   * and the given index. It is only valid and functional as long as the
+   * underlying data of this Tensor is not destructed (i.e. as long as this
+   * object is alive or as it is attached as the parent of another Tensor).
+   * If the underlying data is not yet computed, executes this Tensor.
+   * E.g.
+   *
+   * @code{
+   * Tensor<int, 3> foo{{{0,1}, {2,3}}, {{4,5}, {6,7}}};
+   * TensorView<int, 2> bar = foo[1];
+   * TensorView<int, 1> baz = bar[1];
+   * std::cout << baz[0] << std::endl; // 6
+   * std::cout << foo[0][1][1] << std::endl; // 3
+   * }
+   */
   TensorView<T, n - 1> operator[](const size_t index) {
     if (node->result_data && !node->result_data->data) {
       fExecuteGraph_gpu(node);
@@ -634,6 +650,11 @@ template <typename T, unsigned int n> struct Tensor {
     }
     return TensorView<T, n - 1>((T *)store->data, ns, alrdindx);
   }
+  /**
+   * Converts this Tensor to a string representation.
+   * If the Tensor was not yet executed, it won't be, instead of the data it
+   * will say "<not yet executed>".
+   */
   operator std::string() {
     FOperation *op = node->operation;
     std::string foo = "Tensor<" +
@@ -650,6 +671,10 @@ template <typename T, unsigned int n> struct Tensor {
     foo += ")";
     return foo;
   }
+  /**
+   * Calls `std::string()` on this Tensor and pipes the returned string to the
+   * pipe.
+   */
   friend std::ostream &operator<<(std::ostream &os, Tensor<T, n> &t) {
     os << (std::string)t;
     return os;
@@ -658,7 +683,23 @@ template <typename T, unsigned int n> struct Tensor {
   template <typename K>
   using stronger_return =
       typename std::conditional<isStronger<K, T>(), K, T>::type;
-  // OPERATIONS
+  /**
+   * Elementwise addition of this Tensor and `other`. If the dimensions differ
+   * the smaller Tensor is broadcasted along the first dimensions which are not
+   * shared of the larger one. The datatype of the result is the datatype with
+   * higher precedence. E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0,1}, {2,3}}, {{4,5}, {6,7}}};
+   * Tensor<float, 2> b{{4,2},{0.5f,1}};
+   * std::cout << (a + b)() << std::endl;
+   * // Tensor<FLOAT32, shape: [2, 2, 2]>(
+   * // [[[4.000000, 3.000000],
+   * //   [2.500000, 4.000000]],
+   * //  [[8.000000, 7.000000],
+   * //   [6.500000, 8.000000]]])
+   * }
+   * */
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator+(const Tensor<K, k> &other) const {
@@ -667,10 +708,32 @@ template <typename T, unsigned int n> struct Tensor {
     else
       return Tensor<stronger_return<K>, n>(fadd(node, other.node), shape);
   }
+  /**
+   * Elementwise addition of the constant `other` to this Tensor.
+   * If the datatype of `K` is stronger (stronger precedence) than the datatype
+   * of this Tensor `T`, `K` will be the result type, else `T`.
+   */
   template <typename K>
   Tensor<stronger_return<K>, n> operator+(const K other) const {
     return Tensor<stronger_return<K>, n>(fadd(node, other), shape);
   }
+  /**
+   * Elementwise subtraction of this Tensor and `other`. If the dimensions
+   * differ the smaller Tensor is broadcasted along the first dimensions which
+   * are not shared of the larger one. The datatype of the result is the
+   * datatype with higher precedence. E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0,1}, {2,3}}, {{4,5}, {6,7}}};
+   * Tensor<float, 2> b{{4,2},{0.5f,1}};
+   * std::cout << (a - b)() << std::endl;
+   * // Tensor<FLOAT32, shape: [2, 2, 2]>(
+   * // [[[-4.000000, -1.000000],
+   * //   [1.500000, 2.000000]],
+   * //  [[0.000000, 3.000000],
+   * //   [5.500000, 6.000000]]])
+   * }
+   * */
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator-(const Tensor<K, k> &other) const {
@@ -679,6 +742,11 @@ template <typename T, unsigned int n> struct Tensor {
     else
       return Tensor<stronger_return<K>, n>(fsub(node, other.node), shape);
   }
+  /**
+   * Elementwise substraction of the constant `other` from this Tensor.
+   * If the datatype of `K` is stronger (stronger precedence) than the datatype
+   * of this Tensor `T`, `K` will be the result type, else `T`.
+   */
   template <typename K>
   Tensor<stronger_return<K>, n> operator-(const K other) const {
     return Tensor<stronger_return<K>, n>(fsub(node, other), shape);
