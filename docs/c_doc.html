@@ -403,23 +403,27 @@ framework was initialized, else they do nothing. </div></div><div style="display
 <div class="card"><div style="padding: 5px;"> Negates the elements of <pre class="inline_code">a</pre>, i.e. <pre class="inline_code">-a[i]</pre> </div></div><div style="display: block; height: 2em;"></div>
 <div id="fsign"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fsign</b>(FGraphNode *a)</pre></div>
 <br />
-<div class="card"><div style="padding: 5px;"> Returns a tensor x with the shape of a with <pre class="inline_code">x[i] = 1</pre> if <pre class="inline_code">a[i] &gt;= 0</pre> else
- <pre class="inline_code">x[i] = -1</pre> </div></div><div style="display: block; height: 2em;"></div>
+<div class="card"><div style="padding: 5px;"> Returns a <pre class="inline_code">F_INT32</pre> tensor x with the shape of a with <pre class="inline_code">x[i] = 1</pre> if <pre class="inline_code">a[i] &gt;=
+ 0</pre> else <pre class="inline_code">x[i] = -1</pre>. <pre class="inline_code">a</pre> needs to have a integer data type.</div></div><div style="display: block; height: 2em;"></div>
 <div id="feven"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*feven</b>(FGraphNode *a)</pre></div>
 <br />
-<div class="card"><div style="padding: 5px;"> Returns a tensor <pre class="inline_code">x</pre> with the shape of <pre class="inline_code">a</pre> with <pre class="inline_code">x[i] = 1</pre> if <pre class="inline_code">a[i] % 2 =
- 0</pre> else <pre class="inline_code">x[i] = 0</pre> </div></div><div style="display: block; height: 2em;"></div>
+<div class="card"><div style="padding: 5px;"> Returns a <pre class="inline_code">F_INT32</pre> tensor <pre class="inline_code">x</pre> with the shape of <pre class="inline_code">a</pre> with <pre class="inline_code">x[i] = 1</pre> if
+ <pre class="inline_code">a[i] % 2 = 0</pre> else <pre class="inline_code">x[i] = 0</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
 <div id="fless_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fless_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
-<div class="card"><div style="padding: 5px;"> Compares two tensors elementwise by <pre class="inline_code">a &lt; b</pre> and returns a 0,1 INT32 Tensor
+<div class="card"><div style="padding: 5px;"> Compares two tensors elementwise by <pre class="inline_code">a &lt; b</pre> and returns a 0,1 <pre class="inline_code">F_INT32</pre>
+ Tensor
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="fgreater_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fgreater_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
-<div class="card"><div style="padding: 5px;"> Compares two tensors elementwise by <pre class="inline_code">a &gt; b</pre> and returns a 0,1 INT32 Tensor
+<div class="card"><div style="padding: 5px;"> Compares two tensors elementwise by <pre class="inline_code">a &gt; b</pre> and returns a 0,1 <pre class="inline_code">F_INT32</pre>
+ Tensor
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="fequal_g"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fequal_g</b>(FGraphNode *a, FGraphNode *b)</pre></div>
 <br />
-<div class="card"><div style="padding: 5px;"> Compares two tensors elementwise by <pre class="inline_code">a = b</pre><pre class="inline_code"> and returns a 0,1 INT32 Tensor
+<div class="card"><div style="padding: 5px;"> Compares two tensors elementwise by <pre class="inline_code">a = b</pre><pre class="inline_code"> and returns a 0,1 </pre>F_INT32<pre class="inline_code">
+ Tensor
 </pre></div></div><div style="display: block; height: 2em;"></div>
 <div id="fless_ci"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fless_ci</b>(FGraphNode *a, const int b)</pre></div>
 <br />
@@ -478,7 +482,7 @@ framework was initialized, else they do nothing. </div></div><div style="display
  tensor multiple other previous entries are needed, the operand tensors need
  to be executed first. Therefor the method will implicitly (or eagerly)
  execute the two parameter nodes <pre class="inline_code">a</pre> and <pre class="inline_code">b</pre> if their data is not allready
- present, the given pointers will be overwritten with the results. </div></div><div style="display: block; height: 2em;"></div>
+ present. </div></div><div style="display: block; height: 2em;"></div>
 <div id="fflatten"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*fflatten</b>(FGraphNode *a)</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Flattens the complete tensor to a tensor with one

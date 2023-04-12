@@ -499,7 +499,7 @@ FGraphNode *fequal_cd(FGraphNode *a, const double b);
  * tensor multiple other previous entries are needed, the operand tensors need
  * to be executed first. Therefor the method will implicitly (or eagerly)
  * execute the two parameter nodes `a` and `b` if their data is not allready
- * present, the given pointers will be overwritten with the results. */
+ * present. */
 FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b);
 /** Flattens the complete tensor to a tensor with one
 dimension.

@@ -33,7 +33,35 @@
 <div class="content" style="margin-top: -3.1em">
         <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types</span><ul><li><a href="#_typename_T__unsigned_int_n__struct_Tensor_">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></a></li></ul><span class="card_header" style="font-size:1.2em">Functions</span><ul><li><a href="#data)_"><b>Tensor</b>(init_type data) </a></li><li><a href="#data)_"><b>Tensor</b>(storage_type data) </a></li><li><a href="#Tensor_&other)_"><b>Tensor</b>(const Tensor &other) </a></li><li><a href="#n__&operator=">Tensor&lt;T, n&gt; <b>&operator=</b>(const Tensor &other) </a></li><li><a href="#&&other)_"><b>Tensor</b>(Tensor &&other) </a></li><li><a href="#n__get_shape">std::array&lt;size_t, n&gt; <b>get_shape</b>() const </a></li><li><a href="#n__&operator=">Tensor&lt;T, n&gt; <b>&operator=</b>(Tensor &&other) </a></li><li><a href="#"><b>~Tensor</b>() </a></li><li><a href="#_typename..._args_
 __static_Tensor_T__n__constant">template &lt;typename... args&gt;
-  static Tensor&lt;T, n&gt; <b>constant</b>(T value, args... sizes) </a></li><li><a href="#operator*">storage_type <b>operator*</b>() </a></li><li><a href="#execute">void <b>execute</b>() </a></li><li><a href="#execute_cpu">void <b>execute_cpu</b>() </a></li><li><a href="#execute_gpu">void <b>execute_gpu</b>() </a></li><li><a href="#n__&operator">Tensor&lt;T, n&gt; <b>&operator</b>()() </a></li><li><a href="#n__operator-">Tensor&lt;T, n&gt; <b>operator-</b>() const </a></li><li><a href="#n__sign">Tensor&lt;int, n&gt; <b>sign</b>() const </a></li></ul></div>
+  static Tensor&lt;T, n&gt; <b>constant</b>(T value, args... sizes) </a></li><li><a href="#operator*">storage_type <b>operator*</b>() </a></li><li><a href="#execute">void <b>execute</b>() </a></li><li><a href="#execute_cpu">void <b>execute_cpu</b>() </a></li><li><a href="#execute_gpu">void <b>execute_gpu</b>() </a></li><li><a href="#n__&operator">Tensor&lt;T, n&gt; <b>&operator</b>()() </a></li><li><a href="#n__operator-">Tensor&lt;T, n&gt; <b>operator-</b>() const </a></li><li><a href="#n__sign">Tensor&lt;int, n&gt; <b>sign</b>() const </a></li><li><a href="#n__even">Tensor&lt;int, n&gt; <b>even</b>() const </a></li><li><a href="#n_-_1__operator[]">TensorView&lt;T, n - 1&gt; <b>operator[]</b>(const size_t index) </a></li><li><a href="#std::string">operator <b>std::string</b>() </a></li><li><a href="#std::ostream_&operator__">friend std::ostream <b>&operator&lt;&lt;</b>(std::ostream &os, Tensor&lt;T, n&gt; &t) </a></li><li><a href="#_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n_
+__operator+">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
+  <b>operator+</b>(const Tensor&lt;K, k&gt; &other) const </a></li><li><a href="#_typename_K_
+__Tensor_stronger_return_K___n__operator+">template &lt;typename K&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>operator+</b>(const K other) const </a></li><li><a href="#_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n_
+__operator-">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
+  <b>operator-</b>(const Tensor&lt;K, k&gt; &other) const </a></li><li><a href="#_typename_K_
+__Tensor_stronger_return_K___n__operator-">template &lt;typename K&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>operator-</b>(const K other) const </a></li><li><a href="#_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n_
+__operator*">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
+  <b>operator*</b>(const Tensor&lt;K, k&gt; &other) const </a></li><li><a href="#_typename_K_
+__Tensor_stronger_return_K___n__operator*">template &lt;typename K&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>operator*</b>(const K other) const </a></li><li><a href="#_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n_
+__operator/">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
+  <b>operator/</b>(const Tensor&lt;K, k&gt; &other) const </a></li><li><a href="#_typename_K_
+__Tensor_stronger_return_K___n__operator/">template &lt;typename K&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>operator/</b>(const K other) const </a></li><li><a href="#1__flattened">Tensor&lt;T, 1&gt; <b>flattened</b>() const </a></li><li><a href="#n_-_1__flattened">Tensor&lt;T, n - 1&gt; <b>flattened</b>(const int dimension) const </a></li><li><a href="#_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n__pow">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt; <b>pow</b>(const Tensor&lt;K, k&gt; &other) </a></li><li><a href="#_typename_K__Tensor_stronger_return_K___n__pow">template &lt;typename K&gt; Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>pow</b>(const K other) </a></li><li><a href="#n__log">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>log</b>() </a></li><li><a href="#n__log2">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>log2</b>() </a></li><li><a href="#n__log10">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>log10</b>() </a></li><li><a href="#n__sqrt">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>sqrt</b>() </a></li><li><a href="#n__sin">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>sin</b>() </a></li><li><a href="#n__cos">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>cos</b>() </a></li><li><a href="#n__tan">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>tan</b>() </a></li><li><a href="#n__asin">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>asin</b>() </a></li><li><a href="#n__acos">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>acos</b>() </a></li><li><a href="#n__atan">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>atan</b>() </a></li><li><a href="#_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n__matmul">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt; <b>matmul</b>(Tensor&lt;K, k&gt; &other) </a></li></ul></div>
         <div style="display: block; height: 2em;"></div>
         <div id="_typename_T__unsigned_int_n__struct_Tensor_"></div><div class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></pre></div>
 <br />
@@ -190,9 +218,9 @@ __static_Tensor_T__n__constant"></div><div class="card"><pre class="card_header_
 <div id="n__sign"></div><div class="card"><pre class="card_header_code">Tensor&lt;int, n&gt; <b>sign</b>() const </pre></div>
 <br />
 <div class="card"><div style="padding: 5px;">
- Returns a tensor x with the shape of a with <pre class="inline_code">x[i] = 1</pre> if <pre class="inline_code">a[i] &gt;= 0</pre> else
- <pre class="inline_code">x[i] = -1</pre>. If you need to distinguish additionally for 0 values, take a
- look at <pre class="inline_code">equal</pre>- E.g.<div style="display:block; height: 0.5em"></div>
+ Returns a tensor <pre class="inline_code">x</pre> with the shape of a with <pre class="inline_code">x[i] = 1</pre> if <pre class="inline_code">a[i] &gt;= 0</pre>
+ else <pre class="inline_code">x[i] = -1</pre>. If you need to distinguish additionally for 0 values,
+ take a look at <pre class="inline_code">equal</pre>. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; foo = {{-<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">7</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">8</span>, -<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">3</span>}};
  std::cout &lt;&lt; (foo.sign())() &lt;&lt; std::endl;
@@ -200,6 +228,297 @@ __static_Tensor_T__n__constant"></div><div class="card"><pre class="card_header_
  <span style="color: #D0D0D0">//  [[-<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">1</span>],</span>
  <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span>, -<span style="color: #30F0FF">1</span>]])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
+<div id="n__even"></div><div class="card"><pre class="card_header_code">Tensor&lt;int, n&gt; <b>even</b>() const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Returns a int tensor <pre class="inline_code">x</pre> with the shape of <pre class="inline_code">this</pre> with <pre class="inline_code">x[i] = 1</pre> if
+ <pre class="inline_code">this[i] % 2 = 0</pre> else <pre class="inline_code">x[i] = 0</pre>. <pre class="inline_code">a</pre> needs to have a integer type. E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; foo = {{<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">7</span>}};
+ std::cout &lt;&lt; (foo.even())() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n_-_1__operator[]"></div><div class="card"><pre class="card_header_code">TensorView&lt;T, n - 1&gt; <b>operator[]</b>(const size_t index) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Indexes the Tensor in its last dimension by <pre class="inline_code">index</pre>.
+ The returned type <pre class="inline_code">TensorView</pre> stores the underlying data of this Tensor
+ and the given index. It is only valid and functional as long as the
+ underlying data of this Tensor is not destructed (i.e. as long as this
+ object is alive or as it is attached as the parent of another Tensor).
+ If the underlying data is not yet computed, executes this Tensor.
+ E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; foo{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>View&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; bar = foo[<span style="color: #30F0FF">1</span>];
+ <span style="color: #FFF030">Tensor</span>View&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">1</span>&gt; baz = bar[<span style="color: #30F0FF">1</span>];
+ std::cout &lt;&lt; baz[<span style="color: #30F0FF">0</span>] &lt;&lt; std::endl; <span style="color: #D0D0D0">// <span style="color: #30F0FF">6</span></span>
+ std::cout &lt;&lt; foo[<span style="color: #30F0FF">0</span>][<span style="color: #30F0FF">1</span>][<span style="color: #30F0FF">1</span>] &lt;&lt; std::endl; <span style="color: #D0D0D0">// <span style="color: #30F0FF">3</span></span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="std::string"></div><div class="card"><pre class="card_header_code">operator <b>std::string</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Converts this Tensor to a string representation.
+ If the Tensor was not yet executed, it won't be, instead of the data it
+ will say "&lt;not yet executed&gt;".
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="std::ostream_&operator__"></div><div class="card"><pre class="card_header_code">friend std::ostream <b>&operator&lt;&lt;</b>(std::ostream &os, Tensor&lt;T, n&gt; &t) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Calls <pre class="inline_code">std::string()</pre> on this Tensor and pipes the returned string to the
+ pipe.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n_
+__operator+"></div><div class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
+  <b>operator+</b>(const Tensor&lt;K, k&gt; &other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Elementwise addition of this Tensor and <pre class="inline_code">other</pre>. If the dimensions differ
+ the smaller Tensor is broadcasted along the first dimensions which are not
+ shared of the larger one. The datatype of the result is the datatype with
+ higher precedence. E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">2</span>},{<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f,<span style="color: #30F0FF">1</span>}};
+ std::cout &lt;&lt; (a + b)() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">8</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">6</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">8</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]]])</span></pre>
+ </div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K_
+__Tensor_stronger_return_K___n__operator+"></div><div class="card"><pre class="card_header_code">template &lt;typename K&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>operator+</b>(const K other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Elementwise addition of the constant <pre class="inline_code">other</pre> to this Tensor.
+ If the datatype of <pre class="inline_code">K</pre> is stronger (stronger precedence) than the datatype
+ of this Tensor <pre class="inline_code">T</pre>, <pre class="inline_code">K</pre> will be the result type, else <pre class="inline_code">T</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n_
+__operator-"></div><div class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
+  <b>operator-</b>(const Tensor&lt;K, k&gt; &other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Elementwise subtraction of this Tensor and <pre class="inline_code">other</pre>. If the dimensions
+ differ the smaller Tensor is broadcasted along the first dimensions which
+ are not shared of the larger one. The datatype of the result is the
+ datatype with higher precedence. E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">2</span>},{<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f,<span style="color: #30F0FF">1</span>}};
+ std::cout &lt;&lt; (a - b)() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[-<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">5</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">6</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]]])</span></pre>
+ </div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K_
+__Tensor_stronger_return_K___n__operator-"></div><div class="card"><pre class="card_header_code">template &lt;typename K&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>operator-</b>(const K other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Elementwise substraction of the constant <pre class="inline_code">other</pre> from this Tensor.
+ If the datatype of <pre class="inline_code">K</pre> is stronger (stronger precedence) than the datatype
+ of this Tensor <pre class="inline_code">T</pre>, <pre class="inline_code">K</pre> will be the result type, else <pre class="inline_code">T</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n_
+__operator*"></div><div class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
+  <b>operator*</b>(const Tensor&lt;K, k&gt; &other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Elementwise multiplication of this Tensor and <pre class="inline_code">other</pre>. If the dimensions
+ differ the smaller Tensor is broadcasted along the first dimensions which
+ are not shared of the larger one. The datatype of the result is the
+ datatype with higher precedence. E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">2</span>},{<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f,<span style="color: #30F0FF">1</span>}};
+ std::cout &lt;&lt; (a * b)() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">1</span><span style="color: #30F0FF">6</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]]])</span></pre>
+ </div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K_
+__Tensor_stronger_return_K___n__operator*"></div><div class="card"><pre class="card_header_code">template &lt;typename K&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>operator*</b>(const K other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Elementwise multiplication of the constant <pre class="inline_code">other</pre> from this Tensor.
+ If the datatype of <pre class="inline_code">K</pre> is stronger (stronger precedence) than the datatype
+ of this Tensor <pre class="inline_code">T</pre>, <pre class="inline_code">K</pre> will be the result type, else <pre class="inline_code">T</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n_
+__operator/"></div><div class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
+  <b>operator/</b>(const Tensor&lt;K, k&gt; &other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Elementwise division of this Tensor and <pre class="inline_code">other</pre>. If the dimensions
+ differ the smaller Tensor is broadcasted along the first dimensions which
+ are not shared of the larger one. The datatype of the result is the
+ datatype with higher precedence. E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">2</span>},{<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f,<span style="color: #30F0FF">1</span>}};
+ std::cout &lt;&lt; (a / b)() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]]])</span></pre>
+ </div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K_
+__Tensor_stronger_return_K___n__operator/"></div><div class="card"><pre class="card_header_code">template &lt;typename K&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>operator/</b>(const K other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Elementwise division of the constant <pre class="inline_code">other</pre> from this Tensor.
+ If the datatype of <pre class="inline_code">K</pre> is stronger (stronger precedence) than the datatype
+ of this Tensor <pre class="inline_code">T</pre>, <pre class="inline_code">K</pre> will be the result type, else <pre class="inline_code">T</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="1__flattened"></div><div class="card"><pre class="card_header_code">Tensor&lt;T, 1&gt; <b>flattened</b>() const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Flattens the complete tensor to a tensor with one dimension.
+ E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">long</span>, <span style="color: #30F0FF">3</span>&gt; a = {{{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">4</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">5</span>}}, {{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">9</span>}}};
+ std::cout &lt;&lt; (a.flattened())() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT64, shape: <span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span>&gt;([<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">9</span>])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n_-_1__flattened"></div><div class="card"><pre class="card_header_code">Tensor&lt;T, n - 1&gt; <b>flattened</b>(const int dimension) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Flattens this tensor with <pre class="inline_code">n</pre> dimensions along
+ <pre class="inline_code">dimension</pre>, resulting in a tensor with <pre class="inline_code">n-1</pre> dimensions.
+ Flattening a dimension will remove it from the shape of the tensor.
+ The data stays the same, you can imagine the elements along the flattened
+ dimension to be appended to each other. E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">long</span>, <span style="color: #30F0FF">3</span>&gt; a = {{{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">4</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">5</span>}}, {{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">9</span>}}};
+ std::cout &lt;&lt; (a.flattened(<span style="color: #30F0FF">1</span>))() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT64, shape: [<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">4</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">5</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">9</span>]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n__pow"></div><div class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt; <b>pow</b>(const Tensor&lt;K, k&gt; &other) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Elementwise power of this Tensor to <pre class="inline_code">other</pre>. If the dimensions
+ differ the smaller Tensor is broadcasted along the first dimensions which
+ are not shared of the larger one. The datatype of the result is the
+ datatype with higher precedence. E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f, <span style="color: #30F0FF">1</span>}};
+ std::cout &lt;&lt; (a.pow(b))() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">2</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">6</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">5</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">4</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]]])</span></pre>
+ </div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__Tensor_stronger_return_K___n__pow"></div><div class="card"><pre class="card_header_code">template &lt;typename K&gt; Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>pow</b>(const K other) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Elementwise power of this tensor to the constant <pre class="inline_code">other</pre>.
+ If the datatype of <pre class="inline_code">K</pre> is stronger (stronger precedence) than the datatype
+ of this Tensor <pre class="inline_code">T</pre>, <pre class="inline_code">K</pre> will be the result type, else <pre class="inline_code">T</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__log"></div><div class="card"><pre class="card_header_code">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>log</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Takes the elementwise natural logarithm of this Tensor.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__log2"></div><div class="card"><pre class="card_header_code">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>log2</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Takes the elementwise logarithm dualis of this Tensor.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__log10"></div><div class="card"><pre class="card_header_code">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>log10</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Takes the elementwise logarithm to basis 10 of this Tensor.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__sqrt"></div><div class="card"><pre class="card_header_code">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>sqrt</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Takes the elementwise square root of this Tensor.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__sin"></div><div class="card"><pre class="card_header_code">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>sin</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Takes the elementwise sinus of this Tensor.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__cos"></div><div class="card"><pre class="card_header_code">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>cos</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Takes the elementwise cosinus of this Tensor.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__tan"></div><div class="card"><pre class="card_header_code">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>tan</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Takes the elementwise tangents of this Tensor.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__asin"></div><div class="card"><pre class="card_header_code">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>asin</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Takes the elementwise arcsinus of this Tensor (<pre class="inline_code">sin^(-1)</pre>).
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__acos"></div><div class="card"><pre class="card_header_code">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>acos</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Takes the elementwise arccosinus of this Tensor (<pre class="inline_code">cos^(-1)</pre>).
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n__atan"></div><div class="card"><pre class="card_header_code">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>atan</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Takes the elementwise arctangents of this Tensor (<pre class="inline_code">tan^(-1)</pre>).
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n__matmul"></div><div class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt; <b>matmul</b>(Tensor&lt;K, k&gt; &other) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Carries out matrix multiplication on the last two dimensions of the
+ tensors (broadcasts all others). E.g. a matrix multiplication of two
+ tensors with shapes <pre class="inline_code">(64, 32, 16)</pre> and <pre class="inline_code">(16, 24)</pre> will yield a tensor with
+ shape <pre class="inline_code">(64, 32, 24)</pre>.<div style="display:block; height: 0.5em"></div>
+ Since for one entry of the tensor multiple other
+ previous entries are needed, the operand tensors need to be executed first.
+ Therefor the method will implicitly (or eagerly) execute this Tensor and
+ <pre class="inline_code">other</pre> if their data is not allready present. E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>},
+                   {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}},
+                  {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>},
+                   {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,    <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">5</span>f},
+                     {<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>}};
+ std::cout &lt;&lt; (a.matmul(b))() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">9</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">1</span><span style="color: #30F0FF">8</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span><span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">9</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]]])</span></pre></div></div><div style="display: block; height: 2em;"></div>
 
     </div>
 </center>

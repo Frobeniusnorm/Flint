@@ -751,6 +751,23 @@ template <typename T, unsigned int n> struct Tensor {
   Tensor<stronger_return<K>, n> operator-(const K other) const {
     return Tensor<stronger_return<K>, n>(fsub(node, other), shape);
   }
+  /**
+   * Elementwise multiplication of this Tensor and `other`. If the dimensions
+   * differ the smaller Tensor is broadcasted along the first dimensions which
+   * are not shared of the larger one. The datatype of the result is the
+   * datatype with higher precedence. E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0,1}, {2,3}}, {{4,5}, {6,7}}};
+   * Tensor<float, 2> b{{4,2},{0.5f,1}};
+   * std::cout << (a * b)() << std::endl;
+   * // Tensor<FLOAT32, shape: [2, 2, 2]>(
+   * // [[[0.000000, 2.000000],
+   * //   [1.000000, 3.000000]],
+   * //  [[16.000000, 10.000000],
+   * //   [3.000000, 7.000000]]])
+   * }
+   * */
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator*(const Tensor<K, k> &other) const {
@@ -759,10 +776,32 @@ template <typename T, unsigned int n> struct Tensor {
     else
       return Tensor<stronger_return<K>, n>(fmul(node, other.node), shape);
   }
+  /**
+   * Elementwise multiplication of the constant `other` from this Tensor.
+   * If the datatype of `K` is stronger (stronger precedence) than the datatype
+   * of this Tensor `T`, `K` will be the result type, else `T`.
+   */
   template <typename K>
   Tensor<stronger_return<K>, n> operator*(const K other) const {
     return Tensor<stronger_return<K>, n>(fmul(node, other), shape);
   }
+  /**
+   * Elementwise division of this Tensor and `other`. If the dimensions
+   * differ the smaller Tensor is broadcasted along the first dimensions which
+   * are not shared of the larger one. The datatype of the result is the
+   * datatype with higher precedence. E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0,1}, {2,3}}, {{4,5}, {6,7}}};
+   * Tensor<float, 2> b{{4,2},{0.5f,1}};
+   * std::cout << (a / b)() << std::endl;
+   * // Tensor<FLOAT32, shape: [2, 2, 2]>(
+   * // [[[0.000000, 0.500000],
+   * //   [4.000000, 3.000000]],
+   * //  [[1.000000, 2.500000],
+   * //   [12.000000, 7.000000]]])
+   * }
+   * */
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   operator/(const Tensor<K, k> &other) const {
@@ -771,14 +810,46 @@ template <typename T, unsigned int n> struct Tensor {
     else
       return Tensor<stronger_return<K>, n>(fdiv(node, other.node), shape);
   }
+  /**
+   * Elementwise division of the constant `other` from this Tensor.
+   * If the datatype of `K` is stronger (stronger precedence) than the datatype
+   * of this Tensor `T`, `K` will be the result type, else `T`.
+   */
   template <typename K>
   Tensor<stronger_return<K>, n> operator/(const K other) const {
     return Tensor<stronger_return<K>, n>(fdiv(node, other), shape);
   }
+  /**
+   * Flattens the complete tensor to a tensor with one dimension.
+   * E.g.
+   *
+   * @code{
+   * Tensor<long, 3> a = {{{3, 1, 4}, {2, 1, 5}}, {{0, 4, 2}, {4, 7, 9}}};
+   * std::cout << (a.flattened())() << std::endl;
+   * // Tensor<INT64, shape: 12>([3, 1, 4, 2, 1, 5, 0, 4, 2, 4, 7, 9])
+   * }
+   */
   Tensor<T, 1> flattened() const {
     FGraphNode *foo = fflatten(node);
     return Tensor<T, 1>(foo, total_size);
   }
+  /**
+   * Flattens this tensor with `n` dimensions along
+   * `dimension`, resulting in a tensor with `n-1` dimensions.
+   * Flattening a dimension will remove it from the shape of the tensor.
+   * The data stays the same, you can imagine the elements along the flattened
+   * dimension to be appended to each other. E.g.
+   *
+   * @code{
+   * Tensor<long, 3> a = {{{3, 1, 4}, {2, 1, 5}}, {{0, 4, 2}, {4, 7, 9}}};
+   * std::cout << (a.flattened(1))() << std::endl;
+   * // Tensor<INT64, shape: [4, 3]>(
+   * // [[3, 1, 4],
+   * //  [2, 1, 5],
+   * //  [0, 4, 2],
+   * //  [4, 7, 9]])
+   * }
+   */
   Tensor<T, n - 1> flattened(const int dimension) const {
     FGraphNode *foo = fflatten_dimension(node, dimension);
     std::array<size_t, n - 1> ns;
@@ -786,6 +857,23 @@ template <typename T, unsigned int n> struct Tensor {
                 ns.begin());
     return Tensor<T, n - 1>(foo, ns);
   }
+  /**
+   * Elementwise power of this Tensor to `other`. If the dimensions
+   * differ the smaller Tensor is broadcasted along the first dimensions which
+   * are not shared of the larger one. The datatype of the result is the
+   * datatype with higher precedence. E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1}, {2, 3}}, {{4, 5}, {6, 7}}};
+   * Tensor<double, 2> b{{4, 2}, {0.5f, 1}};
+   * std::cout << (a.pow(b))() << std::endl;
+   * // Tensor<FLOAT64, shape: [2, 2, 2]>(
+   * // [[[0.000000, 1.000000],
+   * //   [1.414214, 3.000000]],
+   * //  [[256.000000, 25.000000],
+   * //   [2.449490, 7.000000]]])
+   * }
+   * */
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n> pow(const Tensor<K, k> &other) {
     if constexpr (k >= n)
@@ -793,39 +881,99 @@ template <typename T, unsigned int n> struct Tensor {
     else
       return Tensor<stronger_return<K>, n>(fpow(node, other.node), shape);
   }
+  /**
+   * Elementwise power of this tensor to the constant `other`.
+   * If the datatype of `K` is stronger (stronger precedence) than the datatype
+   * of this Tensor `T`, `K` will be the result type, else `T`.
+   */
   template <typename K> Tensor<stronger_return<K>, n> pow(const K other) {
     return Tensor<stronger_return<K>, n>(fpow(node, other), shape);
   }
+  /**
+   * Takes the elementwise natural logarithm of this Tensor.
+   */
   Tensor<to_float<T>, n> log() {
     return Tensor<to_float<T>, n>(flog(node), shape);
   }
+  /**
+   * Takes the elementwise logarithm dualis of this Tensor.
+   */
   Tensor<to_float<T>, n> log2() {
     return Tensor<to_float<T>, n>(flog2(node), shape);
   }
+  /**
+   * Takes the elementwise logarithm to basis 10 of this Tensor.
+   */
   Tensor<to_float<T>, n> log10() {
     return Tensor<to_float<T>, n>(flog10(node), shape);
   }
+  /**
+   * Takes the elementwise square root of this Tensor.
+   */
   Tensor<to_float<T>, n> sqrt() {
     return Tensor<to_float<T>, n>(fsqrt_g(node), shape);
   }
+  /**
+   * Takes the elementwise sinus of this Tensor.
+   */
   Tensor<to_float<T>, n> sin() {
     return Tensor<to_float<T>, n>(fsin(node), shape);
   }
+  /**
+   * Takes the elementwise cosinus of this Tensor.
+   */
   Tensor<to_float<T>, n> cos() {
     return Tensor<to_float<T>, n>(fcos(node), shape);
   }
+  /**
+   * Takes the elementwise tangents of this Tensor.
+   */
   Tensor<to_float<T>, n> tan() {
     return Tensor<to_float<T>, n>(ftan(node), shape);
   }
+  /**
+   * Takes the elementwise arcsinus of this Tensor (`sin^(-1)`).
+   */
   Tensor<to_float<T>, n> asin() {
     return Tensor<to_float<T>, n>(fasin(node), shape);
   }
+  /**
+   * Takes the elementwise arccosinus of this Tensor (`cos^(-1)`).
+   */
   Tensor<to_float<T>, n> acos() {
     return Tensor<to_float<T>, n>(facos(node), shape);
   }
+  /**
+   * Takes the elementwise arctangents of this Tensor (`tan^(-1)`).
+   */
   Tensor<to_float<T>, n> atan() {
     return Tensor<to_float<T>, n>(fatan(node), shape);
   }
+  /**
+   * Carries out matrix multiplication on the last two dimensions of the
+   * tensors (broadcasts all others). E.g. a matrix multiplication of two
+   * tensors with shapes `(64, 32, 16)` and `(16, 24)` will yield a tensor with
+   * shape `(64, 32, 24)`.
+   *
+   * Since for one entry of the tensor multiple other
+   * previous entries are needed, the operand tensors need to be executed first.
+   * Therefor the method will implicitly (or eagerly) execute this Tensor and
+   * `other` if their data is not allready present. E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1},
+   *                   {2, 3}},
+   *                  {{4, 5},
+   *                   {6, 7}}};
+   * Tensor<double, 2> b{{4,    2, 3.5f},
+   *                     {0.5f, 1, 0}};
+   * std::cout << (a.matmul(b))() << std::endl;
+   * // Tensor<FLOAT64, shape: [2, 2, 3]>(
+   * // [[[0.500000, 1.000000, 0.000000],
+   * //   [9.500000, 7.000000, 7.000000]],
+   * //  [[18.500000, 13.000000, 14.000000],
+   * //   [27.500000, 19.000000, 21.000000]]])
+   * }*/
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n> matmul(Tensor<K, k> &other) {
     int x = shape[shape.size() - 2];
