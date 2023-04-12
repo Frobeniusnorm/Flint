@@ -1093,6 +1093,27 @@ template <typename T, unsigned int n> struct Tensor {
   template <typename K> Tensor<int, n> equal(const K other) const {
     return Tensor<int, n>(fequal(node, other));
   }
+  /** Reduces one dimension of the tensor by additive folding e.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1, 32}, {2, 3, 4}},
+   *                  {{4, 5, -6}, {6, 7, -1}}};
+   * std::cout << (a.reduce_sum(0))() << std::endl;
+   * // Tensor<INT32, shape: [2, 3]>(
+   * // [[4, 6, 26],
+   * //  [8, 10, 3]])
+   * std::cout << (a.reduce_sum(1))() << std::endl;
+   * // Tensor<INT32, shape: [2, 3]>(
+   * // [[2, 4, 36],
+   * //  [10, 12, -7]])
+   * std::cout << (a.reduce_sum(2))() << std::endl;
+   * // Tensor<INT32, shape: [2, 2]>(
+   * // [[33, 9],
+   * //  [3, 12]])
+   * }
+   *
+   * The results of this Tensor must be available, to
+   * ensure that the method may execute the Tensor. */
   Tensor<T, n - 1> reduce_sum(int dimension) {
     std::array<size_t, n - 1> ns;
     if (dimension < 0)
@@ -1103,6 +1124,26 @@ template <typename T, unsigned int n> struct Tensor {
       ns[i] = shape[i + 1];
     return Tensor<T, n - 1>(freduce_sum(node, dimension), ns);
   }
+  /** Reduces one dimension of the tensor by multiplicative folding e.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1, 32}, {2, 3, 4}}, {{4, 5, -6}, {6, 7, -1}}};
+   * std::cout << (a.reduce_mul(0))() << std::endl;
+   * // Tensor<INT32, shape: [2, 3]>(
+   * // [[0, 5, -192],
+   * //  [12, 21, -4]])
+   * std::cout << (a.reduce_mul(1))() << std::endl;
+   * // Tensor<INT32, shape: [2, 3]>(
+   * // [[0, 3, 128],
+   * //  [24, 35, 6]])
+   * std::cout << (a.reduce_mul(2))() << std::endl;
+   * // Tensor<INT32, shape: [2, 2]>(
+   * // [[0, 24],
+   * //  [-120, -42]])
+   * }
+   *
+   * The results of this Tensor must be available, to
+   * ensure that the method may execute the Tensor. */
   Tensor<T, n - 1> reduce_mul(int dimension) {
     std::array<size_t, n - 1> ns;
     if (dimension < 0)

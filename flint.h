@@ -556,8 +556,7 @@ FGraphNode *fmax_cd(FGraphNode *a, const double b);
  * `freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]`
  *
  * The results of the predecessor node must be available, to
- * ensure that the method may execute the parameter node. The corresponding
- * result is then stored in the memory pointed to by `a`. */
+ * ensure that the method may execute the parameter node. */
 FGraphNode *freduce_sum(FGraphNode *a,
                         const int dimension); // TODO what about single dim case
 /** Reduces one dimension of the tensor by multiplicative folding e.g.
@@ -566,8 +565,7 @@ FGraphNode *freduce_sum(FGraphNode *a,
  * `freduce_mul([[1,2,3], [4,5,6]], 1) = [6, 120]`
  *
  * The results of the predecessor node must be available; to
- * ensure that the method may execute the parameter node. The corresponding
- * result is then stored in the memory pointed to by a. */
+ * ensure that the method may execute the parameter node.*/
 FGraphNode *freduce_mul(FGraphNode *a, const int dimension);
 /** Selects a slice of the tensor with a dimension wise start and end index.
  * `start` and `end` are arrays with as many entries

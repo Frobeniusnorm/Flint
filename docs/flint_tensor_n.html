@@ -61,7 +61,23 @@ __Tensor_stronger_return_K___n__operator/">template &lt;typename K&gt;
 __Tensor_stronger_return_K___k__=_n_?_k_:_n__pow">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt; <b>pow</b>(const Tensor&lt;K, k&gt; &other) </a></li><li><a href="#_typename_K__Tensor_stronger_return_K___n__pow">template &lt;typename K&gt; Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>pow</b>(const K other) </a></li><li><a href="#n__log">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>log</b>() </a></li><li><a href="#n__log2">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>log2</b>() </a></li><li><a href="#n__log10">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>log10</b>() </a></li><li><a href="#n__sqrt">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>sqrt</b>() </a></li><li><a href="#n__sin">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>sin</b>() </a></li><li><a href="#n__cos">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>cos</b>() </a></li><li><a href="#n__tan">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>tan</b>() </a></li><li><a href="#n__asin">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>asin</b>() </a></li><li><a href="#n__acos">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>acos</b>() </a></li><li><a href="#n__atan">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>atan</b>() </a></li><li><a href="#_typename_K__unsigned_int_k_
 __Tensor_stronger_return_K___k__=_n_?_k_:_n__matmul">template &lt;typename K, unsigned int k&gt;
-  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt; <b>matmul</b>(Tensor&lt;K, k&gt; &other) </a></li></ul></div>
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt; <b>matmul</b>(Tensor&lt;K, k&gt; &other) </a></li><li><a href="#_typename_K__Tensor_K__n__convert">template &lt;typename K&gt; Tensor&lt;K, n&gt; <b>convert</b>() const </a></li><li><a href="#_typename..._args_
+__Tensor_T__sizeof...">template &lt;typename... args&gt;
+  Tensor&lt;T, <b>sizeof...</b>(args)&gt; reshape(args... shape) </a></li><li><a href="#_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n_
+__min">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
+  <b>min</b>(const Tensor&lt;K, k&gt; &other) const </a></li><li><a href="#_typename_K__Tensor_stronger_return_K___n__min">template &lt;typename K&gt; Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>min</b>(const K other) const </a></li><li><a href="#_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n_
+__max">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
+  <b>max</b>(const Tensor&lt;K, k&gt; &other) const </a></li><li><a href="#_typename_K__Tensor_stronger_return_K___n__max">template &lt;typename K&gt; Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>max</b>(const K other) const </a></li><li><a href="#_typename_K__unsigned_int_k_
+__Tensor_int__k__=_n_?_k_:_n__operator_">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;int, k &gt;= n ? k : n&gt; <b>operator&lt;</b>(const Tensor&lt;K, k&gt; &other) const </a></li><li><a href="#_typename_K__Tensor_int__n__operator_">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>operator&lt;</b>(const K other) const </a></li><li><a href="#_typename_K__unsigned_int_k_
+__Tensor_int__k__=_n_?_k_:_n__operator_">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;int, k &gt;= n ? k : n&gt; <b>operator&gt;</b>(const Tensor&lt;K, k&gt; &other) const </a></li><li><a href="#_typename_K__Tensor_int__n__operator_">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>operator&gt;</b>(const K other) const </a></li><li><a href="#_typename_K__unsigned_int_k_
+__Tensor_int__k__=_n_?_k_:_n__equal">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;int, k &gt;= n ? k : n&gt; <b>equal</b>(const Tensor&lt;K, k&gt; &other) const </a></li><li><a href="#_typename_K__Tensor_int__n__equal">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>equal</b>(const K other) const </a></li><li><a href="#n_-_1__reduce_sum">Tensor&lt;T, n - 1&gt; <b>reduce_sum</b>(int dimension) </a></li><li><a href="#n_-_1__reduce_mul">Tensor&lt;T, n - 1&gt; <b>reduce_mul</b>(int dimension) </a></li></ul></div>
         <div style="display: block; height: 2em;"></div>
         <div id="_typename_T__unsigned_int_n__struct_Tensor_"></div><div class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></pre></div>
 <br />
@@ -519,6 +535,129 @@ __Tensor_stronger_return_K___k__=_n_?_k_:_n__matmul"></div><div class="card"><pr
  <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">9</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]],</span>
  <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">1</span><span style="color: #30F0FF">8</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
  <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span><span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">9</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]]])</span></pre></div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__Tensor_K__n__convert"></div><div class="card"><pre class="card_header_code">template &lt;typename K&gt; Tensor&lt;K, n&gt; <b>convert</b>() const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Converts this Tensor (and the underlying data) to type <pre class="inline_code">K</pre> given in the
+ template. <pre class="inline_code">K</pre> must be one of <pre class="inline_code">int</pre>, <pre class="inline_code">long</pre>, <pre class="inline_code">float</pre>, <pre class="inline_code">double</pre>. The data is
+ converted, not reinterpreted.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename..._args_
+__Tensor_T__sizeof..."></div><div class="card"><pre class="card_header_code">template &lt;typename... args&gt;
+  Tensor&lt;T, <b>sizeof...</b>(args)&gt; reshape(args... shape) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Reshapes this Tensor to a new shape with arbitrary dimensions.
+ It can have less dimensions, more dimensions and a completly different
+ shape, the only assumption that has to hold is that the product of the new
+ shape is the same as the product of the old shape (the new shape represents
+ as many elements as the old).
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n_
+__min"></div><div class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
+  <b>min</b>(const Tensor&lt;K, k&gt; &other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;"> Takes the minimum of this tensor and <pre class="inline_code">other</pre> element wise (the lower value
+ is the result, if one tensor is smaller it will be broadcasted).</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__Tensor_stronger_return_K___n__min"></div><div class="card"><pre class="card_header_code">template &lt;typename K&gt; Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>min</b>(const K other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;"> Takes the minimum of this Tensor and the constant value <pre class="inline_code">other</pre> for each
+ element.</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__unsigned_int_k_
+__Tensor_stronger_return_K___k__=_n_?_k_:_n_
+__max"></div><div class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
+  <b>max</b>(const Tensor&lt;K, k&gt; &other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;"> Takes the maximum of this tensor and <pre class="inline_code">other</pre> element wise (the higher
+ value is the result, if one tensor is smaller it will be broadcasted).</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__Tensor_stronger_return_K___n__max"></div><div class="card"><pre class="card_header_code">template &lt;typename K&gt; Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>max</b>(const K other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;"> Takes the maximum of this Tensor and the constant value <pre class="inline_code">other</pre> for each
+ element.</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__unsigned_int_k_
+__Tensor_int__k__=_n_?_k_:_n__operator_"></div><div class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;int, k &gt;= n ? k : n&gt; <b>operator&lt;</b>(const Tensor&lt;K, k&gt; &other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Compares this tensor and <pre class="inline_code">other</pre> elementwise and returns a 0,1 integer
+ Tensor. <pre class="inline_code">0</pre> denotes that <pre class="inline_code">this &gt;= other</pre>, <pre class="inline_code">1</pre> that <pre class="inline_code">this &lt; other</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__Tensor_int__n__operator_"></div><div class="card"><pre class="card_header_code">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>operator&lt;</b>(const K other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Compares this tensor and the constant <pre class="inline_code">other</pre> elementwise and returns a 0,1
+ integer Tensor. <pre class="inline_code">0</pre> denotes that <pre class="inline_code">this &gt;= other</pre>, <pre class="inline_code">1</pre> that <pre class="inline_code">this &lt; other</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__unsigned_int_k_
+__Tensor_int__k__=_n_?_k_:_n__operator_"></div><div class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;int, k &gt;= n ? k : n&gt; <b>operator&gt;</b>(const Tensor&lt;K, k&gt; &other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Compares this tensor and <pre class="inline_code">other</pre> elementwise and returns a 0,1 integer
+ Tensor. <pre class="inline_code">0</pre> denotes that <pre class="inline_code">this &lt;= other</pre>, <pre class="inline_code">1</pre> that <pre class="inline_code">this &gt; other</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__Tensor_int__n__operator_"></div><div class="card"><pre class="card_header_code">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>operator&gt;</b>(const K other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Compares this tensor and the constant <pre class="inline_code">other</pre> elementwise and returns a 0,1
+ integer Tensor. <pre class="inline_code">0</pre> denotes that <pre class="inline_code">this &lt;= other</pre>, <pre class="inline_code">1</pre> that <pre class="inline_code">this &gt; other</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__unsigned_int_k_
+__Tensor_int__k__=_n_?_k_:_n__equal"></div><div class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;int, k &gt;= n ? k : n&gt; <b>equal</b>(const Tensor&lt;K, k&gt; &other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Compares this tensor and <pre class="inline_code">other</pre> elementwise and returns a 0,1 integer
+ Tensor. <pre class="inline_code">0</pre> denotes that <pre class="inline_code">this != other</pre>, <pre class="inline_code">1</pre> that <pre class="inline_code">this == other</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="_typename_K__Tensor_int__n__equal"></div><div class="card"><pre class="card_header_code">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>equal</b>(const K other) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Compares this tensor and the constant <pre class="inline_code">other</pre> elementwise and returns a 0,1
+ integer Tensor. <pre class="inline_code">0</pre> denotes that <pre class="inline_code">this != other</pre>, <pre class="inline_code">1</pre> that <pre class="inline_code">this == other</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="n_-_1__reduce_sum"></div><div class="card"><pre class="card_header_code">Tensor&lt;T, n - 1&gt; <b>reduce_sum</b>(int dimension) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;"> Reduces one dimension of the tensor by additive folding e.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">3</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}},
+                  {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>, -<span style="color: #30F0FF">6</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>, -<span style="color: #30F0FF">1</span>}}};
+ std::cout &lt;&lt; (a.reduce_sum(<span style="color: #30F0FF">0</span>))() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">6</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">8</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">3</span>]])</span>
+ std::cout &lt;&lt; (a.reduce_sum(<span style="color: #30F0FF">1</span>))() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">3</span><span style="color: #30F0FF">6</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span>, -<span style="color: #30F0FF">7</span>]])</span>
+ std::cout &lt;&lt; (a.reduce_sum(<span style="color: #30F0FF">2</span>))() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">3</span><span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">9</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span>]])</span></pre><div style="display:block; height: 0.5em"></div>
+ The results of this Tensor must be available, to
+ ensure that the method may execute the Tensor. </div></div><div style="display: block; height: 2em;"></div>
+<div id="n_-_1__reduce_mul"></div><div class="card"><pre class="card_header_code">Tensor&lt;T, n - 1&gt; <b>reduce_mul</b>(int dimension) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;"> Reduces one dimension of the tensor by multiplicative folding e.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">3</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}}, {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>, -<span style="color: #30F0FF">6</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>, -<span style="color: #30F0FF">1</span>}}};
+ std::cout &lt;&lt; (a.reduce_mul(<span style="color: #30F0FF">0</span>))() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">5</span>, -<span style="color: #30F0FF">1</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">1</span>, -<span style="color: #30F0FF">4</span>]])</span>
+ std::cout &lt;&lt; (a.reduce_mul(<span style="color: #30F0FF">1</span>))() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">8</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">2</span><span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">3</span><span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">6</span>]])</span>
+ std::cout &lt;&lt; (a.reduce_mul(<span style="color: #30F0FF">2</span>))() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">4</span>],</span>
+ <span style="color: #D0D0D0">//  [-<span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>]])</span></pre><div style="display:block; height: 0.5em"></div>
+ The results of this Tensor must be available, to
+ ensure that the method may execute the Tensor. </div></div><div style="display: block; height: 2em;"></div>
 
     </div>
 </center>
