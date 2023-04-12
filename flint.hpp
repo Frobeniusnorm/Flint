@@ -987,9 +987,21 @@ template <typename T, unsigned int n> struct Tensor {
     return Tensor < stronger_return<K>,
            k >= n ? k : n > (fmatmul(node, other.node), ns);
   }
+  /**
+   * Converts this Tensor (and the underlying data) to type `K` given in the
+   * template. `K` must be one of `int`, `long`, `float`, `double`. The data is
+   * converted, not reinterpreted.
+   */
   template <typename K> Tensor<K, n> convert() const {
     return Tensor<K, n>(fconvert(node, toFlintType<K>()), shape);
   }
+  /**
+   * Reshapes this Tensor to a new shape with arbitrary dimensions.
+   * It can have less dimensions, more dimensions and a completly different
+   * shape, the only assumption that has to hold is that the product of the new
+   * shape is the same as the product of the old shape (the new shape represents
+   * as many elements as the old).
+   */
   template <typename... args>
   Tensor<T, sizeof...(args)> reshape(args... shape) {
     constexpr size_t newdim = sizeof...(args);
@@ -997,6 +1009,8 @@ template <typename T, unsigned int n> struct Tensor {
     return Tensor<T, newdim>(freshape(node, new_shape.data(), newdim),
                              new_shape);
   }
+  /** Takes the minimum of this tensor and `other` element wise (the lower value
+   * is the result, if one tensor is smaller it will be broadcasted).*/
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   min(const Tensor<K, k> &other) const {
@@ -1005,9 +1019,13 @@ template <typename T, unsigned int n> struct Tensor {
     else
       return Tensor<stronger_return<K>, n>(fmin(node, other.node), shape);
   }
+  /** Takes the minimum of this Tensor and the constant value `other` for each
+   * element.*/
   template <typename K> Tensor<stronger_return<K>, n> min(const K other) const {
     return Tensor<stronger_return<K>, n>(fmin(node, other));
   }
+  /** Takes the maximum of this tensor and `other` element wise (the higher
+   * value is the result, if one tensor is smaller it will be broadcasted).*/
   template <typename K, unsigned int k>
   Tensor<stronger_return<K>, k >= n ? k : n>
   max(const Tensor<K, k> &other) const {
@@ -1016,9 +1034,15 @@ template <typename T, unsigned int n> struct Tensor {
     else
       return Tensor<stronger_return<K>, n>(fmax(node, other.node), shape);
   }
+  /** Takes the maximum of this Tensor and the constant value `other` for each
+   * element.*/
   template <typename K> Tensor<stronger_return<K>, n> max(const K other) const {
     return Tensor<stronger_return<K>, n>(fmax(node, other));
   }
+  /**
+   * Compares this tensor and `other` elementwise and returns a 0,1 integer
+   * Tensor. `0` denotes that `this >= other`, `1` that `this < other`.
+   */
   template <typename K, unsigned int k>
   Tensor<int, k >= n ? k : n> operator<(const Tensor<K, k> &other) const {
     if constexpr (k >= n)
@@ -1026,9 +1050,17 @@ template <typename T, unsigned int n> struct Tensor {
     else
       return Tensor<int, n>(fless(node, other.node), shape);
   }
+  /**
+   * Compares this tensor and the constant `other` elementwise and returns a 0,1
+   * integer Tensor. `0` denotes that `this >= other`, `1` that `this < other`.
+   */
   template <typename K> Tensor<int, n> operator<(const K other) const {
     return Tensor<int, n>(fless(node, other));
   }
+  /**
+   * Compares this tensor and `other` elementwise and returns a 0,1 integer
+   * Tensor. `0` denotes that `this <= other`, `1` that `this > other`.
+   */
   template <typename K, unsigned int k>
   Tensor<int, k >= n ? k : n> operator>(const Tensor<K, k> &other) const {
     if constexpr (k >= n)
@@ -1036,9 +1068,17 @@ template <typename T, unsigned int n> struct Tensor {
     else
       return Tensor<int, n>(fgreater(node, other.node), shape);
   }
+  /**
+   * Compares this tensor and the constant `other` elementwise and returns a 0,1
+   * integer Tensor. `0` denotes that `this <= other`, `1` that `this > other`.
+   */
   template <typename K> Tensor<int, n> operator>(const K other) const {
     return Tensor<int, n>(fgreater(node, other));
   }
+  /**
+   * Compares this tensor and `other` elementwise and returns a 0,1 integer
+   * Tensor. `0` denotes that `this != other`, `1` that `this == other`.
+   */
   template <typename K, unsigned int k>
   Tensor<int, k >= n ? k : n> equal(const Tensor<K, k> &other) const {
     if constexpr (k >= n)
@@ -1046,6 +1086,10 @@ template <typename T, unsigned int n> struct Tensor {
     else
       return Tensor<int, n>(fequal(node, other.node), shape);
   }
+  /**
+   * Compares this tensor and the constant `other` elementwise and returns a 0,1
+   * integer Tensor. `0` denotes that `this != other`, `1` that `this == other`.
+   */
   template <typename K> Tensor<int, n> equal(const K other) const {
     return Tensor<int, n>(fequal(node, other));
   }

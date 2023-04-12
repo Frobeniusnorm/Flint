@@ -443,16 +443,13 @@ FGraphNode *fsign(FGraphNode *a);
  */
 FGraphNode *feven(FGraphNode *a);
 /** Compares two tensors elementwise by `a < b` and returns a 0,1 `F_INT32`
- * Tensor
- */
+ * Tensor. `0` denotes that `a >= b`, `1` that `a < b`. */
 FGraphNode *fless_g(FGraphNode *a, FGraphNode *b);
 /** Compares two tensors elementwise by `a > b` and returns a 0,1 `F_INT32`
- * Tensor
- */
+ * Tensor. */
 FGraphNode *fgreater_g(FGraphNode *a, FGraphNode *b);
 /** Compares two tensors elementwise by `a = b`` and returns a 0,1 `F_INT32`
- * Tensor
- */
+ * Tensor. `0` denotes that `a <= b`, `1` that `a > b`.*/
 FGraphNode *fequal_g(FGraphNode *a, FGraphNode *b);
 /** Compares a tensor and a constant elementwise by `a < b` and returns a 0,1
  * `INT32` Tensor. See `fless_g`. */
