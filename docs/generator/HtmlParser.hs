@@ -72,20 +72,24 @@ module HtmlParser where
             markCode (x : t) n iscode = (x, iscode) : markCode t n iscode
 
             highlightCode [] = []
-            highlightCode ('c':'l':'a':'s':'s':t) =
-                    "<span style=\"color: " ++ highKeyword ++ "\">class</span>" ++ highlightCode t
-            highlightCode ('i':'n':'t':t) =
-                    "<span style=\"color: " ++ highType ++ "\">int</span>" ++ highlightCode t
-            highlightCode ('f':'l':'o':'a':'t':t) =
-                    "<span style=\"color: " ++ highType ++ "\">float</span>" ++ highlightCode t
-            highlightCode ('d':'o':'u':'b':'l':'e':t) =
-                    "<span style=\"color: " ++ highType ++ "\">double</span>" ++ highlightCode t
-            highlightCode ('l':'o':'n':'g':t) =
-                    "<span style=\"color: " ++ highType ++ "\">long</span>" ++ highlightCode t
-            highlightCode ('s':'i':'z':'e':'_':'t':t) =
-                    "<span style=\"color: " ++ highType ++ "\">double</span>" ++ highlightCode t
-            highlightCode ('T':'e':'n':'s':'o':'r':t) =
-                    "<span style=\"color: " ++ highType ++ "\">Tensor</span>" ++ highlightCode t
+            highlightCode ('c':'l':'a':'s':'s':' ':t) =
+                    "<span style=\"color: " ++ highKeyword ++ "\">class</span> " ++ highlightCode t
+            highlightCode ('s':'t':'r':'u':'c':'t':' ':t) =
+                    "<span style=\"color: " ++ highKeyword ++ "\">struct</span> " ++ highlightCode t
+            highlightCode ('i':'n':'t':' ':t) =
+                    "<span style=\"color: " ++ highType ++ "\">int</span> " ++ highlightCode t
+            highlightCode ('f':'l':'o':'a':'t':' ':t) =
+                    "<span style=\"color: " ++ highType ++ "\">float</span> " ++ highlightCode t
+            highlightCode ('d':'o':'u':'b':'l':'e':' ':t) =
+                    "<span style=\"color: " ++ highType ++ "\">double</span> " ++ highlightCode t
+            highlightCode ('l':'o':'n':'g':' ':t) =
+                    "<span style=\"color: " ++ highType ++ "\">long</span> " ++ highlightCode t
+            highlightCode ('s':'i':'z':'e':'_':'t':' ':t) =
+                    "<span style=\"color: " ++ highType ++ "\">double</span> " ++ highlightCode t
+            highlightCode ('T':'e':'n':'s':'o':'r':'<':t) =
+                    "<span style=\"color: " ++ highType ++ "\">Tensor</span>&lt;" ++ highlightCode t
+            highlightCode ('T':'e':'n':'s':'o':'r':' ':t) =
+                    "<span style=\"color: " ++ highType ++ "\">Tensor</span> " ++ highlightCode t
             highlightCode ('/':'/':t) =
                     "<span style=\"color: #D0D0D0\">//" ++ takeWhile (\c -> c /= '\n' && c /= '\r') t ++ "</span>" ++ highlightCode (dropWhile (\c -> c /= '\n' && c /= '\r') t)
             highlightCode ('/':'*':t) = do
@@ -95,7 +99,6 @@ module HtmlParser where
                     let rest = drop 2 (map fst (dropWhile (\x -> fst x /= '*' || snd x /= '/') interleaved))
                     "<span style=\"color: #D0D0D0\">/*" ++ comment ++
                         "*/</span>" ++ highlightCode rest
-            -- here the replacement for < > happens
             highlightCode (x:t)= x : highlightCode t
 
             newFilename x = take (length x - 5) x  ++ "html"

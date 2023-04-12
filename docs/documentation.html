@@ -42,7 +42,7 @@ FGraphNode *g1 = fCreateGraph(&data1[<span style="color: #30F0FF">0</span>], <sp
 FGraphNode *g2 = fCreateGraph(&data2[<span style="color: #30F0FF">0</span>], <span style="color: #30F0FF">4</span>, F_FLOAT64, &shape[<span style="color: #30F0FF">0</span>]);
 FGraphNode *mm = fExecuteGraph(fmatmul(g1, g2));
 FResultData *rd = mm-&gt;result_data;
-<span style="color: #FFF030">double</span>* result = rd-&gt;data;
+double* result = rd-&gt;data;
 <span style="color: #FFF030">double</span> result_shape = {mm-&gt;operation-&gt;shape[<span style="color: #30F0FF">0</span>], mm-&gt;operation-&gt;shape[<span style="color: #30F0FF">1</span>]};</pre>
           </pre>
         </p>
@@ -66,14 +66,14 @@ FResultData *rd = mm-&gt;result_data;
           <div style="display: block; height: 1em;"></div>
           <pre class="card code">
             <pre class="card code" style="margin: 5px;">
-<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; t1{{<span style="color: #30F0FF">1</span>,<span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">3</span>,<span style="color: #30F0FF">4</span>}};
-<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">2</span>&gt; t2{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">3</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">1</span>}};
-<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">2</span>&gt; mm = t1.matmul(t2);
+Tensor&lt;float, <span style="color: #30F0FF">2</span>&gt; t1{{<span style="color: #30F0FF">1</span>,<span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">3</span>,<span style="color: #30F0FF">4</span>}};
+Tensor&lt;double, <span style="color: #30F0FF">2</span>&gt; t2{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">3</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">1</span>}};
+Tensor&lt;double, <span style="color: #30F0FF">2</span>&gt; mm = t1.matmul(t2);
 <span style="color: #D0D0D0">// access directly (fast)</span>
 std::cout &lt;&lt; mm[<span style="color: #30F0FF">0</span>][<span style="color: #30F0FF">1</span>] &lt;&lt; std::endl;
 std::cout &lt;&lt; mm &lt;&lt; std::endl;
 <span style="color: #D0D0D0">// or transform to vector (slow)</span>
-std::vector&lt;std::vector&lt;<span style="color: #FFF030">double</span>&gt;&gt; res = *mm;</pre>
+std::vector&lt;std::vector&lt;double&gt;&gt; res = *mm;</pre>
           </pre>
         </p>
       </div>

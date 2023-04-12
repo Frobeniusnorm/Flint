@@ -190,9 +190,9 @@ public:
  * Describes a slice operation for one dimension.
  */
 struct TensorRange {
-  static const long MAX_SIZE = 2147483647;
+  static const long MAX_SCOPE = 2147483647;
   long start = 0;
-  long end = MAX_SIZE;
+  long end = MAX_SCOPE;
   long step = 1;
   TensorRange() = default;
   TensorRange(std::tuple<long, long, long> range_vals)
@@ -206,6 +206,6 @@ struct TensorRange {
     if (range_vals.size() > 2)
       step = *(range_vals.begin() + 2);
   }
-  TensorRange(long start, long end = MAX_SIZE, long step = 1)
+  TensorRange(long start, long end = MAX_SCOPE, long step = 1)
       : start(start), end(end), step(step) {}
 };

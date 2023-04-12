@@ -554,7 +554,7 @@ TEST_SUITE("C++ Bindings") {
   TEST_CASE("SLICE") {
     Tensor<long, 3> t1{{{1, 7}, {8, 8}, {2, 1}}, {{9, 3}, {2, 1}, {8, 9}}};
     Tensor<long, 3> s1 =
-        t1.slice(TensorRange(), TensorRange(0, TensorRange::MAX_SIZE, 2),
+        t1.slice(TensorRange(), TensorRange(0, TensorRange::MAX_SCOPE, 2),
                  TensorRange(1, 2));
     Tensor<long, 3> s2 = s1.slice(TensorRange(0, 1));
     CHECK_EQ(1, s2.get_shape()[0]);
@@ -571,8 +571,9 @@ TEST_SUITE("C++ Bindings") {
     Tensor<double, 2> f1 = t2.flattened(2);
     // slice only positive to 0.6
     Tensor<double, 2> s3 = f1.slice(TensorRange(1, 4));
-    Tensor<int, 1> f2 =
-        (s3.flattened() * 10).slice(1, TensorRange::MAX_SIZE, 2).convert<int>();
+    Tensor<int, 1> f2 = (s3.flattened() * 10)
+                            .slice(1, TensorRange::MAX_SCOPE, 2)
+                            .convert<int>();
     CHECK_EQ(2, f2[0]);
     CHECK_EQ(4, f2[1]);
     CHECK_EQ(6, f2[2]);

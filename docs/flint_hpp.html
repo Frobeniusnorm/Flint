@@ -42,34 +42,7 @@
           the implementation may differ slightly.
         </div>
         <div style="display: block; height: 2em;"></div>
-        <div id="_typename_T__unsigned_int_n__struct_Tensor"></div><div class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor</b></pre></div>
-<br />
-<div class="card"><div style="padding: 5px;">
- This is the base class of the C++ implementation of Flint.<div style="display:block; height: 0.5em"></div>
- Instances of a implementation of this template wrap around the <pre class="inline_code">FGraphNode</pre>
- struct by providing C++ style operations and a template representing the
- underlying datatype of the node (adding type safety) and its dimensionality
- (sometimes refered to as rank). That allows conversion to STL objects like
- the <pre class="inline_code">operator*</pre> does and dimensionality safety for operations like
- <pre class="inline_code">operator[]</pre> or <pre class="inline_code">slice</pre>.<div style="display:block; height: 0.5em"></div>
- When using it it behaves like a single Tensor representation (i.e. operations
- can be called on it, its data may be queried), but internally it may rather
- store applied operations and parameters for later lazy execution.<div style="display:block; height: 0.5em"></div>
- When you apply an operation to an instance it usually returns a new <pre class="inline_code">Tensor</pre>
- object, representing that operation applied to the old object. If eager
- execution is enabled (see <pre class="inline_code">Flint::enable_eager_execution()</pre>) the operation is
- directly executed with the generation of the new object, else it only
- executes if you query its data (with <pre class="inline_code">operator*</pre> or <pre class="inline_code">operator[]</pre>) or if a
- previous operation requires its data (keep in mind that some operations have
- to execute the operations of their parameters directly, because their data
- is already completly needed during execution e.g. reduce operations or matrix
- multiplication).<div style="display:block; height: 0.5em"></div>
- The template is recursively defined on the dimensionality <pre class="inline_code">n</pre>. Meaning there
- are two implementations: one for the basis case <pre class="inline_code">n=1</pre> and one for the general
- case <pre class="inline_code">n&gt;1</pre>. The interface should not differ much, except that some operations
- that are dimension specific behave differently.
-</div></div><div style="display: block; height: 2em;"></div>
-
+        
     </div>
 </center>
   <div id="footer">

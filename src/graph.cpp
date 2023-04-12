@@ -902,9 +902,12 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
     if ((step[i] < 0 && (slice->end[i] > slice->start[i])) ||
         (step[i] > 0 && (slice->end[i] < slice->start[i]))) {
       flogging(F_ERROR,
-               "invalid slice: combination of step sign and start and end "
+               "invalid slice: combination of step sign, start and end "
                "in dimension " +
-                   std::to_string(i) + " will yield empty tensor!");
+                   std::to_string(i) + " will yield empty tensor! start: " +
+                   std::to_string(slice->start[i]) +
+                   ", end: " + std::to_string(slice->end[i]) +
+                   ", step: " + std::to_string(slice->step[i]));
     }
   }
   return eager_execution ? execute_eagerly(foo) : foo;

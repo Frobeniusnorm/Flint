@@ -64,8 +64,8 @@
       </div>
       <br />
 <pre class="card code" style="margin: 5px;">
-<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; t1{{{<span style="color: #30F0FF">0</span>}, {<span style="color: #30F0FF">1</span>}}, {{<span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">3</span>}}};
-<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; t2 = t1.repeat(<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>).flattened(<span style="color: #30F0FF">2</span>);
+Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt; t1{{{<span style="color: #30F0FF">0</span>}, {<span style="color: #30F0FF">1</span>}}, {{<span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">3</span>}}};
+Tensor&lt;int, <span style="color: #30F0FF">2</span>&gt; t2 = t1.repeat(<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>).flattened(<span style="color: #30F0FF">2</span>);
 std::cout &lt;&lt; t2 &lt;&lt; std::endl;
 <span style="color: #D0D0D0">/* Tensor&lt;INT32, shape: [<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">6</span>]&gt;( 
  *  [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>], 

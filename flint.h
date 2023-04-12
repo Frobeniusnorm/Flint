@@ -571,23 +571,23 @@ FGraphNode *freduce_mul(FGraphNode *a, const int dimension);
  * `start` and `end` are arrays with as many entries
  * as the tensor has dimensions. They may contain negative values,
  * which are then subtracted from the end of the tensor (e.g. `-1` means the
- * last element). `start` is inclusive and describes the start index of the
- * selection per dimension and `end` describes the end index per dimension
- * and is exclusive.
+ * element before the last element). `start` is inclusive and describes the
+ * start index of the selection per dimension and `end` describes the end index
+ * per dimension and is exclusive.
  */
 FGraphNode *fslice(FGraphNode *a, const long *start, const long *end);
 /** Selects a slice of the tensor with a dimension wise start index, end index
  * and step size. `start`, `end` and `step` are arrays with as
  * many entries as the tensor has dimensions. `start` and `end` may
  * contain negative values, which are then subtracted from the end of the tensor
- * (e.g. `-1` means the last element). `start` is inclusive and describes the
- * start index of the selection per dimension and `end` describes the end
- * index per dimension and is exclusive. `step` contains the per
- * dimension step size (e.g. `2` meaning every second element will be selected
- * etc.) and may be negative as well, which reverses the traversal order (the
- * first elements are selected as the last ones). For a negative step size,
- * `start > end` must hold (for a positive of course `end >
- * start`) for each dimension.
+ * (e.g. `-1` means the element before the last element). `start` is inclusive
+ * and describes the start index of the selection per dimension and `end`
+ * describes the end index per dimension and is exclusive. `step` contains the
+ * per dimension step size (e.g. `2` meaning every second element will be
+ * selected etc.) and may be negative as well, which reverses the traversal
+ * order (the first elements are selected as the last ones). For a negative step
+ * size, `start > end` must hold (for a positive of course `end > start`) for
+ * each dimension.
  */
 FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
                         const long *step);

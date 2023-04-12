@@ -320,11 +320,11 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K> Tensor<int, 1> equal(const K other) const {
     return Tensor<int, 1>(fequal(node, other));
   }
-  Tensor<T, 1> slice(long start = 0, long end = TensorRange::MAX_SIZE,
+  Tensor<T, 1> slice(long start = 0, long end = TensorRange::MAX_SCOPE,
                      long step = 1) const {
-    if (start == TensorRange::MAX_SIZE)
+    if (start == TensorRange::MAX_SCOPE)
       start = shape[0] - 1;
-    if (end == TensorRange::MAX_SIZE)
+    if (end == TensorRange::MAX_SCOPE)
       end = shape[0];
     FGraphNode *nn = fslice_step(node, &start, &end, &step);
     return Tensor<T, 1>(nn, nn->operation->shape[0]);
@@ -1154,8 +1154,64 @@ template <typename T, unsigned int n> struct Tensor {
       ns[i] = shape[i + 1];
     return Tensor<T, n - 1>(freduce_mul(node, dimension), ns);
   }
+  /**
+   * Takes the elementwise absolute value of this Tensor (negative signs are
+   * removed).
+   */
   Tensor<T, n> abs() const { return Tensor<T, n>(fabs_g(node), shape); }
 
+  /** Selects a slice of the tensor with a dimension wise start index, end index
+   * and step size. The arguments of this function are objects of the type
+   * `TensorRange`, there may be as many arguments as dimensions or less. The
+   * arguments start by the first one describing the first dimension, the second
+   * one describing the second and so on. If there are less arguments than
+   * dimensions, all elements of the missing last dimensions will be selected.
+   *
+   * Each `TensorRange` contains a `start`, `end` and `step` member.
+   * `start` and `end` may be negative values, which are then subtracted from
+   * the end of the tensor (e.g. `-1` means the element before last element).
+   * `start` is inclusive and describes the start index of the selection per
+   * dimension and `end` describes the end index per dimension and is exclusive.
+   * `step` contains the per dimension step size (e.g. `2` meaning every second
+   * element will be selected etc.) and may be negative as well, which reverses
+   * the traversal order (the first elements are selected as the last ones). For
+   * a negative step size, `start > end` must hold (for a positive of course
+   * `end > start`) for each dimension. E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1, 32}, {2, 3, 4}}, {{4, 5, -6}, {6, 7, -1}}};
+   * std::cout << (a.slice(TensorRange(0, 2), TensorRange(0, -1),
+   *                       TensorRange(2, 0, -1)))()
+   *           << std::endl;
+   * // Tensor<INT32, shape: [2, 1, 2]>(
+   * // [[[32, 1]],
+   * //  [[-6, 5]]])
+   * }
+   *
+   * To help with indexing there is the value
+   * `TensorRange::MAX_SCOPE` which describes a index depending on the traversal
+   * order in that dimension (i.e. the sign of step):
+   * - for forward traversel it denotes in start the shape of that dimensions -
+   *   1 (which is the last element start can index) and for end the shape of
+   *   that dimension
+   * - for backward traversal it denoted in start 0 and in end the element
+   *   before 0 (this is necessary since otherwise it would not be possible to
+   *   just inverse a dimension without eliminating values).
+   * E.g.
+   *
+   * @code{
+   * Tensor<int, 2> a{{0, 1, 2, 3}, {4, 5, 6, 7}};
+   * std::cout << (a.slice(
+   *               TensorRange(TensorRange::MAX_SCOPE,
+   *                           TensorRange::MAX_SCOPE),
+   *               TensorRange(TensorRange::MAX_SCOPE,
+   *                           TensorRange::MAX_SCOPE, -1)))()
+   *           << std::endl;
+   * // Tensor<INT32, shape: [2, 4]>(
+   * // [[3, 2, 1, 0],
+   * //  [7, 6, 5, 4]])
+   * }
+   */
   template <typename... args>
   Tensor<T, n> slice(const args... dim_ranges) const {
     constexpr size_t num_ranges = sizeof...(args);
@@ -1167,10 +1223,21 @@ template <typename T, unsigned int n> struct Tensor {
     long starts[n], ends[n], steps[n];
     for (unsigned int i = 0; i < n; i++) {
       if (i < num_ranges) {
-        starts[i] = ranges[i].start == TensorRange::MAX_SIZE ? shape[i] - 1
-                                                             : ranges[i].start;
-        ends[i] =
-            ranges[i].end == TensorRange::MAX_SIZE ? shape[i] : ranges[i].end;
+        if (ranges[i].start == TensorRange::MAX_SCOPE) {
+          if (ranges[i].step > 0)
+            starts[i] = 0;
+          else
+            starts[i] = shape[i] - 1;
+        } else
+          starts[i] = ranges[i].start;
+
+        if (ranges[i].end == TensorRange::MAX_SCOPE) {
+          if (ranges[i].step < 0)
+            ends[i] = -shape[i] - 1;
+          else
+            ends[i] = shape[i];
+        } else
+          ends[i] = ranges[i].end;
         steps[i] = ranges[i].step;
       } else {
         starts[i] = 0;
