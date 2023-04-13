@@ -72,12 +72,30 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K, unsigned int k> friend struct Tensor;
   typedef std::vector<T> storage_type;
   typedef std::initializer_list<T> init_type;
+  /**
+   * Creates a Tensor from a `std::vector`.
+   * (`storage_type` is a recursive defined type definition, for `n=1` it is
+   * just an alias for `std::vector`). E.g.
+   *
+   * @code{
+   * Tensor<float, 1> t1{-1., 0., 1., 2.};
+   * }
+   */
   Tensor(storage_type data) : shape{data.size()} {
     isTensorType<T>();
     node =
         fCreateGraph(data.data(), data.size(), toFlintType<T>(), &shape[0], 1);
     node->reference_counter = 1;
   }
+  /**
+   * Creates a Tensor from a `std::initializer_list`.
+   * (`init_type` is a recursive defined type definition, for `n=1` it is just
+   * an alias for `std::initializer_list`). E.g.
+   *
+   * @code{
+   * Tensor<float, 1> t(std::vector<float>{-1., 0., 1., 2.});
+   * }
+   */
   Tensor(init_type data) : shape{data.size()} {
     isTensorType<T>();
 
@@ -85,12 +103,32 @@ template <typename T> struct Tensor<T, 1> {
                         &shape[0], 1);
     node->reference_counter = 1;
   }
-  // copy
+  /**
+   * Copy constructor. Copies the underlying Graph structure by creating a new
+   * node with the same operation, shape and data types. The new predecessor
+   * array points to the same predecessors (memory safety is ensured with
+   * reference counting).
+   *
+   * If `other` has result data or if it is a storage node, the complete CPU
+   * data is directly copied. Since this operation is expensive it is advised to
+   * only use it if it is completly necessary.
+   */
   Tensor(const Tensor &other) {
     shape = other.shape;
     node = fCopyGraph(other.node);
     node->reference_counter++;
   }
+  /**
+   * Copy operator. Copies the underlying Graph structure by creating a new
+   * node with the same operation, shape and data types. If there was any
+   * previous allocated operation node allocated by this Tensor it is cleaned
+   * up. The new predecessor array points to the same predecessors (memory
+   * safety is ensured with reference counting).
+   *
+   * If `other` has result data or if it is a storage node, the complete CPU
+   * data is directly copied. Since this operation is expensive it is advised to
+   * only use it if it is completly necessary.
+   */
   void operator=(const Tensor<T, 1> &other) {
     if (node) {
       node->reference_counter--;
@@ -100,20 +138,20 @@ template <typename T> struct Tensor<T, 1> {
     node = fCopyGraph(other.node);
     node->reference_counter++;
   }
-  T &operator[](const size_t index) {
-    if (node->result_data && !node->result_data->data) {
-      fExecuteGraph_gpu(node);
-    }
-    if (!node->result_data)
-      execute();
-    return ((T *)node->result_data->data)[index];
-  }
-  // move
+  /*
+   * Move constructor. Moves every important field from `other` to this Tensor.
+   * `other` is invalidated after this operation.
+   */
   Tensor(Tensor &&other) {
     shape = other.shape;
     node = other.node;
     other.node = nullptr;
   }
+  /**
+   * Move operator. Moves every important field from `other` to this Tensor.
+   * `other` is invalidated after this operation. If there was any previous
+   * allocated operation node allocated by this Tensor it is cleaned up.
+   */
   void operator=(Tensor &&other) {
     if (node) {
       node->reference_counter--;
@@ -123,12 +161,37 @@ template <typename T> struct Tensor<T, 1> {
     node = other.node;
     other.node = nullptr;
   }
+  /**
+   * Cleans up this tensor and frees all underlying data by reference counting.
+   */
   ~Tensor() {
     if (node) {
       node->reference_counter--;
       fFreeGraph(node);
     }
   }
+  /**
+   * Indexes the Tensor and returns the element.
+   * If the underlying data is not yet computed, executes this Tensor.
+   */
+  T &operator[](const size_t index) {
+    if (node->result_data && !node->result_data->data) {
+      fExecuteGraph_gpu(node);
+    }
+    if (!node->result_data)
+      execute();
+    return ((T *)node->result_data->data)[index];
+  }
+  /**
+   * Generates a Tensor containing the single given value in every entry.
+   * The resulting Tensor will have a dimensionality of 1 and a
+   * size denoted by `size`. e.g.
+   * @code{
+   * Tensor<double, 1> foo = Tensor<double, 1>::constant(3.141592, 3);
+   * std::cout << foo << std::endl;
+   * // Tensor<FLOAT64, shape: 3>([3.141592, 3.141592, 3.141592])
+   * }
+   */
   static Tensor<T, 1> constant(T value, size_t size) {
     FGraphNode *node = fconstant(value, &size, 1);
     return Tensor(node, size);
@@ -1421,7 +1484,10 @@ template <typename T, unsigned int n> struct Tensor {
    * still memory managed by this Tensor instance, so be carefull about variable
    * lifetimes. */
   FGraphNode *get_graph_node() const { return node; }
-
+  /**
+   * Calculates the gradient of this Tensor to `dx`. A gradient is always a
+   * Tensor of type `double`.
+   */
   template <typename K, unsigned int k>
   Tensor<double, k> gradient(const Tensor<K, k> &dx) {
     return Tensor<double, k>(fCalculateGradient(this->node, dx.node), dx.shape);
