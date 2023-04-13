@@ -13,7 +13,7 @@ module HtmlParser where
     replaceIllegal (x:s) = x : replaceIllegal s
     replaceIllegal [] = []
 
-    splitBy delimiter = foldr f [[]] 
+    splitBy delimiter = foldr f [[]]
           where f c l@(x:xs) | c == delimiter = []:l
                              | otherwise = (c:x):xs
 
@@ -76,20 +76,30 @@ module HtmlParser where
                     "<span style=\"color: " ++ highKeyword ++ "\">class</span> " ++ highlightCode t
             highlightCode ('s':'t':'r':'u':'c':'t':' ':t) =
                     "<span style=\"color: " ++ highKeyword ++ "\">struct</span> " ++ highlightCode t
-            highlightCode ('i':'n':'t':' ':t) =
-                    "<span style=\"color: " ++ highType ++ "\">int</span> " ++ highlightCode t
-            highlightCode ('f':'l':'o':'a':'t':' ':t) =
-                    "<span style=\"color: " ++ highType ++ "\">float</span> " ++ highlightCode t
-            highlightCode ('d':'o':'u':'b':'l':'e':' ':t) =
-                    "<span style=\"color: " ++ highType ++ "\">double</span> " ++ highlightCode t
-            highlightCode ('l':'o':'n':'g':' ':t) =
-                    "<span style=\"color: " ++ highType ++ "\">long</span> " ++ highlightCode t
-            highlightCode ('s':'i':'z':'e':'_':'t':' ':t) =
-                    "<span style=\"color: " ++ highType ++ "\">double</span> " ++ highlightCode t
-            highlightCode ('T':'e':'n':'s':'o':'r':'<':t) =
-                    "<span style=\"color: " ++ highType ++ "\">Tensor</span>&lt;" ++ highlightCode t
-            highlightCode ('T':'e':'n':'s':'o':'r':' ':t) =
-                    "<span style=\"color: " ++ highType ++ "\">Tensor</span> " ++ highlightCode t
+            highlightCode ('i':'n':'t':t) =
+                if head t `elem` ['&', ',', '.', ' '] then
+                    "<span style=\"color: " ++ highType ++ "\">int</span>" ++ highlightCode t
+                else "int" ++ highlightCode t
+            highlightCode ('f':'l':'o':'a':'t':t) =
+                if head t `elem` ['&', ',', '.', ' '] then
+                    "<span style=\"color: " ++ highType ++ "\">float</span>" ++ highlightCode t
+                else "float" ++ highlightCode (t)
+            highlightCode ('d':'o':'u':'b':'l':'e':t) =
+                if head t `elem` ['&', ',', '.', ' '] then
+                    "<span style=\"color: " ++ highType ++ "\">double</span>" ++ highlightCode t
+                else "double" ++ highlightCode (t)
+            highlightCode ('l':'o':'n':'g':t) =
+                if head t `elem` ['&', ',', '.', ' '] then
+                    "<span style=\"color: " ++ highType ++ "\">long</span>" ++ highlightCode t
+                else "long" ++ highlightCode (t)
+            highlightCode ('s':'i':'z':'e':'_':'t':t) =
+                if head t `elem` ['&', ',', '.', ' '] then
+                    "<span style=\"color: " ++ highType ++ "\">double</span>" ++ highlightCode t
+                else "size_t" ++ highlightCode (t)
+            highlightCode ('T':'e':'n':'s':'o':'r':t) =
+                if head t `elem` ['&', ',', '.', ' '] then
+                    "<span style=\"color: " ++ highType ++ "\">Tensor</span>" ++ highlightCode t
+                else "Tensor" ++ highlightCode (t)
             highlightCode ('/':'/':t) =
                     "<span style=\"color: #D0D0D0\">//" ++ takeWhile (\c -> c /= '\n' && c /= '\r') t ++ "</span>" ++ highlightCode (dropWhile (\c -> c /= '\n' && c /= '\r') t)
             highlightCode ('/':'*':t) = do

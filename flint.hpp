@@ -1251,11 +1251,86 @@ template <typename T, unsigned int n> struct Tensor {
       new_shape[i] = nn->operation->shape[i];
     return Tensor<T, n>(nn, new_shape);
   }
+  /**
+   * Creates a new tensor of zeroes with the requested shape. The original
+   * tensor is embedded at the given indices. Typically used to add padding to a
+   * Tensor.
+   * - `new_shape` an array describing the new shape (the number of dimensions
+   *    stays the same).
+   * - `indices` an array of indices per dimension where the Tensor should be
+   *    placed inside of that dimension.
+   *    Each entry describes the start index (meaning every other index prior in
+   *    that dimension will only contain 0s).
+   *    It is important, that the size in that dimension (denoted in
+   *    `new_shape`) is large enough to hold the size of this Tensor +
+   *    the start index.
+   * E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1, 2}, {3, 4, 5}}, {{6, 7, 8}, {9, -2, -1}}};
+   * std::cout << (a.extend(std::array<size_t, 3>{3, 4, 4},
+   *                        std::array<size_t, 3>{1, 0, 1}))()
+   *           << std::endl;
+   * // Tensor<INT32, shape: [3, 4, 4]>(
+   * // [[[0, 0, 0, 0],
+   * //   [0, 0, 0, 0],
+   * //   [0, 0, 0, 0],
+   * //   [0, 0, 0, 0]],
+   * //  [[0, 0, 1, 2],
+   * //   [0, 3, 4, 5],
+   * //   [0, 0, 0, 0],
+   * //   [0, 0, 0, 0]],
+   * //  [[0, 6, 7, 8],
+   * //   [0, 9, -2, -1],
+   * //   [0, 0, 0, 0],
+   * //   [0, 0, 0, 0]]])
+   * }
+   */
   Tensor<T, n> extend(std::array<size_t, n> new_shape,
                       std::array<size_t, n> indices) {
     return Tensor<T, n>(fextend(node, new_shape.data(), indices.data()),
                         new_shape);
   }
+  /**
+   * Creates a new tensor of zeroes with the requested shape. The original
+   * tensor is embedded at the given indices and with a step size.
+   * - `new_shape` an array describing the new shape (the number of dimensions
+   *    stays the same).
+   * - `indices` an array of indices per dimension where the Tensor should be
+   *    placed inside of that dimension.
+   *    Each entry describes the start index (meaning every other index prior in
+   *    that dimension will only contain 0s).
+   *    It is important, that the size in that dimension (denoted in
+   *    `new_shape`) is large enough to hold the size of this Tensor +
+   *    the start index.
+   * - `steps` an array of step sizes per dimension. A step size of 2 means that
+   *    between each value in that dimension of the original Tensor an
+   *    additional 0 is placed. May be negative to inverse traversal order, in
+   *    that case the index denotes the end of the traversal (still describes
+   *    the index of the first value that occurs in the result tensor).
+   * E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1, 2}, {3, 4, 5}}, {{6, 7, 8}, {9, -2, -1}}};
+   * std::cout << (a.extend(std::array<size_t, 3>{3, 4, 4},
+   *                        std::array<size_t, 3>{0, 0, 1},
+   *                        std::array<long, 3>{2, 3, -1}))()
+   *           << std::endl;
+   * // Tensor<INT32, shape: [3, 4, 4]>(
+   * // [[[0, 2, 1, 0],
+   * //   [0, 0, 0, 0],
+   * //   [0, 0, 0, 0],
+   * //   [0, 5, 4, 3]],
+   * //  [[0, 0, 0, 0],
+   * //   [0, 0, 0, 0],
+   * //   [0, 0, 0, 0],
+   * //   [0, 0, 0, 0]],
+   * //  [[0, 8, 7, 6],
+   * //   [0, 0, 0, 0],
+   * //   [0, 0, 0, 0],
+   * //   [0, -1, -2, 9]]])
+   * }
+   */
   Tensor<T, n> extend(std::array<size_t, n> new_shape,
                       std::array<size_t, n> indices,
                       std::array<long, n> steps) {

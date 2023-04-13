@@ -55,7 +55,10 @@
   Tensor&lt;int, k &gt;= n ? k : n&gt; <b>operator&lt;</b>(const Tensor<K, k> &other) const </a></li><li><a href="#s-_typename_K__Tensor_int__n__operator__const_K_other__const_">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>operator&lt;</b>(const K other) const </a></li><li><a href="#s-_typename_K__unsigned_int_k___Tensor_int__k__=_n_?_k_:_n__operator__const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;int, k &gt;= n ? k : n&gt; <b>operator&gt;</b>(const Tensor<K, k> &other) const </a></li><li><a href="#s-_typename_K__Tensor_int__n__operator__const_K_other__const_">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>operator&gt;</b>(const K other) const </a></li><li><a href="#s-_typename_K__unsigned_int_k___Tensor_int__k__=_n_?_k_:_n__equal_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;int, k &gt;= n ? k : n&gt; <b>equal</b>(const Tensor<K, k> &other) const </a></li><li><a href="#s-_typename_K__Tensor_int__n__equal_const_K_other__const_">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>equal</b>(const K other) const </a></li><li><a href="#s-n_-_1__reduce_sum_int_dimension__">Tensor&lt;T, n - 1&gt; <b>reduce_sum</b>(int dimension) </a></li><li><a href="#s-n_-_1__reduce_mul_int_dimension__">Tensor&lt;T, n - 1&gt; <b>reduce_mul</b>(int dimension) </a></li><li><a href="#s-n__abs___const_">Tensor&lt;T, n&gt; <b>abs</b>() const </a></li><li><a href="#s-_typename____args___Tensor_T__n__slice_const_args____dim_ranges__const_">template &lt;typename... args&gt;
-  Tensor&lt;T, n&gt; <b>slice</b>(const args... dim_ranges) const </a></li></ul></div>
+  Tensor&lt;T, n&gt; <b>slice</b>(const args... dim_ranges) const </a></li><li><a href="#s-n__extend_std::array_size_t__n__new_shape_______________________std::array_size_t__n__indices__">Tensor&lt;T, n&gt; <b>extend</b>(std::array<size_t, n> new_shape,
+                      std::array<size_t, n> indices) </a></li><li><a href="#s-n__extend_std::array_size_t__n__new_shape_______________________std::array_size_t__n__indices_______________________std::array_long__n__steps__">Tensor&lt;T, n&gt; <b>extend</b>(std::array<size_t, n> new_shape,
+                      std::array<size_t, n> indices,
+                      std::array<long, n> steps) </a></li></ul></div>
         <div style="display: block; height: 2em;"></div>
         <div id="s-_typename_T__unsigned_int_n__struct_Tensor_"></div><div class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></pre></div>
 <br />
@@ -69,8 +72,8 @@
  (<pre class="inline_code">init_type</pre> is a recursive defined type definition).
  E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;float, <span style="color: #30F0FF">2</span>&gt; t1{{-<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">0</span>.}, {<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">2</span>.}};
- Tensor&lt;float, <span style="color: #30F0FF">3</span>&gt; t2 = {{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>}}, {{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}, {<span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">6</span>}}};</pre>
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; t1{{-<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">0</span>.}, {<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">2</span>.}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">3</span>&gt; t2 = {{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>}}, {{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}, {<span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">6</span>}}};</pre>
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-data__"></div><div class="card"><pre class="card_header_code"><b>Tensor</b>(storage_type data) </pre></div>
 <br />
@@ -79,8 +82,8 @@
  (<pre class="inline_code">storage_type</pre> is a recursive defined type definition).
  E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- std::vector&lt;std::vector&lt;float&gt;&gt; s1 = {{-<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">0</span>.}, {<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">2</span>.}};
- Tensor&lt;float, <span style="color: #30F0FF">2</span>&gt; t1(s1);</pre>
+ std::vector&lt;std::vector&lt;<span style="color: #FFF030">float</span>&gt;&gt; s1 = {{-<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">0</span>.}, {<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">2</span>.}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; t1(s1);</pre>
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-Tensor_&other__"></div><div class="card"><pre class="card_header_code"><b>Tensor</b>(const Tensor &other) </pre></div>
 <br />
@@ -118,8 +121,8 @@
  Each entry describes the size of the corresponding dimension.
  E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;float, <span style="color: #30F0FF">2</span>&gt; t1{{-<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">0</span>.}, {<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">2</span>.}};
- std::array&lt;size_t, <span style="color: #30F0FF">2</span>&gt; shape1 = t1.get_shape();
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; t1{{-<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">0</span>.}, {<span style="color: #30F0FF">1</span>., <span style="color: #30F0FF">2</span>.}};
+ std::array&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">2</span>&gt; shape1 = t1.get_shape();
  <span style="color: #D0D0D0">// shape1 = {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>}</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-n__&operator=_Tensor_&&other__"></div><div class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>&operator=</b>(Tensor &&other) </pre></div>
@@ -142,7 +145,7 @@
  The resulting Tensor will have a dimensionality of <pre class="inline_code">sizeof...(args)</pre> and a
  shape denoted by each entry in <pre class="inline_code">sizes</pre>. e.g.
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;double, <span style="color: #30F0FF">3</span>&gt; foo = Tensor&lt;double, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>);
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt; foo = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>);
  std::cout &lt;&lt; foo &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
  <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
@@ -160,8 +163,8 @@
  the index operator <pre class="inline_code">operator[]</pre> whenever possible instead.
  E.g.
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt; foo = Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>);
- std::vector&lt;std::vector&lt;std::vector&lt;int&gt;&gt;&gt; foo_res = *foo;
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; foo = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>);
+ std::vector&lt;std::vector&lt;std::vector&lt;<span style="color: #FFF030">int</span>&gt;&gt;&gt; foo_res = *foo;
  <span style="color: #D0D0D0">// foo_res = {{{<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>}}, {{<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>}}}</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-execute___"></div><div class="card"><pre class="card_header_code">void <b>execute</b>() </pre></div>
@@ -202,7 +205,7 @@
  Negates the elements of this Tensor.
  E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;float, <span style="color: #30F0FF">2</span>&gt; foo = {{-<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">7</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">8</span>, -<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">3</span>}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; foo = {{-<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">7</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">8</span>, -<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">3</span>}};
  std::cout &lt;&lt; (-foo)() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
  <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
@@ -215,7 +218,7 @@
  else <pre class="inline_code">x[i] = -1</pre>. If you need to distinguish additionally for 0 values,
  take a look at <pre class="inline_code">equal</pre>. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;float, <span style="color: #30F0FF">2</span>&gt; foo = {{-<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">7</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">8</span>, -<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">3</span>}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; foo = {{-<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">7</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">8</span>, -<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">3</span>}};
  std::cout &lt;&lt; (foo.sign())() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
  <span style="color: #D0D0D0">//  [[-<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">1</span>],</span>
@@ -227,7 +230,7 @@
  Returns a int tensor <pre class="inline_code">x</pre> with the shape of <pre class="inline_code">this</pre> with <pre class="inline_code">x[i] = 1</pre> if
  <pre class="inline_code">this[i] % 2 = 0</pre> else <pre class="inline_code">x[i] = 0</pre>. <pre class="inline_code">a</pre> needs to have a integer type. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">2</span>&gt; foo = {{<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">7</span>}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; foo = {{<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">7</span>}};
  std::cout &lt;&lt; (foo.even())() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
  <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>],</span>
@@ -244,9 +247,9 @@
  If the underlying data is not yet computed, executes this Tensor.
  E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt; foo{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
- TensorView&lt;int, <span style="color: #30F0FF">2</span>&gt; bar = foo[<span style="color: #30F0FF">1</span>];
- TensorView&lt;int, <span style="color: #30F0FF">1</span>&gt; baz = bar[<span style="color: #30F0FF">1</span>];
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; foo{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
+ TensorView&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; bar = foo[<span style="color: #30F0FF">1</span>];
+ TensorView&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">1</span>&gt; baz = bar[<span style="color: #30F0FF">1</span>];
  std::cout &lt;&lt; baz[<span style="color: #30F0FF">0</span>] &lt;&lt; std::endl; <span style="color: #D0D0D0">// <span style="color: #30F0FF">6</span></span>
  std::cout &lt;&lt; foo[<span style="color: #30F0FF">0</span>][<span style="color: #30F0FF">1</span>][<span style="color: #30F0FF">1</span>] &lt;&lt; std::endl; <span style="color: #D0D0D0">// <span style="color: #30F0FF">3</span></span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
@@ -273,8 +276,8 @@
  shared of the larger one. The datatype of the result is the datatype with
  higher precedence. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
- Tensor&lt;float, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">2</span>},{<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f,<span style="color: #30F0FF">1</span>}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">2</span>},{<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f,<span style="color: #30F0FF">1</span>}};
  std::cout &lt;&lt; (a + b)() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
  <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
@@ -300,8 +303,8 @@
  are not shared of the larger one. The datatype of the result is the
  datatype with higher precedence. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
- Tensor&lt;float, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">2</span>},{<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f,<span style="color: #30F0FF">1</span>}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">2</span>},{<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f,<span style="color: #30F0FF">1</span>}};
  std::cout &lt;&lt; (a - b)() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
  <span style="color: #D0D0D0">// [[[-<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
@@ -327,8 +330,8 @@
  are not shared of the larger one. The datatype of the result is the
  datatype with higher precedence. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
- Tensor&lt;float, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">2</span>},{<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f,<span style="color: #30F0FF">1</span>}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">2</span>},{<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f,<span style="color: #30F0FF">1</span>}};
  std::cout &lt;&lt; (a * b)() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
  <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
@@ -354,8 +357,8 @@
  are not shared of the larger one. The datatype of the result is the
  datatype with higher precedence. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
- Tensor&lt;float, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">2</span>},{<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f,<span style="color: #30F0FF">1</span>}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>,<span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>,<span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,<span style="color: #30F0FF">2</span>},{<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f,<span style="color: #30F0FF">1</span>}};
  std::cout &lt;&lt; (a / b)() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
  <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
@@ -377,7 +380,7 @@
  Flattens the complete tensor to a tensor with one dimension.
  E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;long, <span style="color: #30F0FF">3</span>&gt; a = {{{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">4</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">5</span>}}, {{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">9</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">long</span>, <span style="color: #30F0FF">3</span>&gt; a = {{{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">4</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">5</span>}}, {{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">9</span>}}};
  std::cout &lt;&lt; (a.flattened())() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;INT64, shape: <span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span>&gt;([<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">9</span>])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
@@ -390,7 +393,7 @@
  The data stays the same, you can imagine the elements along the flattened
  dimension to be appended to each other. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;long, <span style="color: #30F0FF">3</span>&gt; a = {{{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">4</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">5</span>}}, {{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">9</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">long</span>, <span style="color: #30F0FF">3</span>&gt; a = {{{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">4</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">5</span>}}, {{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">9</span>}}};
  std::cout &lt;&lt; (a.flattened(<span style="color: #30F0FF">1</span>))() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;INT64, shape: [<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
  <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">4</span>],</span>
@@ -407,8 +410,8 @@
  are not shared of the larger one. The datatype of the result is the
  datatype with higher precedence. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>}}};
- Tensor&lt;double, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f, <span style="color: #30F0FF">1</span>}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f, <span style="color: #30F0FF">1</span>}};
  std::cout &lt;&lt; (a.pow(b))() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
  <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
@@ -486,11 +489,11 @@
  Therefor the method will implicitly (or eagerly) execute this Tensor and
  <pre class="inline_code">other</pre> if their data is not allready present. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>},
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>},
                    {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}},
                   {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>},
                    {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>}}};
- Tensor&lt;double, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,    <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">5</span>f},
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">2</span>&gt; b{{<span style="color: #30F0FF">4</span>,    <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">5</span>f},
                      {<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span>f, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>}};
  std::cout &lt;&lt; (a.matmul(b))() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
@@ -578,7 +581,7 @@
 <br />
 <div class="card"><div style="padding: 5px;"> Reduces one dimension of the tensor by additive folding e.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">3</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}},
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">3</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}},
                   {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>, -<span style="color: #30F0FF">6</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>, -<span style="color: #30F0FF">1</span>}}};
  std::cout &lt;&lt; (a.reduce_sum(<span style="color: #30F0FF">0</span>))() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
@@ -598,7 +601,7 @@
 <br />
 <div class="card"><div style="padding: 5px;"> Reduces one dimension of the tensor by multiplicative folding e.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">3</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}}, {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>, -<span style="color: #30F0FF">6</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>, -<span style="color: #30F0FF">1</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">3</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}}, {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>, -<span style="color: #30F0FF">6</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>, -<span style="color: #30F0FF">1</span>}}};
  std::cout &lt;&lt; (a.reduce_mul(<span style="color: #30F0FF">0</span>))() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
  <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">5</span>, -<span style="color: #30F0FF">1</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
@@ -639,7 +642,7 @@
  a negative step size, <pre class="inline_code">start &gt; end</pre> must hold (for a positive of course
  <pre class="inline_code">end &gt; start</pre>) for each dimension. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">3</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}}, {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>, -<span style="color: #30F0FF">6</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>, -<span style="color: #30F0FF">1</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">3</span><span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}}, {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>, -<span style="color: #30F0FF">6</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>, -<span style="color: #30F0FF">1</span>}}};
  std::cout &lt;&lt; (a.slice(TensorRange(<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>), TensorRange(<span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">1</span>),
                        TensorRange(<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">1</span>)))()
            &lt;&lt; std::endl;
@@ -656,7 +659,7 @@
    just inverse a dimension without eliminating values).
 </li></ul> E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
- Tensor&lt;int, <span style="color: #30F0FF">2</span>&gt; a{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}, {<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; a{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}, {<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>}};
  std::cout &lt;&lt; (a.slice(
                TensorRange(TensorRange::MAX_SCOPE,
                            TensorRange::MAX_SCOPE),
@@ -666,6 +669,82 @@
  <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">4</span>]&gt;(</span>
  <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>],</span>
  <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">4</span>]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-n__extend_std::array_size_t__n__new_shape_______________________std::array_size_t__n__indices__"></div><div class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>extend</b>(std::array<size_t, n> new_shape,
+                      std::array<size_t, n> indices) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Creates a new tensor of zeroes with the requested shape. The original
+ tensor is embedded at the given indices. Typically used to add padding to a
+ Tensor.<ul><li><pre class="inline_code">new_shape</pre> an array describing the new shape (the number of dimensions
+    stays the same).
+</li><li><pre class="inline_code">indices</pre> an array of indices per dimension where the Tensor should be
+    placed inside of that dimension.
+    Each entry describes the start index (meaning every other index prior in
+    that dimension will only contain 0s).
+    It is important, that the size in that dimension (denoted in
+    <pre class="inline_code">new_shape</pre>) is large enough to hold the size of this Tensor +
+    the start index.
+</li></ul> E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>}}, {{<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">8</span>}, {<span style="color: #30F0FF">9</span>, -<span style="color: #30F0FF">2</span>, -<span style="color: #30F0FF">1</span>}}};
+ std::cout &lt;&lt; (a.extend(std::array&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">4</span>},
+                        std::array&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;{<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}))()
+           &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">4</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">8</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">9</span>, -<span style="color: #30F0FF">2</span>, -<span style="color: #30F0FF">1</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>]]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-n__extend_std::array_size_t__n__new_shape_______________________std::array_size_t__n__indices_______________________std::array_long__n__steps__"></div><div class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>extend</b>(std::array<size_t, n> new_shape,
+                      std::array<size_t, n> indices,
+                      std::array<long, n> steps) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Creates a new tensor of zeroes with the requested shape. The original
+ tensor is embedded at the given indices and with a step size.<ul><li><pre class="inline_code">new_shape</pre> an array describing the new shape (the number of dimensions
+    stays the same).
+</li><li><pre class="inline_code">indices</pre> an array of indices per dimension where the Tensor should be
+    placed inside of that dimension.
+    Each entry describes the start index (meaning every other index prior in
+    that dimension will only contain 0s).
+    It is important, that the size in that dimension (denoted in
+    <pre class="inline_code">new_shape</pre>) is large enough to hold the size of this Tensor +
+    the start index.
+</li><li><pre class="inline_code">steps</pre> an array of step sizes per dimension. A step size of 2 means that
+    between each value in that dimension of the original Tensor an
+    additional 0 is placed. May be negative to inverse traversal order, in
+    that case the index denotes the end of the traversal (still describes
+    the index of the first value that occurs in the result tensor).
+</li></ul> E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>}}, {{<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">8</span>}, {<span style="color: #30F0FF">9</span>, -<span style="color: #30F0FF">2</span>, -<span style="color: #30F0FF">1</span>}}};
+ std::cout &lt;&lt; (a.extend(std::array&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">4</span>},
+                        std::array&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>},
+                        std::array&lt;<span style="color: #FFF030">long</span>, <span style="color: #30F0FF">3</span>&gt;{<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, -<span style="color: #30F0FF">1</span>}))()
+           &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">4</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">3</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">8</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">6</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">1</span>, -<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">9</span>]]])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
 
     </div>
