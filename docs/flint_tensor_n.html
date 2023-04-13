@@ -59,7 +59,7 @@
                       std::array<size_t, n> indices) </a></li><li><a href="#s-n__extend_std::array_size_t__n__new_shape_______________________std::array_size_t__n__indices_______________________std::array_long__n__steps__">Tensor&lt;T, n&gt; <b>extend</b>(std::array<size_t, n> new_shape,
                       std::array<size_t, n> indices,
                       std::array<long, n> steps) </a></li><li><a href="#s-_typename____args___Tensor_T__n__repeat_const_args____repetitions__const_">template &lt;typename... args&gt;
-  Tensor&lt;T, n&gt; <b>repeat</b>(const args... repetitions) const </a></li></ul></div>
+  Tensor&lt;T, n&gt; <b>repeat</b>(const args... repetitions) const </a></li><li><a href="#s-n__transpose_std::initializer_list_int__transposition_=_">Tensor&lt;T, n&gt; <b>transpose</b>(std::initializer_list<int> transposition = </a></li><li><a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a></li></ul></div>
         <div style="display: block; height: 2em;"></div>
         <div id="s-_typename_T__unsigned_int_n__struct_Tensor_"></div><div class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></pre></div>
 <br />
@@ -770,6 +770,37 @@
  <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>],</span>
  <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>]]])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-n__transpose_std::initializer_list_int__transposition_=_"></div><div class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>transpose</b>(std::initializer_list<int> transposition = </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Transposes this tensor along multiple dimensions
+ <pre class="inline_code">transpositions</pre> is an array with the same number of entries as the tensor
+ has dimensions, which gives the perumtation of dimensions. The tensor will
+ have a resulting shape in which the size in dimension <pre class="inline_code">i</pre> corresponds to
+ the former size in dimension <pre class="inline_code">transpositions[i]</pre>. <pre class="inline_code">transpositions</pre> may be
+ smaller than the number of dimensions of the original Tensor, in which case
+ the remaining dimensions will be fully transposed (0 with n-1, 1 with n-2,
+ ...). E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>}}, {{<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}, {<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}}};
+ std::cout &lt;&lt; (a.transpose({<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>}))() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>]]])</span>
+ std::cout &lt;&lt; (a.transpose())() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">3</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">3</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">4</span>]]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-get_graph_node___const_"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*get_graph_node</b>() const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;"> Returns the underlying <pre class="inline_code">FGraphNode</pre> for use with the C-Frontend. It is
+ still memory managed by this Tensor instance, so be carefull about variable
+ lifetimes. </div></div><div style="display: block; height: 2em;"></div>
 
     </div>
 </center>

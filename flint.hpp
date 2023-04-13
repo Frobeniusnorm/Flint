@@ -1378,6 +1378,32 @@ template <typename T, unsigned int n> struct Tensor {
       new_shape[i] = nn->operation->shape[i];
     return Tensor<T, n>(nn, new_shape);
   }
+  /**
+   * Transposes this tensor along multiple dimensions
+   * `transpositions` is an array with the same number of entries as the tensor
+   * has dimensions, which gives the perumtation of dimensions. The tensor will
+   * have a resulting shape in which the size in dimension `i` corresponds to
+   * the former size in dimension `transpositions[i]`. `transpositions` may be
+   * smaller than the number of dimensions of the original Tensor, in which case
+   * the remaining dimensions will be fully transposed (0 with n-1, 1 with n-2,
+   * ...). E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1}, {1, 2}}, {{2, 3}, {3, 4}}};
+   * std::cout << (a.transpose({1, 0, 2}))() << std::endl;
+   * // Tensor<INT32, shape: [2, 2, 2]>(
+   * // [[[0, 1],
+   * //   [2, 3]],
+   * //  [[1, 2],
+   * //   [3, 4]]])
+   * std::cout << (a.transpose())() << std::endl;
+   * // Tensor<INT32, shape: [2, 2, 2]>(
+   * // [[[0, 2],
+   * //   [1, 3]],
+   * //  [[1, 3],
+   * //   [2, 4]]])
+   * }
+   */
   Tensor<T, n> transpose(std::initializer_list<int> transposition = {}) {
     std::array<int, n> acc_trans;
     int i = 0;
@@ -1391,6 +1417,9 @@ template <typename T, unsigned int n> struct Tensor {
     FGraphNode *nn = ftranspose(node, acc_trans.data());
     return Tensor<T, n>(nn, new_shape);
   }
+  /** Returns the underlying `FGraphNode` for use with the C-Frontend. It is
+   * still memory managed by this Tensor instance, so be carefull about variable
+   * lifetimes. */
   FGraphNode *get_graph_node() const { return node; }
 
   template <typename K, unsigned int k>
