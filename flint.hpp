@@ -1338,6 +1338,28 @@ template <typename T, unsigned int n> struct Tensor {
         fextend_step(node, new_shape.data(), indices.data(), steps.data()),
         new_shape);
   }
+  /**
+   * Repeats dimensions of a tensor multiple times.
+   * `repititions` is an array with the same number of entries as the tensor has
+   * dimensions. If `repetitions` has in a dimension a value `x` the resulting
+   * shape in that dimension is `x` times larger than that of the origional
+   * Tensor (because it is concatenated with itself `x` times).
+   * E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1}, {1, 2}}, {{2, 3}, {3, 4}}};
+   * std::cout << (a.repeat(0, 1, 2))() << std::endl;
+   * // Tensor<INT32, shape: [2, 4, 6]>(
+   * // [[[0, 1, 0, 1, 0, 1],
+   * //   [1, 2, 1, 2, 1, 2],
+   * //   [0, 1, 0, 1, 0, 1],
+   * //   [1, 2, 1, 2, 1, 2]],
+   * //  [[2, 3, 2, 3, 2, 3],
+   * //   [3, 4, 3, 4, 3, 4],
+   * //   [2, 3, 2, 3, 2, 3],
+   * //   [3, 4, 3, 4, 3, 4]]])
+   * }
+   */
   template <typename... args>
   Tensor<T, n> repeat(const args... repetitions) const {
     constexpr size_t num_repetitions = sizeof...(args);

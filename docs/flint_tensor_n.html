@@ -58,7 +58,8 @@
   Tensor&lt;T, n&gt; <b>slice</b>(const args... dim_ranges) const </a></li><li><a href="#s-n__extend_std::array_size_t__n__new_shape_______________________std::array_size_t__n__indices__">Tensor&lt;T, n&gt; <b>extend</b>(std::array<size_t, n> new_shape,
                       std::array<size_t, n> indices) </a></li><li><a href="#s-n__extend_std::array_size_t__n__new_shape_______________________std::array_size_t__n__indices_______________________std::array_long__n__steps__">Tensor&lt;T, n&gt; <b>extend</b>(std::array<size_t, n> new_shape,
                       std::array<size_t, n> indices,
-                      std::array<long, n> steps) </a></li></ul></div>
+                      std::array<long, n> steps) </a></li><li><a href="#s-_typename____args___Tensor_T__n__repeat_const_args____repetitions__const_">template &lt;typename... args&gt;
+  Tensor&lt;T, n&gt; <b>repeat</b>(const args... repetitions) const </a></li></ul></div>
         <div style="display: block; height: 2em;"></div>
         <div id="s-_typename_T__unsigned_int_n__struct_Tensor_"></div><div class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></pre></div>
 <br />
@@ -745,6 +746,29 @@
  <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
  <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
  <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">1</span>, -<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">9</span>]]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename____args___Tensor_T__n__repeat_const_args____repetitions__const_"></div><div class="card"><pre class="card_header_code">template &lt;typename... args&gt;
+  Tensor&lt;T, n&gt; <b>repeat</b>(const args... repetitions) const </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Repeats dimensions of a tensor multiple times.
+ <pre class="inline_code">repititions</pre> is an array with the same number of entries as the tensor has
+ dimensions. If <pre class="inline_code">repetitions</pre> has in a dimension a value <pre class="inline_code">x</pre> the resulting
+ shape in that dimension is <pre class="inline_code">x</pre> times larger than that of the origional
+ Tensor (because it is concatenated with itself <pre class="inline_code">x</pre> times).
+ E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>}}, {{<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}, {<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}}};
+ std::cout &lt;&lt; (a.repeat(<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>))() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">6</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>]]])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
 
     </div>
