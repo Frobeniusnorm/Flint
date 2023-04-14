@@ -61,6 +61,7 @@ module CPPParser where
     removeIllegal [] = []
 
     bulletpointHighlight ('\r':'\n':'\r':'\n':str) = "<div style=\"display:block; height: 0.5em\"></div>" ++ bulletpointHighlight ('\n':str)
+    bulletpointHighlight ('\n':'\n':str) = "<div style=\"display:block; height: 0.5em\"></div>" ++ bulletpointHighlight ('\n':str)
     bulletpointHighlight ('\n':' ':'-':str) = do
         let (subpoints, rest) = highlightpoints ('\n':' ':'-':str)
         "<ul>" ++ subpoints ++ "</ul>" ++ bulletpointHighlight rest

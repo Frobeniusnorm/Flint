@@ -118,7 +118,7 @@
 <div class="card"><div style="padding: 5px;">
  Generates a Tensor containing the single given value in every entry.
  The resulting Tensor will have a dimensionality of 1 and a
- size denoted by <pre class="inline_code">size</pre>. e.g.
+ size denoted by <pre class="inline_code">size</pre>. e.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">1</span>&gt; foo = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">1</span>&gt;::constant(<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>);
  std::cout &lt;&lt; foo &lt;&lt; std::endl;
@@ -468,12 +468,12 @@
  <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: <span style="color: #30F0FF">3</span>&gt;([<span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">3</span>])</span></pre><div style="display:block; height: 0.5em"></div>
  To help with indexing there is the value
  <pre class="inline_code">TensorRange::MAX_SCOPE</pre> which describes a index depending on the traversal
- order in that dimension (i.e. the sign of step):<ul><li>for forward traversel it denotes in start the shape of this Tensor -
+ order in that dimension (i.e. the sign of step):<ul><li>for forward traversel it denotes in start the shape of this Tensor -
    1 (which is the last element start can index) and for end the shape of
    this Tensor.
 </li><li>for backward traversal it denotes in start 0 and in end the element
    before 0 (this is necessary since otherwise it would not be possible to
-   just inverse a dimension without eliminating values).</li></ul>
+   just inverse a dimension without eliminating values).</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-get_graph_node___const_"></div><div class="card"><pre class="card_header_code">FGraphNode <b>*get_graph_node</b>() const </pre></div>
 <br />

@@ -654,7 +654,7 @@
  <span style="color: #D0D0D0">//  [[-<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">5</span>]]])</span></pre><div style="display:block; height: 0.5em"></div>
  To help with indexing there is the value
  <pre class="inline_code">TensorRange::MAX_SCOPE</pre> which describes a index depending on the traversal
- order in that dimension (i.e. the sign of step):<ul><li>for forward traversel it denotes in start the shape of that dimensions -
+ order in that dimension (i.e. the sign of step):<ul><li>for forward traversel it denotes in start the shape of that dimensions -
    1 (which is the last element start can index) and for end the shape of
    that dimension
 </li><li>for backward traversal it denoted in start 0 and in end the element
@@ -679,7 +679,7 @@
 <div class="card"><div style="padding: 5px;">
  Creates a new tensor of zeroes with the requested shape. The original
  tensor is embedded at the given indices. Typically used to add padding to a
- Tensor.<ul><li><pre class="inline_code">new_shape</pre> an array describing the new shape (the number of dimensions
+ Tensor.<ul><li><pre class="inline_code">new_shape</pre> an array describing the new shape (the number of dimensions
     stays the same).
 </li><li><pre class="inline_code">indices</pre> an array of indices per dimension where the Tensor should be
     placed inside of that dimension.
@@ -714,7 +714,7 @@
 <br />
 <div class="card"><div style="padding: 5px;">
  Creates a new tensor of zeroes with the requested shape. The original
- tensor is embedded at the given indices and with a step size.<ul><li><pre class="inline_code">new_shape</pre> an array describing the new shape (the number of dimensions
+ tensor is embedded at the given indices and with a step size.<ul><li><pre class="inline_code">new_shape</pre> an array describing the new shape (the number of dimensions
     stays the same).
 </li><li><pre class="inline_code">indices</pre> an array of indices per dimension where the Tensor should be
     placed inside of that dimension.

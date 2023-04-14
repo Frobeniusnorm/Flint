@@ -20,9 +20,9 @@
   </div>
   <center>
 <div class="content" style="margin-top: -3.1em">
-        @gen_toc("../flint.hpp", s-_typename_T__struct_Tensor_T__1__)
+        @gen_toc("../flint_1.hpp", s-_typename_T__struct_Tensor_T__1__)
         <div style="display: block; height: 2em;"></div>
-        @from_code("../flint.hpp", s-_typename_T__struct_Tensor_T__1__)
+        @from_code("../flint_1.hpp", s-_typename_T__struct_Tensor_T__1__)
     </div>
 </center>
 @include("footer.html")

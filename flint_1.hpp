@@ -130,6 +130,7 @@ template <typename T> struct Tensor<T, 1> {
    * Generates a Tensor containing the single given value in every entry.
    * The resulting Tensor will have a dimensionality of 1 and a
    * size denoted by `size`. e.g.
+   *
    * @code{
    * Tensor<double, 1> foo = Tensor<double, 1>::constant(3.141592, 3);
    * std::cout << foo << std::endl;

@@ -23,7 +23,7 @@
           is the place to go.
           <div style="display: block; height: 1em;"></div>
           <pre class="card code">
-            @code{
+@code{
 float data1[] = {1,2,3,4};
 double data2[] = {4,3,2,1};
 size_t shape[] = {2,2};
@@ -54,7 +54,7 @@ size_t result_shape = {mm->operation->shape[0], mm->operation->shape[1]}; }
           If you want to develop in C++ this is the place to go. 
           <div style="display: block; height: 1em;"></div>
           <pre class="card code">
-            @code{
+@code{
 Tensor<float, 2> t1{{1,2}, {3,4}};
 Tensor<double, 2> t2{{4,3}, {2,1}};
 Tensor<double, 2> mm = t1.matmul(t2);
