@@ -15,13 +15,30 @@ Just as other Tensor libraries, Flint collects operations in a graph and execute
 The Graph (i.e. all yet to be calculated indirect parent nodes to one needed leaf node) is executed when the user of the library requests the resulting data or another operation depends on the full result so that combining those operations becomes impossible (i.e. operations like matrix multiplication or reducing). The Framework allows you to choose between CPU (with a thread pool that executes the tensor operations in parallel) and GPU execution (which generates OpenCL kernels for the execution graph), or you can let the framework decide on certain heuristics which backend to use. It additionally supports eager execution, for e.g. efficient gradient calculation or debugging purposes.
 
 ## Usage ##
-There is no first official version yet. However if you want to build it you need (a recent version of) the Clang compiler, Make and a installed OpenCL library. Then just run make and test if the implementation works on your machine with the test executable build in the test directory. The systems it was tested on run Arch Linux and Gentoo. It was tested on AMD GPUs (integrated and dedicated), integrated Intel CPUs and on a NVIDIA GPU. 
+There is no first official version yet. However if you want to build it you need (a recent version of) a C++ compiler, CMake and an installed OpenCL library. 
+To build the library execute this inside of the project folder:
+```
+mkdir build;
+cd build;
+cmake ..;
+make;
+```
+to install it run `make install`.
+Then just run the test programs (`test` and `test_gradients`, optionally `benchmark`)  to test if the implementation works on your machine. 
+After that you can include the library in your project with
+```
+#include <flint/flint.hpp> // for the C++ implementation
+#include <flint/flint.h> // for the C implementation
+```
+and link it against `-lflint -lOpenCL`.
+
+The systems it was tested on ran Arch Linux, Gentoo, Fedora and Void. It was tested on AMD GPUs (integrated and dedicated), integrated Intel CPUs and on a NVIDIA GPU. 
 
 There is a documentation which is very much a work in progress: [https://frobeniusnorm.github.io/Flint/](https://frobeniusnorm.github.io/Flint/). You can also build it yourself with the Makefile in the docs folder, the prerequisit is a working version of ghc. However usually the newest version of the documentation is already built in the repository.
 
 ## Dependencies ##
 - OpenCL
-- Clang C++ Compiler with C++20 feature implementations like e.g. semaphores
+- C++ Compiler with C++20 feature implementations like e.g. semaphores
 
 ## Attribution to included libraries ##
 - Benchmarking: [plf::nanotimer](https://github.com/mattreecebentley/plf_nanotimer) (zlib Licence)
