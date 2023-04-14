@@ -163,7 +163,7 @@
  executed prior). This operation has to duplicate the complete data.
  Since that is a memory heavy and slow operation, it is recommended to use
  the index operator <pre class="inline_code">operator[]</pre> whenever possible instead.
- E.g.
+ E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; foo = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>);
  std::vector&lt;std::vector&lt;std::vector&lt;<span style="color: #FFF030">int</span>&gt;&gt;&gt; foo_res = *foo;
@@ -230,7 +230,8 @@
 <br />
 <div class="card"><div style="padding: 5px;">
  Returns a int tensor <pre class="inline_code">x</pre> with the shape of <pre class="inline_code">this</pre> with <pre class="inline_code">x[i] = 1</pre> if
- <pre class="inline_code">this[i] % 2 = 0</pre> else <pre class="inline_code">x[i] = 0</pre>. <pre class="inline_code">a</pre> needs to have a integer type. E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="inline_code">this[i] % 2 = 0</pre> else <pre class="inline_code">x[i] = 0</pre>. This Tensor needs to have a integer
+ type. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; foo = {{<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}, {<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">7</span>}};
  std::cout &lt;&lt; (foo.even())() &lt;&lt; std::endl;
