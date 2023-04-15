@@ -547,6 +547,17 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     code += ", __constant long* steps, __constant long* start, __constant "
             "long* pred_shape";
   } break;
+  case FCONVOLVE: {
+    // acc_sizes, acc_sizes_pred, acc_sizes_kernel, steps
+    code += ", const long num_entriesR, const __global " +
+            typeString(parameter_types[0]) + "* P0";
+    code += ", const long num_entries0, const int dimensions0";
+    code += ", const __global " + typeString(parameter_types[1]) + "* P1";
+    code += ", const long num_entries1, const int dimensions1";
+    code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred, "
+            "__constant long* acc_sizes_kernel";
+    code += ", __constant long* steps";
+  } break;
   default:
     for (int i = 0; i < parameter_types.size(); i++)
       code += ", const __global " + typeString(parameter_types[i]) + "* P" +
@@ -794,7 +805,40 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "  set_zero = 1;\n  break;\n }\n"
             " if(inv) di = pred_shape[d] - di - 1;\n"
             " j += di * acc_sizes_pred[d];\n}\n"
-            "R[index] = set_zero ? 0 : P0[j];\n";
+            "R[index] = set_zero ? 0 : P0[j];";
+    break;
+  case FCONVOLVE:
+    // parameters (and i fucking hate it)
+    // acc_sizes, acc_sizes_pred, acc_sizes_kernel, steps
+    code +=
+        "if(index >= num_entriesR) return;\n"
+        "long j = 0;\n"
+        "for(int d = 0; d < dimensions0 - 1; d++){\n"
+        " long di = (d == 0 ? index : index % acc_sizes[d - 1]) / "
+        "acc_sizes[d];\n"
+        " j += di * steps[d] * acc_sizes_pred[d];\n"
+        "}\n" +
+        typeString(res_type) +
+        " res = 0;\n"
+        "for(long k = 0; k < num_entries1; k++){\n"
+        " bool set_zero = false;\n"
+        " long o = 0;\n"
+        " for(int d = 0; d < dimensions0; d++){\n"
+        "  long di = (d == 0 ? index : index % acc_sizes[d - 1]) / "
+        "acc_sizes[d];\n"
+        "  long dk = (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / "
+        "acc_sizes_kernel[d];\n"
+        "  if(d < dimensions0 - 1)\n"
+        "   if(((di * steps[d]) + dk) * acc_sizes_pred[d] >= num_entries0 ||\n"
+        "        (d > 0 && ((di * steps[d]) + dk) * acc_sizes_pred[d] >= \n"
+        "acc_sizes_pred[d - 1])) {\n"
+        "    set_zero = true; break;\n}\n"
+        "  o += dk * acc_sizes_pred[d];\n"
+        " }\n"
+        " if (set_zero) continue;\n"
+        " res += P1[k] * P0[j + o];\n"
+        "}\n"
+        "R[index] = res;";
     break;
   }
   code += "\n}\n";

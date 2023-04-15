@@ -193,7 +193,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     rd->num_entries = num_elems;
     rd->mem_id = nullptr;
     int type_size = typeSize(node->operation->data_type);
-    // TODO !data && memory
     if (data) {
       rd->data = malloc(type_size * num_elems);
       if (!rd->data)
@@ -398,6 +397,12 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
         flogging(F_ERROR, "Could not load Argument to kernel!");
     }
   } break;
+  case FCONVOLVE: {
+    long total_size_puffer = total_size_node;
+    if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                       (void *)&total_size_puffer) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  } break;
   case FREDUCE_MUL:
   case FREDUCE_SUM: {
     int *dim = ((int *)node->operation->additional_data);
@@ -470,6 +475,11 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
                          (void *)&op->dimensions) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
       break;
+    case FCONVOLVE: {
+      if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                         (void *)&op->dimensions) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+    } break;
     case FREDUCE_SUM:
     case FREDUCE_MUL: {
       int dim = ((int *)node->operation->additional_data)[0];
@@ -676,6 +686,81 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     default:
       break;
     }
+  }
+  switch (node->operation->op_type) {
+  case FCONVOLVE: {
+    const FOperation *op = node->operation;
+    const FGraphNode *gnp1 = node->predecessors[0],
+                     *gnp2 = node->predecessors[1];
+    const FOperation *pred = gnp1->operation, *kernel_par = gnp2->operation;
+    unsigned int *steps = (unsigned int *)op->additional_data;
+    // calculate accumulated sizes for result, kernel and source (pred)
+    std::vector<size_t> acc_sizes(op->dimensions);
+    std::vector<size_t> acc_sizes_pred(acc_sizes.size() + 1);
+    std::vector<size_t> acc_sizes_kernel(acc_sizes.size() + 1);
+    acc_sizes[op->dimensions - 1] = 1;
+    for (long d = op->dimensions - 2; d >= 0; d--) {
+      acc_sizes[d] = acc_sizes[d + 1] * op->shape[d + 1];
+    }
+    acc_sizes_kernel[acc_sizes.size()] = 1;
+    acc_sizes_pred[acc_sizes.size()] = 1;
+    size_t kernel_num_elems = kernel_par->shape[acc_sizes.size()];
+    size_t pred_num_elems = pred->shape[acc_sizes.size()];
+    for (long d = acc_sizes.size() - 1; d >= 0; d--) {
+      pred_num_elems *= pred->shape[d];
+      kernel_num_elems *= kernel_par->shape[d];
+      acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel_par->shape[d + 1];
+      acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred->shape[d + 1];
+    }
+    cl_mem acc_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        op->dimensions * sizeof(long), acc_sizes.data(), &err_code);
+    if (!acc_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    cl_mem acc_pred_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        pred->dimensions * sizeof(long), acc_sizes_pred.data(), &err_code);
+    if (!acc_pred_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    cl_mem acc_kernel_mem =
+        clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                       kernel_par->dimensions * sizeof(long),
+                       acc_sizes_kernel.data(), &err_code);
+    if (!acc_kernel_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    // allocate steps
+    cl_mem steps_mem =
+        clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                       op->dimensions * sizeof(long), steps, &err_code);
+    if (!steps_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&acc_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                       (void *)&acc_pred_mem) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                       (void *)&acc_kernel_mem) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                       (void *)&steps_mem) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    to_free.push_back(acc_mem);
+    to_free.push_back(acc_pred_mem);
+    to_free.push_back(acc_kernel_mem);
+    to_free.push_back(steps_mem);
+  } break;
+  default:
+    break;
   }
   // execute it
   err_code = clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &total_size_node,

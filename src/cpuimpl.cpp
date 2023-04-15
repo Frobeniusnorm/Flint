@@ -148,7 +148,7 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
       }
       // now that we have the correct base index in source, convolve
       T res = 0;
-      for (unsigned int k = 0; k < kernel_num_elems; k++) {
+      for (size_t k = 0; k < kernel_num_elems; k++) {
         bool set_zero = false;
         size_t o = 0; // source offset
         // reproject kernel
