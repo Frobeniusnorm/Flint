@@ -734,7 +734,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     // allocate steps
     cl_mem steps_mem =
         clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                       op->dimensions * sizeof(long), steps, &err_code);
+                       op->dimensions * sizeof(unsigned int), steps, &err_code);
     if (!steps_mem)
       flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
                             std::to_string(err_code));

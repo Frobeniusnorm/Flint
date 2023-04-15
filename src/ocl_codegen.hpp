@@ -556,7 +556,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     code += ", const long num_entries1, const int dimensions1";
     code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred, "
             "__constant long* acc_sizes_kernel";
-    code += ", __constant long* steps";
+    code += ", __constant int* steps";
   } break;
   default:
     for (int i = 0; i < parameter_types.size(); i++)
@@ -808,8 +808,6 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "R[index] = set_zero ? 0 : P0[j];";
     break;
   case FCONVOLVE:
-    // parameters (and i fucking hate it)
-    // acc_sizes, acc_sizes_pred, acc_sizes_kernel, steps
     code +=
         "if(index >= num_entriesR) return;\n"
         "long j = 0;\n"
