@@ -111,6 +111,54 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
       }
     }
   } break;
+  case FCONVOLVE: {
+    const FOperation *op = curr->operation;
+    const FGraphNode *gnp1 = curr->predecessors[0],
+                     *gnp2 = curr->predecessors[1];
+    const FOperation *pred = gnp1->operation, *kernel = gnp2->operation;
+    unsigned int *steps = (unsigned int *)op->additional_data;
+    // calculate accumulated sizes for result, kernel and source (pred)
+    std::vector<size_t> acc_sizes(op->dimensions);
+    std::vector<size_t> acc_sizes_pred(acc_sizes.size() + 1);
+    std::vector<size_t> acc_sizes_kernel(acc_sizes.size() + 1);
+    acc_sizes[op->dimensions - 1] = 1;
+    for (long d = op->dimensions - 2; d >= 0; d--) {
+      acc_sizes[d] = acc_sizes[d + 1] * op->shape[d + 1];
+    }
+    acc_sizes_kernel[acc_sizes.size()] = 1;
+    acc_sizes_pred[acc_sizes.size()] = 1;
+    size_t kernel_num_elems = kernel->shape[acc_sizes.size()];
+    for (long d = acc_sizes.size() - 1; d >= 0; d--) {
+      kernel_num_elems *= kernel->shape[d];
+      acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel->shape[d + 1];
+      acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred->shape[d + 1];
+    }
+    for (size_t i = from; i < from + size; i++) {
+      size_t j = 0;
+      // we can ignore last index of source and kernel for result since we
+      // iterate over it (i.e. for the destination it is 0 since it does not
+      // have that dimension)
+      for (unsigned int d = 0; d < op->dimensions; d++) {
+        // get dimension index
+        size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
+        // reproject
+        j += di * steps[d] * acc_sizes_pred[d];
+      }
+      // now that we have the correct base index in source, convolve
+      T res = 0;
+      for (unsigned int k = 0; k < kernel_num_elems; k++) {
+        size_t o = 0; // source offset
+        // reproject kernel
+        for (unsigned int d = 0; d < acc_sizes_kernel.size(); d++) {
+          size_t di =
+              (d == 0 ? i : i % acc_sizes_kernel[d - 1]) / acc_sizes_kernel[d];
+          o += di * acc_sizes_pred[d];
+        }
+        res += data2[k] * data1[j + o];
+      }
+      result[i] = res;
+    }
+  } break;
   case FMIN:
     for (size_t i = from; i < from + size; i++)
       result[i] = MIN_VAL(data1[i % index_man_1], data2[i % index_man_2]);
@@ -195,17 +243,17 @@ static void executeNode(FGraphNode *node,
     const FOperation *op = node->operation;
     const int *transposition = (int *)op->additional_data;
     CPUResultData pred = predecessor_data[0];
+    // calculate number of elements per dimension entry for destination and
+    // source
+    std::vector<size_t> acc_sizes_d(op->dimensions);
+    std::vector<size_t> acc_sizes_s(op->dimensions);
+    acc_sizes_d[op->dimensions - 1] = 1;
+    acc_sizes_s[op->dimensions - 1] = 1;
+    for (int dim = op->dimensions - 2; dim >= 0; dim--) {
+      acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
+      acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
+    }
     for (int i = from; i < from + size; i++) {
-      // calculate number of elements per dimension entry for destination and
-      // source
-      std::vector<size_t> acc_sizes_d(op->dimensions);
-      std::vector<size_t> acc_sizes_s(op->dimensions);
-      acc_sizes_d[op->dimensions - 1] = 1;
-      acc_sizes_s[op->dimensions - 1] = 1;
-      for (int dim = op->dimensions - 2; dim >= 0; dim--) {
-        acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
-        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
-      }
       // to get the index in the source array we first calculate the indices and
       // reproject
       int index = i;

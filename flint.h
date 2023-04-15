@@ -641,10 +641,12 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
  * dimension (which will be completly reduced by the convolution). In all other
  * dimensions the size of `a` should be larger or equal to the size of `kernel`.
  * The `kernel` will be 'slid' over `a` in each dimension, multiplying all
- * values of `kernel` with the corresponding ones in `a` and moving the kernel
- * further by the value given in `steps` in that corresponding dimension. The
- * implementation does not care about padding (if `a` is in a dimension not
- * divisable by the step size, the remainder is truncated). If you want to
+ * values of `kernel` with the corresponding ones in `a` and summing them up to
+ * a single value and moving the kernel further by the value given in `steps` in
+ * that corresponding dimension. The implementation does not care about padding
+ * (if `a` is in a dimension not divisable by the step size, the size is rounded
+ * up. If in one step the kernel overlaps over the Tensor for one or more
+ * dimensions, the overlapping values will be multiplied by `0`). If you want to
  * include it use `fextend` or similar.
  *
  * The resulting Tensor will therefor have a shape with dimensionality `n - 1`

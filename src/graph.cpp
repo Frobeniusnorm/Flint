@@ -1063,7 +1063,7 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
                       "Tensor must match that of the kernel!");
   std::vector<size_t> new_shape(ao->dimensions - 1);
   for (int i = 0; i < ao->dimensions - 1; i++)
-    new_shape[i] = ao->shape[i] / steps[i];
+    new_shape[i] = 1 + ((ao->shape[i] - 1) / steps[i]);
   FOperation *op = new FOperation();
   op->dimensions = ao->dimensions - 1;
   op->shape = safe_mal<size_t>(op->dimensions);

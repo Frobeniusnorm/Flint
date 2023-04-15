@@ -172,7 +172,13 @@ using to_float = typename std::conditional<isInt<T>(), double, T>::type;
  */
 namespace Flint {
 /** Sets the Logging Level of the Flint Backend */
-inline void setLoggingLevel(int level) { fSetLoggingLevel(level); }
+inline void setLoggingLevel(FLogType level) { fSetLoggingLevel(level); }
+/**
+ * Deallocates any resourced allocated by the corresponding backends and allows
+ * them to shutdown their threads.
+ */
+inline void cleanup() { flintCleanup(); }
+
 }; // namespace Flint
 /**
  * Encapsulates the data of a tensor. Is only valid as long as the Tensor is

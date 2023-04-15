@@ -96,7 +96,7 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   benches.insert({"reduce_fun", reduce_fun});
   /////////////////////////////////////////////////
   unordered_map<string, pair<double, double>> times;
-  Flint::setLoggingLevel(3);
+  Flint::setLoggingLevel(F_INFO);
   if (benchmarks & FLINT_BACKEND_ONLY_CPU) {
     // cpu tests
     flintInit(FLINT_BACKEND_ONLY_CPU);

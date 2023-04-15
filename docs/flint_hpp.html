@@ -42,6 +42,12 @@
           the implementation may differ slightly.
         </div>
         <div style="display: block; height: 2em;"></div>
+        <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
+          The use of Tensors alone isn't enough to correctly use Flint. 
+          Especially cleaning up the library when you are finished is important to allow the backends to deallocate resources 
+          and joining Threads.
+        </div>
+        <div style="display: block; height: 2em;"></div>
         <div id="s-_typename_T__unsigned_int_n__struct_Tensor"></div><div class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor</b></pre></div>
 <br />
 <div class="card"><div style="padding: 5px;">

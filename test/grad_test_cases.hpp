@@ -4,7 +4,7 @@
 #include <cmath>
 TEST_SUITE("Autodiff") {
   TEST_CASE("Two Times Matmul") {
-    Flint::setLoggingLevel(2);
+    Flint::setLoggingLevel(F_INFO);
     enable_eager_execution();
     Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
     Tensor<double, 2> y = {{3.0, -7.0}, {-1.0, 5.0}};
@@ -79,7 +79,7 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(70., dz[1][1]);
   }
   TEST_CASE("Sub, Mul, Div") {
-    Flint::setLoggingLevel(3);
+    Flint::setLoggingLevel(F_INFO);
     Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
     Tensor<double, 1> y = {5., -7.};
     Tensor<double, 2> z = {{4, 3}, {2.5, 1.5}};
