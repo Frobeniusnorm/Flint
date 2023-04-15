@@ -128,7 +128,9 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
     acc_sizes_kernel[acc_sizes.size()] = 1;
     acc_sizes_pred[acc_sizes.size()] = 1;
     size_t kernel_num_elems = kernel->shape[acc_sizes.size()];
+    size_t pred_num_elems = pred->shape[acc_sizes.size()];
     for (long d = acc_sizes.size() - 1; d >= 0; d--) {
+      pred_num_elems *= pred->shape[d];
       kernel_num_elems *= kernel->shape[d];
       acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel->shape[d + 1];
       acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred->shape[d + 1];
@@ -147,13 +149,24 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
       // now that we have the correct base index in source, convolve
       T res = 0;
       for (unsigned int k = 0; k < kernel_num_elems; k++) {
+        bool set_zero = false;
         size_t o = 0; // source offset
         // reproject kernel
         for (unsigned int d = 0; d < acc_sizes_kernel.size(); d++) {
-          size_t di =
-              (d == 0 ? i : i % acc_sizes_kernel[d - 1]) / acc_sizes_kernel[d];
-          o += di * acc_sizes_pred[d];
+          size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
+          size_t dk =
+              (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / acc_sizes_kernel[d];
+          if (d < op->dimensions)
+            if (((di * steps[d]) + dk) * acc_sizes_pred[d] >= pred_num_elems ||
+                (d > 0 && ((di * steps[d]) + dk) * acc_sizes_pred[d] >=
+                              acc_sizes_pred[d - 1])) {
+              set_zero = true;
+              break;
+            }
+          o += dk * acc_sizes_pred[d];
         }
+        if (set_zero)
+          continue;
         res += data2[k] * data1[j + o];
       }
       result[i] = res;

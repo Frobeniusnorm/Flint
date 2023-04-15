@@ -794,6 +794,29 @@ TEST_SUITE("C++ Bindings") {
       CHECK_EQ(15, d[i][3]);
     }
   }
+  TEST_CASE("Convolve") {
+    Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
+                        {{5, 6}, {7, 8}, {9, 0}},
+                        {{1, 2}, {3, 4}, {5, 6}}};
+    Tensor<float, 3> k1{{{1, 1}, {2, 2}}, {{2, 2}, {1, 1}}};
+    Tensor<float, 2> r1 = t1.convolve(k1, 1, 1);
+    CHECK_EQ(44, r1[0][0]);
+    CHECK_EQ(56, r1[0][1]);
+    CHECK_EQ(25, r1[0][2]);
+    CHECK_EQ(54, r1[1][0]);
+    CHECK_EQ(58, r1[1][1]);
+    CHECK_EQ(31, r1[1][2]);
+    CHECK_EQ(17, r1[2][0]);
+    CHECK_EQ(29, r1[2][1]);
+    CHECK_EQ(11, r1[2][2]);
+    Tensor<float, 3> t2{{{0}, {1}, {2}, {3}}, {{3}, {2}, {1}, {0}}};
+    Tensor<float, 3> k2{{{1}, {2}}};
+    Tensor<float, 2> r2 = t2.convolve(k2, 1, 2);
+    CHECK_EQ(2, r2[0][0]);
+    CHECK_EQ(8, r2[0][1]);
+    CHECK_EQ(7, r2[1][0]);
+    CHECK_EQ(1, r2[1][1]);
+  }
   TEST_CASE("Total Reduce") {
     Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
     Tensor<float, 1> r1 = t1.flattened().reduce_sum();

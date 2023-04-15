@@ -1076,6 +1076,23 @@ template <typename T, unsigned int n> struct Tensor {
     FGraphNode *nn = ftranspose(node, acc_trans.data());
     return Tensor<T, n>(nn, new_shape);
   }
+  template <typename K, unsigned int k, typename... args>
+  Tensor<stronger_return<K>, n - 1> convolve(const Tensor<K, k> &kernel,
+                                             const args... steps) const {
+    constexpr size_t num_steps = sizeof...(args);
+    static_assert(num_steps <= n - 1,
+                  "A convolve operation may only have n-1 number of steps (one "
+                  "for each dimension except the last)!");
+    std::array<unsigned int, num_steps> steps_arr_par{
+        static_cast<unsigned int>(steps)...};
+    std::array<unsigned int, n - 1> steps_arr;
+    for (int i = 0; i < n - 1; i++)
+      steps_arr[i] = i < num_steps ? steps_arr_par[i] : 1;
+    FGraphNode *nc = fconvolve(node, kernel.get_graph_node(), steps_arr.data());
+    std::array<size_t, n - 1> new_shape;
+    std::copy_n(nc->operation->shape, (n - 1), new_shape.begin());
+    return Tensor<stronger_return<K>, n - 1>(nc, new_shape);
+  }
   /** Returns the underlying `FGraphNode` for use with the C-Frontend. It is
    * still memory managed by this Tensor instance, so be carefull about variable
    * lifetimes. */

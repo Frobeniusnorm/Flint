@@ -1060,10 +1060,13 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
                       "Kernel have to have to same number of dimensions!");
   if (ao->shape[ao->dimensions - 1] != bo->shape[bo->dimensions - 1])
     flogging(F_ERROR, "For a convolution the size of the last dimension of the "
-                      "Tensor must match that of the kernel!");
+                      "Tensor must match that of the kernel! " +
+                          std::to_string(ao->shape[ao->dimensions - 1]) +
+                          " vs. " +
+                          std::to_string(bo->shape[bo->dimensions - 1]));
   std::vector<size_t> new_shape(ao->dimensions - 1);
   for (int i = 0; i < ao->dimensions - 1; i++)
-    new_shape[i] = 1 + ((ao->shape[i] - 1) / steps[i]);
+    new_shape[i] = 1 + (ao->shape[i] - 1) / steps[i];
   FOperation *op = new FOperation();
   op->dimensions = ao->dimensions - 1;
   op->shape = safe_mal<size_t>(op->dimensions);
