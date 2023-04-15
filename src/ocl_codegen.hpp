@@ -144,6 +144,86 @@ generateCode(FGraphNode *node,
                " > v" + to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
 
       } break;
+      case FCONVOLVE: {
+        string par1, par2;
+        push_pred = false;
+        FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
+        // we ignore the value assignment of the parameters since we have to
+        // access the arrays directly parameter 1
+        if (assigned_params.find(gnp1) != assigned_params.end()) {
+          par1 = assigned_params[gnp1];
+        } else {
+          par1 = "P" + to_string(assigned_params.size());
+          assigned_params.insert({gnp1, par1});
+          parameters.push_back({gnp1, par1});
+        }
+        // parameter 2
+        if (assigned_params.find(gnp2) != assigned_params.end()) {
+          par2 = assigned_params[gnp2];
+        } else {
+          par2 = "P" + to_string(assigned_params.size());
+          assigned_params.insert({gnp2, par2});
+          parameters.push_back({gnp2, par2});
+        }
+        const FOperation *op = node->operation;
+        const FOperation *pred = gnp1->operation, *kernel = gnp2->operation;
+        unsigned int *steps = (unsigned int *)op->additional_data;
+        vector<size_t> acc_sizes(op->dimensions);
+        vector<size_t> acc_sizes_pred(acc_sizes.size() + 1);
+        vector<size_t> acc_sizes_kernel(acc_sizes.size() + 1);
+        acc_sizes[op->dimensions - 1] = 1;
+        for (long d = op->dimensions - 2; d >= 0; d--) {
+          acc_sizes[d] = acc_sizes[d + 1] * op->shape[d + 1];
+        }
+        acc_sizes_kernel[acc_sizes.size()] = 1;
+        acc_sizes_pred[acc_sizes.size()] = 1;
+        size_t kernel_num_elems = kernel->shape[acc_sizes.size()];
+        size_t pred_num_elems = pred->shape[acc_sizes.size()];
+        for (long d = acc_sizes.size() - 1; d >= 0; d--) {
+          pred_num_elems *= pred->shape[d];
+          kernel_num_elems *= kernel->shape[d];
+          acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel->shape[d + 1];
+          acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred->shape[d + 1];
+        }
+        string conv_code = "long j = 0";
+        for (unsigned int d = 0; d < op->dimensions; d++)
+          conv_code += " + (" +
+                       (d == 0 ? string("index")
+                               : "index % " + to_string(acc_sizes[d - 1])) +
+                       " / " + to_string(acc_sizes[d]) + ") * " +
+                       to_string(steps[d] * acc_sizes_pred[d]);
+        conv_code += ";\n" + typeString(op->data_type) +
+                     " res = 0;\n"
+                     "for(long k = 0; k < " +
+                     to_string(kernel_num_elems) +
+                     "; k++){\n"
+                     " long o = 0;\n";
+        for (unsigned int d = 0; d < acc_sizes_kernel.size(); d++) {
+          conv_code += "{\nconst long di = " +
+                       (d == 0 ? string("index")
+                               : "index % " + to_string(acc_sizes[d - 1])) +
+                       " / " + to_string(acc_sizes[d]) +
+                       ";\n"
+                       "const long dk = " +
+                       (d == 0 ? string("k")
+                               : "k % " + to_string(acc_sizes_kernel[d - 1])) +
+                       "/ " + to_string(acc_sizes_kernel[d]) + ";\n";
+          if (d < op->dimensions) {
+            conv_code += "if((di * " + to_string(steps[d]) + " + dk) * " +
+                         to_string(acc_sizes_pred[d]) +
+                         " >= " + to_string(pred_num_elems);
+            if (d > 0)
+              conv_code += " || (di * " + to_string(steps[d]) + " + dk) * " +
+                           to_string(acc_sizes_pred[d]) +
+                           " >= " + to_string(acc_sizes_pred[d - 1]);
+            conv_code += ") continue;\n";
+          }
+          conv_code += "o += dk * " + to_string(acc_sizes_pred[d]) + ";\n}\n";
+        }
+        conv_code += "res += " + par2 + "[k] * " + par1 + "[j + o];\n}\n" +
+                     type + " " + name + " = res;\n";
+        code = conv_code + code;
+      } break;
       case FMATMUL: {
         string par1, par2;
         push_pred = false;
