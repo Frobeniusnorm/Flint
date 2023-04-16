@@ -1097,13 +1097,13 @@ template <typename T, unsigned int n> struct Tensor {
   Tensor<stronger_return<K>, n> slide(const Tensor<K, n> &kernel,
                                       const args... steps) const {
     constexpr size_t num_steps = sizeof...(args);
-    static_assert(num_steps <= n,
-                  "A slide operation may only have n number of steps (one "
-                  "for each dimension)!");
+    static_assert(num_steps < n,
+                  "A slide operation may only have n-1 number of steps (one "
+                  "for each dimension except the last)!");
     std::array<unsigned int, num_steps> steps_arr_par{
         static_cast<unsigned int>(steps)...};
-    std::array<unsigned int, n> steps_arr;
-    for (int i = 0; i < n; i++)
+    std::array<unsigned int, n - 1> steps_arr;
+    for (int i = 0; i < n - 1; i++)
       steps_arr[i] = i < num_steps ? steps_arr_par[i] : 1;
     FGraphNode *nc = fslide(node, kernel.get_graph_node(), steps_arr.data());
     std::array<size_t, n> new_shape;

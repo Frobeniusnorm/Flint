@@ -200,11 +200,9 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
       // we want to iterate over all elements it would be slid agains
       while (a < pred_num_elems) {
         long step = 0;
-        std::cout << i << ", " << a << std::endl;
-        std::cout << data1[a] << " * " << data2[i] << std::endl;
         res += data1[a] * data2[i];
         // reproject index to calculate step from steps
-        for (int d = pred->dimensions - 1; d >= 0; d--) {
+        for (int d = pred->dimensions - 2; d >= 0; d--) {
           size_t da =
               (d == 0 ? a : a % acc_sizes_pred[d - 1]) / acc_sizes_pred[d];
           if (da + steps[d] < pred->shape[d]) {

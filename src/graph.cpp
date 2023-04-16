@@ -1092,8 +1092,15 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
     fExecuteGraph(a);
   }
   if (ao->dimensions != bo->dimensions)
-    flogging(F_ERROR, "For a convolution the original Tensor and the filter "
-                      "Kernel have to have to same number of dimensions!");
+    flogging(F_ERROR,
+             "For the slide operation the original Tensor and the filter "
+             "Kernel have to have to same number of dimensions!");
+  if (ao->shape[ao->dimensions - 1] != bo->shape[bo->dimensions - 1])
+    flogging(F_ERROR,
+             "For the slide operation the size of the last dimension of the "
+             "Tensor must match that of the kernel! " +
+                 std::to_string(ao->shape[ao->dimensions - 1]) + " vs. " +
+                 std::to_string(bo->shape[bo->dimensions - 1]));
   // b does not have to be executed. TODO: keep track of that in oclimpl!
   FOperation *op = new FOperation();
   op->op_type = FSLIDE;
@@ -1101,7 +1108,8 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
   op->dimensions = ao->dimensions;
   op->shape = safe_mal<size_t>(op->dimensions);
   memcpy(op->shape, bo->shape, op->dimensions * sizeof(size_t));
-  op->additional_data = safe_mal<unsigned int>(op->dimensions);
-  memcpy(op->additional_data, steps, op->dimensions * sizeof(unsigned int));
+  op->additional_data = safe_mal<unsigned int>(op->dimensions - 1);
+  memcpy(op->additional_data, steps,
+         (op->dimensions - 1) * sizeof(unsigned int));
   return addNode(op, {a, kernel});
 }
