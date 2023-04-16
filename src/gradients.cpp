@@ -132,6 +132,16 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       return nullptr;
     }
   }
+  case FCONVOLVE: {
+    FGraphNode *a = y->predecessors[0];
+    FGraphNode *kernel = y->predecessors[1];
+    if (a == dx) {
+      // TODO
+    } else if (kernel == dx) {
+      // TODO
+    }
+    return nullptr;
+  }
   case FPOW: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];

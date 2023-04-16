@@ -1055,6 +1055,12 @@ FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
   const FOperation *ao = a->operation;
   const FOperation *bo = kernel->operation;
+  if (!a->result_data && ao->op_type != FSTORE) {
+    fExecuteGraph(a);
+  }
+  if (!kernel->result_data && bo->op_type != FSTORE) {
+    fExecuteGraph(kernel);
+  }
   if (ao->dimensions != bo->dimensions)
     flogging(F_ERROR, "For a convolution the original Tensor and the filter "
                       "Kernel have to have to same number of dimensions!");
