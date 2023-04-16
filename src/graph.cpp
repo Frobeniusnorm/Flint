@@ -31,7 +31,7 @@ const char *fop_to_string[] = {
     "FMATMUL",     "FCONVERSION", "FRESHAPE", "FMIN",   "FMAX",
     "FREDUCE_SUM", "FREDUCE_MUL", "FSLICE",   "FABS",   "FREPEAT",
     "FTRANSPOSE",  "FEXTEND",     "FLESS",    "FEQUAL", "FGREATER",
-    "FCONVOLVE",
+    "FCONVOLVE",   "FSLIDE",
 };
 static bool use_cpu, use_gpu, eager_execution = false;
 // converts c++ type to flint type
@@ -1079,6 +1079,26 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
   memcpy(op->shape, new_shape.data(), op->dimensions * sizeof(size_t));
   op->data_type = higherType(ao->data_type, bo->data_type);
   op->op_type = FCONVOLVE;
+  op->additional_data = safe_mal<unsigned int>(op->dimensions);
+  memcpy(op->additional_data, steps, op->dimensions * sizeof(unsigned int));
+  return addNode(op, {a, kernel});
+}
+FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
+  const FOperation *ao = a->operation;
+  const FOperation *bo = kernel->operation;
+  if (!a->result_data && ao->op_type != FSTORE) {
+    fExecuteGraph(a);
+  }
+  if (ao->dimensions != bo->dimensions)
+    flogging(F_ERROR, "For a convolution the original Tensor and the filter "
+                      "Kernel have to have to same number of dimensions!");
+  // b does not have to be executed. TODO: keep track of that in oclimpl!
+  FOperation *op = new FOperation();
+  op->op_type = FSLIDE;
+  op->data_type = higherType(ao->data_type, bo->data_type);
+  op->dimensions = ao->dimensions;
+  op->shape = safe_mal<size_t>(op->dimensions);
+  memcpy(op->shape, bo->shape, op->dimensions * sizeof(size_t));
   op->additional_data = safe_mal<unsigned int>(op->dimensions);
   memcpy(op->additional_data, steps, op->dimensions * sizeof(unsigned int));
   return addNode(op, {a, kernel});

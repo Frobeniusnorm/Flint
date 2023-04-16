@@ -146,6 +146,7 @@ enum FOperationType {
   FEQUAL,
   FGREATER,
   FCONVOLVE,
+  FSLIDE,
   FNUM_OPERATION_TYPES
 };
 /**
@@ -653,6 +654,21 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
  * and size of `resulting_shape[i] = a->operation->shape[i] / steps[i]`
  */
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
+/**
+ * Slides `kernel` along `a`, multiplying it with the elements of `a` it is slid
+ * over. For each element all multiplied values are summed up, so that the
+ * result has the same shape as `kernel` (every element in the result is the
+ * accumulated sum of the product of that element with all elements it was slid
+ * over). `kernel` is initially placed so that the first element of `a` and
+ * the first element of `kernel` overlap. It is then moved for each dimension
+ * `i` by `steps[i]` elements forward, just like it would be by ´fconvolve` with
+ * the difference, that everything is accumulated for the kernel instead of the
+ * original node.
+ * The number of steps is in contrast to `fconvolve` not limited to every
+ * dimension except the last, `fslide` can slide the Tensor along all dimensions
+ * (NOTE: this may change in the future).
+ */
+FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
 #ifdef __cplusplus
 }
 // no c++ bindings, but function overloading for c++ header
