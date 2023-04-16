@@ -172,6 +172,58 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
       result[i] = res;
     }
   } break;
+  case FSLIDE: {
+    const FOperation *op = curr->operation;
+    const FGraphNode *gnp1 = curr->predecessors[0],
+                     *gnp2 = curr->predecessors[1];
+    const FOperation *pred = gnp1->operation, *kernel = gnp2->operation;
+    std::vector<size_t> acc_sizes_pred(pred->dimensions);
+    std::vector<size_t> acc_sizes_kernel(kernel->dimensions);
+    acc_sizes_pred[pred->dimensions - 1] = 1;
+    acc_sizes_kernel[kernel->dimensions - 1] = 1;
+    size_t pred_num_elems = pred->shape[pred->dimensions - 1];
+    for (long d = pred->dimensions - 2; d >= 0; d--) {
+      pred_num_elems *= pred->shape[d];
+      acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred->shape[d + 1];
+      acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel->shape[d + 1];
+    }
+    unsigned int *steps = (unsigned int *)op->additional_data;
+    for (size_t i = from; i < from + size; i++) {
+      size_t a = 0;
+      // reproject start
+      for (int d = kernel->dimensions - 1; d >= 0; d--) {
+        size_t di =
+            (d == 0 ? i : i % acc_sizes_kernel[d - 1]) / acc_sizes_kernel[d];
+        a += di * acc_sizes_pred[d];
+      }
+      T res = 0;
+      // we want to iterate over all elements it would be slid agains
+      while (a < pred_num_elems) {
+        long step = 0;
+        std::cout << i << ", " << a << std::endl;
+        std::cout << data1[a] << " * " << data2[i] << std::endl;
+        res += data1[a] * data2[i];
+        // reproject index to calculate step from steps
+        for (int d = pred->dimensions - 1; d >= 0; d--) {
+          size_t da =
+              (d == 0 ? a : a % acc_sizes_pred[d - 1]) / acc_sizes_pred[d];
+          if (da + steps[d] < pred->shape[d]) {
+            step += steps[d] * acc_sizes_pred[d];
+            break;
+          } else {
+            size_t di = (d == 0 ? i : i % acc_sizes_kernel[d - 1]) /
+                        acc_sizes_kernel[d];
+            step -= (da - di) *
+                    acc_sizes_pred[d]; // set to kernel start in this dimension
+          }
+        }
+        if (step <= 0)
+          break; // total overflow
+        a += step;
+      }
+      result[i] = res;
+    }
+  } break;
   case FMIN:
     for (size_t i = from; i < from + size; i++)
       result[i] = MIN_VAL(data1[i % index_man_1], data2[i % index_man_2]);

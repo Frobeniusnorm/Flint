@@ -190,6 +190,8 @@ void fFreeGraph(FGraphNode *graph) {
           free(s->step);
           delete s;
         } break;
+        case FCONVOLVE:
+        case FSLIDE:
         case FTRANSPOSE:
         case FREDUCE_SUM:
         case FREDUCE_MUL:
