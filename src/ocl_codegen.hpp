@@ -918,6 +918,31 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
         "}\n"
         "R[index] = res;";
     break;
+  case FSLIDE:
+    code += "if(index >= num_entriesR) return;\n"
+            "long a = 0;\n"
+            "for(int d = 0; d < dimensions0; d++){\n"
+            " long di = (d == 0 ? index : index % acc_sizes_kernel[d - 1]) / "
+            "acc_sizes_kernel[d];\n"
+            " a += di * acc_sizes_pred[d];\n}\n" +
+            typeString(res_type) +
+            " res = 0;\n"
+            "while(a < num_entries1){\n"
+            " long step = 0;\n"
+            " res += P0[a] * P1[i];\n"
+            " for(int d = dimensions0 - 2; d >= 0; d--){\n"
+            "  long da = (d == 0 ? a : a % acc_sizes_pred[d-1]) / "
+            "acc_sizes_pred[d];\n"
+            "  if(da + steps[d] < shape0[d]){\n"
+            "   step += steps[d] * acc_sizes_pred[d];\n"
+            "   break;\n  }else{\n"
+            "   long di = (d == 0 ? index : index % acc_sizes_kernel[d - 1]) / "
+            "acc_sizes_kernel[d];\n"
+            "   step -= (da - di) * acc_sizes_pred[d];\n  }\n }\n"
+            " if (step <= 0) break;\n"
+            " a += step;\n"
+            "}\nR[index] = res;";
+    break;
   }
   code += "\n}\n";
   return code;
