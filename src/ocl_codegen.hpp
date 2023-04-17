@@ -638,6 +638,17 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "__constant long* acc_sizes_kernel";
     code += ", __constant int* steps";
   } break;
+  case FSLIDE: {
+    // acc_sizes, acc_sizes_pred, acc_sizes_kernel, steps
+    code += ", const long num_entriesR, const __global " +
+            typeString(parameter_types[0]) + "* P0";
+    code += ", const long num_entries0, const int dimensions0";
+    code += ", const __global " + typeString(parameter_types[1]) + "* P1";
+    code += ", const long num_entries1, const int dimensions1";
+    code += ", __constant long* acc_sizes_pred, "
+            "__constant long* acc_sizes_kernel";
+    code += ", __constant int* steps, __constant long* shape0";
+  } break;
   default:
     for (int i = 0; i < parameter_types.size(); i++)
       code += ", const __global " + typeString(parameter_types[i]) + "* P" +
@@ -921,15 +932,15 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   case FSLIDE:
     code += "if(index >= num_entriesR) return;\n"
             "long a = 0;\n"
-            "for(int d = 0; d < dimensions0; d++){\n"
+            "for(int d = dimensions1 - 1; d >= 0; d--){\n"
             " long di = (d == 0 ? index : index % acc_sizes_kernel[d - 1]) / "
             "acc_sizes_kernel[d];\n"
             " a += di * acc_sizes_pred[d];\n}\n" +
             typeString(res_type) +
             " res = 0;\n"
-            "while(a < num_entries1){\n"
+            "while(a < num_entries0){\n"
             " long step = 0;\n"
-            " res += P0[a] * P1[i];\n"
+            " res += P0[a] * P1[index];\n"
             " for(int d = dimensions0 - 2; d >= 0; d--){\n"
             "  long da = (d == 0 ? a : a % acc_sizes_pred[d-1]) / "
             "acc_sizes_pred[d];\n"
