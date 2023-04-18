@@ -816,6 +816,19 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(8, r2[0][1]);
     CHECK_EQ(7, r2[1][0]);
     CHECK_EQ(1, r2[1][1]);
+    // in context
+    Tensor<float, 3> t4{{{0}, {1}}};
+    Tensor<double, 3> k4{{{1}, {0}, {1}, {0}}};
+    Tensor<double, 2> r4 =
+        (t4 + 1).repeat(1, 1, 1).convolve(k4.pow(2).repeat(0, 0, 1));
+    CHECK_EQ(4, r4[0][0]);
+    CHECK_EQ(8, r4[0][1]);
+    CHECK_EQ(2, r4[0][2]);
+    CHECK_EQ(4, r4[0][3]);
+    CHECK_EQ(4, r4[1][0]);
+    CHECK_EQ(8, r4[1][1]);
+    CHECK_EQ(2, r4[1][2]);
+    CHECK_EQ(4, r4[1][3]);
   }
   TEST_CASE("Slide") {
     Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
@@ -841,7 +854,16 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(33, r3[0][0][1]);
     CHECK_EQ(60, r3[0][1][0]);
     CHECK_EQ(52, r3[0][1][1]);
-    // TODO higher cases?
+    // in context
+    Tensor<float, 3> t4{{{0}, {1}}};
+    Tensor<double, 3> k4{{{1}, {0}, {1}, {0}}};
+    Tensor<double, 2> r4 =
+        ((t4 + 1).repeat(1, 1, 1).slide(k4.pow(2).repeat(0, 0, 1)) + 1)
+            .reduce_sum(2);
+    CHECK_EQ(26, r4[0][0]);
+    CHECK_EQ(2, r4[0][1]);
+    CHECK_EQ(14, r4[0][2]);
+    CHECK_EQ(2, r4[0][3]);
   }
   TEST_CASE("Total Reduce") {
     Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};

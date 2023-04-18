@@ -1101,7 +1101,6 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
              "Tensor must match that of the kernel! " +
                  std::to_string(ao->shape[ao->dimensions - 1]) + " vs. " +
                  std::to_string(bo->shape[bo->dimensions - 1]));
-  // b does not have to be executed. TODO: keep track of that in oclimpl!
   FOperation *op = new FOperation();
   op->op_type = FSLIDE;
   op->data_type = higherType(ao->data_type, bo->data_type);

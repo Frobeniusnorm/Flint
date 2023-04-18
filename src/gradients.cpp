@@ -138,6 +138,19 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     if (a == dx) {
       // TODO
     } else if (kernel == dx) {
+      FGraphNode *one = constant_tensor(
+          1, higherType(a->operation->data_type, kernel->operation->data_type),
+          kernel->operation->shape, kernel->operation->dimensions);
+      return fslide(a, one, (unsigned int *)y->operation->additional_data);
+    }
+    return nullptr;
+  }
+  case FSLIDE: {
+    FGraphNode *a = y->predecessors[0];
+    FGraphNode *kernel = y->predecessors[1];
+    if (a == dx) {
+      // TODO
+    } else if (kernel == dx) {
       // TODO
     }
     return nullptr;
