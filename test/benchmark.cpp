@@ -88,7 +88,24 @@ double gradient_fun(bool backend) {
   }
   return timer.get_elapsed_ms();
 }
-
+double convolveFun(bool backend) {
+  nanotimer timer;
+  vector<vector<vector<float>>> image(
+      2048, vector<vector<float>>(2048, vector<float>(3, 0.8)));
+  vector<vector<vector<float>>> filter(
+      32, vector<vector<float>>(32, vector<float>(3, 0.5)));
+  Tensor<float, 3> img_t(image);
+  Tensor<float, 3> ker_t(filter);
+  for (int i = 0; i < 100; i++) {
+    Tensor<float, 2> foo = img_t.convolve(ker_t, 16, 16);
+    Tensor<float, 2> err = Tensor<float, 1>{0.7, 0.7, 0.7} - foo;
+    Tensor<double, 3> grad = err.gradient(ker_t);
+    if (backend)
+      grad.execute_gpu();
+    else
+      grad.execute_cpu();
+  }
+}
 void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   unordered_map<string, double (*)(bool)> benches;
   benches.insert({"gradient_fun", gradient_fun});
