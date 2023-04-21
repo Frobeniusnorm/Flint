@@ -96,6 +96,7 @@ double convolveFun(bool backend) {
       32, vector<vector<float>>(32, vector<float>(3, 0.5)));
   Tensor<float, 3> img_t(image);
   Tensor<float, 3> ker_t(filter);
+  timer.start();
   for (int i = 0; i < 100; i++) {
     Tensor<float, 2> foo = img_t.convolve(ker_t, 16, 16);
     Tensor<float, 2> err = Tensor<float, 1>{0.7, 0.7, 0.7} - foo;
@@ -105,6 +106,7 @@ double convolveFun(bool backend) {
     else
       grad.execute_cpu();
   }
+  return timer.get_elapsed_ms();
 }
 void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   unordered_map<string, double (*)(bool)> benches;

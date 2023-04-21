@@ -136,7 +136,18 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     FGraphNode *a = y->predecessors[0];
     FGraphNode *kernel = y->predecessors[1];
     if (a == dx) {
-      // TODO
+      // maybe the acc_kernel has to be larger than the original if its step size is larger than the kernel size
+      std::vector<size_t> acc_shape(kernel->operation->dimensions);
+      // iterate over steps to calculate correct size
+      unsigned int *steps = (unsigned int *)y->operation->additional_data;
+      for(int i = 0; i < acc_shape.size(); i++){
+        acc_shape[i] = kernel->operation->shape[i];
+        if(acc_shape[i] < steps[i])
+          acc_shape[i] += steps[i] - acc_shape[i];
+      }
+      std::vector<size_t> insert_at(kernel->operation->dimensions, 0);
+      FGraphNode* acc_kernel = fextend(kernel, acc_shape.data(), insert_at.data());
+      // TODO iterate over steps while keeping in mind the corner cases
     } else if (kernel == dx) {
       FGraphNode *one = constant_tensor(
           1, higherType(a->operation->data_type, kernel->operation->data_type),
