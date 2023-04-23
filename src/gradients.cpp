@@ -136,18 +136,24 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     FGraphNode *a = y->predecessors[0];
     FGraphNode *kernel = y->predecessors[1];
     if (a == dx) {
-      // maybe the acc_kernel has to be larger than the original if its step size is larger than the kernel size
-      std::vector<size_t> acc_shape(kernel->operation->dimensions);
-      // iterate over steps to calculate correct size
-      unsigned int *steps = (unsigned int *)y->operation->additional_data;
-      for(int i = 0; i < acc_shape.size(); i++){
-        acc_shape[i] = kernel->operation->shape[i];
-        if(acc_shape[i] < steps[i])
-          acc_shape[i] += steps[i] - acc_shape[i];
-      }
-      std::vector<size_t> insert_at(kernel->operation->dimensions, 0);
-      FGraphNode* acc_kernel = fextend(kernel, acc_shape.data(), insert_at.data());
-      // TODO iterate over steps while keeping in mind the corner cases
+      // the rules:
+      // return slice(slide(tensor=h, kernel=g, steps = 1 + shape(kernel) *
+      // steps, start = steps - 1), steps = -1)
+      // TODO: emulate start
+      // g = ones(shape(a))
+      // h = repeat(slice(fextend(kernel, shape=shape(kernel) + max(steps -
+      // shape(kernel), 0)), steps = -1), rep = shape(a) / shape(kernel))
+      /* E.g. for
+       * kernel = [[1, 2],
+       *           [3, 4]]
+       * steps = [3, 1]
+       * h = [[0, 4, 3, 0, 4, 3, 0, 4, 3],
+       *      [0, 2, 1, 0, 2, 1, 0, 2, 1],
+       *      [0, 4, 3, 0, 4, 3, 0, 4, 3],
+       *      [0, 2, 1, 0, 2, 1, 0, 2, 1],
+       *      [0, 4, 3, 0, 4, 3, 0, 4, 3],
+       *      [0, 2, 1, 0, 2, 1, 0, 2, 1]]
+       */
     } else if (kernel == dx) {
       FGraphNode *one = constant_tensor(
           1, higherType(a->operation->data_type, kernel->operation->data_type),
