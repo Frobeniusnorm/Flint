@@ -132,6 +132,7 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       return nullptr;
     }
   }
+  case FSLIDE:
   case FCONVOLVE: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *kernel = y->predecessors[1];
@@ -154,19 +155,8 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
        *      [0, 4, 3, 0, 4, 3, 0, 4, 3],
        *      [0, 2, 1, 0, 2, 1, 0, 2, 1]]
        */
-    } else if (kernel == dx) {
-      FGraphNode *one = constant_tensor(
-          1, higherType(a->operation->data_type, kernel->operation->data_type),
-          kernel->operation->shape, kernel->operation->dimensions);
-      return fslide(a, one, (unsigned int *)y->operation->additional_data);
-    }
-    return nullptr;
-  }
-  case FSLIDE: {
-    FGraphNode *a = y->predecessors[0];
-    FGraphNode *kernel = y->predecessors[1];
-    if (a == dx) {
-      // TODO
+
+      // TODO also true for slide?
     } else if (kernel == dx) {
       FGraphNode *one = constant_tensor(
           1, higherType(a->operation->data_type, kernel->operation->data_type),
