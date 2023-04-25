@@ -25,8 +25,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#define MIN_VAL(x, y) x < y ? x : y
-#define MAX_VAL(x, y) x < y ? y : x
+#define MIN_VAL(x, y) (x) < (y) ? (x) : (y)
+#define MAX_VAL(x, y) (x) < (y) ? (y) : (x)
 static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
                                    int dimensions) {
   switch (type) {
@@ -169,17 +169,25 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       std::vector<long> emulate_start(kernel->operation->dimensions);
       slice_steps[kernel->operation->dimensions - 1] = 1;
       for (int i = 0; i < h_shape.size(); i++) {
-        h_shape[i] = kernel->operation->shape[i] +
-                     MAX_VAL(steps[i] - kernel->operation->shape[i], 0);
-        slice_end[i] = -h_shape[i] - 1;
-        slice_start[i] = h_shape[i] - 1;
+        if (i < kernel->operation->dimensions - 1) {
+          h_shape[i] =
+              kernel->operation->shape[i] +
+              (MAX_VAL((long)steps[i] - (long)kernel->operation->shape[i], 0));
+          slice_end[i] = -h_shape[i] - 1;
+          slice_start[i] = h_shape[i] - 1;
+        } else {
+          h_shape[i] = kernel->operation->shape[i];
+          slice_end[i] = h_shape[i];
+          slice_start[i] = 0;
+        }
         repetitions[i] =
             i == h_shape.size() - 1
                 ? 0
                 : a->operation->shape[i] / kernel->operation->shape[i];
         if (i < h_shape.size() - 1)
           slide_steps[i] = 1 + kernel->operation->shape[i] * steps[i];
-        emulate_start[i] = steps[i] - 1;
+        emulate_start[i] =
+            i == kernel->operation->dimensions - 1 ? 0 : (int)steps[i] - 1;
       }
       FGraphNode *h = fextend(kernel, h_shape.data(), ins_at.data());
       h = fslice_step(h, slice_start.data(), slice_end.data(),
@@ -194,16 +202,20 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       std::vector<long> end_inv_slide(g->operation->dimensions);
       std::vector<long> steps_inv_slide(g->operation->dimensions, -1);
       steps_inv_slide[kernel->operation->dimensions - 1] = 1;
-      for (int i = 0; i < g->operation->dimensions; i++)
-        end_inv_slide[i] = a->operation->shape[i];
+      for (int i = 0; i < g->operation->dimensions - 1; i++) {
+        end_inv_slide[i] = -a->operation->shape[i] - 1;
+        start_inv_slide[i] = a->operation->shape[i] - 1;
+      }
+      start_inv_slide[kernel->operation->dimensions - 1] = 0;
+      end_inv_slide[kernel->operation->dimensions - 1] =
+          a->operation->shape[a->operation->dimensions - 1];
       return fslice_step(fslide(h, g, slide_steps.data()),
                          start_inv_slide.data(), end_inv_slide.data(),
                          steps_inv_slide.data());
       // TODO also true for slide?
     } else if (kernel == dx) {
-      FGraphNode *one = constant_tensor(
-          1, higherType(a->operation->data_type, kernel->operation->data_type),
-          kernel->operation->shape, kernel->operation->dimensions);
+      FGraphNode *one = fconstant_d(1.0, kernel->operation->shape,
+                                    kernel->operation->dimensions);
       return fslide(a, one, (unsigned int *)y->operation->additional_data);
     }
     return nullptr;
