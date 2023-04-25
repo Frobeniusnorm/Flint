@@ -200,9 +200,9 @@ generateCode(FGraphNode *node,
                      " long o = 0;\n";
         for (unsigned int d = 0; d < acc_sizes_kernel.size(); d++) {
           conv_code += "{\nconst long di = " +
-                       (d == 0 ? string("index")
+                       (d == acc_sizes_kernel.size() - 1 ? "0" :(d == 0 ? string("index")
                                : "index % " + to_string(acc_sizes[d - 1])) +
-                       " / " + to_string(acc_sizes[d]) +
+                       " / " + to_string(acc_sizes[d])) +
                        ";\n"
                        "const long dk = " +
                        (d == 0 ? string("k")
@@ -987,7 +987,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
         " bool set_zero = false;\n"
         " long o = 0;\n"
         " for(int d = 0; d < dimensions0; d++){\n"
-        "  long di = (d == 0 ? index : index % acc_sizes[d - 1]) / "
+        "  long di = d == dimensions0 - 1 ? 0 : (d == 0 ? index : index % acc_sizes[d - 1]) / "
         "acc_sizes[d];\n"
         "  long dk = (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / "
         "acc_sizes_kernel[d];\n"
