@@ -153,7 +153,7 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
         size_t o = 0; // source offset
         // reproject kernel
         for (unsigned int d = 0; d < acc_sizes_kernel.size(); d++) {
-          size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
+          size_t di = d == acc_sizes_kernel.size() - 1 ? 0 : (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
           size_t dk =
               (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / acc_sizes_kernel[d];
           if (d < op->dimensions)
@@ -171,6 +171,7 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
       }
       result[i] = res;
     }
+
   } break;
   case FSLIDE: {
     const FOperation *op = curr->operation;
@@ -687,7 +688,7 @@ static void threadRoutine() {
     sem->release();
   }
 }
-#define PARALLEL_EXECUTION_SIZE 1000 // for debugging
+#define PARALLEL_EXECUTION_SIZE 10000 // for debugging
 template <typename T>
 inline void chooseExecutionMethod(FGraphNode *node,
                                   std::vector<CPUResultData> pred_data,

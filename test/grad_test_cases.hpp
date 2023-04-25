@@ -310,4 +310,18 @@ TEST_SUITE("Autodiff") {
     for (int j = 0; j < 3; j++)
       CHECK_EQ(Approx(res[j]).epsilon(0.001), dy[j]);
   }
+  TEST_CASE("CONVOLVE, SLIDE"){
+    Tensor<int, 3> x {{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}},
+                      {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}},
+                      {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}},
+                      {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}};
+    Tensor<int, 3> k {{{1, 1, 1}, {2, 2, 2}},
+                      {{-1, -1, -1}, {-2, -2, -2}}};
+    Tensor<int, 2> y = x.convolve(k, 1, 2);
+    std::cout << y() << std::endl;
+    Tensor<double, 3> dk = y.gradient(k);
+    std::cout << dk() << std::endl;
+    Tensor<double, 3> dx = y.gradient(x);
+    //std::cout << dx() << std::endl;
+  }
 }
