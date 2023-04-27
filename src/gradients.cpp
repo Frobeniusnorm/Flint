@@ -184,8 +184,9 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
             i == h_shape.size() - 1
                 ? 0
                 : a->operation->shape[i] / kernel->operation->shape[i];
-        if (i < h_shape.size() - 1)
+        if (i < h_shape.size() - 1){
           slide_steps[i] = 1 + kernel->operation->shape[i] * steps[i];
+	}
         emulate_start[i] =
             i == kernel->operation->dimensions - 1 ? 0 : (int)steps[i] - 1;
       }
@@ -198,7 +199,7 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
         h_size[i] = h->operation->shape[i];
       // emulate start
       h = fslice(h, emulate_start.data(), h_size.data());
-      std::vector<long> start_inv_slide(g->operation->dimensions, 0);
+      std::vector<long> start_inv_slide(g->operation->dimensions);
       std::vector<long> end_inv_slide(g->operation->dimensions);
       std::vector<long> steps_inv_slide(g->operation->dimensions, -1);
       steps_inv_slide[kernel->operation->dimensions - 1] = 1;
@@ -209,7 +210,8 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       start_inv_slide[kernel->operation->dimensions - 1] = 0;
       end_inv_slide[kernel->operation->dimensions - 1] =
           a->operation->shape[a->operation->dimensions - 1];
-      return fslice_step(fslide(h, g, slide_steps.data()),
+      FGraphNode* slided = fslide(h, g, slide_steps.data());
+      return fslice_step(slided,
                          start_inv_slide.data(), end_inv_slide.data(),
                          steps_inv_slide.data());
       // TODO also true for slide?

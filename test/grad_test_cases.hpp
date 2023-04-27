@@ -310,18 +310,35 @@ TEST_SUITE("Autodiff") {
     for (int j = 0; j < 3; j++)
       CHECK_EQ(Approx(res[j]).epsilon(0.001), dy[j]);
   }
-  TEST_CASE("CONVOLVE, SLIDE"){
-    Tensor<int, 3> x {{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}},
-                      {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}},
-                      {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}},
-                      {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}};
-    Tensor<int, 3> k {{{1, 1, 1}, {2, 2, 2}},
-                      {{-1, -1, -1}, {-2, -2, -2}}};
+  TEST_CASE("CONVOLVE, SLIDE") {
+    Tensor<int, 3> x{{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}},
+                     {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}},
+                     {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}},
+                     {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}};
+    Tensor<int, 3> k{{{1, 1, 1}, {2, 2, 2}}, {{-3, -3, -3}, {1, 1, 1}}};
     Tensor<int, 2> y = x.convolve(k, 1, 2);
-    std::cout << y() << std::endl;
     Tensor<double, 3> dk = y.gradient(k);
-    std::cout << dk() << std::endl;
+    CHECK_EQ(12, dk[0][0][0]);
+    CHECK_EQ(6, dk[0][0][1]);
+    CHECK_EQ(18, dk[0][0][2]);
+    CHECK_EQ(6, dk[0][1][0]);
+    CHECK_EQ(8, dk[0][1][1]);
+    CHECK_EQ(10, dk[0][1][2]);
+    CHECK_EQ(10, dk[1][0][0]);
+    CHECK_EQ(2, dk[1][0][1]);
+    CHECK_EQ(12, dk[1][0][2]);
+    CHECK_EQ(5, dk[1][1][0]);
+    CHECK_EQ(6, dk[1][1][1]);
+    CHECK_EQ(7, dk[1][1][2]);
     Tensor<double, 3> dx = y.gradient(x);
-    //std::cout << dx() << std::endl;
+    CHECK_EQ(1, dx[0][0][0]);
+    CHECK_EQ(2, dx[0][1][0]);
+    CHECK_EQ(1, dx[0][2][0]);
+
+    // check if last dimension is same
+    for(int i = 0; i < 4; i++)
+      for(int j = 0; j < 3; j++)
+	for(int k = 1; k < 3; k++)
+	  CHECK_EQ(dx[i][j][k], dx[i][j][k-1]);
   }
 }
