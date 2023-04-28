@@ -311,11 +311,12 @@ TEST_SUITE("Autodiff") {
       CHECK_EQ(Approx(res[j]).epsilon(0.001), dy[j]);
   }
   TEST_CASE("CONVOLVE, SLIDE") {
-    Tensor<int, 3> x{{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}},
-                     {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}},
+    Tensor<int, 3> x{{{0, 1, 2},    {1, 2, 3},    {2, 3, 4}},
+                     {{3, 4, 5},    {6, 7, 8},    {9, 0, -1}},
                      {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}},
-                     {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}};
-    Tensor<int, 3> k{{{1, 1, 1}, {2, 2, 2}}, {{-3, -3, -3}, {1, 1, 1}}};
+                     {{1, 2, 3},    {4, 5, 6},    {7, 8, 9}}};
+    Tensor<int, 3> k{{{1, 1, 1},    {2, 2, 2}}, 
+                     {{-3, -3, -3}, {1, 1, 1}}};
     Tensor<int, 2> y = x.convolve(k, 1, 2);
     Tensor<double, 3> dk = y.gradient(k);
     CHECK_EQ(12, dk[0][0][0]);
@@ -334,11 +335,51 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(1, dx[0][0][0]);
     CHECK_EQ(2, dx[0][1][0]);
     CHECK_EQ(1, dx[0][2][0]);
-
+    CHECK_EQ(-2, dx[1][0][0]);
+    CHECK_EQ(3, dx[1][1][0]);
+    CHECK_EQ(-2, dx[1][2][0]);
+    CHECK_EQ(-2, dx[2][0][0]);
+    CHECK_EQ(3, dx[2][1][0]);
+    CHECK_EQ(-2, dx[2][2][0]);
+    CHECK_EQ(-2, dx[3][0][0]);
+    CHECK_EQ(3, dx[3][1][0]);
+    CHECK_EQ(-2, dx[3][2][0]);
     // check if last dimension is same
     for(int i = 0; i < 4; i++)
       for(int j = 0; j < 3; j++)
-	for(int k = 1; k < 3; k++)
-	  CHECK_EQ(dx[i][j][k], dx[i][j][k-1]);
+	      for(int k = 1; k < 3; k++)
+	        CHECK_EQ(dx[i][j][k], dx[i][j][k-1]);
+    Tensor<double, 4> w{{{{0.1, 0.2, 0.3}, {-0.9, -0.8, -0.7}}, 
+                         {{1, 2, 3}, {0, 0, 0}}}, 
+                        {{{3,4,5}, {-1,-1,-1}},
+                         {{0, 0, 0}, {1, 2, 0.1}}}};
+    Tensor<double, 4> f{{{{3, 2, 1}, {-1, 1, -1}}}};
+    Tensor<double, 3> z = w.convolve(f, 1, 2, 2);
+    Tensor<double, 4> dw = z.gradient(w);
+    CHECK_EQ(3, dw[0][0][0][0]);
+    CHECK_EQ(2, dw[0][0][0][1]);
+    CHECK_EQ(1, dw[0][0][0][2]);
+    CHECK_EQ(-1, dw[0][0][1][0]);
+    CHECK_EQ(1, dw[0][0][1][1]);
+    CHECK_EQ(-1, dw[0][0][1][2]);
+    CHECK_EQ(0, dw[0][1][0][0]);
+    CHECK_EQ(0, dw[0][1][0][1]);
+    CHECK_EQ(0, dw[0][1][0][2]);
+    CHECK_EQ(0, dw[0][1][1][0]);
+    CHECK_EQ(0, dw[0][1][1][1]);
+    CHECK_EQ(0, dw[0][1][1][2]);
+    CHECK_EQ(3, dw[1][0][0][0]);
+    CHECK_EQ(2, dw[1][0][0][1]);
+    CHECK_EQ(1, dw[1][0][0][2]);
+    CHECK_EQ(-1, dw[1][0][1][0]);
+    CHECK_EQ(1, dw[1][0][1][1]);
+    CHECK_EQ(-1, dw[1][0][1][2]);
+    CHECK_EQ(0, dw[1][1][0][0]);
+    CHECK_EQ(0, dw[1][1][0][1]);
+    CHECK_EQ(0, dw[1][1][0][2]);
+    CHECK_EQ(0, dw[1][1][1][0]);
+    CHECK_EQ(0, dw[1][1][1][1]);
+    CHECK_EQ(0, dw[1][1][1][2]);
+    std::cout << z() << std::endl;
   }
 }
