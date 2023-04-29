@@ -68,16 +68,31 @@ static std::string printShape(size_t *shape, int dim) {
   std::vector<size_t> sh(shape, shape + dim);
   return vectorString(sh);
 }
+template <typename T> static std::string printNode(FGraphNode *node, int dim, int* b) {
+  std::string prev = "";
+  for(int i = 0; i < dim; i++)
+    prev += " ";
+  std::string s = "[";
+  if (dim == node->operation->dimensions - 1){
+    for (int i = 0; i < node->operation->shape[dim]; i++){
+      s += std::to_string(((T*) node->result_data->data)[*b + i]);
+      if (i != node->operation->shape[dim] - 1)
+        s += ", ";
+    }
+    (*b) += node->operation->shape[dim];
+  } else {
+    for (int i = 0; i < node->operation->shape[dim]; i++)
+      s += printNode<T>(node, dim + 1, b) + ",\n" + prev;
+    s = s.substr(0, s.size() - 2 - prev.size());
+  }
+  return s + "]";
+}
 template <typename T> static std::string printNode(FGraphNode *node) {
-  std::string s = "";
   if (!node->result_data) {
     fExecuteGraph(node);
   }
-  for (int i = 0; i < node->result_data->num_entries; i++)
-    s += std::to_string(((T *)node->result_data->data)[i]) +
-         (i == node->result_data->num_entries - 1 ? std::string("")
-                                                  : std::string(", "));
-  return s;
+  int b = 0;
+  return printNode<T>(node, 0, &b);
 }
 static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
                                   FGraphNode *prev_adj) {
@@ -169,10 +184,11 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       std::vector<long> emulate_start(kernel->operation->dimensions);
       slice_steps[kernel->operation->dimensions - 1] = 1;
       for (int i = 0; i < h_shape.size(); i++) {
+        long padding = (MAX_VAL((long)steps[i] - (long)kernel->operation->shape[i], 0));
         if (i < kernel->operation->dimensions - 1) {
           h_shape[i] =
               kernel->operation->shape[i] +
-              (MAX_VAL((long)steps[i] - (long)kernel->operation->shape[i], 0));
+              padding;
           slice_end[i] = -h_shape[i] - 1;
           slice_start[i] = h_shape[i] - 1;
         } else {
@@ -183,22 +199,27 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
         repetitions[i] =
             i == h_shape.size() - 1
                 ? 0
-                : a->operation->shape[i] / kernel->operation->shape[i];
+                : a->operation->shape[i] / h_shape[i];
         if (i < h_shape.size() - 1){
           slide_steps[i] = 1 + kernel->operation->shape[i] * steps[i];
-	}
+	      }
         emulate_start[i] =
-            i == kernel->operation->dimensions - 1 ? 0 : (int)steps[i] - 1;
+            i == kernel->operation->dimensions - 1 ? 0 : h_shape[i] * (repetitions[i] + 1) - g->operation->shape[i];
+        // emulate_start[i] = MIN_VAL(h_shape[i] * (repetitions[i] + 1) - a->operation->shape[i], emulate_start[i]);
       }
       FGraphNode *h = fextend(kernel, h_shape.data(), ins_at.data());
+      std::cout << "h0: " << printNode<double>(h) << std::endl;
       h = fslice_step(h, slice_start.data(), slice_end.data(),
                       slice_steps.data());
       h = frepeat(h, repetitions.data());
+      std::cout << "h1: " << printNode<double>(h) << std::endl;
       std::vector<long> h_size(h->operation->dimensions);
       for (int i = 0; i < h_size.size(); i++)
         h_size[i] = h->operation->shape[i];
       // emulate start
+      std::cout << "emulate start: " << vectorString(emulate_start) << std::endl;
       h = fslice(h, emulate_start.data(), h_size.data());
+      std::cout << "h2: " << printNode<double>(h) << std::endl;
       std::vector<long> start_inv_slide(g->operation->dimensions);
       std::vector<long> end_inv_slide(g->operation->dimensions);
       std::vector<long> steps_inv_slide(g->operation->dimensions, -1);
@@ -210,7 +231,9 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       start_inv_slide[kernel->operation->dimensions - 1] = 0;
       end_inv_slide[kernel->operation->dimensions - 1] =
           a->operation->shape[a->operation->dimensions - 1];
+      std::cout << "slide steps: " << vectorString(slide_steps) << std::endl;
       FGraphNode* slided = fslide(h, g, slide_steps.data());
+      std::cout << "h3: " << printNode<double>(h) << std::endl;
       return fslice_step(slided,
                          start_inv_slide.data(), end_inv_slide.data(),
                          steps_inv_slide.data());
