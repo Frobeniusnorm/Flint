@@ -158,12 +158,14 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     FGraphNode *kernel = y->predecessors[1];
     if (a == dx) {
       const unsigned int *steps = (unsigned int *)y->operation->additional_data;
-      // idea: fuck this noise, i am writing a custom function i cant take this anymore
+      // fuck this noise, i am writing a custom function i cant take this anymore
+      if(!kernel->result_data)
+        fExecuteGraph(kernel); 
       FGraphNode* gradient = new FGraphNode();
-      gradient->num_predecessor = 2;
-      gradient->predecessors = safe_mal<FGraphNode*>(2);
-      gradient->predecessors[0] = a;
-      gradient->predecessors[1] = kernel;
+      gradient->num_predecessor = 1;
+      gradient->predecessors = safe_mal<FGraphNode*>(1);
+      gradient->predecessors[0] = kernel;
+      kernel->reference_counter++;
       gradient->result_data = nullptr;
       gradient->reference_counter = 0;
       FOperation* op = new FOperation();

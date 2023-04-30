@@ -1,5 +1,6 @@
 #include "../flint.h"
 #include "../flint.hpp"
+#include <flint/flint_helper.hpp>
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
 #include "grad_test_cases.hpp"
@@ -31,6 +32,7 @@ int main(int argc, char **argv) {
     flintInit(FLINT_BACKEND_ONLY_GPU);
     if (eager)
       enable_eager_execution();
+    Flint::setLoggingLevel(F_DEBUG);
     res = context.run();
     flintCleanup();
   }

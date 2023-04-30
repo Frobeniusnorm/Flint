@@ -288,6 +288,18 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       }
       break;
     }
+    case FGRADIENT_CONVOLVE: {
+      std::string kernel_name;
+      for (FType param : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}){
+        code += generateEagerCode(node->operation->op_type, F_FLOAT64, {param},
+                                kernel_name);
+        if (param == node->predecessors[0]->operation->data_type)
+          our_kernel = kernel_name;
+        all_kernels.push_back(
+            {generateKernelHash(node->operation->op_type, F_FLOAT64, {param}),
+             kernel_name});
+      }
+    } break;
     default: {
       std::vector<std::vector<FType>> par_poss =
           allTypePermutations(node->num_predecessor);
@@ -350,7 +362,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
           clCreateKernel(prog, kernel_name.second.c_str(), &err_code);
       if (err_code != CL_SUCCESS)
         flogging(F_ERROR, "kernel compilation failed!");
-
       eager_cache.insert({kernel_name.first, curr});
       if (kernel_name.first == hash) {
         kernel = curr;
@@ -359,7 +370,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     if (!kernel)
       flogging(F_ERROR,
                "something went horrible wrong for operation: " +
-                   std::string(fop_to_string[node->operation->op_type]));
+                   std::string(fop_to_string[node->operation->op_type])
+                   + " result type: " + std::to_string(node->operation->data_type));
     eager_programs.push_back(prog);
     const std::chrono::duration<double, std::milli> elapsed =
         std::chrono::high_resolution_clock::now() - start;
@@ -399,6 +411,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
         flogging(F_ERROR, "Could not load Argument to kernel!");
     }
   } break;
+  case FGRADIENT_CONVOLVE:
   case FSLIDE:
   case FCONVOLVE: {
     long total_size_puffer = total_size_node;
@@ -478,6 +491,14 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
                          (void *)&op->dimensions) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
       break;
+    case FGRADIENT_CONVOLVE: {
+      if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                         (void *)&op->dimensions) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+      if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                         (void *)&node->operation->dimensions) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+    } break;
     case FSLIDE:
     case FCONVOLVE: {
       if (clSetKernelArg(kernel, par_index++, sizeof(int),
@@ -691,12 +712,23 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       break;
     }
   }
+  // parameters for functions that dont set them per parent
   switch (node->operation->op_type) {
+  case FGRADIENT_CONVOLVE:
   case FSLIDE: {
+    bool is_slide = node->operation->op_type == FSLIDE;
     const FOperation *op = node->operation;
     const FGraphNode *gnp1 = node->predecessors[0],
                      *gnp2 = node->predecessors[1];
-    const FOperation *pred = gnp1->operation, *kernel_par = gnp2->operation;
+    const FOperation *pred;
+    const FOperation *kernel_par;
+    if (is_slide){
+      pred = gnp1->operation;
+      kernel_par = gnp2->operation;
+    } else {
+      pred = op;
+      kernel_par = gnp1->operation;
+    }
     unsigned int *steps = (unsigned int *)op->additional_data;
     // calculate accumulated sizes for result, kernel and source (pred)
     std::vector<size_t> acc_sizes_pred(pred->dimensions);
@@ -741,9 +773,10 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
                        (void *)&steps_mem) != CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
                             std::to_string(err_code));
+    const FOperation* shape_par = is_slide ? pred : kernel_par;
     cl_mem shape_mem =
         clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                       pred->dimensions * sizeof(long), pred->shape, &err_code);
+                       shape_par->dimensions * sizeof(long), shape_par->shape, &err_code);
     if (!shape_mem)
       flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
                             std::to_string(err_code));
@@ -754,6 +787,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     to_free.push_back(acc_pred_mem);
     to_free.push_back(acc_kernel_mem);
     to_free.push_back(steps_mem);
+    to_free.push_back(shape_mem);
   } break;
   case FCONVOLVE: {
     const FOperation *op = node->operation;

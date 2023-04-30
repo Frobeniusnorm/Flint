@@ -68,10 +68,10 @@ void flintCleanup_gpu();
  * Levels:
  * - 0: No logging
  * - 1: Only `F_ERROR`
- * - 2: Logging level 1 + `F_WARNING` (should be used for production)
- * - 3: Logging level 2 + `F_INFO` (for developement)
- * - 4: Logging level 3 + `F_VERBOSE` (for library developement)
- * - 5: Logging level 4 + `F_DEBUG` (when a bug in the library has been found)
+ * - 2: Logging level `F_WARNING` (should be used for production)
+ * - 3: Logging level `F_INFO` (for developement)
+ * - 4: Logging level `F_VERBOSE` (for library developement)
+ * - 5: Logging level `F_DEBUG` (when a bug in the library has been found)
  */
 void fSetLoggingLevel(int);
 
@@ -88,7 +88,7 @@ void fSetLoggingLevel(int);
  * - `F_WARNING` (probably unwanted behaviour or undefined behaviour caused
  *    by missuse of functions).
  */
-enum FLogType { F_DEBUG, F_VERBOSE, F_INFO, F_ERROR, F_WARNING };
+enum FLogType { F_NO_LOGGING, F_ERROR, F_WARNING, F_INFO, F_VERBOSE, F_DEBUG };
 
 /** Logs a NULL terminated string with the given logging level.
  * See also: `fSetLoggingLevel` */
