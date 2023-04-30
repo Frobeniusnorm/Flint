@@ -147,6 +147,7 @@ enum FOperationType {
   FGREATER,
   FCONVOLVE,
   FSLIDE,
+  FGRADIENT_CONVOLVE, //only for internal use!
   FNUM_OPERATION_TYPES
 };
 /**

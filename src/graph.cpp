@@ -31,7 +31,7 @@ const char *fop_to_string[] = {
     "FMATMUL",     "FCONVERSION", "FRESHAPE", "FMIN",   "FMAX",
     "FREDUCE_SUM", "FREDUCE_MUL", "FSLICE",   "FABS",   "FREPEAT",
     "FTRANSPOSE",  "FEXTEND",     "FLESS",    "FEQUAL", "FGREATER",
-    "FCONVOLVE",   "FSLIDE",
+    "FCONVOLVE",   "FSLIDE", "FGRADIENT_CONVOLVE"
 };
 static bool use_cpu, use_gpu, eager_execution = false;
 // converts c++ type to flint type

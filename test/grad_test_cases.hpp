@@ -380,5 +380,30 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(0, dw[1][1][1][0]);
     CHECK_EQ(0, dw[1][1][1][1]);
     CHECK_EQ(0, dw[1][1][1][2]);
+    Tensor<double, 3> a = Tensor<double, 3>::constant(1.0, 6, 6, 1);
+    Tensor<double, 3> b {{{1}, {-1}, {2}, {2}}, {{2}, {3}, {-1}, {4}}};
+    Tensor<double, 2> c = a.convolve(b, 5, 2);
+    Tensor<double, 3> da = c.gradient(a);
+    CHECK_EQ(1, da[0][0][0]);
+    CHECK_EQ(-1, da[0][1][0]);
+    CHECK_EQ(3, da[0][2][0]);
+    CHECK_EQ(1, da[0][3][0]);
+    CHECK_EQ(3, da[0][4][0]);
+    CHECK_EQ(1, da[0][5][0]);
+    CHECK_EQ(2, da[1][0][0]);
+    CHECK_EQ(3, da[1][1][0]);
+    CHECK_EQ(1, da[1][2][0]);
+    CHECK_EQ(7, da[1][3][0]);
+    CHECK_EQ(1, da[1][4][0]);
+    CHECK_EQ(7, da[1][5][0]);
+    for(int i = 0; i < 3; i++)
+      for(int j = 0; j < 6; j++)
+        CHECK_EQ(0, da[2 + i][j][0]);
+    CHECK_EQ(1, da[5][0][0]);
+    CHECK_EQ(-1, da[5][1][0]);
+    CHECK_EQ(3, da[5][2][0]);
+    CHECK_EQ(1, da[5][3][0]);
+    CHECK_EQ(3, da[5][4][0]);
+    CHECK_EQ(1, da[5][5][0]);
   }
 }

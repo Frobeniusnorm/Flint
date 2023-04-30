@@ -10,7 +10,10 @@
    distributed under the License is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
-   limitations under the License. */
+   limitations under the License. 
+
+  This file includes the implementation of the gradient calculation functions
+*/
 
 #ifndef GRADIENTS_CPP
 #define GRADIENTS_CPP
@@ -154,75 +157,25 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     FGraphNode *a = y->predecessors[0];
     FGraphNode *kernel = y->predecessors[1];
     if (a == dx) {
-      // idea: work on inverse order (so that we can simulate borders of gradient with slide) 
-      // and then slide an 1-shaped tensor for a along a accumulated kernel with the right shape
-      // so that the border works out
-      // algorithm:
-      // return slice(slide(tensor=h, kernel=g, steps = 1 + shape(kernel) *
-      // steps, start = (shape(h) - shape(a)) % (steps + 1)), steps = -1)
-      // g = ones(shape(a))
-      // h = repeat(slice(fextend(kernel, shape=shape(kernel) + max(steps -
-      // shape(kernel), 0)), steps = -1), rep = shape(a) / shape(kernel))
       const unsigned int *steps = (unsigned int *)y->operation->additional_data;
-      FGraphNode *g =
-          fconstant_d(1.0, a->operation->shape, a->operation->dimensions);
-      std::vector<size_t> h_shape(kernel->operation->dimensions);
-      std::vector<size_t> ins_at(kernel->operation->dimensions, 0);
-      std::vector<long> slice_steps(kernel->operation->dimensions, -1);
-      std::vector<long> slice_end(kernel->operation->dimensions);
-      std::vector<long> slice_start(kernel->operation->dimensions);
-      std::vector<int> repetitions(kernel->operation->dimensions);
-      std::vector<unsigned int> slide_steps(kernel->operation->dimensions - 1);
-      std::vector<long> emulate_start(kernel->operation->dimensions);
-      slice_steps[kernel->operation->dimensions - 1] = 1;
-      for (int i = 0; i < h_shape.size(); i++) {
-        long padding = (MAX_VAL((long)steps[i] - (long)kernel->operation->shape[i], 0));
-        if (i < kernel->operation->dimensions - 1) {
-          h_shape[i] =
-              kernel->operation->shape[i] +
-              padding;
-          slice_end[i] = -h_shape[i] - 1;
-          slice_start[i] = h_shape[i] - 1;
-        } else {
-          h_shape[i] = kernel->operation->shape[i];
-          slice_end[i] = h_shape[i];
-          slice_start[i] = 0;
-        }
-        repetitions[i] =
-            i == h_shape.size() - 1
-                ? 0
-                : a->operation->shape[i] / h_shape[i];
-        if (i < h_shape.size() - 1){
-          slide_steps[i] = 1 + kernel->operation->shape[i] * steps[i];
-	      }
-        emulate_start[i] =
-            i == kernel->operation->dimensions - 1 ? 0 : (h_shape[i] * (repetitions[i] + 1) - g->operation->shape[i]) % (steps[i] + 1);
-      }
-      FGraphNode *h = fextend(kernel, h_shape.data(), ins_at.data());
-      h = fslice_step(h, slice_start.data(), slice_end.data(),
-                      slice_steps.data());
-      h = frepeat(h, repetitions.data());
-      std::vector<long> h_size(h->operation->dimensions);
-      for (int i = 0; i < h_size.size(); i++)
-        h_size[i] = h->operation->shape[i];
-      // emulate start
-      h = fslice(h, emulate_start.data(), h_size.data());
-      std::vector<long> start_inv_slide(g->operation->dimensions);
-      std::vector<long> end_inv_slide(g->operation->dimensions);
-      std::vector<long> steps_inv_slide(g->operation->dimensions, -1);
-      steps_inv_slide[kernel->operation->dimensions - 1] = 1;
-      for (int i = 0; i < g->operation->dimensions - 1; i++) {
-        end_inv_slide[i] = -a->operation->shape[i] - 1;
-        start_inv_slide[i] = a->operation->shape[i] - 1;
-      }
-      start_inv_slide[kernel->operation->dimensions - 1] = 0;
-      end_inv_slide[kernel->operation->dimensions - 1] =
-          a->operation->shape[a->operation->dimensions - 1];
-      FGraphNode* slided = fslide(h, g, slide_steps.data());
-      return fslice_step(slided,
-                         start_inv_slide.data(), end_inv_slide.data(),
-                         steps_inv_slide.data());
-      // TODO also true for slide?
+      // idea: fuck this noise, i am writing a custom function i cant take this anymore
+      FGraphNode* gradient = new FGraphNode();
+      gradient->num_predecessor = 2;
+      gradient->predecessors = safe_mal<FGraphNode*>(2);
+      gradient->predecessors[0] = a;
+      gradient->predecessors[1] = kernel;
+      gradient->result_data = nullptr;
+      gradient->reference_counter = 0;
+      FOperation* op = new FOperation();
+      op->data_type = F_FLOAT64;
+      op->dimensions = a->operation->dimensions;
+      op->shape = safe_mal<size_t>(op->dimensions);
+      memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
+      op->op_type = FGRADIENT_CONVOLVE;
+      op->additional_data = safe_mal<unsigned int>(a->operation->dimensions - 1);
+      memcpy(op->additional_data, steps, (a->operation->dimensions - 1) * sizeof(unsigned int));
+      gradient->operation = op;
+      return gradient;
     } else if (kernel == dx) {
       FGraphNode *one = fconstant_d(1.0, kernel->operation->shape,
                                     kernel->operation->dimensions);
