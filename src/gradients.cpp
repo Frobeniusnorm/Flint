@@ -154,23 +154,15 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     FGraphNode *a = y->predecessors[0];
     FGraphNode *kernel = y->predecessors[1];
     if (a == dx) {
-      // the rules:
+      // idea: work on inverse order (so that we can simulate borders of gradient with slide) 
+      // and then slide an 1-shaped tensor for a along a accumulated kernel with the right shape
+      // so that the border works out
+      // algorithm:
       // return slice(slide(tensor=h, kernel=g, steps = 1 + shape(kernel) *
-      // steps, start = steps - 1), steps = -1)
+      // steps, start = (shape(h) - shape(a)) % (steps + 1)), steps = -1)
       // g = ones(shape(a))
       // h = repeat(slice(fextend(kernel, shape=shape(kernel) + max(steps -
       // shape(kernel), 0)), steps = -1), rep = shape(a) / shape(kernel))
-      /* E.g. for
-       * kernel = [[1, 2],
-       *           [3, 4]]
-       * steps = [3, 1]
-       * h = [[0, 4, 3, 0, 4, 3, 0, 4, 3],
-       *      [0, 2, 1, 0, 2, 1, 0, 2, 1],
-       *      [0, 4, 3, 0, 4, 3, 0, 4, 3],
-       *      [0, 2, 1, 0, 2, 1, 0, 2, 1],
-       *      [0, 4, 3, 0, 4, 3, 0, 4, 3],
-       *      [0, 2, 1, 0, 2, 1, 0, 2, 1]]
-       */
       const unsigned int *steps = (unsigned int *)y->operation->additional_data;
       FGraphNode *g =
           fconstant_d(1.0, a->operation->shape, a->operation->dimensions);
@@ -204,22 +196,17 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
           slide_steps[i] = 1 + kernel->operation->shape[i] * steps[i];
 	      }
         emulate_start[i] =
-            i == kernel->operation->dimensions - 1 ? 0 : h_shape[i] * (repetitions[i] + 1) - g->operation->shape[i];
-        // emulate_start[i] = MIN_VAL(h_shape[i] * (repetitions[i] + 1) - a->operation->shape[i], emulate_start[i]);
+            i == kernel->operation->dimensions - 1 ? 0 : (h_shape[i] * (repetitions[i] + 1) - g->operation->shape[i]) % (steps[i] + 1);
       }
       FGraphNode *h = fextend(kernel, h_shape.data(), ins_at.data());
-      std::cout << "h0: " << printNode<double>(h) << std::endl;
       h = fslice_step(h, slice_start.data(), slice_end.data(),
                       slice_steps.data());
       h = frepeat(h, repetitions.data());
-      std::cout << "h1: " << printNode<double>(h) << std::endl;
       std::vector<long> h_size(h->operation->dimensions);
       for (int i = 0; i < h_size.size(); i++)
         h_size[i] = h->operation->shape[i];
       // emulate start
-      std::cout << "emulate start: " << vectorString(emulate_start) << std::endl;
       h = fslice(h, emulate_start.data(), h_size.data());
-      std::cout << "h2: " << printNode<double>(h) << std::endl;
       std::vector<long> start_inv_slide(g->operation->dimensions);
       std::vector<long> end_inv_slide(g->operation->dimensions);
       std::vector<long> steps_inv_slide(g->operation->dimensions, -1);
@@ -231,9 +218,7 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       start_inv_slide[kernel->operation->dimensions - 1] = 0;
       end_inv_slide[kernel->operation->dimensions - 1] =
           a->operation->shape[a->operation->dimensions - 1];
-      std::cout << "slide steps: " << vectorString(slide_steps) << std::endl;
       FGraphNode* slided = fslide(h, g, slide_steps.data());
-      std::cout << "h3: " << printNode<double>(h) << std::endl;
       return fslice_step(slided,
                          start_inv_slide.data(), end_inv_slide.data(),
                          steps_inv_slide.data());

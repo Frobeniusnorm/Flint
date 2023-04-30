@@ -380,6 +380,5 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(0, dw[1][1][1][0]);
     CHECK_EQ(0, dw[1][1][1][1]);
     CHECK_EQ(0, dw[1][1][1][2]);
-    std::cout << dw() << std::endl;
   }
 }

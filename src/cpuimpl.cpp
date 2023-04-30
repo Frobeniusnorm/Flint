@@ -845,17 +845,9 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
           vector<size_t>(curr->operation->shape,
                          curr->operation->shape + curr->operation->dimensions);
       foo.type = curr->operation->data_type;
-      if (curr->result_data) {
-        FResultData *store = curr->result_data;
-        foo.num_entries = store->num_entries;
-        foo.data = store->data;
-      } else {
-        if (curr->operation->op_type == FSTORE) {
-          FStore *store = (FStore *)curr->operation->additional_data;
-          foo.num_entries = store->num_entries;
-          foo.data = store->data;
-        }
-      }
+      FStore *store = (FStore *)curr->operation->additional_data;
+      foo.num_entries = store->num_entries;
+      foo.data = store->data;
       results.insert({curr, foo});
     } else {
       // allocate result data and execute
