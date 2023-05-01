@@ -367,9 +367,7 @@ static void executeNode(FGraphNode *node,
     acc_sizes_kernel[op->dimensions - 1] = 1;
     acc_sizes_pred[op->dimensions - 1] = 1;
     size_t kernel_num_elems = kernel->shape[op->dimensions - 1];
-    size_t pred_num_elems = op->shape[op->dimensions - 1];
     for (long d = op->dimensions - 2; d >= 0; d--) {
-      pred_num_elems *= op->shape[d];
       kernel_num_elems *= kernel->shape[d];
       acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel->shape[d + 1];
       acc_sizes_pred[d] = acc_sizes_pred[d + 1] * op->shape[d + 1];
@@ -417,8 +415,6 @@ static void executeNode(FGraphNode *node,
               step += stepd * acc_sizes_kernel[d];
               break;
             } else {
-              size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
-                          acc_sizes_pred[d];
               step -= (dk - (di % stepd)) *
                       acc_sizes_kernel[d]; // set to kernel start in this dimension
             }
