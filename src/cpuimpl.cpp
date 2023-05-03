@@ -111,6 +111,78 @@ static void binaryExpression(T *result, A *data1, B *data2, FOperationType op,
       }
     }
   } break;
+  case FGRADIENT_CONVOLVE: {
+    const FOperation *op = curr->operation;
+    const FGraphNode *gnp1 = curr->predecessors[0],
+                     *gnp2 = curr->predecessors[1];
+    const FOperation *kernel= gnp1->operation, *a = gnp2->operation;
+    unsigned int *steps = (unsigned int *)op->additional_data;
+    // calculate accumulated sizes for result (pred), kernel and a (adjacent)
+    std::vector<size_t> acc_sizes(op->dimensions - 1);
+    std::vector<size_t> acc_sizes_pred(op->dimensions);
+    std::vector<size_t> acc_sizes_kernel(op->dimensions);
+    acc_sizes_kernel[op->dimensions - 1] = 1;
+    acc_sizes_pred[op->dimensions - 1] = 1;
+    acc_sizes[op->dimensions - 2] = 1;
+    size_t kernel_num_elems = kernel->shape[op->dimensions - 1];
+    for (long d = op->dimensions - 2; d >= 0; d--) {
+      kernel_num_elems *= kernel->shape[d];
+      acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel->shape[d + 1];
+      acc_sizes_pred[d] = acc_sizes_pred[d + 1] * op->shape[d + 1];
+    }
+    for (long d = op->dimensions - 3; d >= 0; d--)
+      acc_sizes[d] = acc_sizes[d + 1] * a->shape[d + 1];
+
+    for (size_t i = from; i < from + size; i++) {
+      T res = 0; 
+      long k = 0;
+      bool in_steps = true;
+      // reproject first time kernel hits i
+      for (int d = op->dimensions - 1; d >= 0; d--) {
+        size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
+                        acc_sizes_pred[d];
+        size_t dk = d == op->dimensions - 1 ? di : di % steps[d];
+        if (dk >= kernel->shape[d]){
+          in_steps = false;
+          break;
+        }
+        k += dk * acc_sizes_kernel[d];
+      }
+      if(in_steps)
+        while (k < kernel_num_elems) {
+          size_t i_conv = 0;
+          for (int d = 0; d < op->dimensions - 2; d++) {
+            const size_t dk =
+                (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / acc_sizes_kernel[d];
+            const size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
+                          acc_sizes_pred[d];
+            const size_t j = (di - dk) / steps[d]; // top left corner
+            i_conv += j * acc_sizes[d];
+          }
+          res += data1[k] * data2[i_conv];
+          long step = 0;
+          // reproject index to calculate step from steps
+          for (int d = op->dimensions - 2; d >= 0; d--) {
+            const int stepd = steps[d];
+            const size_t dk =
+                (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / acc_sizes_kernel[d];
+            const size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
+                          acc_sizes_pred[d];
+            if (dk + stepd < kernel->shape[d] && di >= dk + stepd) {
+              step += stepd * acc_sizes_kernel[d];
+              break;
+            } else {
+              step -= (dk - (di % stepd)) *
+                      acc_sizes_kernel[d]; // set to kernel start in this dimension
+            }
+          }
+          if (step <= 0)
+            break; // total overflow
+          k += step;
+        }
+      result[i] = res;
+    }
+  } break;
   case FCONVOLVE: {
     const FOperation *op = curr->operation;
     const FGraphNode *gnp1 = curr->predecessors[0],
@@ -352,78 +424,6 @@ static void executeNode(FGraphNode *node,
         else
           result[i] *= curr;
       }
-    }
-  } break;
-  case FGRADIENT_CONVOLVE: {
-    const FOperation *op = node->operation;
-    const FGraphNode 
-                     *gnp2 = node->predecessors[0];
-    const FOperation *kernel = gnp2->operation;
-    CPUResultData kernel_data = predecessor_data[0];
-    unsigned int *steps = (unsigned int *)op->additional_data;
-    // calculate accumulated sizes for result, kernel and source (pred)
-    std::vector<size_t> acc_sizes_pred(op->dimensions);
-    std::vector<size_t> acc_sizes_kernel(op->dimensions);
-    acc_sizes_kernel[op->dimensions - 1] = 1;
-    acc_sizes_pred[op->dimensions - 1] = 1;
-    size_t kernel_num_elems = kernel->shape[op->dimensions - 1];
-    for (long d = op->dimensions - 2; d >= 0; d--) {
-      kernel_num_elems *= kernel->shape[d];
-      acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel->shape[d + 1];
-      acc_sizes_pred[d] = acc_sizes_pred[d + 1] * op->shape[d + 1];
-    }
-    for (size_t i = from; i < from + size; i++) {
-      T res = 0; 
-      long k = 0;
-      bool in_steps = true;
-      // reproject first time kernel hits i
-      for (int d = op->dimensions - 1; d >= 0; d--) {
-        size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
-                        acc_sizes_pred[d];
-        size_t dk = d == op->dimensions - 1 ? di : di % steps[d];
-        if (dk >= kernel->shape[d]){
-          in_steps = false;
-          break;
-        }
-        k += dk * acc_sizes_kernel[d];
-      }
-      if(in_steps)
-        while (k < kernel_num_elems) {
-          switch(kernel_data.type){
-          case F_INT32:
-            res += ((int*)kernel_data.data)[k];
-          break;
-          case F_INT64:
-            res += ((long*)kernel_data.data)[k];
-          break;
-          case F_FLOAT32:
-            res += ((float*)kernel_data.data)[k];
-          break;
-          case F_FLOAT64:
-            res += ((double*)kernel_data.data)[k];
-          break;
-          }
-          long step = 0;
-          // reproject index to calculate step from steps
-          for (int d = op->dimensions - 2; d >= 0; d--) {
-            int stepd = steps[d];
-            size_t dk =
-                (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / acc_sizes_kernel[d];
-            size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
-                          acc_sizes_pred[d];
-            if (dk + stepd < kernel->shape[d] && di >= dk + stepd) {
-              step += stepd * acc_sizes_kernel[d];
-              break;
-            } else {
-              step -= (dk - (di % stepd)) *
-                      acc_sizes_kernel[d]; // set to kernel start in this dimension
-            }
-          }
-          if (step <= 0)
-            break; // total overflow
-          k += step;
-        }
-      result[i] = res;
     }
   } break;
   case FRESHAPE:

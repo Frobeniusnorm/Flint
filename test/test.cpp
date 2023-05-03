@@ -845,9 +845,6 @@ TEST_SUITE("C++ Bindings") {
     Tensor<float, 3> r2 = t2.slide(k2, 1, 2);
     CHECK_EQ(12, r2[0][0][0]);
     CHECK_EQ(16, r2[0][1][0]);
-    Tensor<float, 3> t3{{{0, 1}, {1, 2}, {3, 4}},
-                        {{5, 6}, {7, 8}, {9, 0}},
-                        {{1, 2}, {3, 4}, {5, 6}}};
     Tensor<float, 3> k3{{{1, 1}}, {{2, 2}}};
     Tensor<float, 3> r3 = t1.slide(k3);
     CHECK_EQ(34, r3[0][0][0]);

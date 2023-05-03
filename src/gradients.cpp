@@ -162,9 +162,10 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       if(!kernel->result_data)
         fExecuteGraph(kernel); 
       FGraphNode* gradient = new FGraphNode();
-      gradient->num_predecessor = 1;
-      gradient->predecessors = safe_mal<FGraphNode*>(1);
+      gradient->num_predecessor = 2;
+      gradient->predecessors = safe_mal<FGraphNode*>(2);
       gradient->predecessors[0] = kernel;
+      gradient->predecessors[1] = prev_adj;
       kernel->reference_counter++;
       gradient->result_data = nullptr;
       gradient->reference_counter = 0;
@@ -179,12 +180,30 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       gradient->operation = op;
       return gradient;
     } else if (kernel == dx) {
-      FGraphNode *one = fconstant_d(1.0, kernel->operation->shape,
-                                    kernel->operation->dimensions);
-      return fslide(a, one, (unsigned int *)y->operation->additional_data);
+      if (y->operation->op_type == FCONVOLVE) {
+        // last dimension has been reduced
+        std::vector<size_t> ns (prev_adj->operation->dimensions + 1);
+        for (int i = 0; i < prev_adj->operation->dimensions; i++)
+          ns[i] = prev_adj->operation->shape[i];
+        ns[ns.size() - 1] = 1;
+        prev_adj = freshape(prev_adj, ns.data(), ns.size());
+        // repeat it for the correct shape 
+        std::vector<int> rp (a->operation->dimensions, 0);
+        rp[rp.size() - 1] = (int)a->operation->shape[rp.size() - 1] - 1;
+        prev_adj = frepeat(prev_adj, rp.data());
+      }
+      return fslide(a, prev_adj, (unsigned int *)y->operation->additional_data);     
     }
     return nullptr;
   }
+  case FGRADIENT_CONVOLVE: {
+    // for the derivation of a derivation
+    FGraphNode *kernel = y->predecessors[0];
+    if (kernel == dx){
+       
+    }
+    return nullptr;
+  } break;
   case FPOW: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];
