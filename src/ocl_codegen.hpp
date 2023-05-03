@@ -4,16 +4,16 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-This file includes the implementation of the GPU backend code generation and
-should only be included in oclimpl.cpp.
+       http://www.apache.org/licenses/LICENSE-2.0
+   
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+   
+  This file includes the implementation of the GPU backend code generation and
+   should only be included in oclimpl.cpp.
 */
 
 #ifndef OCL_CODEGEN_HPP
@@ -774,10 +774,11 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   case FGRADIENT_CONVOLVE: {
     code += ", const long num_entriesR";
     code += ", const __global " + typeString(parameter_types[0]) + "* P1";
-    code += ", const long num_entries1, const int dimensions1, const int "
+    code += ", const long num_entries1, const int dimensions1, const __global double* P2, const long num_entries2, const int dimensions2, const int "
             "dimensions0";
     code += ", __constant long* acc_sizes_pred, "
-            "__constant long* acc_sizes_kernel";
+            "__constant long* acc_sizes_kernel"
+            ", __constant long* acc_sizes";
     code += ", __constant int* steps, __constant long* shape1";
   } break;
   case FSLIDE: {
@@ -1090,9 +1091,17 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             " res = 0;\n"
             "if(in_steps)\n"
             " while(k < num_entries1){\n"
-            "  res += P1[k];\n"
+            "  long i_conv = 0;\n"
+            "  for(int d = 0; d < dimensions0 - 2; d++){\n"
+            "   long dk = (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / "
+            "acc_sizes_kernel[d];\n"
+            "   long di = (d == 0 ? index : index % acc_sizes_pred[d - 1]) / "
+            "acc_sizes_pred[d];\n"
+            "   i_conv += ((di - dk) / steps[d]) * acc_sizes[d];\n"
+            "  }\n"
+            "  res += P1[k] * P2[i_conv];\n"
             "  long step = 0;\n"
-            "  for(int d = dimensions0 - 2; d >= 0; d--) {"
+            "  for(int d = dimensions0 - 2; d >= 0; d--) {\n"
             "   long dk = (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / "
             "acc_sizes_kernel[d];\n"
             "   long di = (d == 0 ? index : index % acc_sizes_pred[d - 1]) / "
