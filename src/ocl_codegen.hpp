@@ -145,10 +145,17 @@ generateCode(FGraphNode *node,
 
       } break;
       case FGRADIENT_CONVOLVE: {
-        string par2;
+        string par1, par2;
         push_pred = false;
-        FGraphNode *gnp2 = node->predecessors[0];
-        // parameter 1 (names 2 for similarity to convolve)
+        FGraphNode *gnp2 = node->predecessors[1];
+        FGraphNode *gnp1 = node->predecessors[0];
+        if (assigned_params.find(gnp1) != assigned_params.end()) {
+          par1 = assigned_params[gnp1];
+        } else {
+          par1 = "P" + to_string(assigned_params.size());
+          assigned_params.insert({gnp1, par1});
+          parameters.push_back({gnp1, par1});
+        }
         if (assigned_params.find(gnp2) != assigned_params.end()) {
           par2 = assigned_params[gnp2];
         } else {
@@ -157,18 +164,23 @@ generateCode(FGraphNode *node,
           parameters.push_back({gnp2, par2});
         }
         const FOperation *op = node->operation;
-        const FOperation *kernel = gnp2->operation;
+        const FOperation *kernel = gnp1->operation, *a = gnp2->operation;
         unsigned int *steps = (unsigned int *)op->additional_data;
+        vector<size_t> acc_sizes(op->dimensions - 1);
         vector<size_t> acc_sizes_pred(op->dimensions);
         vector<size_t> acc_sizes_kernel(op->dimensions);
         acc_sizes_kernel[acc_sizes_pred.size() - 1] = 1;
         acc_sizes_pred[acc_sizes_pred.size() - 1] = 1;
+        acc_sizes[op->dimensions - 2] = 1;
         size_t kernel_num_elems = kernel->shape[acc_sizes_kernel.size() - 1];
         for (long d = acc_sizes_pred.size() - 2; d >= 0; d--) {
           kernel_num_elems *= kernel->shape[d];
           acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel->shape[d + 1];
           acc_sizes_pred[d] = acc_sizes_pred[d + 1] * op->shape[d + 1];
         }
+        for (long d = op->dimensions - 3; d >= 0; d--)
+          acc_sizes[d] = acc_sizes[d + 1] * a->shape[d + 1];
+
         string conv_code = type + " " + name + " = 0;\n{\nlong k = 0;\nint in_steps=1;\n";
         for(long d = acc_sizes_pred.size() - 1; d >= 0; d--){
           conv_code += (d == acc_sizes_pred.size() - 1 ? string("{") : string("if(in_steps){")) + "\n"
@@ -180,7 +192,19 @@ generateCode(FGraphNode *node,
             "  k += dk * " + to_string(acc_sizes_kernel[d]) + ";\n}\n";
         }
         conv_code += "if(in_steps) while(k < " + to_string(kernel_num_elems) + "){\n"
-          "  " + name + " += " + par2 + "[k];\n"
+          "  long i_conv = 0";
+          for(int d = 0; d < op->dimensions - 2; d++) {
+            conv_code += "+((" + 
+              (d == 0 ? string("index")
+                      : "(index%" + to_string(acc_sizes_pred[d - 1]) + ")")
+              + "/" + to_string(acc_sizes_pred[d]) + " - " +
+              (d == 0 ? string("k")
+                      : "(k%" + to_string(acc_sizes_kernel[d - 1]) + ")")
+              + "/" + to_string(acc_sizes_kernel[d]) + ")/" + to_string(steps[d])
+                + ") * " + to_string(acc_sizes[d]);
+          }
+        conv_code +=
+          ";\n  " + name + " += " + par1 + "[k] * " + par2 + "[i_conv];\n"
           "  int continue_loop = 1;\n"
           "  long step = 0;\n";
         for (long d = acc_sizes_pred.size() - 2; d >= 0; d--) {
