@@ -10,7 +10,7 @@
    distributed under the License is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
-   limitations under the License. 
+   limitations under the License.
 
   This file includes the implementation of the gradient calculation functions
 */
@@ -71,14 +71,15 @@ static std::string printShape(size_t *shape, int dim) {
   std::vector<size_t> sh(shape, shape + dim);
   return vectorString(sh);
 }
-template <typename T> static std::string printNode(FGraphNode *node, int dim, int* b) {
+template <typename T>
+static std::string printNode(FGraphNode *node, int dim, int *b) {
   std::string prev = "";
-  for(int i = 0; i < dim; i++)
+  for (int i = 0; i < dim; i++)
     prev += " ";
   std::string s = "[";
-  if (dim == node->operation->dimensions - 1){
-    for (int i = 0; i < node->operation->shape[dim]; i++){
-      s += std::to_string(((T*) node->result_data->data)[*b + i]);
+  if (dim == node->operation->dimensions - 1) {
+    for (int i = 0; i < node->operation->shape[dim]; i++) {
+      s += std::to_string(((T *)node->result_data->data)[*b + i]);
       if (i != node->operation->shape[dim] - 1)
         s += ", ";
     }
@@ -158,49 +159,79 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     FGraphNode *kernel = y->predecessors[1];
     if (a == dx) {
       const unsigned int *steps = (unsigned int *)y->operation->additional_data;
-      // fuck this noise, i am writing a custom function i cant take this anymore
-      if(!kernel->result_data)
-        fExecuteGraph(kernel); 
-      FGraphNode* gradient = new FGraphNode();
+      // fuck this noise, i am writing a custom function i cant take this
+      // anymore
+      if (!kernel->result_data)
+        fExecuteGraph(kernel);
+      FGraphNode *gradient = new FGraphNode();
       gradient->num_predecessor = 2;
-      gradient->predecessors = safe_mal<FGraphNode*>(2);
+      gradient->predecessors = safe_mal<FGraphNode *>(2);
       gradient->predecessors[0] = kernel;
       gradient->predecessors[1] = prev_adj;
       kernel->reference_counter++;
       gradient->result_data = nullptr;
       gradient->reference_counter = 0;
-      FOperation* op = new FOperation();
+      FOperation *op = new FOperation();
       op->data_type = F_FLOAT64;
       op->dimensions = a->operation->dimensions;
       op->shape = safe_mal<size_t>(op->dimensions);
       memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
       op->op_type = FGRADIENT_CONVOLVE;
-      op->additional_data = safe_mal<unsigned int>(a->operation->dimensions - 1);
-      memcpy(op->additional_data, steps, (a->operation->dimensions - 1) * sizeof(unsigned int));
+      op->additional_data =
+          safe_mal<unsigned int>(a->operation->dimensions - 1);
+      memcpy(op->additional_data, steps,
+             (a->operation->dimensions - 1) * sizeof(unsigned int));
       gradient->operation = op;
       return gradient;
     } else if (kernel == dx) {
       if (y->operation->op_type == FCONVOLVE) {
         // last dimension has been reduced
-        std::vector<size_t> ns (prev_adj->operation->dimensions + 1);
+        std::vector<size_t> ns(prev_adj->operation->dimensions + 1);
         for (int i = 0; i < prev_adj->operation->dimensions; i++)
           ns[i] = prev_adj->operation->shape[i];
         ns[ns.size() - 1] = 1;
         prev_adj = freshape(prev_adj, ns.data(), ns.size());
-        // repeat it for the correct shape 
-        std::vector<int> rp (a->operation->dimensions, 0);
+        // repeat it for the correct shape
+        std::vector<int> rp(a->operation->dimensions, 0);
         rp[rp.size() - 1] = (int)a->operation->shape[rp.size() - 1] - 1;
         prev_adj = frepeat(prev_adj, rp.data());
       }
-      return fslide(a, prev_adj, (unsigned int *)y->operation->additional_data);     
+      return fslide(a, prev_adj, (unsigned int *)y->operation->additional_data);
     }
     return nullptr;
   }
   case FGRADIENT_CONVOLVE: {
     // for the derivation of a derivation
     FGraphNode *kernel = y->predecessors[0];
-    if (kernel == dx){
-       
+    FGraphNode *a = y->predecessors[1];
+    if (a == dx) {
+      const unsigned int *steps = (unsigned int *)y->operation->additional_data;
+      // fuck this noise, i am writing a custom function i cant take this
+      // anymore
+      if (!kernel->result_data)
+        fExecuteGraph(kernel);
+      FGraphNode *gradient = new FGraphNode();
+      gradient->num_predecessor = 2;
+      gradient->predecessors = safe_mal<FGraphNode *>(2);
+      gradient->predecessors[0] = kernel;
+      gradient->predecessors[1] = prev_adj;
+      kernel->reference_counter++;
+      gradient->result_data = nullptr;
+      gradient->reference_counter = 0;
+      FOperation *op = new FOperation();
+      op->data_type = F_FLOAT64;
+      op->dimensions = a->operation->dimensions;
+      op->shape = safe_mal<size_t>(op->dimensions);
+      memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
+      op->op_type = FGRADIENT_CONVOLVE;
+      op->additional_data =
+          safe_mal<unsigned int>(a->operation->dimensions - 1);
+      memcpy(op->additional_data, steps,
+             (a->operation->dimensions - 1) * sizeof(unsigned int));
+      gradient->operation = op;
+      return gradient;
+    } else if (kernel == dx) {
+      return fslide(prev_adj, a, (unsigned int *)y->operation->additional_data);
     }
     return nullptr;
   } break;

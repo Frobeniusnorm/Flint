@@ -423,5 +423,12 @@ TEST_SUITE("Autodiff") {
         CHECK_EQ(-2, dx[j][2][i]);
       }
     }
+    Tensor<double, 3> dxk = dx.gradient(k);
+    for(int i = 0; i < 3; i++){
+      CHECK_EQ(8, dxk[0][0][i]);
+      CHECK_EQ(4, dxk[0][1][i]);
+      CHECK_EQ(6, dxk[1][0][i]);
+      CHECK_EQ(3, dxk[1][1][i]);
+    }
   }
 }
