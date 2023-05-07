@@ -624,6 +624,13 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<double, k> gradient(const Tensor<K, k> &dx) {
     return Tensor<double, k>(fCalculateGradient(this->node, dx.node), dx.shape);
   }
+  /** Watches this node, i.e. collects information needed to calculate the gradient with this node as a derivative */
+  void watch() {
+    markGradientVariable(node);
+  }
+  void unwatch(){
+    unmarkGradientVariable(node);
+  }
 
 protected:
   Tensor(FGraphNode *node, size_t shape) : node(node), shape{shape} {

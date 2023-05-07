@@ -1122,6 +1122,13 @@ template <typename T, unsigned int n> struct Tensor {
   Tensor<double, k> gradient(const Tensor<K, k> &dx) {
     return Tensor<double, k>(fCalculateGradient(this->node, dx.node), dx.shape);
   }
+  /** Watches this node, i.e. collects information needed to calculate the gradient with this node as a derivative */
+  void watch() {
+    markGradientVariable(node);
+  }
+  void unwatch(){
+    unmarkGradientVariable(node);
+  }
 
 protected:
   Tensor(FGraphNode *node, std::array<size_t, n> shape)

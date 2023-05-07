@@ -5,8 +5,11 @@
 TEST_SUITE("Autodiff") {
   TEST_CASE("Two Times Matmul") {
     Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
+    x.watch();
     Tensor<double, 2> y = {{3.0, -7.0}, {-1.0, 5.0}};
+    y.watch();
     Tensor<double, 3> z = {{{1, 1}, {2, 2}}, {{3, 3}, {-1, -1}}};
+    z.watch();
     Tensor<double, 3> w = (x.matmul(y)).matmul(z);
     Tensor<double, 3> dx = w.gradient(x);
     CHECK_EQ(dx[0][0][0], -22);
@@ -53,8 +56,11 @@ TEST_SUITE("Autodiff") {
   }
   TEST_CASE("Add, Mul, Matmul") {
     Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
+    x.watch();
     Tensor<double, 1> y = {5., -7.};
+    y.watch();
     Tensor<double, 2> z = {{4, 3}, {2.5, 1.5}};
+    z.watch();
     Tensor<double, 2> y_z = z * y;
     Tensor<double, 3> w = (x + y).matmul(y_z) * (x + z);
     Tensor<double, 3> dx = w.gradient(x);
@@ -79,6 +85,9 @@ TEST_SUITE("Autodiff") {
     Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
     Tensor<double, 1> y = {5., -7.};
     Tensor<double, 2> z = {{4, 3}, {2.5, 1.5}};
+    x.watch();
+    y.watch();
+    z.watch();
     Tensor<double, 3> w = (x - y) / (z * y) * (x - z) - (z * y);
     Tensor<double, 3> dx = w.gradient(x);
     Tensor<double, 1> dy = w.gradient(y);
@@ -100,6 +109,9 @@ TEST_SUITE("Autodiff") {
                            {{7, 9}, {3.5, 77}, {10, 10}}};
     Tensor<double, 1> y = {-7, 5.5};
     Tensor<double, 2> z = {{1.5, 2.5}, {3.5, 4.5}, {7.5, 9}};
+    x.watch();
+    y.watch();
+    z.watch();
     Tensor<double, 3> w = x.pow(y).log();
     Tensor<double, 3> dx = w.gradient(x);
     Tensor<double, 1> dy = w.gradient(y);
@@ -118,6 +130,8 @@ TEST_SUITE("Autodiff") {
                            {{-3, -2.5}, {1.5, 2.5}},
                            {{-42, -75.3}, {4, -4}}}};
     Tensor<int, 2> r = {{2, 3}, {4, 5}};
+    t.watch();
+    r.watch();
     Tensor<float, 4> e = t.pow(r + 1);
 
     Tensor<double, 4> dt = e.gradient(t);
@@ -156,6 +170,9 @@ TEST_SUITE("Autodiff") {
                            {{7, 9}, {3.5, 77}, {10, 10}}};
     Tensor<double, 1> y = {-7, 5.5};
     Tensor<double, 2> z = {{1.5, 5.5}, {-7, 4.5}, {7.5, -9}};
+    x.watch();
+    y.watch();
+    z.watch();
     Tensor<double, 2> m1 = (z.min(y) * 0.3).abs();
     Tensor<double, 3> m2 = (y.min(z) * 0.3).max(x).abs() * y.abs();
     Tensor<double, 3> dx2 = m2.gradient(x);
@@ -185,6 +202,7 @@ TEST_SUITE("Autodiff") {
   }
   TEST_CASE("Reduce Operations") {
     Tensor<float, 2> a{{0, 3, -1}, {0.5, 2.5, 1}};
+    a.watch();
     Tensor<float, 1> b = a.reduce_sum(1) * 2;
     Tensor<double, 2> da = b.gradient(a);
     for (int i = 0; i < 2; i++)
@@ -192,6 +210,7 @@ TEST_SUITE("Autodiff") {
         CHECK_EQ(2, da[i][j]);
     Tensor<double, 3> x = {{{42, 75.3}, {4, 4}, {50, 3}},
                            {{7, 9}, {3.5, 77}, {10, 10}}};
+    x.watch();
     Tensor<double, 1> w = (x.reduce_sum(2) * a).reduce_sum(0);
     da = w.gradient(a);
     Tensor<double, 3> dx = w.gradient(x);
@@ -237,6 +256,7 @@ TEST_SUITE("Autodiff") {
   TEST_CASE("REPEAT, SLICE, TRANSPOSE") {
     Tensor<double, 2> t{
         {0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 0, 1}, {2, 3, 4, 5}, {6, 7, 8, 9}};
+    t.watch();
     Tensor<double, 2> r =
         (t.slice(TensorRange(0, 4, 2), TensorRange(-1, -5, -1))).transpose() *
         Tensor<double, 2>{{1, 2}, {3, 4}, {5, 6}, {7, 8}};
@@ -268,6 +288,7 @@ TEST_SUITE("Autodiff") {
   }
   TEST_CASE("SQRT") {
     Tensor<long, 1> y = {9, 7, 13};
+    y.watch();
     Tensor<float, 1> z = (y * 0.5f).sqrt();
     Tensor<double, 1> dy = z.gradient(y);
     using doctest::Approx;
@@ -278,6 +299,8 @@ TEST_SUITE("Autodiff") {
   TEST_CASE("SIN, COS, TAN") {
     Tensor<int, 2> x = {{0, 1, -2}, {2, -3, 4}};
     Tensor<long, 1> y = {-9, 7, 13};
+    x.watch();
+    y.watch();
     Tensor<double, 2> z1 = (x.sin() * y.cos()).tan();
     Tensor<double, 2> dx = z1.gradient(x);
     std::vector<double> res = {-0.91113025, 0.6279001,  -0.8204005,
@@ -313,6 +336,8 @@ TEST_SUITE("Autodiff") {
                      {{1, 2, 3},    {4, 5, 6},    {7, 8, 9}}};
     Tensor<int, 3> k{{{1, 1, 1},    {2, 2, 2}}, 
                      {{-3, -3, -3}, {1, 1, 1}}};
+    x.watch();
+    k.watch();
     Tensor<int, 2> y = x.convolve(k, 1, 2);
     Tensor<double, 3> dk = y.gradient(k);
     CHECK_EQ(12, dk[0][0][0]);
@@ -350,6 +375,7 @@ TEST_SUITE("Autodiff") {
                         {{{3,4,5}, {-1,-1,-1}},
                          {{0, 0, 0}, {1, 2, 0.1}}}};
     Tensor<double, 4> f{{{{3, 2, 1}, {-1, 1, -1}}}};
+    w.watch();
     Tensor<double, 3> z = w.convolve(f, 1, 2, 2);
     Tensor<double, 4> dw = z.gradient(w);
     CHECK_EQ(3, dw[0][0][0][0]);
@@ -377,6 +403,7 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(0, dw[1][1][1][1]);
     CHECK_EQ(0, dw[1][1][1][2]);
     Tensor<double, 3> a = Tensor<double, 3>::constant(1.0, 6, 6, 1);
+    a.watch();
     Tensor<double, 3> b {{{1}, {-1}, {2}, {2}}, {{2}, {3}, {-1}, {4}}};
     Tensor<double, 2> c = a.convolve(b, 5, 2);
     Tensor<double, 3> da = c.gradient(a);

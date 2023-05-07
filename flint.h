@@ -147,7 +147,7 @@ enum FOperationType {
   FGREATER,
   FCONVOLVE,
   FSLIDE,
-  FGRADIENT_CONVOLVE, //only for internal use!
+  FGRADIENT_CONVOLVE, // only for internal use!
   FNUM_OPERATION_TYPES
 };
 /**
@@ -199,7 +199,8 @@ struct FGraphNode {
   FOperation *operation;    // the operation represented by this graph node
   size_t reference_counter; // for garbage collection in free graph
   FResultData *result_data; // to store computational result
-  void *gradient_data;      // to store a list of present variables that are currently watched in the graph
+  void *gradient_data;      // to store a list of present variables that are
+                            // currently watched in the graph
 };
 /** Result of an call to `fCreateGraph`, see `FResultData`.
  * Data of this Operation may not be changed manually when using a GPU Backend.
@@ -341,6 +342,16 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
  * - `dx`: the variable for which outputfct is derived for
  */
 FGraphNode *fCalculateGradient(FGraphNode *outputfct, const FGraphNode *dx);
+/** Marks this node as a node for which a gradient might be calculated later.
+ * It is only possible to calculate the gradient for this node (as a derivative)
+ * in operations that occur AFTER a call to this method.
+ */
+void markGradientVariable(FGraphNode *node);
+/** Removes the gradient mark (ans subsequent memory overhead) for this node.
+ * After a call to this method no subsequent gradient calculations with this
+ * node as a derivative will be possible.
+ */
+void unmarkGradientVariable(FGraphNode *node);
 //  operations
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);

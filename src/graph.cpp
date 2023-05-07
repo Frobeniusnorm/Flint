@@ -23,16 +23,25 @@
 #include <vector>
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
-const char *fop_to_string[] = {
-    "FSTORE",      "FADD",        "FSUB",     "FMUL",   "FDIV",
-    "FPOW",        "FNEG",        "FLOG",     "FSIGN",  "FEVEN",
-    "FLOG2",       "FLOG10",      "FSIN",     "FCOS",   "FTAN",
-    "FASIN",       "FACOS",       "FATAN",    "FSQRT",  "FLATTEN",
-    "FMATMUL",     "FCONVERSION", "FRESHAPE", "FMIN",   "FMAX",
-    "FREDUCE_SUM", "FREDUCE_MUL", "FSLICE",   "FABS",   "FREPEAT",
-    "FTRANSPOSE",  "FEXTEND",     "FLESS",    "FEQUAL", "FGREATER",
-    "FCONVOLVE",   "FSLIDE", "FGRADIENT_CONVOLVE"
-};
+const char *fop_to_string[] = {"FSTORE",      "FADD",
+                               "FSUB",        "FMUL",
+                               "FDIV",        "FPOW",
+                               "FNEG",        "FLOG",
+                               "FSIGN",       "FEVEN",
+                               "FLOG2",       "FLOG10",
+                               "FSIN",        "FCOS",
+                               "FTAN",        "FASIN",
+                               "FACOS",       "FATAN",
+                               "FSQRT",       "FLATTEN",
+                               "FMATMUL",     "FCONVERSION",
+                               "FRESHAPE",    "FMIN",
+                               "FMAX",        "FREDUCE_SUM",
+                               "FREDUCE_MUL", "FSLICE",
+                               "FABS",        "FREPEAT",
+                               "FTRANSPOSE",  "FEXTEND",
+                               "FLESS",       "FEQUAL",
+                               "FGREATER",    "FCONVOLVE",
+                               "FSLIDE",      "FGRADIENT_CONVOLVE"};
 static bool use_cpu, use_gpu, eager_execution = false;
 // converts c++ type to flint type
 
@@ -64,22 +73,25 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
       return fExecuteGraph_cpu(f);
   }
 }
-static inline void configureGradientInformation(FGraphNode* g, std::vector<FGraphNode*> pred){
-  std::unordered_set<FGraphNode*>* gd = nullptr;
-  for (FGraphNode* p : pred){
-    if (p->gradient_data){
+static inline void
+configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
+  std::unordered_set<const FGraphNode *> *gd = nullptr;
+  for (FGraphNode *p : pred) {
+    if (p->gradient_data) {
       if (!gd)
-        gd = new std::unordered_set<FGraphNode*>();
-      std::unordered_set<FGraphNode*>* other = (std::unordered_set<FGraphNode*>*)p->gradient_data;
-      gd->insert(other->begin(), other->end()); 
+        gd = new std::unordered_set<const FGraphNode *>();
+      std::unordered_set<const FGraphNode *> *other =
+          (std::unordered_set<const FGraphNode *> *)p->gradient_data;
+      gd->insert(other->begin(), other->end());
     }
   }
-  g->gradient_data = (void*)gd;
+  g->gradient_data = (void *)gd;
 }
 
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
-  if (eager_execution) execute_eagerly(node);
+  if (eager_execution)
+    execute_eagerly(node);
   if (!use_cpu && !use_gpu)
     flintInit(FLINT_BACKEND_BOTH);
   if (use_gpu)
@@ -146,7 +158,7 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
 }
 // frees all allocated data from the graph and the nodes that are reachable
 void fFreeGraph(FGraphNode *graph) {
-  std::unordered_set<FGraphNode *>
+  std::unordered_set<const FGraphNode *>
       all; // all which are in the queue and were visited
   std::list<FGraphNode *> wq;
   all.insert(graph);
@@ -166,7 +178,7 @@ void fFreeGraph(FGraphNode *graph) {
       }
     }
     if (gn->gradient_data) {
-      delete (std::unordered_set<FGraphNode*>*) gn->gradient_data;
+      delete (std::unordered_set<const FGraphNode *> *)gn->gradient_data;
     }
     bool freed_res = false;
     if (gn->result_data) {
@@ -220,7 +232,6 @@ void fFreeGraph(FGraphNode *graph) {
         gn->operation->additional_data = nullptr;
       }
       delete gn->operation;
-
     }
     delete gn;
   }
@@ -278,8 +289,10 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
     std::memcpy(crd->data, ord->data, byte_size);
   }
   if (node->gradient_data) {
-    std::unordered_set<FGraphNode*> *other = (std::unordered_set<FGraphNode*>*) node->gradient_data;
-    foo->gradient_data = (void*)(new std::unordered_set<FGraphNode*>(*other));
+    std::unordered_set<const FGraphNode *> *other =
+        (std::unordered_set<const FGraphNode *> *)node->gradient_data;
+    foo->gradient_data =
+        (void *)(new std::unordered_set<const FGraphNode *>(*other));
   }
   foo->num_predecessor = node->num_predecessor;
   if (foo->num_predecessor) {
@@ -394,6 +407,25 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
   memcpy((void *)op->shape, src, sizeof(size_t) * op->dimensions);
   // determine type
   op->data_type = b ? higherType(a->data_type, b->data_type) : a->data_type;
+}
+void markGradientVariable(FGraphNode *node) {
+  std::unordered_set<const FGraphNode *> *trace =
+      node->gradient_data
+          ? (std::unordered_set<const FGraphNode *> *) node->gradient_data
+          : new std::unordered_set<const FGraphNode *>();
+  trace->insert(node);
+  node->gradient_data = (void *)trace;
+}
+void unmarkGradientVariable(FGraphNode *node) {
+  if (node->gradient_data) {
+    std::unordered_set<const FGraphNode *> *gd =
+        (std::unordered_set<const FGraphNode *> *)node->gradient_data;
+    gd->erase(node);
+    if (gd->empty()) {
+      delete gd;
+      node->gradient_data = nullptr;
+    }
+  }
 }
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
@@ -707,7 +739,7 @@ FGraphNode *fsign(FGraphNode *a) {
   op->shape = safe_mal<size_t>(op->dimensions);
   memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
   op->data_type = F_INT32;
-  FGraphNode* g = addNode(op, {a});
+  FGraphNode *g = addNode(op, {a});
   return g;
 }
 FGraphNode *feven(FGraphNode *a) {
@@ -721,7 +753,7 @@ FGraphNode *feven(FGraphNode *a) {
   op->shape = safe_mal<size_t>(op->dimensions);
   memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
   op->data_type = F_INT32;
-  FGraphNode* g = addNode(op, {a});
+  FGraphNode *g = addNode(op, {a});
   return g;
 }
 FGraphNode *fflatten(FGraphNode *a) {
@@ -802,7 +834,7 @@ FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b) {
   res->op_type = FMATMUL;
 
   FGraphNode *node = new FGraphNode();
-  configureGradientInformation(node, {x, y}); 
+  configureGradientInformation(node, {x, y});
   node->operation = res;
   node->result_data = nullptr;
   node->num_predecessor = 2;
@@ -825,7 +857,7 @@ FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions) {
     flogging(F_ERROR, "To reshape a node the product of its new shape must "
                       "match the product of its old!");
   FGraphNode *node = new FGraphNode();
-  configureGradientInformation(node, {a}); 
+  configureGradientInformation(node, {a});
   node->operation = new FOperation();
   node->result_data = nullptr;
   node->operation->shape = safe_mal<size_t>(dimensions);
@@ -842,7 +874,7 @@ FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions) {
 }
 FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   FGraphNode *foo = new FGraphNode();
-  configureGradientInformation(foo, {a}); 
+  configureGradientInformation(foo, {a});
   foo->reference_counter = 0;
   foo->num_predecessor = 1;
   foo->result_data = nullptr;
@@ -867,7 +899,7 @@ static inline FGraphNode *reduce_operation(FGraphNode *x, const int dimension,
     a = fExecuteGraph(a);
   }
   FGraphNode *foo = new FGraphNode();
-  configureGradientInformation(foo, {a}); 
+  configureGradientInformation(foo, {a});
   foo->reference_counter = 0;
   foo->num_predecessor = 1;
   foo->result_data = nullptr;
@@ -907,7 +939,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
                         const long *step) {
   // construct nodes
   FGraphNode *foo = new FGraphNode();
-  configureGradientInformation(foo, {a}); 
+  configureGradientInformation(foo, {a});
   foo->num_predecessor = 1;
   foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
@@ -1011,7 +1043,7 @@ FGraphNode *fless_g(FGraphNode *a, FGraphNode *b) {
   op->additional_data = nullptr;
   initShape_keep(op, a->operation, b->operation);
   op->data_type = F_INT32;
-  FGraphNode* g = addNode(op, {a, b});
+  FGraphNode *g = addNode(op, {a, b});
   return g;
 }
 FGraphNode *fgreater_g(FGraphNode *a, FGraphNode *b) {
@@ -1020,7 +1052,7 @@ FGraphNode *fgreater_g(FGraphNode *a, FGraphNode *b) {
   op->additional_data = nullptr;
   initShape_keep(op, a->operation, b->operation);
   op->data_type = F_INT32;
-  FGraphNode* g = addNode(op, {a, b});
+  FGraphNode *g = addNode(op, {a, b});
   return g;
 }
 FGraphNode *fequal_g(FGraphNode *a, FGraphNode *b) {
@@ -1029,7 +1061,7 @@ FGraphNode *fequal_g(FGraphNode *a, FGraphNode *b) {
   op->additional_data = nullptr;
   initShape_keep(op, a->operation, b->operation);
   op->data_type = F_INT32;
-  FGraphNode* g = addNode(op, {a, b});
+  FGraphNode *g = addNode(op, {a, b});
   return g;
 }
 template <typename T> static inline FGraphNode *less(FGraphNode *a, const T b) {
@@ -1037,7 +1069,7 @@ template <typename T> static inline FGraphNode *less(FGraphNode *a, const T b) {
   op->additional_data = nullptr;
   op->op_type = FLESS;
   initShape_keep(op, a->operation, nullptr);
-  FGraphNode* g = addNodeWithConst(op, a, b);
+  FGraphNode *g = addNodeWithConst(op, a, b);
   g->operation->data_type = F_INT32;
   return g;
 }
@@ -1053,7 +1085,7 @@ static inline FGraphNode *greater(FGraphNode *a, const T b) {
   op->op_type = FGREATER;
   initShape_keep(op, a->operation, nullptr);
   op->data_type = F_INT32;
-  FGraphNode* g = addNodeWithConst(op, a, b);
+  FGraphNode *g = addNodeWithConst(op, a, b);
   return g;
 }
 FGraphNode *fgreater_ci(FGraphNode *a, const int b) { return greater(a, b); }
@@ -1068,7 +1100,7 @@ static inline FGraphNode *equal(FGraphNode *a, const T b) {
   op->op_type = FEQUAL;
   initShape_keep(op, a->operation, nullptr);
   op->data_type = F_INT32;
-  FGraphNode* g = addNodeWithConst(op, a, b);
+  FGraphNode *g = addNodeWithConst(op, a, b);
   return g;
 }
 FGraphNode *fequal_ci(FGraphNode *a, const int b) { return equal(a, b); }
@@ -1079,7 +1111,7 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
                          const size_t *insert_at, const long *step_size) {
   // construct nodes
   FGraphNode *foo = new FGraphNode();
-  configureGradientInformation(foo, {a}); 
+  configureGradientInformation(foo, {a});
   foo->num_predecessor = 1;
   foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
