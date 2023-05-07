@@ -32,7 +32,6 @@ int main(int argc, char **argv) {
     flintInit(FLINT_BACKEND_ONLY_GPU);
     if (eager)
       enable_eager_execution();
-    Flint::setLoggingLevel(F_DEBUG);
     res = context.run();
     flintCleanup();
   }

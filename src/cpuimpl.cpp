@@ -911,15 +911,21 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
     size_t size = 1;
     for (int j = 0; j < curr->operation->dimensions; j++)
       size *= curr->operation->shape[j];
-    if (curr->operation->op_type == FSTORE) {
+    if (curr->operation->op_type == FSTORE || curr->result_data) {
       CPUResultData foo;
       foo.shape =
           vector<size_t>(curr->operation->shape,
                          curr->operation->shape + curr->operation->dimensions);
       foo.type = curr->operation->data_type;
-      FStore *store = (FStore *)curr->operation->additional_data;
-      foo.num_entries = store->num_entries;
-      foo.data = store->data;
+      if (curr->result_data) {
+        FResultData* rd = curr->result_data;
+        foo.num_entries = rd->num_entries;
+        foo.data = rd->data;
+      } else {
+        FStore *store = (FStore *)curr->operation->additional_data;
+        foo.num_entries = store->num_entries;
+        foo.data = store->data;
+      }
       results.insert({curr, foo});
     } else {
       // allocate result data and execute

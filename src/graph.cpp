@@ -180,10 +180,10 @@ void fFreeGraph(FGraphNode *graph) {
     }
     if (gn->predecessors != NULL && gn->num_predecessor != 0)
       free(gn->predecessors);
-    if (gn->operation != NULL) {
+    if (gn->operation != nullptr) {
       if (gn->operation->shape)
         free(gn->operation->shape);
-      if (gn->operation->additional_data)
+      if (gn->operation->additional_data) {
         switch (gn->operation->op_type) {
         case FSTORE: {
           FStore *st = (FStore *)gn->operation->additional_data;
@@ -217,7 +217,10 @@ void fFreeGraph(FGraphNode *graph) {
         default:
           break;
         }
+        gn->operation->additional_data = nullptr;
+      }
       delete gn->operation;
+
     }
     delete gn;
   }
