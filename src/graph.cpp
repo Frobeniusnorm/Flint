@@ -64,6 +64,18 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
       return fExecuteGraph_cpu(f);
   }
 }
+static inline void configureGradientInformation(FGraphNode* g, std::vector<FGraphNode*> pred){
+  std::unordered_set<FGraphNode*>* gd = nullptr;
+  for (FGraphNode* p : pred){
+    if (p->gradient_data){
+      if (!gd)
+        gd = new std::unordered_set<FGraphNode*>();
+      std::unordered_set<FGraphNode*>* other = (std::unordered_set<FGraphNode*>*)p->gradient_data;
+      gd->insert(other->begin(), other->end()); 
+    }
+  }
+  g->gradient_data = (void*)gd;
+}
 
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
@@ -94,6 +106,7 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
                          const FType data_type, const size_t *shape,
                          const int dimensions) {
   FGraphNode *gn = new FGraphNode();
+  gn->gradient_data = nullptr;
   gn->reference_counter = 0;
   gn->result_data = nullptr;
   FOperation *op = new FOperation();
@@ -151,6 +164,9 @@ void fFreeGraph(FGraphNode *graph) {
         wq.push_back(gn->predecessors[i]);
         all.insert(gn->predecessors[i]);
       }
+    }
+    if (gn->gradient_data) {
+      delete (std::unordered_set<FGraphNode*>*) gn->gradient_data;
     }
     bool freed_res = false;
     if (gn->result_data) {
@@ -214,6 +230,7 @@ static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
              "correct behaviour!");
   }
   FGraphNode *foo = new FGraphNode();
+  configureGradientInformation(foo, pre);
   foo->reference_counter = 0;
   foo->operation = op;
   foo->result_data = nullptr;
@@ -256,6 +273,10 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
       break;
     }
     std::memcpy(crd->data, ord->data, byte_size);
+  }
+  if (node->gradient_data) {
+    std::unordered_set<FGraphNode*> *other = (std::unordered_set<FGraphNode*>*) node->gradient_data;
+    foo->gradient_data = (void*)(new std::unordered_set<FGraphNode*>(*other));
   }
   foo->num_predecessor = node->num_predecessor;
   if (foo->num_predecessor) {
@@ -778,6 +799,7 @@ FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b) {
   res->op_type = FMATMUL;
 
   FGraphNode *node = new FGraphNode();
+  configureGradientInformation(node, {x, y}); 
   node->operation = res;
   node->result_data = nullptr;
   node->num_predecessor = 2;
@@ -800,6 +822,7 @@ FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions) {
     flogging(F_ERROR, "To reshape a node the product of its new shape must "
                       "match the product of its old!");
   FGraphNode *node = new FGraphNode();
+  configureGradientInformation(node, {a}); 
   node->operation = new FOperation();
   node->result_data = nullptr;
   node->operation->shape = safe_mal<size_t>(dimensions);
@@ -816,6 +839,7 @@ FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions) {
 }
 FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   FGraphNode *foo = new FGraphNode();
+  configureGradientInformation(foo, {a}); 
   foo->reference_counter = 0;
   foo->num_predecessor = 1;
   foo->result_data = nullptr;
@@ -840,6 +864,7 @@ static inline FGraphNode *reduce_operation(FGraphNode *x, const int dimension,
     a = fExecuteGraph(a);
   }
   FGraphNode *foo = new FGraphNode();
+  configureGradientInformation(foo, {a}); 
   foo->reference_counter = 0;
   foo->num_predecessor = 1;
   foo->result_data = nullptr;
@@ -879,6 +904,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
                         const long *step) {
   // construct nodes
   FGraphNode *foo = new FGraphNode();
+  configureGradientInformation(foo, {a}); 
   foo->num_predecessor = 1;
   foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
@@ -1050,6 +1076,7 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
                          const size_t *insert_at, const long *step_size) {
   // construct nodes
   FGraphNode *foo = new FGraphNode();
+  configureGradientInformation(foo, {a}); 
   foo->num_predecessor = 1;
   foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);

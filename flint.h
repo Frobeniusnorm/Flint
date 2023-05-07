@@ -199,6 +199,7 @@ struct FGraphNode {
   FOperation *operation;    // the operation represented by this graph node
   size_t reference_counter; // for garbage collection in free graph
   FResultData *result_data; // to store computational result
+  void *gradient_data;      // to store a list of present variables that are currently watched in the graph
 };
 /** Result of an call to `fCreateGraph`, see `FResultData`.
  * Data of this Operation may not be changed manually when using a GPU Backend.
