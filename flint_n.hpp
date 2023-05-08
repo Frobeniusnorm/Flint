@@ -1116,19 +1116,20 @@ template <typename T, unsigned int n> struct Tensor {
   FGraphNode *get_graph_node() const { return node; }
   /**
    * Calculates the gradient of this Tensor to `dx`. A gradient is always a
-   * Tensor of type `double`.
+   * Tensor of type `double`. `dx` needs to have been marked with `watch` during
+   * construction of this Tensor.
    */
   template <typename K, unsigned int k>
   Tensor<double, k> gradient(const Tensor<K, k> &dx) {
     return Tensor<double, k>(fCalculateGradient(this->node, dx.node), dx.shape);
   }
-  /** Watches this node, i.e. collects information needed to calculate the gradient with this node as a derivative */
-  void watch() {
-    markGradientVariable(node);
-  }
-  void unwatch(){
-    unmarkGradientVariable(node);
-  }
+  /** Watches this node, i.e. collects information needed to calculate the
+   * gradient with this node as a derivative */
+  void watch() { markGradientVariable(node); }
+  /** No longer watches this node, for subsequent operations no additional
+   * gradient information will be collected i.e. it wont be possible to derive
+   * for this node for future calculations */
+  void unwatch() { unmarkGradientVariable(node); }
 
 protected:
   Tensor(FGraphNode *node, std::array<size_t, n> shape)

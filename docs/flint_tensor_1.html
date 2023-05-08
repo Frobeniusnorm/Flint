@@ -47,7 +47,7 @@
   Tensor&lt;int, 1&gt; <b>operator&gt;</b>(const Tensor<K, k> &other) const </a></li><li><a href="#s-_typename_K__Tensor_int__1__operator__const_K_other__const_">template &lt;typename K&gt; Tensor&lt;int, 1&gt; <b>operator&gt;</b>(const K other) const </a></li><li><a href="#s-_typename_K__unsigned_int_k___Tensor_int__k__equal_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;int, k&gt; <b>equal</b>(const Tensor<K, k> &other) const </a></li><li><a href="#s-_typename_K__Tensor_int__1__equal_const_K_other__const_">template &lt;typename K&gt; Tensor&lt;int, 1&gt; <b>equal</b>(const K other) const </a></li><li><a href="#s-1__slice_long_start_=_0__long_end_=_TensorRange::MAX_SCOPE______________________long_step_=_1__const_">Tensor&lt;T, 1&gt; <b>slice</b>(long start = 0, long end = TensorRange::MAX_SCOPE,
                      long step = 1) const </a></li><li><a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a></li><li><a href="#s-1__repeat_int_repetitions__const_">Tensor&lt;T, 1&gt; <b>repeat</b>(int repetitions) const </a></li><li><a href="#s-_typename_K__unsigned_int_k___Tensor_double__k__gradient_const_Tensor_K__k__&dx__">template &lt;typename K, unsigned int k&gt;
-  Tensor&lt;double, k&gt; <b>gradient</b>(const Tensor<K, k> &dx) </a></li></ul></div>
+  Tensor&lt;double, k&gt; <b>gradient</b>(const Tensor<K, k> &dx) </a></li><li><a href="#s-watch___">void <b>watch</b>() </a></li></ul></div>
         <div style="display: block; height: 2em;"></div>
         <div id="s-_typename_T__struct_Tensor_T__1__"></div><div class="card"><pre class="card_header_code">template &lt;typename T&gt; struct <b>Tensor</b></pre></div>
 <br />
@@ -497,6 +497,9 @@
  Calculates the gradient of this Tensor to <pre class="inline_code">dx</pre>. A gradient is always a
  Tensor of type <pre class="inline_code">double</pre>.
 </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-watch___"></div><div class="card"><pre class="card_header_code">void <b>watch</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;"> Watches this node, i.e. collects information needed to calculate the gradient with this node as a derivative </div></div><div style="display: block; height: 2em;"></div>
 
     </div>
 </center>

@@ -82,7 +82,11 @@ configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
         gd = new std::unordered_set<const FGraphNode *>();
       std::unordered_set<const FGraphNode *> *other =
           (std::unordered_set<const FGraphNode *> *)p->gradient_data;
-      gd->insert(other->begin(), other->end());
+      gd->reserve(other->size() + gd->size());
+      for (const FGraphNode* g : *other){
+        // check if it is still a variable 
+        if (g->gradient_data) gd->insert(g);
+      }
     }
   }
   g->gradient_data = (void *)gd;

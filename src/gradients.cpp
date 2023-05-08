@@ -39,7 +39,11 @@ configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
         gd = new std::unordered_set<const FGraphNode *>();
       std::unordered_set<const FGraphNode *> *other =
           (std::unordered_set<const FGraphNode *> *)p->gradient_data;
-      gd->insert(other->begin(), other->end());
+      gd->reserve(other->size() + gd->size());
+      for (const FGraphNode* g : *other){
+        // check if it is still a variable 
+        if (g->gradient_data) gd->insert(g);
+      }
     }
   }
   g->gradient_data = (void *)gd;
@@ -519,7 +523,7 @@ FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
         std::unordered_set<const FGraphNode*> *trace = (std::unordered_set<const FGraphNode*> *) parent->gradient_data;
         if (!trace->contains(dx))
           continue;
-      } else continue;
+      } else if(parent != dx) continue;
       FGraphNode *local_grad = local_gradient(curr, parent, adj);
       if (adjoints.contains(parent)) {
         adjoints[parent] =

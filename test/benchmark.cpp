@@ -69,6 +69,8 @@ double gradient_fun(bool backend) {
         d2[i][j][k] = (16 - i) / 2.0 * (64 - j) / 8.0 + j / 16.0;
   Tensor<float, 2> t1(d1);
   Tensor<float, 3> t2(d2);
+  t1.watch();
+  t2.watch();
   timer.start();
   for (int i = 0; i < 100; i++) {
     Tensor<double, 1> t3 =

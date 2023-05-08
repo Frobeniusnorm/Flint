@@ -60,7 +60,7 @@
                       std::array<size_t, n> indices,
                       std::array<long, n> steps) </a></li><li><a href="#s-_typename____args___Tensor_T__n__repeat_const_args____repetitions__const_">template &lt;typename... args&gt;
   Tensor&lt;T, n&gt; <b>repeat</b>(const args... repetitions) const </a></li><li><a href="#s-n__transpose_std::initializer_list_int__transposition_=_">Tensor&lt;T, n&gt; <b>transpose</b>(std::initializer_list<int> transposition = </a></li><li><a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a></li><li><a href="#s-_typename_K__unsigned_int_k___Tensor_double__k__gradient_const_Tensor_K__k__&dx__">template &lt;typename K, unsigned int k&gt;
-  Tensor&lt;double, k&gt; <b>gradient</b>(const Tensor<K, k> &dx) </a></li></ul></div>
+  Tensor&lt;double, k&gt; <b>gradient</b>(const Tensor<K, k> &dx) </a></li><li><a href="#s-watch___">void <b>watch</b>() </a></li><li><a href="#s-unwatch___">void <b>unwatch</b>() </a></li></ul></div>
         <div style="display: block; height: 2em;"></div>
         <div id="s-_typename_T__unsigned_int_n__struct_Tensor_"></div><div class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></pre></div>
 <br />
@@ -808,8 +808,18 @@
 <br />
 <div class="card"><div style="padding: 5px;">
  Calculates the gradient of this Tensor to <pre class="inline_code">dx</pre>. A gradient is always a
- Tensor of type <pre class="inline_code">double</pre>.
+ Tensor of type <pre class="inline_code">double</pre>. <pre class="inline_code">dx</pre> needs to have been marked with <pre class="inline_code">watch</pre> during
+ construction of this Tensor.
 </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-watch___"></div><div class="card"><pre class="card_header_code">void <b>watch</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;"> Watches this node, i.e. collects information needed to calculate the
+ gradient with this node as a derivative </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-unwatch___"></div><div class="card"><pre class="card_header_code">void <b>unwatch</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;"> No longer watches this node, for subsequent operations no additional
+ gradient information will be collected i.e. it wont be possible to derive
+ for this node for future calculations </div></div><div style="display: block; height: 2em;"></div>
 
     </div>
 </center>
