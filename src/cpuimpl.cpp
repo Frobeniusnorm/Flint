@@ -1005,5 +1005,22 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   rd->num_entries = final.num_entries;
   rd->mem_id = nullptr;
   node->result_data = rd;
+  if (!node->gradient_data && node->operation->op_type != FSTORE) {
+    // we can modify this node to a STORE operation
+    freeAdditionalData(node); 
+    node->operation->op_type = FSTORE;
+    for (int i = 0; i < node->num_predecessor; i++) {
+      if(--node->predecessors[i]->reference_counter == 0)
+        fFreeGraph(node->predecessors[i]);
+    }
+    node->num_predecessor = 0;
+    free(node->predecessors);
+    node->predecessors = nullptr;
+    FStore* store = new FStore();
+    store->data = rd->data;
+    store->mem_id = nullptr;
+    store->num_entries = rd->num_entries;
+    node->operation->additional_data = store;
+  }
   return node;
 }

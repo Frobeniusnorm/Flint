@@ -114,6 +114,33 @@ template <typename T> static constexpr FType toFlintType() {
   if (std::is_same<T, double>())
     return F_FLOAT64;
 }
+inline void freeAdditionalData(FGraphNode *gn) {
+
+  switch (gn->operation->op_type) {
+  case FSLICE: {
+    FSlice *s = (FSlice *)gn->operation->additional_data;
+    free(s->end);
+    free(s->start);
+    free(s->step);
+    delete s;
+  } break;
+  case FEXTEND: {
+    FExtend *s = (FExtend *)gn->operation->additional_data;
+    free(s->start);
+    free(s->step);
+    delete s;
+  } break;
+  case FCONVOLVE:
+  case FSLIDE:
+  case FGRADIENT_CONVOLVE:
+  case FTRANSPOSE:
+  case FREDUCE_SUM:
+  case FREDUCE_MUL:
+    free(gn->operation->additional_data);
+  default:
+    break;
+  }
+}
 template <typename T> class blocking_queue {
 private:
   std::mutex mutex;

@@ -210,28 +210,8 @@ void fFreeGraph(FGraphNode *graph) {
           }
           delete st;
         } break;
-        case FSLICE: {
-          FSlice *s = (FSlice *)gn->operation->additional_data;
-          free(s->end);
-          free(s->start);
-          free(s->step);
-          delete s;
-        } break;
-        case FEXTEND: {
-          FExtend *s = (FExtend *)gn->operation->additional_data;
-          free(s->start);
-          free(s->step);
-          delete s;
-        } break;
-        case FCONVOLVE:
-        case FSLIDE:
-        case FGRADIENT_CONVOLVE:
-        case FTRANSPOSE:
-        case FREDUCE_SUM:
-        case FREDUCE_MUL:
-          free(gn->operation->additional_data);
         default:
-          break;
+          freeAdditionalData(gn);
         }
         gn->operation->additional_data = nullptr;
       }
