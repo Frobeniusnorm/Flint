@@ -840,26 +840,7 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
       break;
     }
   } else {
-    size_t byte_size = 1;
-    switch (node->operation->data_type) {
-    case F_INT32:
-      data = safe_mal<int>(total);
-      byte_size = sizeof(int) * total;
-      break;
-    case F_INT64:
-      data = safe_mal<long>(total);
-      byte_size = sizeof(long) * total;
-      break;
-    case F_FLOAT32:
-      data = safe_mal<float>(total);
-      byte_size = sizeof(float) * total;
-      break;
-    case F_FLOAT64:
-      data = safe_mal<double>(total);
-      byte_size = sizeof(double) * total;
-      break;
-    }
-    memcpy(data, ((FStore *)node->operation->additional_data)->data, byte_size);
+    data = ((FStore *)node->operation->additional_data)->data;
   }
   FResultData *rd = new FResultData();
   rd->data = data;
@@ -1005,22 +986,5 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   rd->num_entries = final.num_entries;
   rd->mem_id = nullptr;
   node->result_data = rd;
-  if (!node->gradient_data && node->operation->op_type != FSTORE) {
-    // we can modify this node to a STORE operation
-    freeAdditionalData(node); 
-    node->operation->op_type = FSTORE;
-    for (int i = 0; i < node->num_predecessor; i++) {
-      if(--node->predecessors[i]->reference_counter == 0)
-        fFreeGraph(node->predecessors[i]);
-    }
-    node->num_predecessor = 0;
-    free(node->predecessors);
-    node->predecessors = nullptr;
-    FStore* store = new FStore();
-    store->data = rd->data;
-    store->mem_id = nullptr;
-    store->num_entries = rd->num_entries;
-    node->operation->additional_data = store;
-  }
   return node;
 }

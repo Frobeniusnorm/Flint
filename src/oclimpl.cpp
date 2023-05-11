@@ -459,9 +459,11 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       mem_obj = mem_id;
     } else {
       mem_obj = create_gpu_memory(pred, CL_MEM_READ_ONLY, &total_size);
-      if (op->op_type == FSTORE)
+      if (op->op_type == FSTORE) {
         ((FStore *)op->additional_data)->mem_id = mem_obj;
-      else {
+        if (pred->result_data)
+          pred->result_data->mem_id = mem_obj;
+      } else {
         pred->result_data->mem_id = mem_obj;
       }
       do_write = true;
@@ -705,6 +707,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
         flogging(F_ERROR, "Could not load Argument to kernel!");
       to_free.push_back(asd_mem);
       to_free.push_back(ass_mem);
+      to_free.push_back(steps_mem);
+      to_free.push_back(start_mem);
       to_free.push_back(predshape_mem);
     } break;
     default:
@@ -1042,9 +1046,11 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
                                total_size * type_size, nullptr, &err_code);
       if (err_code == CL_OUT_OF_HOST_MEMORY)
         flogging(F_ERROR, "Not enough memory to create buffer!");
-      if (op->op_type == FSTORE)
+      if (op->op_type == FSTORE) {
         ((FStore *)op->additional_data)->mem_id = mem_obj;
-      else
+        if (gn->result_data)
+          gn->result_data->mem_id = mem_obj;
+      } else
         gn->result_data->mem_id = mem_obj;
       do_write = true;
     }

@@ -337,7 +337,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
 //  gradient calculation
 /** Calculates the overall gradient of an output node to a variable.
  * The variable must be marked as a gradient variable, see
- * `markGradientVariable`.
+ * `fMarkGradientVariable`.
  *
  * - `outputfct`: the Node which represents the chain of functions of which
  *    the gradient is to be computed.
@@ -350,12 +350,12 @@ FGraphNode *fCalculateGradient(FGraphNode *outputfct, const FGraphNode *dx);
  * operations will have a remark that enlists this node as a possible gradient
  * variable, to enable less memory usage and faster gradient calculation).
  */
-void markGradientVariable(FGraphNode *node);
+void fMarkGradientVariable(FGraphNode *node);
 /** Removes the gradient mark (ans subsequent memory overhead) for this node.
  * After a call to this method no subsequent gradient calculations with this
  * node as a derivative will be possible.
  */
-void unmarkGradientVariable(FGraphNode *node);
+void fUnmarkGradientVariable(FGraphNode *node);
 //  operations
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);

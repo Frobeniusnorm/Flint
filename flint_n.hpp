@@ -1125,11 +1125,11 @@ template <typename T, unsigned int n> struct Tensor {
   }
   /** Watches this node, i.e. collects information needed to calculate the
    * gradient with this node as a derivative */
-  void watch() { markGradientVariable(node); }
+  void watch() { fMarkGradientVariable(node); }
   /** No longer watches this node, for subsequent operations no additional
    * gradient information will be collected i.e. it wont be possible to derive
    * for this node for future calculations */
-  void unwatch() { unmarkGradientVariable(node); }
+  void unwatch() { fUnmarkGradientVariable(node); }
 
 protected:
   Tensor(FGraphNode *node, std::array<size_t, n> shape)

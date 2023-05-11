@@ -392,7 +392,7 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
   // determine type
   op->data_type = b ? higherType(a->data_type, b->data_type) : a->data_type;
 }
-void markGradientVariable(FGraphNode *node) {
+void fMarkGradientVariable(FGraphNode *node) {
   std::unordered_set<const FGraphNode *> *trace =
       node->gradient_data
           ? (std::unordered_set<const FGraphNode *> *) node->gradient_data
@@ -400,7 +400,7 @@ void markGradientVariable(FGraphNode *node) {
   trace->insert(node);
   node->gradient_data = (void *)trace;
 }
-void unmarkGradientVariable(FGraphNode *node) {
+void fUnmarkGradientVariable(FGraphNode *node) {
   if (node->gradient_data) {
     std::unordered_set<const FGraphNode *> *gd =
         (std::unordered_set<const FGraphNode *> *)node->gradient_data;

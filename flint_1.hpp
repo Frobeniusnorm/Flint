@@ -626,10 +626,10 @@ template <typename T> struct Tensor<T, 1> {
   }
   /** Watches this node, i.e. collects information needed to calculate the gradient with this node as a derivative */
   void watch() {
-    markGradientVariable(node);
+    fMarkGradientVariable(node);
   }
   void unwatch(){
-    unmarkGradientVariable(node);
+    fUnmarkGradientVariable(node);
   }
 
 protected:
