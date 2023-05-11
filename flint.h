@@ -356,6 +356,16 @@ void fMarkGradientVariable(FGraphNode *node);
  * node as a derivative will be possible.
  */
 void fUnmarkGradientVariable(FGraphNode *node);
+/** Optimizes memory by freeing all parental data (operand nodes of the
+ * operation of this node) and transforming this node to a storage nodes
+ * if no gradient variables are present in this node and result data is 
+ * present (i.e. it has been executed). 
+ * If you call this function manually please make sure to increase the
+ * `reference_counter` of the parents if you want to keep their handles,
+ * since this function may decrease their counter and free them.
+ * The C++ framework does this automatically.
+ */
+FGraphNode* fOptimizeMemory(FGraphNode *node);
 //  operations
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);

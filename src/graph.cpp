@@ -411,6 +411,27 @@ void fUnmarkGradientVariable(FGraphNode *node) {
     }
   }
 }
+FGraphNode* fOptimizeMemory(FGraphNode *node) {
+  if (!node->gradient_data && node->operation->op_type != FSTORE && node->result_data) {
+    FResultData *rd = node->result_data;
+    // we can modify this node to a STORE operation
+    freeAdditionalData(node); 
+    node->operation->op_type = FSTORE;
+    for (int i = 0; i < node->num_predecessor; i++) {
+      if(--node->predecessors[i]->reference_counter == 0)
+        fFreeGraph(node->predecessors[i]);
+    }
+    node->num_predecessor = 0;
+    free(node->predecessors);
+    node->predecessors = nullptr;
+    FStore* store = new FStore();
+    store->data = rd->data;
+    store->mem_id = nullptr;
+    store->num_entries = rd->num_entries;
+    node->operation->additional_data = store;
+  }
+  return node;
+}
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b) {
   FOperation *op = new FOperation();
   op->additional_data = nullptr;
