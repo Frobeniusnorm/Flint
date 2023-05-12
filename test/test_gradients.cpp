@@ -1,6 +1,6 @@
 #include "../flint.h"
 #include "../flint.hpp"
-#include <flint/flint_helper.hpp>
+#include "../flint_helper.hpp"
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
 #include "grad_test_cases.hpp"
