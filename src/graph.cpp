@@ -83,9 +83,10 @@ configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
       std::unordered_set<const FGraphNode *> *other =
           (std::unordered_set<const FGraphNode *> *)p->gradient_data;
       gd->reserve(other->size() + gd->size());
-      for (const FGraphNode* g : *other){
-        // check if it is still a variable 
-        if (g->gradient_data) gd->insert(g);
+      for (const FGraphNode *g : *other) {
+        // check if it is still a variable
+        if (g->gradient_data)
+          gd->insert(g);
       }
     }
   }
@@ -395,7 +396,7 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
 void fMarkGradientVariable(FGraphNode *node) {
   std::unordered_set<const FGraphNode *> *trace =
       node->gradient_data
-          ? (std::unordered_set<const FGraphNode *> *) node->gradient_data
+          ? (std::unordered_set<const FGraphNode *> *)node->gradient_data
           : new std::unordered_set<const FGraphNode *>();
   trace->insert(node);
   node->gradient_data = (void *)trace;
@@ -411,20 +412,21 @@ void fUnmarkGradientVariable(FGraphNode *node) {
     }
   }
 }
-FGraphNode* fOptimizeMemory(FGraphNode *node) {
-  if (!node->gradient_data && node->operation->op_type != FSTORE && node->result_data) {
+FGraphNode *fOptimizeMemory(FGraphNode *node) {
+  if (!node->gradient_data && node->operation->op_type != FSTORE &&
+      node->result_data) {
     FResultData *rd = node->result_data;
     // we can modify this node to a STORE operation
-    freeAdditionalData(node); 
+    freeAdditionalData(node);
     node->operation->op_type = FSTORE;
     for (int i = 0; i < node->num_predecessor; i++) {
-      if(--node->predecessors[i]->reference_counter == 0)
+      if (--node->predecessors[i]->reference_counter == 0)
         fFreeGraph(node->predecessors[i]);
     }
     node->num_predecessor = 0;
     free(node->predecessors);
     node->predecessors = nullptr;
-    FStore* store = new FStore();
+    FStore *store = new FStore();
     store->data = rd->data;
     store->mem_id = nullptr;
     store->num_entries = rd->num_entries;
@@ -1205,45 +1207,51 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
          (op->dimensions - 1) * sizeof(unsigned int));
   return addNode(op, {a, kernel});
 }
-#define MAGIC_NUMBER 0x07f75321
+#define MAGIC_NUMBER 0x75321
 char *fserialize(FGraphNode *node, size_t *bytes_written) {
   if (!node->result_data)
     fExecuteGraph(node);
   size_t total_size_node = node->result_data->num_entries;
   // header
-  size_t data_size = 1;
+  size_t data_size = 4;
   // pure data
   data_size += total_size_node * typeSize(node->operation->data_type);
-  // data type + dimensions + shape 
-  data_size += sizeof(FType) + sizeof(int) + node->operation->dimensions * sizeof(size_t);
-  char* data = safe_mal<char>(data_size);
+  // data type + dimensions + shape
+  data_size += sizeof(FType) + sizeof(int) +
+               node->operation->dimensions * sizeof(size_t);
+  char *data = safe_mal<char>(data_size);
   // // conversion // //
   // magic number
-  data[0] = (char) ((MAGIC_NUMBER >> (3*8)) & 0xff);
-  data[1] = (char) ((MAGIC_NUMBER >> (2*8)) & 0xff);
-  data[2] = (char) ((MAGIC_NUMBER >> (1*8)) & 0xff);
-  data[3] = (char) (MAGIC_NUMBER & 0xff);
+  data[0] = (char)((MAGIC_NUMBER >> (3 * 8)) & 0xff);
+  data[1] = (char)((MAGIC_NUMBER >> (2 * 8)) & 0xff);
+  data[2] = (char)((MAGIC_NUMBER >> (1 * 8)) & 0xff);
+  data[3] = (char)(MAGIC_NUMBER & 0xff);
   size_t index = 4;
   // type
-  for(int i = sizeof(FType) - 1; i >= 0; i--)
+  for (int i = sizeof(FType) - 1; i >= 0; i--)
     data[index++] = ((node->operation->data_type >> (i * 8)) & 0xff);
-  // dimensions  
-  for(int i = sizeof(int) - 1; i >= 0; i--)
+  // dimensions
+  for (int i = sizeof(int) - 1; i >= 0; i--)
     data[index++] = ((node->operation->dimensions >> (i * 8)) & 0xff);
   // shape
-  for(int i = 0; i < node->operation->dimensions; i++) {
+  for (int i = 0; i < node->operation->dimensions; i++) {
     for (int j = sizeof(size_t) - 1; j >= 0; j--) {
       data[index++] = ((node->operation->shape[i] >> (j * 8)) & 0xff);
     }
   }
   // data
-  std::memcpy(&data[index], node->result_data->data, total_size_node * typeSize(node->operation->data_type));
-  *bytes_written = index + total_size_node * typeSize(node->operation->data_type);
+  std::memcpy(&data[index], node->result_data->data,
+              total_size_node * typeSize(node->operation->data_type));
+  if (bytes_written)
+    *bytes_written =
+        index + total_size_node * typeSize(node->operation->data_type);
   return data;
 }
-FGraphNode *funserialize(char *data) {
-  int m = (data[0] << (3*8)) | (data[1] << (2*8)) | (data[2] << (1*8)) | (data[0] << (2*8));
+FGraphNode *fdeserialize(char *data) {
+  int m = (data[0] << (3 * 8)) | (data[1] << (2 * 8)) | (data[2] << (1 * 8)) |
+          (data[3]);
   if (m != MAGIC_NUMBER) {
+    printf("%04x", m);
     flogging(F_WARNING, "Node could not be constructed from binary data!");
     return nullptr;
   }
@@ -1254,7 +1262,7 @@ FGraphNode *funserialize(char *data) {
   int dimensions = 0;
   for (int i = sizeof(int) - 1; i >= 0; i--)
     dimensions |= data[index++] << (i * 8);
-  std::vector<size_t> shape (dimensions, 0);
+  std::vector<size_t> shape(dimensions, 0);
   size_t total_size = 1;
   for (int i = 0; i < dimensions; i++) {
     for (int j = sizeof(size_t) - 1; j >= 0; j--) {
@@ -1262,7 +1270,8 @@ FGraphNode *funserialize(char *data) {
     }
     total_size *= shape[i];
   }
-  char* res = safe_mal<char>(total_size * typeSize((FType) data_type));
-  std::memcpy(res, &data[index], total_size * typeSize((FType) data_type));
-  return fCreateGraph((void*)res, total_size, (FType)data_type, shape.data(), shape.size());
+  char *res = safe_mal<char>(total_size * typeSize((FType)data_type));
+  std::memcpy(res, &data[index], total_size * typeSize((FType)data_type));
+  return fCreateGraph((void *)res, total_size, (FType)data_type, shape.data(),
+                      shape.size());
 }

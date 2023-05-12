@@ -377,7 +377,7 @@ char *fserialize(FGraphNode *node, size_t *bytes_written);
  * The size of the data is stored in itself, therefor no extra parameters are
  * needed. Internally calls `fCreateGraph`.
  */
-FGraphNode *funserialize(char *data);
+FGraphNode *fdeserialize(char *data);
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
 /** Elementwise substraction of `a` and `b`, i.e. `a[i] - b[i]`. */

@@ -76,6 +76,25 @@ TEST_SUITE("Graph implementation") {
       fFreeGraph(gn2);
     }
   }
+  TEST_CASE("serialize, unserialize") {
+    using namespace std;
+    vector<double> v1(6);
+    v1[0] = -1.5;
+    v1[1] = -1.0;
+    v1[2] = -0.5;
+    v1[3] =  0;
+    v1[4] =  0.5;
+    v1[5] =  1.0;
+    vector<size_t> shape{2, 3};
+    FGraphNode *gn1 =
+        fCreateGraph(v1.data(), v1.size(), F_FLOAT64, shape.data(), 2);
+    char* data = fserialize(gn1, nullptr);
+    FGraphNode *gnp2 = fdeserialize(data);
+    free(data);
+    fExecuteGraph(gnp2);
+    for(int i = 0; i < 6; i++)
+      CHECK_EQ(-1.5 + i*0.5, ((double*)gnp2->result_data->data)[i]);
+  }
 }
 TEST_SUITE("Execution") {
   TEST_CASE("init, execution (add, sub, mul) and cleanup") {
