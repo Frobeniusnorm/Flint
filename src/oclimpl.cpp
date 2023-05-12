@@ -1046,11 +1046,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
                                total_size * type_size, nullptr, &err_code);
       if (err_code == CL_OUT_OF_HOST_MEMORY)
         flogging(F_ERROR, "Not enough memory to create buffer!");
-      if (op->op_type == FSTORE) {
+      if (op->op_type == FSTORE)
         ((FStore *)op->additional_data)->mem_id = mem_obj;
-        if (gn->result_data)
-          gn->result_data->mem_id = mem_obj;
-      } else
+      if (gn->result_data)
         gn->result_data->mem_id = mem_obj;
       do_write = true;
     }
@@ -1121,10 +1119,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 }
 void flintCleanup_gpu() {
   if (initialized) {
+    flogging(F_DEBUG, "Cleaning up GPU Backend");
     initialized = false;
-    clReleaseDevice(device);
-    clReleaseCommandQueue(queue);
-    clReleaseContext(context);
     for (auto &k : kernel_cache) {
       clReleaseKernel(k.second.second);
       clReleaseProgram(k.second.first);
@@ -1134,5 +1130,8 @@ void flintCleanup_gpu() {
     }
     for (auto &p : eager_programs)
       clReleaseProgram(p);
+    clReleaseCommandQueue(queue);
+    clReleaseDevice(device);
+    clReleaseContext(context);
   }
 }

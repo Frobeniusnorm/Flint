@@ -46,9 +46,9 @@ static bool use_cpu, use_gpu, eager_execution = false;
 // converts c++ type to flint type
 
 // EAGER EXECUTION WITH HELPER
-void enable_eager_execution() { eager_execution = true; }
-void disable_eager_execution() { eager_execution = false; }
-int is_eager_execution() { return eager_execution; }
+void fEnableEagerExecution() { eager_execution = true; }
+void fDisableEagerExecution() { eager_execution = false; }
+int fIsEagerExecution() { return eager_execution; }
 static inline FGraphNode *execute_eagerly(FGraphNode *f) {
   if (!use_cpu && !use_gpu)
     flintInit(FLINT_BACKEND_BOTH);
@@ -533,6 +533,7 @@ static FGraphNode *addConstWithNode(FOperation *op, const T b, FGraphNode *a) {
 template <typename T>
 static inline FGraphNode *constant(const T value, const size_t *shape,
                                    const int dimensions) {
+  // TODO: better: store with 1 element and repeat
   FOperation *op = new FOperation();
   op->dimensions = dimensions;
   op->shape = safe_mal<size_t>(dimensions);
@@ -1203,4 +1204,65 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
   memcpy(op->additional_data, steps,
          (op->dimensions - 1) * sizeof(unsigned int));
   return addNode(op, {a, kernel});
+}
+#define MAGIC_NUMBER 0x07f75321
+char *fserialize(FGraphNode *node, size_t *bytes_written) {
+  if (!node->result_data)
+    fExecuteGraph(node);
+  size_t total_size_node = node->result_data->num_entries;
+  // header
+  size_t data_size = 1;
+  // pure data
+  data_size += total_size_node * typeSize(node->operation->data_type);
+  // data type + dimensions + shape 
+  data_size += sizeof(FType) + sizeof(int) + node->operation->dimensions * sizeof(size_t);
+  char* data = safe_mal<char>(data_size);
+  // // conversion // //
+  // magic number
+  data[0] = (char) ((MAGIC_NUMBER >> (3*8)) & 0xff);
+  data[1] = (char) ((MAGIC_NUMBER >> (2*8)) & 0xff);
+  data[2] = (char) ((MAGIC_NUMBER >> (1*8)) & 0xff);
+  data[3] = (char) (MAGIC_NUMBER & 0xff);
+  size_t index = 4;
+  // type
+  for(int i = sizeof(FType) - 1; i >= 0; i--)
+    data[index++] = ((node->operation->data_type >> (i * 8)) & 0xff);
+  // dimensions  
+  for(int i = sizeof(int) - 1; i >= 0; i--)
+    data[index++] = ((node->operation->dimensions >> (i * 8)) & 0xff);
+  // shape
+  for(int i = 0; i < node->operation->dimensions; i++) {
+    for (int j = sizeof(size_t) - 1; j >= 0; j--) {
+      data[index++] = ((node->operation->shape[i] >> (j * 8)) & 0xff);
+    }
+  }
+  // data
+  std::memcpy(&data[index], node->result_data->data, total_size_node * typeSize(node->operation->data_type));
+  *bytes_written = index + total_size_node * typeSize(node->operation->data_type);
+  return data;
+}
+FGraphNode *funserialize(char *data) {
+  int m = (data[0] << (3*8)) | (data[1] << (2*8)) | (data[2] << (1*8)) | (data[0] << (2*8));
+  if (m != MAGIC_NUMBER) {
+    flogging(F_WARNING, "Node could not be constructed from binary data!");
+    return nullptr;
+  }
+  size_t index = 4;
+  int data_type = 0;
+  for (int i = sizeof(FType) - 1; i >= 0; i--)
+    data_type |= data[index++] << (i * 8);
+  int dimensions = 0;
+  for (int i = sizeof(int) - 1; i >= 0; i--)
+    dimensions |= data[index++] << (i * 8);
+  std::vector<size_t> shape (dimensions, 0);
+  size_t total_size = 1;
+  for (int i = 0; i < dimensions; i++) {
+    for (int j = sizeof(size_t) - 1; j >= 0; j--) {
+      shape[i] |= data[index++] << (i * 8);
+    }
+    total_size *= shape[i];
+  }
+  char* res = safe_mal<char>(total_size * typeSize((FType) data_type));
+  std::memcpy(res, &data[index], total_size * typeSize((FType) data_type));
+  return fCreateGraph((void*)res, total_size, (FType)data_type, shape.data(), shape.size());
 }

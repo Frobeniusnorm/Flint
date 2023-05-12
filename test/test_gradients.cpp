@@ -24,14 +24,14 @@ int main(int argc, char **argv) {
   if (doCPU) {
     flintInit(FLINT_BACKEND_ONLY_CPU);
     if (eager)
-      enable_eager_execution();
+      fEnableEagerExecution();
     res = context.run();
     flintCleanup();
   }
   if (doGPU) {
     flintInit(FLINT_BACKEND_ONLY_GPU);
     if (eager)
-      enable_eager_execution();
+      fEnableEagerExecution();
     res = context.run();
     flintCleanup();
   }

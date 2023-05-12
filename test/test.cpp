@@ -896,7 +896,7 @@ int main(int argc, char **argv) {
     doCPU = doGPU = true;
   }
   if (eager)
-    enable_eager_execution();
+    fEnableEagerExecution();
   doctest::Context context;
   context.applyCommandLine(argc, argv);
   int res;

@@ -963,7 +963,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
     }
   }
   CPUResultData final = results[node];
-  if (!is_eager_execution()) {
+  if (!fIsEagerExecution()) {
     // free all other data
     for (auto &[gn, rd] : results) {
       if (gn != node && gn->operation->op_type != FSTORE && !gn->result_data)
