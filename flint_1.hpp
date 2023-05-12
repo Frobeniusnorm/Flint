@@ -635,10 +635,12 @@ template <typename T> struct Tensor<T, 1> {
 protected:
   Tensor(FGraphNode *node, size_t shape) : node(node), shape{shape} {
     node->reference_counter++;
+    fOptimizeMemory(node); // should be legal here, since C++ header adjust reference_counter
   }
   Tensor(FGraphNode *node, std::array<size_t, 1> shape)
       : node(node), shape(shape) {
     node->reference_counter++;
+    fOptimizeMemory(node); // should be legal here, since C++ header adjust reference_counter
   }
   FGraphNode *node;
   std::array<size_t, 1> shape;

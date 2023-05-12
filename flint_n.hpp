@@ -1139,6 +1139,8 @@ protected:
     for (int ds : shape)
       total_size *= ds;
     node->reference_counter++;
+    fOptimizeMemory(node); // should be legal here, since C++ header adjust
+                           // reference_counter
   }
   FGraphNode *node;
   std::array<size_t, n> shape;
