@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <tuple>
 #include <vector>
+#include <fstream>
 /**
  * The 1 dimensional implementation of `Tensor`.
  */
@@ -342,6 +343,16 @@ template <typename T> struct Tensor<T, 1> {
     }
     foo += ")";
     return foo;
+  }
+  /**
+   * Calls `deserialize` on this Tensor and pipes the returned data to the
+   * stream.
+   */
+  friend std::ofstream &operator<<(std::ofstream &os, Tensor<T, 1> &t) {
+    for (char c : t.serialize()) {
+      os.put(c);
+    }
+    return os;
   }
   /**
    * Calls `std::string()` on this Tensor and pipes the returned string to the

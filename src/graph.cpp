@@ -1251,7 +1251,6 @@ FGraphNode *fdeserialize(char *data) {
   int m = (data[0] << (3 * 8)) | (data[1] << (2 * 8)) | (data[2] << (1 * 8)) |
           (data[3]);
   if (m != MAGIC_NUMBER) {
-    printf("%04x", m);
     flogging(F_WARNING, "Node could not be constructed from binary data!");
     return nullptr;
   }

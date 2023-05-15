@@ -152,17 +152,6 @@ template <typename T> static constexpr void isTensorType() {
                     std::is_same<T, long>() || std::is_same<T, double>(),
                 "Only integer and floating-point Tensor types are allowed");
 }
-// converts c++ type to flint type
-template <typename T> static constexpr FType toFlintType() {
-  if (std::is_same<T, int>())
-    return F_INT32;
-  if (std::is_same<T, long>())
-    return F_INT64;
-  if (std::is_same<T, float>())
-    return F_FLOAT32;
-  else
-    return F_FLOAT64;
-}
 // checks which of both types the flint backend will choose
 template <typename K, typename V> static constexpr bool isStronger() {
   const int a = std::is_same<K, int>()     ? 0
@@ -174,6 +163,17 @@ template <typename K, typename V> static constexpr bool isStronger() {
                 : std::is_same<V, float>() ? 2
                                            : 3;
   return a >= b;
+}
+template <typename T> static constexpr FType toFlintType() {
+  if (std::is_same<T, int>())
+    return F_INT32;
+  if (std::is_same<T, long>())
+    return F_INT64;
+  if (std::is_same<T, float>())
+    return F_FLOAT32;
+  if (std::is_same<T, double>())
+    return F_FLOAT64;
+  return F_INT32;
 }
 template <typename K> static constexpr bool isInt() {
   return std::is_same<K, int>() || std::is_same<K, long>();

@@ -51,6 +51,19 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
   }
   return res + "]";
 }
+inline std::string typeString(FType t) {
+  switch (t) {
+  case F_INT32:
+    return "int";
+  case F_INT64:
+    return "long";
+  case F_FLOAT32:
+    return "float";
+  case F_FLOAT64:
+    return "double";
+  }
+  return "";
+}
 inline size_t typeSize(FType t) {
   switch (t) {
   case F_INT32:
@@ -100,6 +113,7 @@ template <typename T> static constexpr FType toFlintType() {
     return F_FLOAT32;
   if (std::is_same<T, double>())
     return F_FLOAT64;
+  return F_INT32;
 }
 inline void freeAdditionalData(FGraphNode *gn) {
 

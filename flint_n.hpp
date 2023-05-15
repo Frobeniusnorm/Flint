@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <fstream>
 #include <initializer_list>
 #include <iostream>
 #include <ostream>
@@ -370,6 +371,44 @@ template <typename T, unsigned int n> struct Tensor {
     }
     foo += ")";
     return foo;
+  }
+  /**
+   * Calls `deserialize` on this Tensor and pipes the returned data to the
+   * stream.
+   */
+  friend std::ofstream &operator<<(std::ofstream &os, Tensor<T, n> &t) {
+    for (char c : t.serialize()) {
+      os.put(c);
+    }
+    return os;
+  }
+  static FGraphNode* read_from(std::ifstream &is) {
+    // read to shape
+    std::vector<char> data (4 + sizeof(FType) + sizeof(int));
+    is.read(data.data(), data.size());
+    size_t index = 4 + sizeof(FType);
+    int dimensions = 0;
+    for (int i = sizeof(int) - 1; i >= 0; i--)
+      dimensions |= data[index++] << (i * 8);
+   
+    // get shape data
+    size_t prev_size = data.size();
+    data.resize(data.size() + dimensions * sizeof(size_t));
+    is.read(data.data() + prev_size, dimensions * sizeof(size_t));
+
+    size_t total_size = 1;
+    for (int i = 0; i < dimensions; i++) {
+      size_t shape = 0;
+      for (int j = sizeof(size_t) - 1; j >= 0; j--) {
+        shape |= data[index++] << (i * 8);
+      }
+      total_size *= shape;
+    }
+    // get actual data
+    prev_size = data.size();
+    data.resize(data.size(), prev_size + total_size * sizeof(T));
+    is.read(data.data() + prev_size, total_size * sizeof(T));
+    return deserialize(data);
   }
   /**
    * Calls `std::string()` on this Tensor and pipes the returned string to the
