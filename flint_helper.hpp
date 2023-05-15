@@ -132,6 +132,19 @@ static std::vector<E> flattened(
   }
   return result;
 }
+inline std::string typeString(FType t) {
+  switch (t) {
+  case F_INT32:
+    return "int";
+  case F_INT64:
+    return "long";
+  case F_FLOAT32:
+    return "float";
+  case F_FLOAT64:
+    return "double";
+  }
+  return "";
+}
 }; // namespace FLINT_HPP_HELPER
 // checks if the given type is one of the allowed tensor types
 template <typename T> static constexpr void isTensorType() {

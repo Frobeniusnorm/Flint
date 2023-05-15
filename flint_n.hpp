@@ -191,6 +191,47 @@ template <typename T, unsigned int n> struct Tensor {
     return result;
   }
   /**
+   * Serializes the underlying data of the Tensor to a binary vector.
+   * If the Tensor has no Result Data it is executed.
+   */
+  std::vector<char> serialize() {
+    size_t no_bytes;
+    char *data = fserialize(node, &no_bytes);
+    const std::vector<char> foo(data, data + no_bytes);
+    free(data);
+    return foo;
+  }
+  /**
+   * Deserializes the binary representation of Tensor data back to a Tensor
+   * object.
+   */
+  static Tensor<T, n> deserialize(char *data) {
+    FGraphNode *node = fdeserialize(data);
+    if (n != node->operation->dimensions)
+      flogging(F_ERROR, "Deserializing data of a " +
+                            std::to_string(node->operation->dimensions) +
+                            " dimensional Tensor into a " + std::to_string(n) +
+                            " dimensional Tensor is not possible!");
+    if (toFlintType<T>() != node->operation->data_type)
+      flogging(F_ERROR,
+               "Deserializing data of a " +
+                   FLINT_HPP_HELPER::typeString(node->operation->data_type) +
+                   " Tensor into a " +
+                   FLINT_HPP_HELPER::typeString(toFlintType<T>()) +
+                   " Tensor is not possible!");
+    std::array<size_t, n> shape;
+    for (int i = 0; i < node->operation->dimensions; i++)
+      shape[i] = node->operation->shape[i];
+    return Tensor<T, n>(node, shape);
+  }
+  /**
+   * Deserializes the binary representation of Tensor data back to a Tensor
+   * object.
+   */
+  static Tensor<T, n> deserialize(std::vector<char> data) {
+    return deserialize(data.data());
+  }
+  /**
    * Executes the underlying operation (and lazily the operations of the parents
    * if needed) if it was not already executed prior (in that case the operation
    * does nothing).

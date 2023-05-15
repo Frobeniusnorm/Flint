@@ -141,6 +141,44 @@ template <typename T> struct Tensor<T, 1> {
     FGraphNode *node = fconstant(value, &size, 1);
     return Tensor(node, size);
   }
+  /**
+   * Serializes the underlying data of the Tensor to a binary vector.
+   * If the Tensor has no Result Data it is executed.
+   */
+  std::vector<char> serialize() {
+    size_t no_bytes;
+    char *data = fserialize(node, &no_bytes);
+    const std::vector<char> foo(data, data + no_bytes);
+    free(data);
+    return foo;
+  }
+  /**
+   * Deserializes the binary representation of Tensor data back to a Tensor
+   * object.
+   */
+  static Tensor<T, 1> deserialize(char *data) {
+    FGraphNode *node = fdeserialize(data);
+    if (1 != node->operation->dimensions)
+      flogging(F_ERROR, "Deserializing data of a " +
+                            std::to_string(node->operation->dimensions) +
+                            " dimensional Tensor into a 1 dimensional"
+                            " Tensor is not possible!");
+    if (toFlintType<T>() != node->operation->data_type)
+      flogging(F_ERROR,
+               "Deserializing data of a " +
+                   FLINT_HPP_HELPER::typeString(node->operation->data_type) +
+                   " Tensor into a " +
+                   FLINT_HPP_HELPER::typeString(toFlintType<T>()) +
+                   " Tensor is not possible!");
+    return Tensor<T, 1>(node, node->operation->shape[0]);
+  }
+  /**
+   * Deserializes the binary representation of Tensor data back to a Tensor
+   * object.
+   */
+  static Tensor<T, 1> deserialize(std::vector<char> data) {
+    return deserialize(data.data());
+  }
   /** Reduces one dimension of the tensor by additive folding e.g.
    *
    * @code{
