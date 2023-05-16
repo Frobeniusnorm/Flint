@@ -1265,7 +1265,7 @@ FGraphNode *fdeserialize(char *data) {
   size_t total_size = 1;
   for (int i = 0; i < dimensions; i++) {
     for (int j = sizeof(size_t) - 1; j >= 0; j--) {
-      shape[i] |= data[index++] << (i * 8);
+      shape[i] |= data[index++] << (j * 8);
     }
     total_size *= shape[i];
   }

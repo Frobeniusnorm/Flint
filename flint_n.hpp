@@ -382,33 +382,33 @@ template <typename T, unsigned int n> struct Tensor {
     }
     return os;
   }
-  static FGraphNode* read_from(std::ifstream &is) {
+  static Tensor<T, n> read_from(std::ifstream &is) {
     // read to shape
-    std::vector<char> data (4 + sizeof(FType) + sizeof(int));
+    std::vector<char> data(4 + sizeof(FType) + sizeof(int));
     is.read(data.data(), data.size());
     size_t index = 4 + sizeof(FType);
     int dimensions = 0;
     for (int i = sizeof(int) - 1; i >= 0; i--)
       dimensions |= data[index++] << (i * 8);
-   
     // get shape data
     size_t prev_size = data.size();
     data.resize(data.size() + dimensions * sizeof(size_t));
     is.read(data.data() + prev_size, dimensions * sizeof(size_t));
-
+    std::array<size_t, n> nshape;
     size_t total_size = 1;
     for (int i = 0; i < dimensions; i++) {
       size_t shape = 0;
       for (int j = sizeof(size_t) - 1; j >= 0; j--) {
-        shape |= data[index++] << (i * 8);
+        shape |= data[index++] << (j * 8);
       }
+      nshape[i] = shape;
       total_size *= shape;
     }
     // get actual data
     prev_size = data.size();
-    data.resize(data.size(), prev_size + total_size * sizeof(T));
+    data.resize(prev_size + total_size * sizeof(T));
     is.read(data.data() + prev_size, total_size * sizeof(T));
-    return deserialize(data);
+    return deserialize(data.data());
   }
   /**
    * Calls `std::string()` on this Tensor and pipes the returned string to the
