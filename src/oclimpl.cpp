@@ -229,7 +229,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     std::vector<std::pair<int, std::string>> all_kernels;
     switch (node->operation->op_type) {
     case FEVEN:
-    case FCONVERSION: { // depends on operation TODO
+    case FCONVERSION: { // depends on operation 
       for (int i = 0; i < node->num_predecessor; i++)
         par_types[i] = node->predecessors[i]->operation->data_type;
       code =

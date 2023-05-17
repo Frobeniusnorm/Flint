@@ -598,7 +598,7 @@ FGraphNode *fmax_cd(FGraphNode *a, const double b);
  * The results of the predecessor node must be available, to
  * ensure that the method may execute the parameter node. */
 FGraphNode *freduce_sum(FGraphNode *a,
-                        const int dimension); // TODO what about single dim case
+                        const int dimension);
 /** Reduces one dimension of the tensor by multiplicative folding e.g.
  *
  * `freduce_mul([[1,2,3], [4,5,6]], 0) = [4,10,18]`,

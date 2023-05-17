@@ -500,7 +500,6 @@ static void executeNode(FGraphNode *node,
           break;
         }
         di /= step;
-        // TODO maybe > more correct?
         if (di >= pred.shape[d]) {
           set_zero = true;
           break;
