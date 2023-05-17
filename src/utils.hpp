@@ -98,15 +98,17 @@ static inline size_t computeScore(const FGraphNode *g, bool with_pred = true) {
   std::queue<const FGraphNode *> todo;
   todo.push(g);
   while (!todo.empty()) {
+    const FGraphNode* c = todo.front();
+    todo.pop();
     size_t no_elems = 1;
-    for (int i = 0; i < g->operation->dimensions; i++)
-      no_elems *= g->operation->shape[i];
-    no_elems *= operationScore(g);
+    for (int i = 0; i < c->operation->dimensions; i++)
+      no_elems *= c->operation->shape[i];
+    no_elems *= operationScore(c);
     score += no_elems;
     if (with_pred) {
-      for (int i = 0; i < g->num_predecessor; i++)
-        if (!g->predecessors[i]->result_data && g->operation->op_type != FSTORE)
-          todo.push(g->predecessors[i]);
+      for (int i = 0; i < c->num_predecessor; i++)
+        if (!c->predecessors[i]->result_data && c->operation->op_type != FSTORE)
+          todo.push(c->predecessors[i]);
     }
   }
   return score;

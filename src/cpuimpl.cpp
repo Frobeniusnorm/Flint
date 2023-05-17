@@ -59,8 +59,8 @@ struct CPUResultData {
   std::vector<size_t> shape;
 };
 template <typename T, typename A, typename B>
-static void binaryExpression(T *__restrict__ result, const A *data1,
-                             const B *data2, FOperationType op, size_t from,
+static void binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
+                             const B *__restrict__ data2, FOperationType op, size_t from,
                              size_t size, int index_man_1, int index_man_2,
                              const FGraphNode *curr) {
   switch (op) {
@@ -108,8 +108,7 @@ static void binaryExpression(T *__restrict__ result, const A *data1,
         base_p2 = (index / (l * n)) * (m * n);
       }
       for (size_t i = 0; i < m; i++) {
-        result[index] +=
-            data1[base_p1 + j * m + i] * data2[base_p2 + i * n + k];
+        result[index] += data1[base_p1 + j * m + i] * data2[base_p2 + i * n + k];
       }
     }
   } break;
@@ -328,8 +327,8 @@ static void binaryExpression(T *__restrict__ result, const A *data1,
 // EDIT: nope i was wrong, computeGradient is worse
 template <typename T>
 static void executeNode(const FGraphNode *node,
-                        std::vector<CPUResultData> predecessor_data, T *__restrict__ result,
-                        size_t from, size_t size) {
+                        std::vector<CPUResultData> predecessor_data,
+                        T *__restrict__ result, size_t from, size_t size) {
   switch (node->operation->op_type) {
   case FCONVERSION: {
     CPUResultData pred = predecessor_data[0];
@@ -356,7 +355,7 @@ static void executeNode(const FGraphNode *node,
   case FREPEAT: {
     const FOperation *op = node->operation;
     const CPUResultData pred = predecessor_data[0];
-    const void* __restrict__ data = pred.data;
+    const void *__restrict__ data = pred.data;
     for (int i = from; i < from + size; i++) {
       // calculate number of elements per dimension entry for destination and
       // source
@@ -377,14 +376,14 @@ static void executeNode(const FGraphNode *node,
         index %= acc_sizes_d[dim];
         src_index += (curr_idx % pred.shape[dim]) * acc_sizes_s[dim];
       }
-      result[i] = ((const T * __restrict__)data)[src_index];
+      result[i] = ((const T *__restrict__)data)[src_index];
     }
   } break;
   case FTRANSPOSE: {
     const FOperation *op = node->operation;
     const int *transposition = (int *)op->additional_data;
     CPUResultData pred = predecessor_data[0];
-    const void* __restrict__ data = pred.data;
+    const void *__restrict__ data = pred.data;
     // calculate number of elements per dimension entry for destination and
     // source
     std::vector<size_t> acc_sizes_d(op->dimensions);
@@ -405,14 +404,14 @@ static void executeNode(const FGraphNode *node,
         index %= acc_sizes_d[dim];
         src_index += curr_idx * acc_sizes_s[transposition[dim]];
       }
-      result[i] = ((const T * __restrict__)data)[src_index];
+      result[i] = ((const T *__restrict__)data)[src_index];
     }
   } break;
   case FREDUCE_SUM:
   case FREDUCE_MUL: {
     const CPUResultData pred = predecessor_data[0];
     const int dim = ((int *)node->operation->additional_data)[0];
-    const void* __restrict__ data = pred.data;  
+    const void *__restrict__ data = pred.data;
     size_t it_dim = 1; // iteration size <=> product of all dimensions along dim
     for (size_t d = dim + 1; d < pred.shape.size(); d++)
       it_dim *= pred.shape[d];
@@ -423,9 +422,9 @@ static void executeNode(const FGraphNode *node,
                       ? 0
                       : 1; // init with neutral element
       for (size_t j = 0; j < pred.shape[dim]; j++) {
-        const T curr =
-            ((const T * __restrict__)data)[(i / it_dim) * it_dim * pred.shape[dim] +
-                             i % it_dim + j * it_dim];
+        const T curr = ((const T *__restrict__)
+                            data)[(i / it_dim) * it_dim * pred.shape[dim] +
+                                  i % it_dim + j * it_dim];
         if (node->operation->op_type == FREDUCE_SUM)
           result[i] += curr;
         else
@@ -436,14 +435,14 @@ static void executeNode(const FGraphNode *node,
   case FRESHAPE:
   case FLATTEN: {
     CPUResultData pred = predecessor_data[0];
-    const void* __restrict__ data = pred.data;
+    const void *__restrict__ data = pred.data;
     for (size_t i = from; i < from + size; i++)
-      result[i] = ((const T * __restrict__)data)[i];
+      result[i] = ((const T *__restrict__)data)[i];
   } break;
   case FSLICE: {
     CPUResultData pred = predecessor_data[0];
     FSlice *slice = (FSlice *)node->operation->additional_data;
-    const void* __restrict__ data = pred.data;
+    const void *__restrict__ data = pred.data;
     // flattened shape data
     std::vector<size_t> acc_sizes(node->operation->dimensions);
     std::vector<size_t> acc_sizes_pred(acc_sizes.size());
@@ -470,12 +469,12 @@ static void executeNode(const FGraphNode *node,
         // reproject
         j += di * slice->step[d] * acc_sizes_pred[d];
       }
-      result[i] = ((const T * __restrict__)data)[j];
+      result[i] = ((const T *__restrict__)data)[j];
     }
   } break;
   case FEXTEND: {
     CPUResultData pred = predecessor_data[0];
-    const void* __restrict__ data = pred.data;
+    const void *__restrict__ data = pred.data;
     FExtend *extend = (FExtend *)node->operation->additional_data;
     // flattened shape data
     std::vector<size_t> acc_sizes(node->operation->dimensions);
@@ -521,58 +520,58 @@ static void executeNode(const FGraphNode *node,
         // reproject
         j += di * acc_sizes_pred[d];
       }
-      result[i] = set_zero ? 0 : ((const T * __restrict__)data)[j];
+      result[i] = set_zero ? 0 : ((const T *__restrict__)data)[j];
     }
   } break;
   case FABS: {
     CPUResultData pred = predecessor_data[0];
-    const void* __restrict__ data = pred.data;
+    const void *__restrict__ data = pred.data;
     for (size_t i = from; i < from + size; i++)
-      result[i] = abs(((const T * __restrict__)data)[i]);
+      result[i] = abs(((const T *__restrict__)data)[i]);
   } break;
   case FLOG: {
     CPUResultData pred = predecessor_data[0];
-    const void* __restrict__ data = pred.data;
+    const void *__restrict__ data = pred.data;
     for (size_t i = from; i < from + size; i++) {
-      result[i] = log(((const T * __restrict__)data)[i]);
+      result[i] = log(((const T *__restrict__)data)[i]);
     }
   } break;
   case FLOG2: {
     CPUResultData pred = predecessor_data[0];
-    const void* __restrict__ data = pred.data;
+    const void *__restrict__ data = pred.data;
     for (size_t i = from; i < from + size; i++)
-      result[i] = log2(((const T * __restrict__)data)[i]);
+      result[i] = log2(((const T *__restrict__)data)[i]);
   } break;
   case FNEG: {
     CPUResultData pred = predecessor_data[0];
-    const void* __restrict__ data = pred.data;
+    const void *__restrict__ data = pred.data;
     for (size_t i = from; i < from + size; i++)
-      result[i] = -((const T * __restrict__)data)[i];
+      result[i] = -((const T *__restrict__)data)[i];
   } break;
   case FSIGN: {
     const CPUResultData pred = predecessor_data[0];
     switch (pred.type) {
     case F_INT32: {
       for (size_t i = from; i < from + size; i++) {
-        int val = ((const int * __restrict__)pred.data)[i];
+        int val = ((const int *__restrict__)pred.data)[i];
         result[i] = val < 0 ? -1 : 1;
       }
     } break;
     case F_INT64: {
       for (size_t i = from; i < from + size; i++) {
-        long val = ((const long * __restrict__)pred.data)[i];
+        long val = ((const long *__restrict__)pred.data)[i];
         result[i] = val < 0 ? -1 : 1;
       }
     } break;
     case F_FLOAT32: {
       for (size_t i = from; i < from + size; i++) {
-        float val = ((const float * __restrict__)pred.data)[i];
+        float val = ((const float *__restrict__)pred.data)[i];
         result[i] = val < 0 ? -1 : 1;
       }
     } break;
     case F_FLOAT64: {
       for (size_t i = from; i < from + size; i++) {
-        double val = ((const double * __restrict__)pred.data)[i];
+        double val = ((const double *__restrict__)pred.data)[i];
         result[i] = val < 0 ? -1 : 1;
       }
     } break;
@@ -583,13 +582,13 @@ static void executeNode(const FGraphNode *node,
     switch (pred.type) {
     case F_INT32: {
       for (size_t i = from; i < from + size; i++) {
-        int val = ((const int * __restrict__)pred.data)[i];
+        int val = ((const int *__restrict__)pred.data)[i];
         result[i] = val % 2 == 0 ? 1 : 0;
       }
     } break;
     case F_INT64: {
       for (size_t i = from; i < from + size; i++) {
-        long val = ((const long * __restrict__)pred.data)[i];
+        long val = ((const long *__restrict__)pred.data)[i];
         result[i] = val % 2 == 0 ? 1 : 0;
       }
     } break;
@@ -604,42 +603,42 @@ static void executeNode(const FGraphNode *node,
   case FLOG10: {
     const CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)
-      result[i] = log10(((const T * __restrict__)pred.data)[i]);
+      result[i] = log10(((const T *__restrict__)pred.data)[i]);
   } break;
   case FSIN: {
     const CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)
-      result[i] = sin(((const T * __restrict__)pred.data)[i]);
+      result[i] = sin(((const T *__restrict__)pred.data)[i]);
   } break;
   case FSQRT: {
     const CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)
-      result[i] = sqrt(((const T * __restrict__)pred.data)[i]);
+      result[i] = sqrt(((const T *__restrict__)pred.data)[i]);
   } break;
   case FCOS: {
     const CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)
-      result[i] = cos(((const T * __restrict__)pred.data)[i]);
+      result[i] = cos(((const T *__restrict__)pred.data)[i]);
   } break;
   case FTAN: {
     const CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)
-      result[i] = tan(((const T * __restrict__)pred.data)[i]);
+      result[i] = tan(((const T *__restrict__)pred.data)[i]);
   } break;
   case FASIN: {
     const CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)
-      result[i] = asin(((const T * __restrict__)pred.data)[i]);
+      result[i] = asin(((const T *__restrict__)pred.data)[i]);
   } break;
   case FACOS: {
     const CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)
-      result[i] = acos(((const T * __restrict__)pred.data)[i]);
+      result[i] = acos(((const T *__restrict__)pred.data)[i]);
   } break;
   case FATAN: {
     const CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)
-      result[i] = atan(((const T * __restrict__)pred.data)[i]);
+      result[i] = atan(((const T *__restrict__)pred.data)[i]);
   } break;
   default: { // binary operations
     const CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];

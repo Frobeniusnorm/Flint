@@ -1,5 +1,4 @@
 #include "plf_nanotimer.h"
-
 #include "../flint.hpp"
 #include <iostream>
 #include <unordered_map>
@@ -74,7 +73,7 @@ double gradient_fun(bool backend) {
   timer.start();
   for (int i = 0; i < 100; i++) {
     Tensor<double, 1> t3 =
-        (t1.matmul(t2).pow(3.141592) * (t2.reduce_sum(0) + t1.log10()))
+        (t1.matmul(t2).pow(3.141592) * (t1.log10()))
             .flattened()
             .min(0);
     Tensor<double, 2> g1 = t3.gradient(t1);
@@ -90,7 +89,7 @@ double gradient_fun(bool backend) {
   }
   return timer.get_elapsed_ms();
 }
-double convolveFun(bool backend) {
+double convolve_fun(bool backend) {
   nanotimer timer;
   vector<vector<vector<float>>> image(
       2048, vector<vector<float>>(2048, vector<float>(3, 0.8)));
@@ -98,10 +97,11 @@ double convolveFun(bool backend) {
       32, vector<vector<float>>(32, vector<float>(3, 0.5)));
   Tensor<float, 3> img_t(image);
   Tensor<float, 3> ker_t(filter);
+  ker_t.watch();
   timer.start();
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < 5; i++) {
     Tensor<float, 2> foo = img_t.convolve(ker_t, 16, 16);
-    Tensor<float, 2> err = Tensor<float, 1>{0.7, 0.7, 0.7} - foo;
+    Tensor<float, 2> err = (foo - 0.7f).abs();
     Tensor<double, 3> grad = err.gradient(ker_t);
     if (backend)
       grad.execute_gpu();
@@ -112,6 +112,7 @@ double convolveFun(bool backend) {
 }
 void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   unordered_map<string, double (*)(bool)> benches;
+  benches.insert({"convolve_fun", convolve_fun});
   benches.insert({"gradient_fun", gradient_fun});
   benches.insert({"matrix_multiplication", matrix_multiplication});
   benches.insert({"reduce_fun", reduce_fun});
@@ -121,6 +122,7 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   if (benchmarks & FLINT_BACKEND_ONLY_CPU) {
     // cpu tests
     flintInit(FLINT_BACKEND_ONLY_CPU);
+    fEnableEagerExecution();
     for (const auto &bench : benches) {
       flogging(F_INFO, bench.first + "...");
       times.insert({bench.first, {bench.second(false), 0}});

@@ -170,8 +170,16 @@ static int generateKernelHash(FOperationType operation, FType return_type,
 static std::list<cl_program> eager_programs;
 static std::unordered_map<long, cl_kernel> eager_cache;
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
-  if (node->result_data || node->operation->op_type == FSTORE)
+  if (node->result_data)
     return node;
+  if (node->operation->op_type == FSTORE) {
+    node->result_data = new FResultData();
+    FStore *store = (FStore *)node->operation->additional_data;
+    node->result_data->num_entries = store->num_entries;
+    node->result_data->mem_id = store->mem_id;
+    node->result_data->data = store->data;
+    return node;
+  }
   if (node->operation->op_type == FLATTEN ||
       node->operation->op_type == FRESHAPE) {
     // just copy previous data
@@ -229,7 +237,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     std::vector<std::pair<int, std::string>> all_kernels;
     switch (node->operation->op_type) {
     case FEVEN:
-    case FCONVERSION: { // depends on operation 
+    case FCONVERSION: { // depends on operation
       for (int i = 0; i < node->num_predecessor; i++)
         par_types[i] = node->predecessors[i]->operation->data_type;
       code =
@@ -389,6 +397,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   node->result_data = new FResultData();
   node->result_data->mem_id = res_mem;
   node->result_data->num_entries = total_size_node;
+  node->result_data->data = nullptr;
   // load parameters
   std::vector<cl_event> write_events;
   int par_index = 0;
@@ -882,9 +891,9 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     break;
   }
   // execute it
-  err_code = clEnqueueNDRangeKernel(clqueue, kernel, 1, nullptr, &total_size_node,
-                                    nullptr, write_events.size(),
-                                    write_events.data(), nullptr);
+  err_code = clEnqueueNDRangeKernel(
+      clqueue, kernel, 1, nullptr, &total_size_node, nullptr,
+      write_events.size(), write_events.data(), nullptr);
   for (cl_event ev : write_events)
     clReleaseEvent(ev);
   if (err_code != CL_SUCCESS) {
