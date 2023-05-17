@@ -888,6 +888,23 @@ TEST_SUITE("C++ Bindings") {
     r1 = t1.flattened().reduce_mul();
     CHECK_EQ(r1[0], -2);
   }
+  TEST_CASE("Saving and Loading to files") {
+    Tensor<double, 3> a = Tensor<double, 3>::constant(3.0, 9, 4, 1);
+    Tensor<float, 2> b {{1}, {-1}, {2}, {-2}};
+    Tensor<double, 3> c = a + b;
+    std::ofstream ofile;
+    ofile.open("test.flint");
+    ofile << c;
+    ofile.close();
+    std::ifstream ifile;
+    ifile.open("test.flint");
+    Tensor<double, 3> e = Tensor<double, 3>::read_from(ifile);
+    ifile.close();
+    for(int i = 0; i < 9; i++)
+      for(int j = 0; j < 4; j++)
+        CHECK_EQ(e[i][j][0], c[i][j][0]);
+    std::remove("test.flint");
+  }
 }
 TEST_CASE("Test Example 1") {
   Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
