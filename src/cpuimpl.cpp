@@ -52,6 +52,10 @@ void flintInit_cpu() {
       threads[i] = new std::thread(threadRoutine);
   }
 }
+// TODO capability to lazily compute some operations
+// use generators for that and overload CPUResultDatas capabilities.
+// e.g. transpose saves a overloaded Generator struct whith all the relevant
+// information to compute a index.
 struct CPUResultData {
   void *data;
   FType type;
@@ -59,10 +63,11 @@ struct CPUResultData {
   std::vector<size_t> shape;
 };
 template <typename T, typename A, typename B>
-static void binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
-                             const B *__restrict__ data2, FOperationType op, size_t from,
-                             size_t size, int index_man_1, int index_man_2,
-                             const FGraphNode *curr) {
+static void binaryExpression(T *__restrict__ result,
+                             const A *__restrict__ data1,
+                             const B *__restrict__ data2, FOperationType op,
+                             size_t from, size_t size, int index_man_1,
+                             int index_man_2, const FGraphNode *curr) {
   switch (op) {
   case FADD:
     for (size_t i = from; i < from + size; i++) {
@@ -108,7 +113,8 @@ static void binaryExpression(T *__restrict__ result, const A *__restrict__ data1
         base_p2 = (index / (l * n)) * (m * n);
       }
       for (size_t i = 0; i < m; i++) {
-        result[index] += data1[base_p1 + j * m + i] * data2[base_p2 + i * n + k];
+        result[index] +=
+            data1[base_p1 + j * m + i] * data2[base_p2 + i * n + k];
       }
     }
   } break;
