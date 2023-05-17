@@ -759,13 +759,14 @@ static void threadRoutine() {
     sem->release();
   }
 }
-#define PARALLEL_EXECUTION_SIZE 10000 // for debugging
+#define PARALLEL_EXECUTION_SIZE 64 // for debugging
 template <typename T>
 inline void chooseExecutionMethod(FGraphNode *node,
                                   std::vector<CPUResultData> pred_data,
                                   T *result, size_t size) {
   auto start = std::chrono::high_resolution_clock::now();
-  if (size >= PARALLEL_EXECUTION_SIZE) {
+  size_t score = size * operationScore(node);
+  if (score >= PARALLEL_EXECUTION_SIZE) {
     size_t exeUnits = std::min(size, threads.size());
     size_t workSize = size / exeUnits;
     std::counting_semaphore<MAX_PARALLELITY> *sem =
@@ -784,9 +785,9 @@ inline void chooseExecutionMethod(FGraphNode *node,
   std::chrono::duration<double, std::milli> elapsed =
       std::chrono::high_resolution_clock::now() - start;
   flogging(F_DEBUG, (size >= PARALLEL_EXECUTION_SIZE
-                         ? std::string("Parallel Execution on CPU ")
-                         : std::string("Sequential Execution on CPU ")) +
-                        "took " + std::to_string(elapsed.count()) + "ms");
+                         ? std::string("Parallel Execution on CPU (score: " + std::to_string(score) + ")")
+                         : std::string("Sequential Execution on CPU (score: " + std::to_string(score) + ")")) +
+                        " took " + std::to_string(elapsed.count()) + "ms");
 }
 FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
   if (!initialized)

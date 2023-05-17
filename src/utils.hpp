@@ -18,6 +18,7 @@
 #include <condition_variable>
 #include <list>
 #include <mutex>
+#include <queue>
 #include <vector>
 
 template <typename T> inline T *safe_mal(unsigned int count) {
@@ -50,6 +51,65 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
       res += ",\n" + indentation;
   }
   return res + "]";
+}
+static inline int operationScore(const FGraphNode* g){
+    switch (g->operation->op_type) {
+    case FMUL:
+    case FDIV:
+    case FPOW:
+    case FLOG:
+    case FLOG2:
+    case FLOG10:
+    case FSIN:
+    case FCOS:
+    case FTAN:
+    case FASIN:
+    case FACOS:
+    case FATAN:
+    case FSQRT:
+      return 2;
+    case FREDUCE_SUM:
+    case FREDUCE_MUL:
+    case FMATMUL: {
+      const FGraphNode *a = g->predecessors[0];
+      return a->operation->shape[a->operation->dimensions - 1];
+    }
+    case FGRADIENT_CONVOLVE:
+    case FCONVOLVE: {
+      // multiply with complete kernel size
+      size_t no_elems = 1;
+      const FGraphNode *a = g->predecessors[1];
+      for (int i = 0; i < a->operation->dimensions; i++)
+        no_elems *= a->operation->shape[i];
+      return no_elems;
+    }
+    case FSLIDE: {
+      // no multiplication with complete source, since that would artificially
+      // distort parallelization
+      return 5;
+    }
+    default:
+      break;
+    }
+    return 1;
+}
+static inline size_t computeScore(const FGraphNode *g, bool with_pred = true) {
+  size_t score = 0;
+  std::queue<const FGraphNode *> todo;
+  todo.push(g);
+  while (!todo.empty()) {
+    size_t no_elems = 1;
+    for (int i = 0; i < g->operation->dimensions; i++)
+      no_elems *= g->operation->shape[i];
+    no_elems *= operationScore(g);
+    score += no_elems;
+    if (with_pred) {
+      for (int i = 0; i < g->num_predecessor; i++)
+        if (!g->predecessors[i]->result_data && g->operation->op_type != FSTORE)
+          todo.push(g->predecessors[i]);
+    }
+  }
+  return score;
 }
 inline std::string typeString(FType t) {
   switch (t) {

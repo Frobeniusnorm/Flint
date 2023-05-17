@@ -39,7 +39,7 @@ static void openclCallback(const char *errinfo, const void *privateinfo,
 static bool initialized = false;
 // opencl vars
 static cl_context context;
-static cl_command_queue queue;
+static cl_command_queue clqueue;
 static cl_device_id device;
 void flintInit_gpu() {
   cl_platform_id platforms[10];
@@ -130,7 +130,7 @@ void flintInit_gpu() {
     }
     flogging(F_ERROR, err);
   }
-  queue = clCreateCommandQueueWithProperties(context, device, NULL, &status);
+  clqueue = clCreateCommandQueueWithProperties(context, device, NULL, &status);
   if (status != CL_SUCCESS)
     flogging(F_ERROR, "clCreateCommandQueue");
   initialized = true;
@@ -201,7 +201,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       memcpy(rd->data, data, type_size * num_elems);
     } else if (gpu_data) {
       rd->mem_id = create_gpu_memory(node, CL_MEM_READ_ONLY);
-      clEnqueueCopyBuffer(queue, gpu_data, rd->mem_id, 0, 0,
+      clEnqueueCopyBuffer(clqueue, gpu_data, rd->mem_id, 0, 0,
                           type_size * num_elems, 0, nullptr, nullptr);
     }
     node->result_data = rd;
@@ -217,7 +217,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   cl_kernel kernel = nullptr;
   cl_int err_code;
   std::list<cl_mem> to_free;
-  if (clFinish(queue) != CL_SUCCESS)
+  if (clFinish(clqueue) != CL_SUCCESS)
     flogging(F_ERROR, "OpenCL queue error!");
   // check if the kernel already exists or if it has to be generated
   if (prog == eager_cache.end()) {
@@ -471,7 +471,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     if (do_write) {
       void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
                                          : pred->result_data->data;
-      err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_TRUE, 0,
+      err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_TRUE, 0,
                                       total_size * type_size, data, 0, nullptr,
                                       nullptr);
       if (err_code != CL_SUCCESS) {
@@ -882,7 +882,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     break;
   }
   // execute it
-  err_code = clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &total_size_node,
+  err_code = clEnqueueNDRangeKernel(clqueue, kernel, 1, nullptr, &total_size_node,
                                     nullptr, write_events.size(),
                                     write_events.data(), nullptr);
   for (cl_event ev : write_events)
@@ -931,7 +931,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
         flogging(F_ERROR, "Not enough memory to store result!");
       // wait for result
       cl_int err_code = clEnqueueReadBuffer(
-          queue, node->result_data->mem_id, CL_TRUE, 0,
+          clqueue, node->result_data->mem_id, CL_TRUE, 0,
           res->num_entries * type_size_node, res->data, 0, nullptr, nullptr);
       if (err_code != CL_SUCCESS) {
         std::string msg = "Unknown Error while reading the result!";
@@ -1057,7 +1057,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
                                          : gn->result_data->data;
       writeEvents.emplace_back();
-      err_code = clEnqueueWriteBuffer(queue, mem_obj, CL_FALSE, 0,
+      err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_FALSE, 0,
                                       total_size * type_size, data, 0, nullptr,
                                       &writeEvents[writeEvents.size() - 1]);
       if (err_code != CL_SUCCESS) {
@@ -1078,7 +1078,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   const size_t global_size = total_size_node;
 
   err_code =
-      clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &global_size, nullptr,
+      clEnqueueNDRangeKernel(clqueue, kernel, 1, nullptr, &global_size, nullptr,
                              writeEvents.size(), writeEvents.data(), nullptr);
   for (cl_event ev : writeEvents)
     clReleaseEvent(ev);
@@ -1102,7 +1102,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (!resultData->data)
     flogging(F_ERROR, "Not enough memory to store result!");
   // wait for result
-  err_code = clEnqueueReadBuffer(queue, result_mem, CL_TRUE, 0,
+  err_code = clEnqueueReadBuffer(clqueue, result_mem, CL_TRUE, 0,
                                  total_size_node * type_size_node,
                                  (void *)resultData->data, 0, nullptr, nullptr);
   if (err_code != CL_SUCCESS) {
@@ -1130,7 +1130,7 @@ void flintCleanup_gpu() {
     }
     for (auto &p : eager_programs)
       clReleaseProgram(p);
-    clReleaseCommandQueue(queue);
+    clReleaseCommandQueue(clqueue);
     clReleaseDevice(device);
     clReleaseContext(context);
   }

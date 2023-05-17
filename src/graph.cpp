@@ -62,14 +62,18 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
   }
   if (all_calculated && (use_cpu || use_gpu)) {
     // since we only have one node the heuristics become constant
-    unsigned int gpu_score = 0;
-    // TODO
-    return gpu_score > 2048 || !use_cpu ? fExecuteGraph_gpu_eagerly(f)
-                                        : fExecuteGraph_cpu_eagerly(f);
+    unsigned int gpu_score = computeScore(f, false);
+    return gpu_score >= 1024 || !use_cpu ? fExecuteGraph_gpu_eagerly(f)
+                                         : fExecuteGraph_cpu_eagerly(f);
   } else {
+    if (use_gpu && use_cpu) {
+      unsigned int gpu_score = computeScore(f, true);
+      return gpu_score >= 2048 || !use_cpu ? fExecuteGraph_gpu(f)
+                                           : fExecuteGraph_cpu(f);
+    }
     if (use_gpu)
       return fExecuteGraph_gpu(f);
-    if (use_cpu)
+    else
       return fExecuteGraph_cpu(f);
   }
 }
@@ -95,10 +99,15 @@ configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
 
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
-  if (eager_execution)
-    execute_eagerly(node);
   if (!use_cpu && !use_gpu)
     flintInit(FLINT_BACKEND_BOTH);
+  if (eager_execution)
+    return execute_eagerly(node);
+  if (use_gpu && use_cpu) {
+    unsigned int gpu_score = computeScore(node, true);
+    return gpu_score >= 2048 || !use_cpu ? fExecuteGraph_gpu(node)
+                                         : fExecuteGraph_cpu(node);
+  }
   if (use_gpu)
     return fExecuteGraph_gpu(node);
   if (use_cpu)
@@ -1135,6 +1144,8 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
   op->dimensions = dimensions;
   op->shape = safe_mal<size_t>(dimensions);
   memcpy(op->shape, new_shape, dimensions * sizeof(size_t));
+  // set the parallel score
+
   op->additional_data = new FExtend();
   FExtend &extend = *(FExtend *)op->additional_data;
   extend.start = safe_mal<size_t>(dimensions);
