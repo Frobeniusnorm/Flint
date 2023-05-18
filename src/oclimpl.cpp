@@ -943,7 +943,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
           clqueue, node->result_data->mem_id, CL_TRUE, 0,
           res->num_entries * type_size_node, res->data, 0, nullptr, nullptr);
       if (err_code != CL_SUCCESS) {
-        std::string msg = "Unknown Error while reading the result!";
+        std::string msg = "Unknown Error while reading the result! Error Code: " + std::to_string(err_code);
         if (err_code == CL_OUT_OF_HOST_MEMORY)
           msg = "Not enough memory to read result!";
         flogging(F_ERROR, msg);
@@ -958,6 +958,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   size_t total_size_node = 1;
   for (int i = 0; i < node_op->dimensions; i++)
     total_size_node *= node_op->shape[i];
+  flogging(F_DEBUG, "total size node: " + std::to_string(total_size_node));
   // calculate Code and Parameters
   using namespace std;
   list<pair<FGraphNode *, string>> parameters;
@@ -1037,6 +1038,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   int index = 1;
   std::vector<cl_event> writeEvents;
   for (auto &[gn, name] : parameters) {
+  flogging(F_DEBUG, "param");
     FOperation *op = gn->operation;
     // TODO keep track of when data in Store is changed
     cl_mem mem_obj = nullptr;
@@ -1115,7 +1117,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
                                  total_size_node * type_size_node,
                                  (void *)resultData->data, 0, nullptr, nullptr);
   if (err_code != CL_SUCCESS) {
-    string msg = "Unknown Error while reading the result!";
+    string msg = "Unknown Error while reading the result! Error Code: " + std::to_string(err_code);
     if (err_code == CL_OUT_OF_HOST_MEMORY)
       msg = "Not enough memory to read result!";
     flogging(F_ERROR, msg);

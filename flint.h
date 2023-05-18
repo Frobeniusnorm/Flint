@@ -112,6 +112,8 @@ enum FType { F_INT32, F_INT64, F_FLOAT32, F_FLOAT64 };
 // TODO generation functions for constants, indexing, random
 enum FOperationType {
   FSTORE,
+  FGEN_RANDOM,
+  FGEN_CONSTANT,
   FADD,
   FSUB,
   FMUL,
@@ -284,6 +286,14 @@ FGraphNode *fconstant_f(const float value, const size_t *shape,
  */
 FGraphNode *fconstant_d(const double value, const size_t *shape,
                         const int dimensions);
+/** Creates a tensor that contains randomly distributed values in the range of
+ * [0, 1)
+ *
+ * - `shape`: an array of size `dimensions`, each entry describing the size
+ *    of the corresponding dimension.
+ * - `dimensions`: the number of dimensions
+ */
+FGraphNode *frandom(const size_t *shape, const int dimensions);
 /** Decrements `FGraphNode.reference_counter` of `graph` (for reference
  * counting) and deallocates the node and its corresponding data, if the counter
  * becomes 0. If the node is deallocated, the same process is repeated with its
@@ -598,8 +608,7 @@ FGraphNode *fmax_cd(FGraphNode *a, const double b);
  *
  * The results of the predecessor node must be available, to
  * ensure that the method may execute the parameter node. */
-FGraphNode *freduce_sum(FGraphNode *a,
-                        const int dimension);
+FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
 /** Reduces one dimension of the tensor by multiplicative folding e.g.
  *
  * `freduce_mul([[1,2,3], [4,5,6]], 0) = [4,10,18]`,

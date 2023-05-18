@@ -5,13 +5,13 @@
    You may obtain a copy of the License at
 
        http://www.apache.org/licenses/LICENSE-2.0
-   
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-   
+
   This file includes the implementation of the GPU backend code generation and
    should only be included in oclimpl.cpp.
 */
@@ -144,6 +144,12 @@ generateCode(FGraphNode *node,
                " > v" + to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
 
       } break;
+      case FGEN_RANDOM: {
+        code = type + " " + name + " = 0;\n{\n " + name + " = sin(index + " +
+               to_string(((unsigned int)time(nullptr) % 1000000) / 100.0) +
+               ") * 43758.5453123;\n " + name + " = min(" + name + " - floor(" + name + "), 0.99999);\n"
+               "}\n";
+      } break;
       case FGRADIENT_CONVOLVE: {
         string par1, par2;
         push_pred = false;
@@ -181,47 +187,81 @@ generateCode(FGraphNode *node,
         for (long d = op->dimensions - 3; d >= 0; d--)
           acc_sizes[d] = acc_sizes[d + 1] * a->shape[d + 1];
 
-        string conv_code = type + " " + name + " = 0;\n{\nlong k = 0;\nint in_steps=1;\n";
-        for(long d = acc_sizes_pred.size() - 1; d >= 0; d--){
-          conv_code += (d == acc_sizes_pred.size() - 1 ? string("{") : string("if(in_steps){")) + "\n"
-            " long di = " + (d == 0 ? string("index") : "(index % " + to_string(acc_sizes_pred[d - 1]) + ")") + "/" + to_string(acc_sizes_pred[d]) + ";\n"
-            " long dk = " + (d == acc_sizes_pred.size() - 1 ? string("di") : "di % " + to_string(steps[d])) + ";\n"
-            " if(dk >= " + to_string(kernel->shape[d]) + "){\n"
-            "  in_steps = 0;\n"
-            " }else\n"
-            "  k += dk * " + to_string(acc_sizes_kernel[d]) + ";\n}\n";
-        }
-        conv_code += "if(in_steps) while(k < " + to_string(kernel_num_elems) + "){\n"
-          "  long i_conv = 0";
-          for(int d = 0; d < op->dimensions - 2; d++) {
-            conv_code += "+((" + 
+        string conv_code =
+            type + " " + name + " = 0;\n{\nlong k = 0;\nint in_steps=1;\n";
+        for (long d = acc_sizes_pred.size() - 1; d >= 0; d--) {
+          conv_code +=
+              (d == acc_sizes_pred.size() - 1 ? string("{")
+                                              : string("if(in_steps){")) +
+              "\n"
+              " long di = " +
               (d == 0 ? string("index")
-                      : "(index%" + to_string(acc_sizes_pred[d - 1]) + ")")
-              + "/" + to_string(acc_sizes_pred[d]) + " - " +
+                      : "(index % " + to_string(acc_sizes_pred[d - 1]) + ")") +
+              "/" + to_string(acc_sizes_pred[d]) +
+              ";\n"
+              " long dk = " +
+              (d == acc_sizes_pred.size() - 1 ? string("di")
+                                              : "di % " + to_string(steps[d])) +
+              ";\n"
+              " if(dk >= " +
+              to_string(kernel->shape[d]) +
+              "){\n"
+              "  in_steps = 0;\n"
+              " }else\n"
+              "  k += dk * " +
+              to_string(acc_sizes_kernel[d]) + ";\n}\n";
+        }
+        conv_code += "if(in_steps) while(k < " + to_string(kernel_num_elems) +
+                     "){\n"
+                     "  long i_conv = 0";
+        for (int d = 0; d < op->dimensions - 2; d++) {
+          conv_code +=
+              "+((" +
+              (d == 0 ? string("index")
+                      : "(index%" + to_string(acc_sizes_pred[d - 1]) + ")") +
+              "/" + to_string(acc_sizes_pred[d]) + " - " +
               (d == 0 ? string("k")
-                      : "(k%" + to_string(acc_sizes_kernel[d - 1]) + ")")
-              + "/" + to_string(acc_sizes_kernel[d]) + ")/" + to_string(steps[d])
-                + ") * " + to_string(acc_sizes[d]);
-          }
-        conv_code +=
-          ";\n  " + name + " += " + par1 + "[k] * " + par2 + "[i_conv];\n"
-          "  int continue_loop = 1;\n"
-          "  long step = 0;\n";
+                      : "(k%" + to_string(acc_sizes_kernel[d - 1]) + ")") +
+              "/" + to_string(acc_sizes_kernel[d]) + ")/" +
+              to_string(steps[d]) + ") * " + to_string(acc_sizes[d]);
+        }
+        conv_code += ";\n  " + name + " += " + par1 + "[k] * " + par2 +
+                     "[i_conv];\n"
+                     "  int continue_loop = 1;\n"
+                     "  long step = 0;\n";
         for (long d = acc_sizes_pred.size() - 2; d >= 0; d--) {
-          conv_code += 
-            "  " + (d == acc_sizes_pred.size() - 2 ? string("{") : string("if(continue_loop){")) + "\n"
-            "  long di = " + (d == 0 ? string("index") : "(index % " + to_string(acc_sizes_pred[d - 1]) + ")") + "/" + to_string(acc_sizes_pred[d]) + ";\n"
-            "  long dk = " + (d == 0 ? string("k") : "(k % " + to_string(acc_sizes_kernel[d - 1]) + ")") + "/" + to_string(acc_sizes_kernel[d]) + ";\n"
-            "  if(dk + " + to_string(steps[d]) + " < " + to_string(kernel->shape[d]) + " && di >= dk + " + to_string(steps[d]) + "){\n"
-            "   step += " + to_string(steps[d] * acc_sizes_kernel[d]) + ";\n"
-            "   continue_loop = false;\n"
-            "  }else{\n"
-            "   step -= (dk - (di%" + to_string(steps[d]) + "))*" + to_string(acc_sizes_kernel[d]) + ";\n"
-            "  }  }\n";
+          conv_code +=
+              "  " +
+              (d == acc_sizes_pred.size() - 2 ? string("{")
+                                              : string("if(continue_loop){")) +
+              "\n"
+              "  long di = " +
+              (d == 0 ? string("index")
+                      : "(index % " + to_string(acc_sizes_pred[d - 1]) + ")") +
+              "/" + to_string(acc_sizes_pred[d]) +
+              ";\n"
+              "  long dk = " +
+              (d == 0 ? string("k")
+                      : "(k % " + to_string(acc_sizes_kernel[d - 1]) + ")") +
+              "/" + to_string(acc_sizes_kernel[d]) +
+              ";\n"
+              "  if(dk + " +
+              to_string(steps[d]) + " < " + to_string(kernel->shape[d]) +
+              " && di >= dk + " + to_string(steps[d]) +
+              "){\n"
+              "   step += " +
+              to_string(steps[d] * acc_sizes_kernel[d]) +
+              ";\n"
+              "   continue_loop = false;\n"
+              "  }else{\n"
+              "   step -= (dk - (di%" +
+              to_string(steps[d]) + "))*" + to_string(acc_sizes_kernel[d]) +
+              ";\n"
+              "  }  }\n";
         }
         conv_code += "  if(step <= 0) break;\n"
-          "  k += step;\n"
-          " }\n}";
+                     "  k += step;\n"
+                     " }\n}";
         code = conv_code + code;
       } break;
       case FCONVOLVE: {
@@ -798,8 +838,10 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   case FGRADIENT_CONVOLVE: {
     code += ", const long num_entriesR";
     code += ", const __global " + typeString(parameter_types[0]) + "* P1";
-    code += ", const long num_entries1, const int dimensions1, const __global double* P2, const long num_entries2, const int dimensions2, const int "
-            "dimensions0";
+    code +=
+        ", const long num_entries1, const int dimensions1, const __global "
+        "double* P2, const long num_entries2, const int dimensions2, const int "
+        "dimensions0";
     code += ", __constant long* acc_sizes_pred, "
             "__constant long* acc_sizes_kernel"
             ", __constant long* acc_sizes";

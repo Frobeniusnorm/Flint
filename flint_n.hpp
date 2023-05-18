@@ -164,6 +164,15 @@ template <typename T, unsigned int n> struct Tensor {
     FGraphNode *node = fconstant(value, shape.data(), dimensions);
     return Tensor(node, shape);
   }
+  
+  template <typename... args>
+  static Tensor<double, n> random(args... sizes) {
+    static_assert(std::is_same<T, double>(), "Can only generate random double Tensors!");
+    constexpr size_t dimensions = sizeof...(args);
+    std::array<size_t, dimensions> shape{static_cast<size_t>(sizes)...};
+    FGraphNode *node = frandom(shape.data(), dimensions);
+    return Tensor(node, shape);
+  }
   /**
    * Retrieves the data of the current node and converts it into a
    * multidimensional vector. Executes the node if necessary (if it was not

@@ -132,6 +132,7 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   if (benchmarks & FLINT_BACKEND_ONLY_GPU) {
     // gpu tests
     flintInit(FLINT_BACKEND_ONLY_GPU);
+    fDisableEagerExecution();
     for (const auto &bench : benches) {
       flogging(F_INFO, bench.first + "...");
       times[bench.first].second = bench.second(true);

@@ -14,6 +14,7 @@
 
 #include "../flint.h"
 #include "utils.hpp"
+#include <cmath>
 #include <cstring>
 #include <iostream>
 #include <list>
@@ -23,25 +24,17 @@
 #include <vector>
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
-const char *fop_to_string[] = {"FSTORE",      "FADD",
-                               "FSUB",        "FMUL",
-                               "FDIV",        "FPOW",
-                               "FNEG",        "FLOG",
-                               "FSIGN",       "FEVEN",
-                               "FLOG2",       "FLOG10",
-                               "FSIN",        "FCOS",
-                               "FTAN",        "FASIN",
-                               "FACOS",       "FATAN",
-                               "FSQRT",       "FLATTEN",
-                               "FMATMUL",     "FCONVERSION",
-                               "FRESHAPE",    "FMIN",
-                               "FMAX",        "FREDUCE_SUM",
-                               "FREDUCE_MUL", "FSLICE",
-                               "FABS",        "FREPEAT",
-                               "FTRANSPOSE",  "FEXTEND",
-                               "FLESS",       "FEQUAL",
-                               "FGREATER",    "FCONVOLVE",
-                               "FSLIDE",      "FGRADIENT_CONVOLVE"};
+const char *fop_to_string[] = {
+    "FSTORE",      "FGEN_RANDOM", "FGEN_CONST", "FADD",
+    "FSUB",        "FMUL",        "FDIV",       "FPOW",
+    "FNEG",        "FLOG",        "FSIGN",      "FEVEN",
+    "FLOG2",       "FLOG10",      "FSIN",       "FCOS",
+    "FTAN",        "FASIN",       "FACOS",      "FATAN",
+    "FSQRT",       "FLATTEN",     "FMATMUL",    "FCONVERSION",
+    "FRESHAPE",    "FMIN",        "FMAX",       "FREDUCE_SUM",
+    "FREDUCE_MUL", "FSLICE",      "FABS",       "FREPEAT",
+    "FTRANSPOSE",  "FEXTEND",     "FLESS",      "FEQUAL",
+    "FGREATER",    "FCONVOLVE",   "FSLIDE",     "FGRADIENT_CONVOLVE"};
 static bool use_cpu, use_gpu, eager_execution = false;
 // converts c++ type to flint type
 
@@ -63,8 +56,9 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
   if (all_calculated && (use_cpu || use_gpu)) {
     // since we only have one node the heuristics become constant
     unsigned int gpu_score = computeScore(f, false);
-    return use_gpu && (gpu_score >= 1024 || !use_cpu) ? fExecuteGraph_gpu(fExecuteGraph_gpu_eagerly(f))
-                                         : fExecuteGraph_cpu_eagerly(f);
+    return use_gpu && (gpu_score >= 1024 || !use_cpu)
+               ? fExecuteGraph_gpu(fExecuteGraph_gpu_eagerly(f))
+               : fExecuteGraph_cpu_eagerly(f);
   } else {
     if (use_gpu && use_cpu) {
       unsigned int gpu_score = computeScore(f, true);
@@ -120,6 +114,7 @@ void flintCleanup() {
 }
 void flintInit(int backends) {
   flogging(F_VERBOSE, "Initializing Flint");
+  std::srand((unsigned int)(std::time(nullptr)));
   use_cpu = (backends & FLINT_BACKEND_ONLY_CPU) != 0;
   use_gpu = (backends & FLINT_BACKEND_ONLY_GPU) != 0;
   if (use_cpu)
@@ -1284,4 +1279,20 @@ FGraphNode *fdeserialize(char *data) {
   std::memcpy(res, &data[index], total_size * typeSize((FType)data_type));
   return fCreateGraph((void *)res, total_size, (FType)data_type, shape.data(),
                       shape.size());
+}
+FGraphNode *frandom(const size_t *shape, const int dimensions) {
+  FGraphNode *node = new FGraphNode();
+  FOperation *op = node->operation = new FOperation();
+  op->op_type = FGEN_RANDOM;
+  op->dimensions = dimensions;
+  op->shape = safe_mal<size_t>(dimensions);
+  memcpy(op->shape, shape, dimensions * sizeof(size_t));
+  op->data_type = F_FLOAT64;
+  op->additional_data = nullptr;
+  node->result_data = nullptr;
+  node->predecessors = nullptr;
+  node->num_predecessor = 0;
+  node->gradient_data = nullptr;
+  node->reference_counter = 0;
+  return node;
 }

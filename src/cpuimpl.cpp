@@ -21,6 +21,7 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <list>
@@ -357,6 +358,10 @@ static void executeNode(const FGraphNode *node,
       break;
     }
 
+  } break;
+  case FGEN_RANDOM: {
+    for (size_t i = from; i < from + size; i++)
+      result[i] = (double)rand() / (double)RAND_MAX;
   } break;
   case FREPEAT: {
     const FOperation *op = node->operation;
@@ -929,6 +934,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
         foo.data = store->data;
       }
       results.insert({curr, foo});
+    } else if (curr->operation->op_type == FRESHAPE && curr != node) {
+      results.insert({curr, predData[0]});
     } else {
       // allocate result data and execute
       switch (curr->operation->data_type) {
@@ -987,7 +994,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   if (!fIsEagerExecution()) {
     // free all other data
     for (auto &[gn, rd] : results) {
-      if (gn != node && gn->operation->op_type != FSTORE && !gn->result_data)
+      if (gn != node && gn->operation->op_type != FSTORE && !gn->result_data && gn->operation->op_type != FRESHAPE)
         free(rd.data);
     }
   } else {
