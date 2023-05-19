@@ -29,6 +29,7 @@
 #include <tuple>
 #include <typeinfo>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 static const char *clCompilerOpts = "-cl-no-signed-zeros";
 static void openclCallback(const char *errinfo, const void *privateinfo,
@@ -247,7 +248,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     } break;
     case FGEN_RANDOM: {
       code = generateEagerCode(node->operation->op_type,
-                            node->operation->data_type, {}, our_kernel);
+                               node->operation->data_type, {}, our_kernel);
       all_kernels.push_back({hash, our_kernel});
     } break;
     case FSIGN:
@@ -734,9 +735,11 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   switch (node->operation->op_type) {
   case FGEN_RANDOM: {
     // push time parameter
-    double t = ((unsigned int)time(nullptr) % 1000000) / 100.0;
-    if (clSetKernelArg(kernel, par_index++, sizeof(double),
-                         (void *)&t) != CL_SUCCESS)
+    std::chrono::duration<double, std::nano> tm =
+        std::chrono::high_resolution_clock::now().time_since_epoch();
+    double t = ((unsigned long)tm.count() % 1000000) / 100.0;
+    if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&t) !=
+        CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
   } break;
   case FGRADIENT_CONVOLVE:
@@ -956,7 +959,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
           clqueue, node->result_data->mem_id, CL_TRUE, 0,
           res->num_entries * type_size_node, res->data, 0, nullptr, nullptr);
       if (err_code != CL_SUCCESS) {
-        std::string msg = "Unknown Error while reading the result! Error Code: " + std::to_string(err_code);
+        std::string msg =
+            "Unknown Error while reading the result! Error Code: " +
+            std::to_string(err_code);
         if (err_code == CL_OUT_OF_HOST_MEMORY)
           msg = "Not enough memory to read result!";
         flogging(F_ERROR, msg);
@@ -975,7 +980,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   // calculate Code and Parameters
   using namespace std;
   list<pair<FGraphNode *, string>> parameters;
-  string graph_code = generateCode(node, parameters);
+  unordered_set<string> additional_params;
+  string graph_code = generateCode(node, parameters, additional_params);
   string code = "__kernel void execute_graph(__global ";
   code += typeString(node->operation->data_type);
   code += " *R";
@@ -983,6 +989,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   for (auto &[op, name] : parameters)
     code += ", __global const " + typeString(op->operation->data_type) + " *" +
             name;
+  if (additional_params.contains("time"))
+    code += ", const double time";
   code += "){\n";
   // add the execution code
   code += graph_code;
@@ -1051,7 +1059,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   int index = 1;
   std::vector<cl_event> writeEvents;
   for (auto &[gn, name] : parameters) {
-  flogging(F_DEBUG, "param");
+    flogging(F_DEBUG, "param");
     FOperation *op = gn->operation;
     // TODO keep track of when data in Store is changed
     cl_mem mem_obj = nullptr;
@@ -1098,6 +1106,16 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&result_mem) !=
       CL_SUCCESS)
     flogging(F_ERROR, "Could not set Kernel Argument for the result!");
+  // some operations need additional parameters
+  if (additional_params.contains("time")) {
+    std::chrono::duration<double, std::nano> tm =
+        std::chrono::high_resolution_clock::now().time_since_epoch();
+    double t = ((unsigned long)tm.count() % 1000000) / 100.0;
+
+    if (clSetKernelArg(kernel, index++, sizeof(double), (void *)&t) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  }
   // execute kernel
   const size_t global_size = total_size_node;
 
@@ -1130,7 +1148,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
                                  total_size_node * type_size_node,
                                  (void *)resultData->data, 0, nullptr, nullptr);
   if (err_code != CL_SUCCESS) {
-    string msg = "Unknown Error while reading the result! Error Code: " + std::to_string(err_code);
+    string msg = "Unknown Error while reading the result! Error Code: " +
+                 std::to_string(err_code);
     if (err_code == CL_OUT_OF_HOST_MEMORY)
       msg = "Not enough memory to read result!";
     flogging(F_ERROR, msg);
@@ -1154,6 +1173,9 @@ void flintCleanup_gpu() {
     }
     for (auto &p : eager_programs)
       clReleaseProgram(p);
+    kernel_cache.clear();
+    eager_cache.clear();
+    eager_programs.clear();
     clReleaseCommandQueue(clqueue);
     clReleaseDevice(device);
     clReleaseContext(context);

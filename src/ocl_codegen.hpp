@@ -24,9 +24,11 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
 static std::string
 generateCode(FGraphNode *node,
-             std::list<std::pair<FGraphNode *, std::string>> &parameters) {
+             std::list<std::pair<FGraphNode *, std::string>> &parameters,
+             std::unordered_set<std::string> &additional_params) {
   using namespace std;
   // we use breadth first search to traverse to operation graph
   list<tuple<FGraphNode *, string>> todo;
@@ -145,10 +147,10 @@ generateCode(FGraphNode *node,
 
       } break;
       case FGEN_RANDOM: {
-        code = type + " " + name + " = 0;\n{\n " + name + " = sin(index + " +
-               to_string(((unsigned int)time(nullptr) % 1000000) / 100.0) +
-               ") * 43758.5453123;\n " + name + " = min(" + name + " - floor(" + name + "), 0.99999);\n"
+        code = type + " " + name + " = 0;\n{\n " + name + " = sin(index + time) * 43758.5453123;\n " 
+              + name + " = min(" + name + " - floor(" + name + "), 0.99999);\n"
                "}\n";
+        additional_params.insert("time");
       } break;
       case FGRADIENT_CONVOLVE: {
         string par1, par2;
