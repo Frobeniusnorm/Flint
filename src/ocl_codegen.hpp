@@ -847,6 +847,9 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             ", __constant long* acc_sizes";
     code += ", __constant int* steps, __constant long* shape1";
   } break;
+  case FGEN_RANDOM: {
+    code += ", const long num_entriesR, const double time";
+  } break;
   case FSLIDE: {
     // acc_sizes, acc_sizes_pred, acc_sizes_kernel, steps
     code += ", const long num_entriesR, const __global " +
@@ -1139,6 +1142,11 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
         "}\n"
         "R[index] = res;";
     break;
+  case FGEN_RANDOM: {
+    code += "if(index >= num_entriesR) return;\n"
+            "double v = sin(index + time) * 43758.5453123;\n"
+            "R[index] = min(v - floor(v), 0.99999);\n";
+  } break;
   case FGRADIENT_CONVOLVE:
     code += "if(index >= num_entriesR) return;\n"
             "long k = 0;\n"

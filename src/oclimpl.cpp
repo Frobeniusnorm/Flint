@@ -245,6 +245,11 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
                             node->operation->data_type, par_types, our_kernel);
       all_kernels.push_back({hash, our_kernel});
     } break;
+    case FGEN_RANDOM: {
+      code = generateEagerCode(node->operation->op_type,
+                            node->operation->data_type, {}, our_kernel);
+      all_kernels.push_back({hash, our_kernel});
+    } break;
     case FSIGN:
     case FEQUAL:
     case FLESS:
@@ -422,6 +427,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
         flogging(F_ERROR, "Could not load Argument to kernel!");
     }
   } break;
+  case FGEN_RANDOM:
   case FGRADIENT_CONVOLVE:
   case FSLIDE:
   case FCONVOLVE: {
@@ -726,6 +732,13 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   }
   // parameters for functions that dont set them per parent
   switch (node->operation->op_type) {
+  case FGEN_RANDOM: {
+    // push time parameter
+    double t = ((unsigned int)time(nullptr) % 1000000) / 100.0;
+    if (clSetKernelArg(kernel, par_index++, sizeof(double),
+                         (void *)&t) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  } break;
   case FGRADIENT_CONVOLVE:
   case FSLIDE: {
     bool is_slide = node->operation->op_type == FSLIDE;
