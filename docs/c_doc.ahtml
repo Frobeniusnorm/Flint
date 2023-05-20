@@ -18,6 +18,19 @@
     <div class="content" style="margin-top: -3.1em">
         @gen_toc("../flint.h")
         <div style="display: block; height: 2em;"></div>
+        <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
+          The C-Backend has a memory management system optimized for easy usage in C++, which makes it a little bit weird in C.
+          It uses reference counting for all nodes, but the initial counter is set to 0 and increased when connected to another node.
+          <pre class="code" style="padding: 2px; margin: 5px; font-size: 1em">@code{
+FGraphNode *gn1 = fCreateGraph(...); // counter is 0
+FGraphNode *gn2 = fCreateGraph(...); // counter is 0
+FGraphNode *gn3 = fadd(gn1, gn2); // counter of gn3 is 0, of gn1 is 1 and of gn2 is 1}
+          </pre>
+          The reason for that is that a call to <pre class="inline_code">fFreeGraph</pre> does not decrease the reference counter but frees the node when it is already 0.
+          If a node is freed the method can be recursively called for all its parents, in the example if one calls <pre class="inline_code">fFreeGraph(gn3)</pre>, <pre class="inline_code">gn1</pre> and <pre class="inline_code">gn2</pre> are freed too. This is important when calling <pre class="inline_code">fOptimizeMemory</pre> for e.g. <pre class="inline_code">gn3</pre>, which is allowed to free parental informations when no longer needed.
+          Since in that case <pre class="inline_code">gn1</pre> and <pre class="inline_code">gn2</pre> have a reference counter of 1 depending on <pre class="inline_code">gn3</pre> they could no longer be used after a call to <pre class="inline_code">fOptimizeMemory(gn3)</pre>, to prevent that you have to artifically manipulate the reference counter for nodes in such a context by calling <pre class="inline_code">gn1->reference_counter++</pre>.
+        </div>
+        <div style="display: block; height: 2em;"></div>
         @from_code("../flint.h")
     </div>
 </center>

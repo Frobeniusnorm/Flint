@@ -31,7 +31,7 @@
   </div>
   <center>
 <div class="content" style="margin-top: -3.1em">
-        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types</span><ul><li><a href="#s-_typename_T__struct_Tensor_T__1__">template &lt;typename T&gt; struct <b>Tensor</b></a></li></ul><span class="card_header" style="font-size:1.2em">Functions</span><ul><li><a href="#s-data__:_shape"><b>Tensor</b>(storage_type data) : shape</a></li><li><a href="#s-data__:_shape"><b>Tensor</b>(init_type data) : shape</a></li><li><a href="#s-Tensor_&other__"><b>Tensor</b>(const Tensor &other) </a></li><li><a href="#s-operator=_const_Tensor_T__1__&other__">void <b>operator=</b>(const Tensor<T, 1> &other) </a></li><li><a href="#s-operator=_Tensor_&&other__">void <b>operator=</b>(Tensor &&other) </a></li><li><a href="#s-"><b>~Tensor</b>() </a></li><li><a href="#s-&operator[]_const_size_t_index__">T <b>&operator[]</b>(const size_t index) </a></li><li><a href="#s-Tensor_T__1__constant_T_value__size_t_size__">static Tensor&lt;T, 1&gt; <b>constant</b>(T value, size_t size) </a></li><li><a href="#s-1__reduce_sum___">Tensor&lt;T, 1&gt; <b>reduce_sum</b>() </a></li><li><a href="#s-1__reduce_mul___">Tensor&lt;T, 1&gt; <b>reduce_mul</b>() </a></li><li><a href="#s-size_t_get_shape___const_">const size_t <b>get_shape</b>() const </a></li><li><a href="#s-operator*___">std::vector&lt;T&gt; <b>operator*</b>() </a></li><li><a href="#s-execute___">void <b>execute</b>() </a></li><li><a href="#s-execute_cpu___">void <b>execute_cpu</b>() </a></li><li><a href="#s-execute_gpu___">void <b>execute_gpu</b>() </a></li><li><a href="#s-1__&operator_____">Tensor&lt;T, 1&gt; <b>&operator</b>()() </a></li><li><a href="#s-1__operator-___const_">Tensor&lt;T, 1&gt; <b>operator-</b>() const </a></li><li><a href="#s-1__sign___const_">Tensor&lt;int, 1&gt; <b>sign</b>() const </a></li><li><a href="#s-1__even___const_">Tensor&lt;int, 1&gt; <b>even</b>() const </a></li><li><a href="#s-std::string___">operator <b>std::string</b>() </a></li><li><a href="#s-std::ostream_&operator___std::ostream_&os__Tensor_T__1__&t__">friend std::ostream <b>&operator&lt;&lt;</b>(std::ostream &os, Tensor<T, 1> &t) </a></li><li><a href="#s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___k__operator+_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
+        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types</span><ul><li><a href="#s-_typename_T__struct_Tensor_T__1__">template &lt;typename T&gt; struct <b>Tensor</b></a></li></ul><span class="card_header" style="font-size:1.2em">Functions</span><ul><li><a href="#s-data__:_shape"><b>Tensor</b>(storage_type data) : shape</a></li><li><a href="#s-data__:_shape"><b>Tensor</b>(init_type data) : shape</a></li><li><a href="#s-Tensor_&other__"><b>Tensor</b>(const Tensor &other) </a></li><li><a href="#s-operator=_const_Tensor_T__1__&other__">void <b>operator=</b>(const Tensor<T, 1> &other) </a></li><li><a href="#s-operator=_Tensor_&&other__">void <b>operator=</b>(Tensor &&other) </a></li><li><a href="#s-"><b>~Tensor</b>() </a></li><li><a href="#s-&operator[]_const_size_t_index__">T <b>&operator[]</b>(const size_t index) </a></li><li><a href="#s-Tensor_T__1__constant_T_value__size_t_size__">static Tensor&lt;T, 1&gt; <b>constant</b>(T value, size_t size) </a></li><li><a href="#s-serialize___">std::vector&lt;char&gt; <b>serialize</b>() </a></li><li><a href="#s-Tensor_T__1__deserialize_char_*data__">static Tensor&lt;T, 1&gt; <b>deserialize</b>(char *data) </a></li><li><a href="#s-Tensor_T__1__deserialize_std::vector_char__data__">static Tensor&lt;T, 1&gt; <b>deserialize</b>(std::vector<char> data) </a></li><li><a href="#s-1__reduce_sum___">Tensor&lt;T, 1&gt; <b>reduce_sum</b>() </a></li><li><a href="#s-1__reduce_mul___">Tensor&lt;T, 1&gt; <b>reduce_mul</b>() </a></li><li><a href="#s-size_t_get_shape___const_">const size_t <b>get_shape</b>() const </a></li><li><a href="#s-operator*___">std::vector&lt;T&gt; <b>operator*</b>() </a></li><li><a href="#s-execute___">void <b>execute</b>() </a></li><li><a href="#s-execute_cpu___">void <b>execute_cpu</b>() </a></li><li><a href="#s-execute_gpu___">void <b>execute_gpu</b>() </a></li><li><a href="#s-1__&operator_____">Tensor&lt;T, 1&gt; <b>&operator</b>()() </a></li><li><a href="#s-1__operator-___const_">Tensor&lt;T, 1&gt; <b>operator-</b>() const </a></li><li><a href="#s-1__sign___const_">Tensor&lt;int, 1&gt; <b>sign</b>() const </a></li><li><a href="#s-1__even___const_">Tensor&lt;int, 1&gt; <b>even</b>() const </a></li><li><a href="#s-std::string___">operator <b>std::string</b>() </a></li><li><a href="#s-std::ofstream_&operator___std::ofstream_&os__Tensor_T__1__&t__">friend std::ofstream <b>&operator&lt;&lt;</b>(std::ofstream &os, Tensor<T, 1> &t) </a></li><li><a href="#s-std::ostream_&operator___std::ostream_&os__Tensor_T__1__&t__">friend std::ostream <b>&operator&lt;&lt;</b>(std::ostream &os, Tensor<T, 1> &t) </a></li><li><a href="#s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___k__operator+_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;stronger_return&lt;K&gt;, k&gt; <b>operator+</b>(const Tensor<K, k> &other) const </a></li><li><a href="#s-_typename_K___Tensor_stronger_return_K___1__operator+_const_K_con__const_">template &lt;typename K&gt;
   Tensor&lt;stronger_return&lt;K&gt;, 1&gt; <b>operator+</b>(const K con) const </a></li><li><a href="#s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___k__operator-_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;stronger_return&lt;K&gt;, k&gt; <b>operator-</b>(const Tensor<K, k> &other) const </a></li><li><a href="#s-_typename_K___Tensor_stronger_return_K___1__operator-_const_K_con__const_">template &lt;typename K&gt;
@@ -48,6 +48,12 @@
   Tensor&lt;int, k&gt; <b>equal</b>(const Tensor<K, k> &other) const </a></li><li><a href="#s-_typename_K__Tensor_int__1__equal_const_K_other__const_">template &lt;typename K&gt; Tensor&lt;int, 1&gt; <b>equal</b>(const K other) const </a></li><li><a href="#s-1__slice_long_start_=_0__long_end_=_TensorRange::MAX_SCOPE______________________long_step_=_1__const_">Tensor&lt;T, 1&gt; <b>slice</b>(long start = 0, long end = TensorRange::MAX_SCOPE,
                      long step = 1) const </a></li><li><a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a></li><li><a href="#s-1__repeat_int_repetitions__const_">Tensor&lt;T, 1&gt; <b>repeat</b>(int repetitions) const </a></li><li><a href="#s-_typename_K__unsigned_int_k___Tensor_double__k__gradient_const_Tensor_K__k__&dx__">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;double, k&gt; <b>gradient</b>(const Tensor<K, k> &dx) </a></li><li><a href="#s-watch___">void <b>watch</b>() </a></li></ul></div>
+        <div style="display: block; height: 2em;"></div>
+        <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
+          The use of Tensors alone isn't enough to correctly use Flint. 
+          Especially cleaning up the library when you are finished is important to allow the backends to deallocate resources 
+          and joining Threads. The function <pre class="inline_code">Flint::cleanup()</pre> automatically cleans up all initialized backends.
+        </div>
         <div style="display: block; height: 2em;"></div>
         <div id="s-_typename_T__struct_Tensor_T__1__"></div><div class="card"><pre class="card_header_code">template &lt;typename T&gt; struct <b>Tensor</b></pre></div>
 <br />
@@ -123,6 +129,24 @@
  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">1</span>&gt; foo = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">1</span>&gt;::constant(<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>);
  std::cout &lt;&lt; foo &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: <span style="color: #30F0FF">3</span>&gt;([<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-serialize___"></div><div class="card"><pre class="card_header_code">std::vector&lt;char&gt; <b>serialize</b>() </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Serializes the underlying data of the Tensor to a binary vector.
+ If the Tensor has no Result Data it is executed.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Tensor_T__1__deserialize_char_*data__"></div><div class="card"><pre class="card_header_code">static Tensor&lt;T, 1&gt; <b>deserialize</b>(char *data) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Deserializes the binary representation of Tensor data back to a Tensor
+ object.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Tensor_T__1__deserialize_std::vector_char__data__"></div><div class="card"><pre class="card_header_code">static Tensor&lt;T, 1&gt; <b>deserialize</b>(std::vector<char> data) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Deserializes the binary representation of Tensor data back to a Tensor
+ object.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-1__reduce_sum___"></div><div class="card"><pre class="card_header_code">Tensor&lt;T, 1&gt; <b>reduce_sum</b>() </pre></div>
 <br />
@@ -228,6 +252,12 @@
  Converts this Tensor to a string representation.
  If the Tensor was not yet executed, it won't be, instead of the data it
  will say "&lt;not yet executed&gt;".
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-std::ofstream_&operator___std::ofstream_&os__Tensor_T__1__&t__"></div><div class="card"><pre class="card_header_code">friend std::ofstream <b>&operator&lt;&lt;</b>(std::ofstream &os, Tensor<T, 1> &t) </pre></div>
+<br />
+<div class="card"><div style="padding: 5px;">
+ Calls <pre class="inline_code">deserialize</pre> on this Tensor and pipes the returned data to the
+ stream.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-std::ostream_&operator___std::ostream_&os__Tensor_T__1__&t__"></div><div class="card"><pre class="card_header_code">friend std::ostream <b>&operator&lt;&lt;</b>(std::ostream &os, Tensor<T, 1> &t) </pre></div>
 <br />
@@ -522,3 +552,4 @@
   </div>
 </body>
 </html>
+
