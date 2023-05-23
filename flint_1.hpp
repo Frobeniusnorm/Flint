@@ -3,13 +3,13 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <fstream>
 #include <initializer_list>
 #include <iostream>
 #include <ostream>
 #include <sys/types.h>
 #include <tuple>
 #include <vector>
-#include <fstream>
 /**
  * The 1 dimensional implementation of `Tensor`.
  */
@@ -673,23 +673,27 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<double, k> gradient(const Tensor<K, k> &dx) {
     return Tensor<double, k>(fCalculateGradient(this->node, dx.node), dx.shape);
   }
-  /** Watches this node, i.e. collects information needed to calculate the gradient with this node as a derivative */
-  void watch() {
-    fMarkGradientVariable(node);
-  }
-  void unwatch(){
-    fUnmarkGradientVariable(node);
-  }
+  /** Watches this node, i.e. collects information needed to calculate the
+   * gradient with this node as a derivative */
+  void watch() { fMarkGradientVariable(node); }
+  /**
+   * Removes the gradient mark (ans subsequent memory overhead) for this node.
+   * After a call to this method no subsequent gradient calculations with this
+   * node as a derivative will be possible.
+   */
+  void unwatch() { fUnmarkGradientVariable(node); }
 
 protected:
   Tensor(FGraphNode *node, size_t shape) : node(node), shape{shape} {
     node->reference_counter++;
-    fOptimizeMemory(node); // should be legal here, since C++ header adjust reference_counter
+    fOptimizeMemory(node); // should be legal here, since C++ header adjust
+                           // reference_counter
   }
   Tensor(FGraphNode *node, std::array<size_t, 1> shape)
       : node(node), shape(shape) {
     node->reference_counter++;
-    fOptimizeMemory(node); // should be legal here, since C++ header adjust reference_counter
+    fOptimizeMemory(node); // should be legal here, since C++ header adjust
+                           // reference_counter
   }
   FGraphNode *node;
   std::array<size_t, 1> shape;

@@ -847,9 +847,11 @@
  gradient with this node as a derivative </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-unwatch___"></div><div class="card"><pre class="card_header_code">void <b>unwatch</b>() </pre></div>
 <br />
-<div class="card"><div style="padding: 5px;"> No longer watches this node, for subsequent operations no additional
- gradient information will be collected i.e. it wont be possible to derive
- for this node for future calculations </div></div><div style="display: block; height: 2em;"></div>
+<div class="card"><div style="padding: 5px;">
+ Removes the gradient mark (ans subsequent memory overhead) for this node.
+ After a call to this method no subsequent gradient calculations with this
+ node as a derivative will be possible.
+</div></div><div style="display: block; height: 2em;"></div>
 
     </div>
 </center>
