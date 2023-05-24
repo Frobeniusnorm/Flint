@@ -1,5 +1,6 @@
 #include "../flint.h"
 #include <list>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -13,7 +14,16 @@ struct OCLCompilerThread {
   static void enqueue_eager(FGraphNode *node, int hash);
   static void enqueue_lazy(FGraphNode *node, std::string code);
   static bool is_enqueued_eager(FGraphNode *node, int hash);
-  static bool is_enqueued_lazy(FGraphNode *node, int hash);
+  static bool is_enqueued_lazy(FGraphNode *node, std::string code);
+  static void compiler_thread();
+  // constructing an object creates a thread
+  OCLCompilerThread();
+  // destruction an object joins its thread
+  ~OCLCompilerThread();
+  OCLCompilerThread(OCLCompilerThread&&) = delete;
+  OCLCompilerThread(const OCLCompilerThread&) = delete;
+  OCLCompilerThread& operator=(OCLCompilerThread&&) = delete;
+  OCLCompilerThread& operator=(const OCLCompilerThread&) = delete;
 #define MAX_NUMBER_PARAMS 2
   static int generateKernelHash(FOperationType operation, FType return_type,
                                 std::vector<FType> params) {
@@ -25,4 +35,6 @@ struct OCLCompilerThread {
       hash = hash << 3;
     return hash;
   }
+private:
+  std::thread thread;
 };
