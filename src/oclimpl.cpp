@@ -17,6 +17,7 @@
 
 #include "../flint.h"
 #include "ocl_codegen.hpp"
+#include "ocl_compthread.hpp"
 #include "utils.hpp"
 #include <CL/cl.h>
 #include <iostream>
@@ -155,22 +156,9 @@ static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
     *total_size = total_size_node;
   return result_mem;
 }
-#define MAX_NUMBER_PARAMS 2
-static int generateKernelHash(FOperationType operation, FType return_type,
-                              std::vector<FType> params) {
-  int hash = (operation << 3) |
-             return_type; // 4 types, 2 bits are enough to decode them
-  for (int i = 0; i < params.size(); i++)
-    hash = (hash << 3) | params[i];
-  for (int i = 0; i < MAX_NUMBER_PARAMS - params.size(); i++)
-    hash = hash << 3;
-  return hash;
-}
 #include <chrono>
 #include <unordered_map>
-static std::list<cl_program> eager_programs;
-static std::unordered_map<long, cl_kernel> eager_cache;
-static cl_kernel eager_compile(FGraphNode* node, int hash){
+cl_kernel OCLCompilerThread::eager_compile(FGraphNode* node, int hash){
     cl_int err_code;
     cl_kernel kernel = nullptr;
     auto start = std::chrono::high_resolution_clock::now();
@@ -213,7 +201,7 @@ static cl_kernel eager_compile(FGraphNode* node, int hash){
         if (correct_one)
           our_kernel = kernel_name;
         all_kernels.push_back(
-            {generateKernelHash(node->operation->op_type, F_INT32, params),
+            {OCLCompilerThread::generateKernelHash(node->operation->op_type, F_INT32, params),
              kernel_name});
       }
     } break;
@@ -240,7 +228,7 @@ static cl_kernel eager_compile(FGraphNode* node, int hash){
         if (correct_one)
           our_kernel = kernel_name;
         all_kernels.push_back(
-            {generateKernelHash(node->operation->op_type, param, {param}),
+            {OCLCompilerThread::generateKernelHash(node->operation->op_type, param, {param}),
              kernel_name});
       }
       break;
@@ -253,7 +241,7 @@ static cl_kernel eager_compile(FGraphNode* node, int hash){
         if (param == node->predecessors[0]->operation->data_type)
           our_kernel = kernel_name;
         all_kernels.push_back(
-            {generateKernelHash(node->operation->op_type, F_FLOAT64,
+            {OCLCompilerThread::generateKernelHash(node->operation->op_type, F_FLOAT64,
                                 {param, F_FLOAT64}),
              kernel_name});
       }
@@ -275,7 +263,7 @@ static cl_kernel eager_compile(FGraphNode* node, int hash){
         if (correct_one)
           our_kernel = kernel_name;
         all_kernels.push_back(
-            {generateKernelHash(node->operation->op_type, highest, params),
+            {OCLCompilerThread::generateKernelHash(node->operation->op_type, highest, params),
              kernel_name});
       }
     } break;
@@ -320,7 +308,7 @@ static cl_kernel eager_compile(FGraphNode* node, int hash){
           clCreateKernel(prog, kernel_name.second.c_str(), &err_code);
       if (err_code != CL_SUCCESS)
         flogging(F_ERROR, "kernel compilation failed!");
-      eager_cache.insert({kernel_name.first, curr});
+      OCLCompilerThread::eager_cache.insert({kernel_name.first, curr});
       if (kernel_name.first == hash) {
         kernel = curr;
       }
@@ -331,7 +319,7 @@ static cl_kernel eager_compile(FGraphNode* node, int hash){
           "something went horrible wrong for operation: " +
               std::string(fop_to_string[node->operation->op_type]) +
               " result type: " + std::to_string(node->operation->data_type));
-    eager_programs.push_back(prog);
+    OCLCompilerThread::eager_programs.push_back(prog);
     const std::chrono::duration<double, std::milli> elapsed =
         std::chrono::high_resolution_clock::now() - start;
     flogging(F_DEBUG,
@@ -388,17 +376,17 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   for (int i = 0; i < node->num_predecessor; i++)
     params_types[i] = node->predecessors[i]->operation->data_type;
   // because the operation type should be at the same position
-  int hash = generateKernelHash(node->operation->op_type,
+  int hash = OCLCompilerThread::generateKernelHash(node->operation->op_type,
                                 node->operation->data_type, params_types);
-  const auto prog = eager_cache.find(hash);
+  const auto prog = OCLCompilerThread::eager_cache.find(hash);
   cl_kernel kernel = nullptr;
   cl_int err_code;
   std::list<cl_mem> to_free;
   if (clFinish(clqueue) != CL_SUCCESS)
     flogging(F_ERROR, "OpenCL queue error!");
   // check if the kernel already exists or if it has to be generated
-  if (prog == eager_cache.end()) {
-    kernel = eager_compile(node, hash);
+  if (prog == OCLCompilerThread::eager_cache.end()) {
+    kernel = OCLCompilerThread::eager_compile(node, hash);
   } else {
     kernel = prog->second;
     flogging(F_DEBUG, "Loaded existing eager kernel");
@@ -938,9 +926,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     clReleaseMemObject(tfn);
   return node;
 }
-static std::unordered_map<std::string, std::pair<cl_program, cl_kernel>>
-    kernel_cache;
-static cl_kernel lazy_compile(FGraphNode* node, std::string code) {
+cl_kernel OCLCompilerThread::lazy_compile(FGraphNode* node, std::string code) {
     using namespace std;
     cl_kernel kernel;
     cl_int err_code;
@@ -979,10 +965,10 @@ static cl_kernel lazy_compile(FGraphNode* node, std::string code) {
     kernel = clCreateKernel(prog, "execute_graph", &err_code);
     if (err_code != CL_SUCCESS)
       flogging(F_ERROR, "kernel compilation failed!");
-    kernel_cache.insert({code, {prog, kernel}});
+    OCLCompilerThread::kernel_cache.insert({code, {prog, kernel}});
     return kernel;
 }
-FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
+FGraphNode *fExecuteGraph_gpu(FGraphNode *node) { 
   if (!initialized) {
     flintInit_gpu();
   }
@@ -1024,7 +1010,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   size_t total_size_node = 1;
   for (int i = 0; i < node_op->dimensions; i++)
     total_size_node *= node_op->shape[i];
-  flogging(F_DEBUG, "total size node: " + std::to_string(total_size_node));
   // calculate Code and Parameters
   using namespace std;
   list<pair<FGraphNode *, string>> parameters;
@@ -1049,11 +1034,11 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   flogging(F_DEBUG, "code generation finished (in " +
                         to_string(elapsed.count()) + " ms): \n" + code);
   // don't create code when in cache
-  auto cache_val = kernel_cache.find(code);
+  auto cache_val = OCLCompilerThread::kernel_cache.find(code);
   cl_kernel kernel = nullptr;
   cl_int err_code;
-  if (cache_val == kernel_cache.end()) {
-    kernel = lazy_compile(node, code);
+  if (cache_val == OCLCompilerThread::kernel_cache.end()) {
+    kernel = OCLCompilerThread::lazy_compile(node, code);
   } else {
     flogging(F_DEBUG, "code from cache");
     kernel = cache_val->second.second;
@@ -1072,7 +1057,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   int index = 1;
   std::vector<cl_event> writeEvents;
   for (auto &[gn, name] : parameters) {
-    flogging(F_DEBUG, "param");
     FOperation *op = gn->operation;
     // TODO keep track of when data in Store is changed
     cl_mem mem_obj = nullptr;
@@ -1177,18 +1161,18 @@ void flintCleanup_gpu() {
   if (initialized) {
     flogging(F_DEBUG, "Cleaning up GPU Backend");
     initialized = false;
-    for (auto &k : kernel_cache) {
+    for (auto &k : OCLCompilerThread::kernel_cache) {
       clReleaseKernel(k.second.second);
       clReleaseProgram(k.second.first);
     }
-    for (auto &k : eager_cache) {
+    for (auto &k : OCLCompilerThread::eager_cache) {
       clReleaseKernel(k.second);
     }
-    for (auto &p : eager_programs)
+    for (auto &p : OCLCompilerThread::eager_programs)
       clReleaseProgram(p);
-    kernel_cache.clear();
-    eager_cache.clear();
-    eager_programs.clear();
+    OCLCompilerThread::kernel_cache.clear();
+    OCLCompilerThread::eager_cache.clear();
+    OCLCompilerThread::eager_programs.clear();
     clReleaseCommandQueue(clqueue);
     clReleaseDevice(device);
     clReleaseContext(context);
