@@ -164,10 +164,10 @@ template <typename T, unsigned int n> struct Tensor {
     FGraphNode *node = fconstant(value, shape.data(), dimensions);
     return Tensor(node, shape);
   }
-  
-  template <typename... args>
-  static Tensor<double, n> random(args... sizes) {
-    static_assert(std::is_same<T, double>(), "Can only generate random double Tensors!");
+
+  template <typename... args> static Tensor<double, n> random(args... sizes) {
+    static_assert(std::is_same<T, double>(),
+                  "Can only generate random double Tensors!");
     constexpr size_t dimensions = sizeof...(args);
     std::array<size_t, dimensions> shape{static_cast<size_t>(sizes)...};
     FGraphNode *node = frandom(shape.data(), dimensions);
@@ -1215,9 +1215,11 @@ template <typename T, unsigned int n> struct Tensor {
   /** Watches this node, i.e. collects information needed to calculate the
    * gradient with this node as a derivative */
   void watch() { fMarkGradientVariable(node); }
-  /** No longer watches this node, for subsequent operations no additional
-   * gradient information will be collected i.e. it wont be possible to derive
-   * for this node for future calculations */
+  /**
+   * Removes the gradient mark (ans subsequent memory overhead) for this node.
+   * After a call to this method no subsequent gradient calculations with this
+   * node as a derivative will be possible.
+   */
   void unwatch() { fUnmarkGradientVariable(node); }
 
 protected:
