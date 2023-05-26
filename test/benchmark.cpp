@@ -46,7 +46,7 @@ double reduce_fun(bool backend) {
   timer.start();
   for (int i = 0; i < 1000; i++) {
     Tensor<double, 1> res =
-        ((t2.reduce_mul(0) * (t2 - t1).reduce_sum(0)).reduce_sum(0) / 1000.0);
+        ((t2.sin().reduce_mul(0) * (t2 - t1).tan().reduce_sum(0)).transpose({1, 0}).abs().sqrt().log2().reduce_sum(0) / 1000.0);
     if (backend)
       res.execute_gpu();
     else

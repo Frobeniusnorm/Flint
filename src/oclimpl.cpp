@@ -43,6 +43,8 @@ static bool initialized = false;
 static cl_context context;
 static cl_command_queue clqueue;
 static cl_device_id device;
+// Compiler Threads
+static OCLCompilerThread* compthread;
 void flintInit_gpu() {
   cl_platform_id platforms[10];
   cl_uint num_dev, num_plat;
@@ -135,6 +137,7 @@ void flintInit_gpu() {
   clqueue = clCreateCommandQueueWithProperties(context, device, NULL, &status);
   if (status != CL_SUCCESS)
     flogging(F_ERROR, "clCreateCommandQueue");
+  compthread = new OCLCompilerThread();
   initialized = true;
   flogging(F_VERBOSE, "Flint GPU backend was initialized!");
 }
@@ -1160,6 +1163,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 void flintCleanup_gpu() {
   if (initialized) {
     flogging(F_DEBUG, "Cleaning up GPU Backend");
+    delete compthread;
     initialized = false;
     for (auto &k : OCLCompilerThread::kernel_cache) {
       clReleaseKernel(k.second.second);

@@ -15,7 +15,7 @@ struct OCLCompilerThread {
   static void enqueue_lazy(FGraphNode *node, std::string code);
   static bool is_enqueued_eager(FGraphNode *node, int hash);
   static bool is_enqueued_lazy(FGraphNode *node, std::string code);
-  static void compiler_thread();
+  static void compiler_thread(std::thread*);
   // constructing an object creates a thread
   OCLCompilerThread();
   // destruction an object joins its thread
