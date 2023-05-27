@@ -11,19 +11,12 @@ struct OCLCompilerThread {
       kernel_cache;
   static cl_kernel eager_compile(FGraphNode *node, int hash);
   static cl_kernel lazy_compile(FGraphNode *node, std::string code);
-  static void enqueue_eager(FGraphNode *node, int hash);
-  static void enqueue_lazy(FGraphNode *node, std::string code);
-  static bool is_enqueued_eager(FGraphNode *node, int hash);
-  static bool is_enqueued_lazy(FGraphNode *node, std::string code);
-  static void compiler_thread(std::thread*);
-  // constructing an object creates a thread
-  OCLCompilerThread();
-  // destruction an object joins its thread
-  ~OCLCompilerThread();
-  OCLCompilerThread(OCLCompilerThread&&) = delete;
-  OCLCompilerThread(const OCLCompilerThread&) = delete;
-  OCLCompilerThread& operator=(OCLCompilerThread&&) = delete;
-  OCLCompilerThread& operator=(const OCLCompilerThread&) = delete;
+  // TODO hard drive caching of eager kernels here
+  // TODO if we want to revisit a compiler thread ->
+  //      - ONLY the compiler thread is allowed to compile code. This solves
+  //      synchronizing problems with cache.
+  //      - To do this we can insert in the queue at the back for "compile for
+  //      future" kernels and in the front for "compile for now" kernels
 #define MAX_NUMBER_PARAMS 2
   static int generateKernelHash(FOperationType operation, FType return_type,
                                 std::vector<FType> params) {
@@ -35,6 +28,4 @@ struct OCLCompilerThread {
       hash = hash << 3;
     return hash;
   }
-private:
-  std::thread thread;
 };

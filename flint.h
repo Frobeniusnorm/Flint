@@ -50,7 +50,10 @@ void flintInit_cpu();
 /** Don't call this function explicitly if you intent to use Flint normally. Use
  * `flintInit` */
 void flintInit_gpu();
-
+/** Returns an integer containing the Backend information bitwise.
+ * See constants `FLINT_BACKEND_ONLY_CPU`, `FLINT_BACKEND_ONLY_GPU` and
+ * `FLINT_BACKEND_BOTH`. */
+int flintInitializedBackends();
 /** Deallocates any resourced allocated by the corresponding backends.
 This method calls the other two (following) which are only executed if the
 framework was initialized, else they do nothing. */

@@ -5,7 +5,7 @@
 using namespace plf;
 using namespace std;
 
-double matrix_multiplication(bool backend) {
+double matrix_multiplication() {
   nanotimer timer;
   vector<vector<float>> d1(64, vector<float>(64));
   for (int i = 0; i < 64; i++)
@@ -22,14 +22,11 @@ double matrix_multiplication(bool backend) {
   timer.start();
   for (int i = 0; i < 1000; i++) {
     Tensor<float, 3> res = mat2.matmul(mat1).pow(3.141592f);
-    if (backend)
-      res.execute_gpu();
-    else
-      res.execute_cpu();
+    res.execute();
   }
   return timer.get_elapsed_ms();
 }
-double reduce_fun(bool backend) {
+double reduce_fun() {
   nanotimer timer;
   vector<vector<float>> d1(64, vector<float>(64));
   for (int i = 0; i < 64; i++)
@@ -47,14 +44,11 @@ double reduce_fun(bool backend) {
   for (int i = 0; i < 1000; i++) {
     Tensor<double, 1> res =
         ((t2.sin().reduce_mul(0) * (t2 - t1).tan().reduce_sum(0)).transpose({1, 0}).abs().sqrt().log2().reduce_sum(0) / 1000.0);
-    if (backend)
-      res.execute_gpu();
-    else
-      res.execute_cpu();
+    res.execute();
   }
   return timer.get_elapsed_ms();
 }
-double gradient_fun(bool backend) {
+double gradient_fun() {
   nanotimer timer;
   vector<vector<float>> d1(64, vector<float>(64));
   for (int i = 0; i < 64; i++)
@@ -77,19 +71,13 @@ double gradient_fun(bool backend) {
             .flattened()
             .min(0);
     Tensor<double, 2> g1 = t3.gradient(t1);
-    if (backend)
-      g1.execute_gpu();
-    else
-      g1.execute_cpu();
     Tensor<double, 3> g2 = t3.gradient(t2);
-    if (backend)
-      g2.execute_gpu();
-    else
-      g2.execute_cpu();
+    g1.execute();
+    g2.execute();
   }
   return timer.get_elapsed_ms();
 }
-double convolve_fun(bool backend) {
+double convolve_fun() {
   nanotimer timer;
   vector<vector<vector<float>>> image(
       2048, vector<vector<float>>(2048, vector<float>(3, 0.8)));
@@ -103,29 +91,27 @@ double convolve_fun(bool backend) {
     Tensor<float, 2> foo = img_t.convolve(ker_t, 16, 16);
     Tensor<float, 2> err = (foo - 0.7f).abs();
     Tensor<double, 3> grad = err.gradient(ker_t);
-    if (backend)
-      grad.execute_gpu();
-    else
-      grad.execute_cpu();
+    grad.execute();
+    //foo.execute();
   }
   return timer.get_elapsed_ms();
 }
 void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
-  unordered_map<string, double (*)(bool)> benches;
+  unordered_map<string, double (*)()> benches;
   benches.insert({"convolve_fun", convolve_fun});
   benches.insert({"gradient_fun", gradient_fun});
   benches.insert({"matrix_multiplication", matrix_multiplication});
   benches.insert({"reduce_fun", reduce_fun});
   /////////////////////////////////////////////////
-  unordered_map<string, pair<double, double>> times;
+  unordered_map<string, tuple<double, double, double>> times;
   Flint::setLoggingLevel(F_INFO);
   if (benchmarks & FLINT_BACKEND_ONLY_CPU) {
     // cpu tests
     flintInit(FLINT_BACKEND_ONLY_CPU);
-    fEnableEagerExecution();
+    fDisableEagerExecution();
     for (const auto &bench : benches) {
       flogging(F_INFO, bench.first + "...");
-      times.insert({bench.first, {bench.second(false), 0}});
+      times.insert({bench.first, {bench.second(), 0, 0}});
     }
     flintCleanup();
   }
@@ -135,18 +121,28 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
     fDisableEagerExecution();
     for (const auto &bench : benches) {
       flogging(F_INFO, bench.first + "...");
-      times[bench.first].second = bench.second(true);
+      std::get<1>(times[bench.first]) = bench.second();
+    }
+    flintCleanup();
+  }
+  if (benchmarks & FLINT_BACKEND_BOTH) {
+    // both tests
+    flintInit(FLINT_BACKEND_BOTH);
+    fDisableEagerExecution();
+    for (const auto &bench : benches) {
+      flogging(F_INFO, bench.first + "...");
+      std::get<2>(times[bench.first]) = bench.second();
     }
     flintCleanup();
   }
   std::cout
-      << "+------------------------+------------------+------------------+"
+      << "+------------------------+------------------+------------------+------------------+"
       << std::endl;
   std::cout
-      << "| benchmark name         | cpu time (ms)    | gpu time (ms)    |"
+      << "| benchmark name         | cpu time (ms)    | gpu time (ms)    | jit both (ms)    |"
       << std::endl;
   std::cout
-      << "+------------------------+------------------+------------------+"
+      << "+------------------------+------------------+------------------+------------------+"
       << std::endl;
   for (auto kv : times) {
     string name = kv.first;
@@ -154,10 +150,11 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
       name = kv.first.substr(0, 20);
       name += "..";
     }
-    string cpu_time = to_string(kv.second.first);
-    string gpu_time = to_string(kv.second.second);
+    string cpu_time = to_string(std::get<0>(kv.second));
+    string gpu_time = to_string(std::get<1>(kv.second));
+    string jit_time = to_string(std::get<2>(kv.second));
 
-    for (string *str : {&cpu_time, &gpu_time, &name}) {
+    for (string *str : {&cpu_time, &gpu_time, &name, &jit_time}) {
       size_t target = str == &name ? 22 : 16;
       if (str->size() > target)
         *str = str->substr(0, target);
@@ -167,10 +164,10 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
           *str += " ";
       }
     }
-    cout << "| " << name << " | " << cpu_time << " | " << gpu_time << " |"
+    cout << "| " << name << " | " << cpu_time << " | " << gpu_time << " | " << jit_time << " |"
          << endl;
     std::cout
-        << "+------------------------+------------------+------------------+"
+        << "+------------------------+------------------+------------------+------------------+"
         << std::endl;
   }
 }

@@ -99,7 +99,7 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
     return execute_eagerly(node);
   if (use_gpu && use_cpu) {
     unsigned int gpu_score = computeScore(node, true);
-    return gpu_score >= 2048 || !use_cpu ? fExecuteGraph_gpu(node)
+    return gpu_score >= 2048 ? fExecuteGraph_gpu(node)
                                          : fExecuteGraph_cpu(node);
   }
   if (use_gpu)
@@ -115,12 +115,18 @@ void flintCleanup() {
 void flintInit(int backends) {
   flogging(F_VERBOSE, "Initializing Flint");
   std::srand((unsigned int)(std::time(nullptr)));
-  use_cpu = (backends & FLINT_BACKEND_ONLY_CPU) != 0;
-  use_gpu = (backends & FLINT_BACKEND_ONLY_GPU) != 0;
+  use_cpu = (backends & FLINT_BACKEND_ONLY_CPU);
+  use_gpu = (backends & FLINT_BACKEND_ONLY_GPU);
   if (use_cpu)
     flintInit_cpu();
   if (use_gpu)
     flintInit_gpu();
+}
+int flintInitializedBackends() {
+  int backends = 0;
+  if (use_cpu) backends |= FLINT_BACKEND_ONLY_CPU;
+  if (use_gpu) backends |= FLINT_BACKEND_ONLY_GPU;
+  return backends;
 }
 // GRAPH METHODS
 FGraphNode *fCreateGraph(const void *data, const int num_entries,

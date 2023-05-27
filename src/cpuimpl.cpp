@@ -380,8 +380,8 @@ static void executeNode(const FGraphNode *node,
       }
       // to get the index in the source array we first calculate the indices and
       // reproject
-      int index = i;
-      int src_index = 0;
+      size_t index = i;
+      size_t src_index = 0;
       for (int dim = 0; dim < op->dimensions; dim++) {
         int curr_idx = index / acc_sizes_d[dim];
         index %= acc_sizes_d[dim];
@@ -935,7 +935,9 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
       }
       results.insert({curr, foo});
     } else if (curr->operation->op_type == FRESHAPE && curr != node) {
-      results.insert({curr, predData[0]});
+      CPUResultData npd = predData[0];
+      npd.shape = std::vector<size_t>(curr->operation->shape, curr->operation->shape + curr->operation->dimensions);
+      results.insert({curr, npd});
     } else {
       // allocate result data and execute
       switch (curr->operation->data_type) {
