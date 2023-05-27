@@ -11,6 +11,22 @@
     <div class="content">
       <div style="display: block; height: 5em;"></div>
       <div class="card">
+        <span class="card_header">General Usage</span>
+      </div>
+      <br />
+      <div class="card">
+        <p style="padding-bottom: 10px; padding-top: 2px;">
+          A short explanation of the functionality of Flint and how to use it correctly.<br/>
+          Not intended as a Tutorial but rather an introduction which makes you familiar with the concepts used in this library, 
+          so that it (hopefully) becomes easier to understand the code and usage of it.
+        </p>
+      </div>
+      <br/>
+      <div class="card button3">
+        <a href="general_doc.html">Documentation</a>
+      </div>
+      <div style="display: block; height: 2em;"></div>
+      <div class="card">
         <span class="card_header">C Headers</span>
       </div>
       <br />

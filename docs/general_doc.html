@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>
+    Flint Documentation
+  </title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+</head>
+
+<body>
+
+  <div id="header-bar">
+    <div class="left-spaced">
+      <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
+      <a class="item" href="index.html">About</a>
+      <a class="item selected" href="documentation.html">Documentation</a>
+      <a class="item">Tutorial</a>
+    </div>
+  </div>
+  <div id="showcase_background" style="min-height: 18em; background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(195,225,100,1) 0%, rgba(50,228,100,1) 100%);">
+    <center style="margin-top:2em">
+      <h1>
+        Documentation - General Usage
+      </h1>
+    </center>
+  </div>
+  <center>
+    <div class="content" style="margin-top: -3.1em">
+        <div class="card">
+          <span class="card_header">General Usage</span>
+        </div><br />
+        <div class="card" style="padding: 20px 15px">
+          <ul>
+            <li><a href="#general">What does Flint do</a></li>
+            <li><a href="#execution">Execution of Tensors</a></li>
+            <li><a href="#data">Data Management and Initialization</a></li>
+          </ul>
+        </div>
+        <div style="display: block; height: 2em;" id="general"></div>
+        <div class="card">
+          <div class="card_header_code">
+            What does Flint do?
+          </div>
+        </div>
+        <div class="card" style="padding: 20px 20px;">
+          Flint provides you with a Framework to create and manipulate Tensors. Tensors are just multidimensional data arrays with the same shape along each dimension.
+          A Vector or a Matrix are Tensors too. You can create a 6-dimensional Tensor with the shape of 256, 128, 64, 32, 1024, 53 (here shape is always denoted from inner to outer, so 256 is the outer most dimension).<br/>
+          The great thing about Flint: you can apply operations to those Tensor, for example addition, multiplication, you can convolve Tensor, do Matrix multiplication and so on.<br/> 
+          Flint is then able to execute those operations, which are stored in an operational graph.<br/> (a graph were each node either represents a data node (so it stores data you calculated or put there) or a operation itself, that has been executed or still has to be executed. Those nodes can be connected in a graph: e.g. if you sum up to nodes A and B to the result C, the node C is the child of its parents A and B).<br/>
+          <center><img src="operational_graph_ex1.png" width="410" height="262"/></center><br/>
+          Allthough if you use the C++ frontend you won't get in touch too much with this graph it enables efficient gradient calculation which is the core functionality for machine learning
+          in a Tensor Execution framework. You can execute these Tensor on your CPU or on a OpenCL capable device like a GPU, for more see the Execution section.<br/>
+          Flint provides an automatic memory management system for your Tensors and all their allocated data with reference counting in the graph, for more see the Data section.<br/>
+        </div>
+        
+        <div style="display: block; height: 2em;" id="execution"></div>
+        <div class="card">
+          <div class="card_header_code">
+            Execution of Tensors
+          </div>
+        </div><br/>
+        <div class="card" style="padding: 20px 20px;">
+          TODO
+        </div>
+        
+        <div style="display: block; height: 2em;" id="data"></div>
+        <div class="card">
+          <div class="card_header_code">
+            Data Management and Initialization
+          </div>
+        </div><br/>
+        <div class="card" style="padding: 20px 20px;">
+          TODO
+        </div>
+    </div>
+</center>
+  <div id="footer">
+    <center>
+    <div class="content">
+      <div class="row">
+        <div class="column">
+          © David Schwarzbeck, 2022</br>
+          Licensed under the <a href="https://github.com/Frobeniusnorm/Flint/blob/main/LICENCE">Apache License</a>, Version 2.0
+        </div>
+        <div class="column">&nbsp;</div>
+        <div class="column">&nbsp;</div>
+        <div class="column">
+          <a href="https://github.com/Frobeniusnorm/Flint/">Github</a>
+        </div>
+      </div>
+    </div>
+    <i style="color: #D0D0D0;">This site values your privacy, does not use cookies, javascript or other malware and does not sell anything.</i></center>
+    </center>
+  </div>
+</body>
+</html>
+

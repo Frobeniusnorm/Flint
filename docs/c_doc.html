@@ -27,7 +27,7 @@
   </div>
   <center>
     <div class="content" style="margin-top: -3.1em">
-        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types</span><ul><li><a href="#s-FLogType_">enum <b>FLogType </b></a></li><li><a href="#s-FType_">enum <b>FType </b></a></li><li><a href="#s-FOperation_">struct <b>FOperation </b></a></li><li><a href="#s-FResultData_">struct <b>FResultData </b></a></li><li><a href="#s-FGraphNode_">struct <b>FGraphNode </b></a></li><li><a href="#s-FStore_">struct <b>FStore </b></a></li></ul><span class="card_header" style="font-size:1.2em">Functions</span><ul><li><a href="#s-flintInit_int_backends_">void <b>flintInit</b>(int backends)</a></li><li><a href="#s-flintInit_cpu__">void <b>flintInit_cpu</b>()</a></li><li><a href="#s-flintInit_gpu__">void <b>flintInit_gpu</b>()</a></li><li><a href="#s-flintCleanup__">void <b>flintCleanup</b>()</a></li><li><a href="#s-flintCleanup_cpu__">void <b>flintCleanup_cpu</b>()</a></li><li><a href="#s-flintCleanup_gpu__">void <b>flintCleanup_gpu</b>()</a></li><li><a href="#s-fSetLoggingLevel_int_">void <b>fSetLoggingLevel</b>(int)</a></li><li><a href="#s-flogging_FLogType_type__const_char_*msg_">void <b>flogging</b>(FLogType type, const char *msg)</a></li><li><a href="#s-fEnableEagerExecution__">void <b>fEnableEagerExecution</b>()</a></li><li><a href="#s-fDisableEagerExecution__">void <b>fDisableEagerExecution</b>()</a></li><li><a href="#s-fIsEagerExecution__">int <b>fIsEagerExecution</b>()</a></li><li><a href="#s-fCreateGraph_const_void_*data__const_int_num_entries__________________________const_FType_data_type__const_size_t_*shape__________________________const_int_dimensions_">FGraphNode <b>*fCreateGraph</b>(const void *data, const int num_entries,
+        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types</span><ul><li><a href="#s-FLogType_">enum <b>FLogType </b></a></li><li><a href="#s-FType_">enum <b>FType </b></a></li><li><a href="#s-FOperation_">struct <b>FOperation </b></a></li><li><a href="#s-FResultData_">struct <b>FResultData </b></a></li><li><a href="#s-FGraphNode_">struct <b>FGraphNode </b></a></li><li><a href="#s-FStore_">struct <b>FStore </b></a></li></ul><span class="card_header" style="font-size:1.2em">Functions</span><ul><li><a href="#s-flintInit_int_backends_">void <b>flintInit</b>(int backends)</a></li><li><a href="#s-flintInit_cpu__">void <b>flintInit_cpu</b>()</a></li><li><a href="#s-flintInit_gpu__">void <b>flintInit_gpu</b>()</a></li><li><a href="#s-flintInitializedBackends__">int <b>flintInitializedBackends</b>()</a></li><li><a href="#s-flintCleanup__">void <b>flintCleanup</b>()</a></li><li><a href="#s-flintCleanup_cpu__">void <b>flintCleanup_cpu</b>()</a></li><li><a href="#s-flintCleanup_gpu__">void <b>flintCleanup_gpu</b>()</a></li><li><a href="#s-fSetLoggingLevel_int_">void <b>fSetLoggingLevel</b>(int)</a></li><li><a href="#s-flogging_FLogType_type__const_char_*msg_">void <b>flogging</b>(FLogType type, const char *msg)</a></li><li><a href="#s-fEnableEagerExecution__">void <b>fEnableEagerExecution</b>()</a></li><li><a href="#s-fDisableEagerExecution__">void <b>fDisableEagerExecution</b>()</a></li><li><a href="#s-fIsEagerExecution__">int <b>fIsEagerExecution</b>()</a></li><li><a href="#s-fCreateGraph_const_void_*data__const_int_num_entries__________________________const_FType_data_type__const_size_t_*shape__________________________const_int_dimensions_">FGraphNode <b>*fCreateGraph</b>(const void *data, const int num_entries,
                          const FType data_type, const size_t *shape,
                          const int dimensions)</a></li><li><a href="#s-fconstant_i_const_int_value__const_size_t_*shape_________________________const_int_dimensions_">FGraphNode <b>*fconstant_i</b>(const int value, const size_t *shape,
                         const int dimensions)</a></li><li><a href="#s-fconstant_l_const_long_value__const_size_t_*shape_________________________const_int_dimensions_">FGraphNode <b>*fconstant_l</b>(const long value, const size_t *shape,
@@ -70,6 +70,11 @@ FGraphNode *gn3 = fadd(gn1, gn2); <span style="color: #D0D0D0">// counter of gn3
 <br />
 <div class="card"><div style="padding: 5px;"> Don't call this function explicitly if you intent to use Flint normally. Use
  <pre class="inline_code">flintInit</pre> </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-flintInitializedBackends__"></div><div class="card"><pre class="card_header_code">int <b>flintInitializedBackends</b>()</pre></div>
+<br />
+<div class="card"><div style="padding: 5px;"> Returns an integer containing the Backend information bitwise.
+ See constants <pre class="inline_code">FLINT_BACKEND_ONLY_CPU</pre>, <pre class="inline_code">FLINT_BACKEND_ONLY_GPU</pre> and
+ <pre class="inline_code">FLINT_BACKEND_BOTH</pre>. </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-flintCleanup__"></div><div class="card"><pre class="card_header_code">void <b>flintCleanup</b>()</pre></div>
 <br />
 <div class="card"><div style="padding: 5px;"> Deallocates any resourced allocated by the corresponding backends.
@@ -741,6 +746,7 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
         </div>
       </div>
     </div>
+    <i style="color: #D0D0D0;">This site values your privacy, does not use cookies, javascript or other malware and does not sell anything.</i></center>
     </center>
   </div>
 </body>
