@@ -52,59 +52,60 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
   }
   return res + "]";
 }
-static inline int operationScore(const FGraphNode* g){
-    switch (g->operation->op_type) {
-    case FMUL:
-    case FDIV:
-    case FPOW:
-    case FLOG:
-    case FLOG2:
-    case FLOG10:
-    case FSIN:
-    case FCOS:
-    case FTAN:
-    case FASIN:
-    case FACOS:
-    case FATAN:
-    case FSQRT:
-      return 2;
-    case FREDUCE_SUM:
-    case FREDUCE_MUL:
-    case FMATMUL: {
-      const FGraphNode *a = g->predecessors[0];
-      return a->operation->shape[a->operation->dimensions - 1];
-    }
-    case FGRADIENT_CONVOLVE:
-    case FCONVOLVE: {
-      // multiply with complete kernel size
-      size_t no_elems = 1;
-      const FGraphNode *a = g->predecessors[1];
-      for (int i = 0; i < a->operation->dimensions; i++)
-        no_elems *= a->operation->shape[i];
-      return no_elems;
-    }
-    case FSLIDE: {
-      // no multiplication with complete source, since that would artificially
-      // distort parallelization
-      return 5;
-    }
-    default:
-      break;
-    }
-    return 1;
+static inline int operationScore(const FGraphNode *g) {
+  switch (g->operation->op_type) {
+  case FMUL:
+  case FDIV:
+  case FPOW:
+  case FLOG:
+  case FLOG2:
+  case FLOG10:
+  case FSIN:
+  case FCOS:
+  case FTAN:
+  case FASIN:
+  case FACOS:
+  case FATAN:
+  case FSQRT:
+    return 2;
+  case FREDUCE_SUM:
+  case FREDUCE_MUL: {
+    return 4;
+  }
+  case FMATMUL: {
+    const FGraphNode *a = g->predecessors[0];
+    return a->operation->shape[a->operation->dimensions - 1];
+  }
+  case FGRADIENT_CONVOLVE:
+  case FCONVOLVE: {
+    // multiply with complete kernel size
+    size_t no_elems = 1;
+    const FGraphNode *a = g->predecessors[1];
+    for (int i = 0; i < a->operation->dimensions; i++)
+      no_elems *= a->operation->shape[i];
+    return no_elems;
+  }
+  case FSLIDE: {
+    // no multiplication with complete source, since that would artificially
+    // distort parallelization
+    return 5;
+  }
+  default:
+    break;
+  }
+  return 1;
 }
 static inline size_t computeScore(const FGraphNode *g, bool with_pred = true) {
-  size_t score = 0;
   std::queue<const FGraphNode *> todo;
+  size_t no_elems = 1;
+  for (int i = 0; i < g->operation->dimensions; i++)
+    no_elems *= g->operation->shape[i];
+  size_t score = 0;
   todo.push(g);
   while (!todo.empty()) {
-    const FGraphNode* c = todo.front();
+    const FGraphNode *c = todo.front();
     todo.pop();
-    size_t no_elems = 1;
-    for (int i = 0; i < c->operation->dimensions; i++)
-      no_elems *= c->operation->shape[i];
-    no_elems *= operationScore(c);
-    score += no_elems;
+    score += operationScore(c) * no_elems;
     if (with_pred) {
       for (int i = 0; i < c->num_predecessor; i++)
         if (!c->predecessors[i]->result_data && c->operation->op_type != FSTORE)

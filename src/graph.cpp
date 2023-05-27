@@ -380,6 +380,10 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
     if (b) {
       lower = b->shape;
       lower_dim = b->dimensions;
+      if (a->dimensions == b->dimensions && src[0] == 1) {
+        lower = a->shape;
+        src = b->shape;
+      }
     }
   } else {
     op->dimensions = b->dimensions;
@@ -389,14 +393,18 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
   }
   // check shape if both are defined and lower is not a constant
   if (lower && !(lower_dim == 1 && lower[0] == 1)) {
-    for (int i = 0; i < lower_dim; i++)
-      if (src[i + (op->dimensions - lower_dim)] != lower[i])
+    for (int i = 0; i < lower_dim; i++) {
+      const size_t s1 = src[i + (op->dimensions - lower_dim)];
+      const size_t s2 = lower[i];
+      if (s1 != s2)
         flogging(
             F_ERROR,
             "incompatible shapes of operands: " +
                 vectorString(std::vector<size_t>(src, src + op->dimensions)) +
                 " and " +
                 vectorString(std::vector<size_t>(lower, lower + lower_dim)));
+  
+    }
   }
   op->shape = (size_t *)malloc(sizeof(size_t) * op->dimensions);
   memcpy((void *)op->shape, src, sizeof(size_t) * op->dimensions);

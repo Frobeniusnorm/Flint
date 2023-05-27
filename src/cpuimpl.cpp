@@ -899,13 +899,26 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   while (!workList.empty()) {
     FGraphNode *curr = workList.front();
     workList.pop_front();
-    for (int i = 0; i < curr->num_predecessor; i++) {
-      workList.push_back(curr->predecessors[i]);
-    }
     if (inExecuteList.find(curr) != inExecuteList.end())
       toExecute.remove(curr);
     inExecuteList.insert(curr);
     toExecute.push_front(curr);
+    for (int i = 0; i < curr->num_predecessor; i++) {
+      // execute on GPU if it makes more sense
+      if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU) {
+        FGraphNode* p = curr->predecessors[i];
+        size_t score = computeScore(p, true);
+        if (score >= 2048) {
+          if (inExecuteList.find(p) != inExecuteList.end())
+            toExecute.remove(p);
+          fExecuteGraph_gpu(p);
+          toExecute.push_front(p);
+          inExecuteList.insert(p);
+          continue;
+        }
+      }
+      workList.push_back(curr->predecessors[i]);
+    }
   }
   // work them in correct oder
   for (FGraphNode *curr : toExecute) {
