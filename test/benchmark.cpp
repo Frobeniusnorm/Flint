@@ -55,8 +55,8 @@ double gradient_fun() {
     for (int j = 0; j < 64; j++)
       d1[i][j] = i / 16.0 + j / 16.0;
   vector<vector<vector<float>>> d2(
-      16, vector<vector<float>>(64, vector<float>(64)));
-  for (int i = 0; i < 16; i++)
+      32, vector<vector<float>>(64, vector<float>(64)));
+  for (int i = 0; i < 32; i++)
     for (int j = 0; j < 64; j++)
       for (int k = 0; k < 64; k++)
         d2[i][j][k] = (16 - i) / 2.0 * (64 - j) / 8.0 + j / 16.0;
@@ -89,12 +89,12 @@ double convolve_fun() {
   Tensor<float, 3> ker_t(filter);
   ker_t.watch();
   timer.start();
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 2; i++) {
     Tensor<float, 2> foo = img_t.convolve(ker_t, 16, 16);
     Tensor<float, 2> err = (foo - 0.7f).abs();
     Tensor<double, 3> grad = err.gradient(ker_t);
+    foo.execute();
     grad.execute();
-    //foo.execute();
   }
   return timer.get_elapsed_ms();
 }
@@ -110,7 +110,6 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   if (benchmarks & FLINT_BACKEND_ONLY_CPU) {
     // cpu tests
     flintInit(FLINT_BACKEND_ONLY_CPU);
-    fDisableEagerExecution();
     for (const auto &bench : benches) {
       flogging(F_INFO, bench.first + "...");
       times.insert({bench.first, {bench.second(), 0, 0}});
@@ -120,7 +119,6 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   if (benchmarks & FLINT_BACKEND_ONLY_GPU) {
     // gpu tests
     flintInit(FLINT_BACKEND_ONLY_GPU);
-    fDisableEagerExecution();
     for (const auto &bench : benches) {
       flogging(F_INFO, bench.first + "...");
       std::get<1>(times[bench.first]) = bench.second();
@@ -130,7 +128,6 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   if (benchmarks & FLINT_BACKEND_BOTH) {
     // both tests
     flintInit(FLINT_BACKEND_BOTH);
-    fDisableEagerExecution();
     for (const auto &bench : benches) {
       flogging(F_INFO, bench.first + "...");
       std::get<2>(times[bench.first]) = bench.second();

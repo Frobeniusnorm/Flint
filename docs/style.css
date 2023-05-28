@@ -8,9 +8,12 @@
 html {
   font-family: FiraCode; 
 }
+img {
+  max-width: 100%;
+}
 /* header */
 #header-bar{
-    background-color: #D0D0D0;
+    background-color: #20252F;
     height: 3.5em;
     position: fixed;
     top: 0px;
@@ -21,6 +24,14 @@ html {
     width: 100%;
     z-index: 15;
     white-space: nowrap;
+}
+#header-bar a{
+    color: #E5EAF0;
+    cursor: pointer;
+    text-decoration: none;
+}
+#header-bar a:hover{
+    color: #A0D9FF;
 }
 #header-bar .item{
     margin-left: 20px;
@@ -35,7 +46,7 @@ html {
   }
 }
 #header-bar .selected{
-    color: #0070B0;
+    color: #80C0FF;
     text-decoration: underline;
     text-underline-offset: 5px;
 }
@@ -107,6 +118,10 @@ pre{
 .spacer{
   display: block; 
   height: 0.1em;
+}
+.spacer2{
+  display: block; 
+  height: 0.5em;
 }
 .content{
   max-width: 80em;

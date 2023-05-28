@@ -56,7 +56,7 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
   if (all_calculated && (use_cpu || use_gpu)) {
     // since we only have one node the heuristics become constant
     unsigned int gpu_score = computeScore(f, false);
-    return use_gpu && (gpu_score >= 1024 || !use_cpu)
+    return use_gpu && (gpu_score >= 2048 || !use_cpu)
                ? fExecuteGraph_gpu(fExecuteGraph_gpu_eagerly(f))
                : fExecuteGraph_cpu_eagerly(f);
   } else {

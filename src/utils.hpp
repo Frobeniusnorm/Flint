@@ -15,6 +15,7 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 #include "../flint.h"
+#include <cmath>
 #include <condition_variable>
 #include <list>
 #include <mutex>
@@ -81,14 +82,21 @@ static inline int operationScore(const FGraphNode *g) {
     // multiply with complete kernel size
     size_t no_elems = 1;
     const FGraphNode *a = g->predecessors[1];
-    for (int i = 0; i < a->operation->dimensions; i++)
+    for (int i = 0; i < a->operation->dimensions; i++) {
       no_elems *= a->operation->shape[i];
+    }
     return no_elems;
   }
   case FSLIDE: {
     // no multiplication with complete source, since that would artificially
     // distort parallelization
-    return 5;
+    size_t no_elems = 1;
+    unsigned int *stepsize = (unsigned int *)g->operation->additional_data;
+    const FGraphNode *a = g->predecessors[0];
+    for (int i = 0; i < a->operation->dimensions; i++)
+      no_elems *= a->operation->shape[i] /
+                  (i != a->operation->dimensions - 1 ? stepsize[i] : 1);
+    return (int)std::sqrt(no_elems);
   }
   default:
     break;

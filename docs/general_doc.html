@@ -61,9 +61,46 @@
           </div>
         </div><br/>
         <div class="card" style="padding: 20px 20px;">
-          TODO
+          There are two different backends for the execution of Operations with two different execution strategies.
+          <ul>
+            <li><b>Lazy Execution</b>: the nodes are only executed if the operation enforces it (e.g. matrix multiplication or reduction enforces complete execution of the parental nodes) 
+            or `fExecuteGraph` (in C) or `.execute()` (in C++) is called. 
+            Else the graph is constructed with the operations, but the result data is only calculated for a node if it is executed.
+            <div class="spacer2"></div>
+              <ul>
+                <li><b>CPU Backend</b><br/> A simple thread pool that is initialized with as many threads as your CPU supports.
+                The calculation of a operation may be split into multiple work packages that are then distributed to the threads.<br/>
+                In the case that parental nodes don't have result data yet, those are executed first 
+                (i.e. the unexecuted parental subtree of the node is executed sequentially in its topological order).<br/>
+                Fast for small Tensors or lightweight operations since the overhead is little.
+                <div class="spacer2"></div>
+                </li>
+                <li><b>OpenCL Backend</b><br> Constructs a OpenCL kernel for the complete unexecuted graph and executes it (has a cache to lookup and store already compiled kernels).
+                This allows implicit execution of only those parts of the parental data of a node that are actually important for the last node. E.g.
+                <pre class="card code" style="margin: 5px;">
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">3</span>&gt; m1 = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">8</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">8</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">8</span>);
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">3</span>&gt; m2 = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">8</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">8</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">8</span>);
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">3</span>&gt; m3 = m1.matmul(m2).slice(TensorRange(<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>), TensorRange(<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">4</span>), TensorRange(<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>));
+m3.execute();</pre></br>
+                Here it is possible for the GPU Backend to lazily only compute the 4*4*2 elements of m3 and their corresponding elements in the Matrix multiplication without having to calculate
+                the other 2097120 elements (128*128*128 = 2097152 elements).
+                </li>
+              </ul>
+              <img src="graph.png"/><br/>
+              <small><i>Benchmarks of example programs on an Intel i5 10600K and an AMD Radeon 5700XT,<br/> time in milliseconds</i></small>
+              <div class="spacer2"></div>
+            </li>
+            <li>
+              <b>Eager Execution</b>: Each node has to be executed during construction. The OpenCL backend then resorts to the generation of general operation kernels for each operation
+              (one program per operation, one kernel per possible datatype combination of the parameters).<br/>
+              <img src="graph_eager.png"/><br/>
+              <small><i>Benchmarks of example programs on an Intel i5 10600K and an AMD Radeon 5700XT,<br/> time in milliseconds</i></small>
+            </li>
+          </ul>
+          As one can see from the benchmarks especially for many small operations eager execution is better for the CPU backend since the performance load is better distributed
+          and it has much less overhead. For the GPU backend lazy execution is far better. The best overall performance is achieved with activating both backends, where Flint chooses
+          one by some heuristics without eager execution.
         </div>
-        
         <div style="display: block; height: 2em;" id="data"></div>
         <div class="card">
           <div class="card_header_code">
