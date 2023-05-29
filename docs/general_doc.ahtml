@@ -98,7 +98,32 @@ m3.execute();
           </div>
         </div><br/>
         <div class="card" style="padding: 20px 20px;">
-          TODO
+          Flint needs to be initialized and cleaned up. Initialization can be done implicitly (when no backend had been initialized during a call to an execution method the corresponding or both backends will be initialized). It is possible to initialize only one of the two backends or both in which case Flint is allowed to choose one in the execute call.<br/>
+          When you are done using Flint, the backends need the oportunity to shut down started threads and free memory. Use the cleanup Method for that.
+          <div class="spacer"></div>
+          In C any memory needed to store the Tensors is allocated by the framework itself. Additionally to allow function calls like<br/>
+          @code{
+fdiv(fsub(a, b), a)
+          }<br/>
+          reference counting is used in the nodes to keep track which node is still used.
+          Freeing one node tries to free its predecessors too if their reference counter becomes zero. 
+          Keep in mind that this implies that function calls like <pre class="inline_code">fCreateGraph, fadd, ...</pre> are not allowed to
+          return a counted reference i.e.<br/>
+          @code{
+FGraphNode* a = fCreateGraph(...);
+FGraphNode* b = fCreateGraph(...);
+FGraphNode* c = fadd(a,b);
+fFreeGraph(c);
+          }<br/>
+          would free the memory behind a and b too. This is necessary because else<br/>
+          @code{
+FGraphNode* c = fadd(fCreateGraph(...),fCreateGraph(...));
+fFreeGraph(c);
+          }<br/>
+          would produce a memory leak. You can circumvent such problems by artifically modifying the <pre class="inline_code">reference_counter</pre>
+          member of the nodes. In C++ the constructors and destructors automatically solve all of the above for you, just keep in mind that copying Tensors is expensive.
+          <div class="spacer"></div>
+          Each node and each Tensor may have Result Data which holds either a OpenCL memory handle or memory pointer in RAM (or both) of the data yielded by the execution of the node. This data is freed with the node or Tensor.
         </div>
     </div>
 </center>
