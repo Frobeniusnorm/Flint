@@ -110,6 +110,7 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   if (benchmarks & FLINT_BACKEND_ONLY_CPU) {
     // cpu tests
     flintInit(FLINT_BACKEND_ONLY_CPU);
+    fEnableEagerExecution();
     for (const auto &bench : benches) {
       flogging(F_INFO, bench.first + "...");
       times.insert({bench.first, {bench.second(), 0, 0}});
@@ -125,7 +126,7 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
     }
     flintCleanup();
   }
-  if (benchmarks & FLINT_BACKEND_BOTH) {
+  if ((benchmarks & FLINT_BACKEND_BOTH) == FLINT_BACKEND_BOTH) {
     // both tests
     flintInit(FLINT_BACKEND_BOTH);
     for (const auto &bench : benches) {

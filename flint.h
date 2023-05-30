@@ -347,6 +347,8 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node);
  * necessary the same nodes, but the same combination of nodes), since then the
  * backend can reuse already compiled kernels. */
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
+FResultData* fSyncMemory(FGraphNode *data);
+FGraphNode *fCalculateResult(FGraphNode* node);
 //  gradient calculation
 /** Calculates the overall gradient of an output node to a variable.
  * The variable must be marked as a gradient variable, see

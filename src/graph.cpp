@@ -108,6 +108,11 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
     return fExecuteGraph_cpu(node);
   return nullptr;
 }
+FGraphNode *fCalculateResult(FGraphNode* node) {
+  node = fExecuteGraph(node);
+  fSyncMemory(node);
+  return node;
+}
 void flintCleanup() {
   flintCleanup_cpu();
   flintCleanup_gpu();
@@ -1230,7 +1235,7 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
 #define MAGIC_NUMBER 0x75321
 char *fserialize(FGraphNode *node, size_t *bytes_written) {
   if (!node->result_data)
-    fExecuteGraph(node);
+    fCalculateResult(node);
   size_t total_size_node = node->result_data->num_entries;
   // header
   size_t data_size = 4;

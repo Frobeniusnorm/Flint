@@ -911,7 +911,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
         if (score >= 2048) {
           if (inExecuteList.find(p) != inExecuteList.end())
             toExecute.remove(p);
-          fExecuteGraph_gpu(p);
+          fSyncMemory(fExecuteGraph_gpu(p));
           toExecute.push_front(p);
           inExecuteList.insert(p);
           continue;
@@ -939,6 +939,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
       foo.type = curr->operation->data_type;
       if (curr->result_data) {
         FResultData *rd = curr->result_data;
+        if (!rd->data)
+          fSyncMemory(curr);
         foo.num_entries = rd->num_entries;
         foo.data = rd->data;
       } else {

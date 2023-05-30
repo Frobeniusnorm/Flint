@@ -964,6 +964,39 @@ cl_kernel OCLCompilerThread::lazy_compile(FGraphNode *node, std::string code) {
   OCLCompilerThread::kernel_cache.insert({code, {prog, kernel}});
   return kernel;
 }
+FResultData *fSyncMemory(FGraphNode* node) {
+  if (node->result_data && node->result_data->data)
+    return node->result_data;
+  if (node->operation->op_type == FSTORE) {
+    node->result_data = new FResultData();
+    FStore *store = (FStore *)node->operation->additional_data;
+    node->result_data->num_entries = store->num_entries;
+    node->result_data->mem_id = store->mem_id;
+    node->result_data->data = store->data;
+  }
+  FResultData* res = node->result_data;
+  if (res && res->mem_id && !res->data) {
+    // read result to cpu
+    int type_size_node = typeSize(node->operation->data_type);
+    node->result_data->data = malloc(res->num_entries * type_size_node);
+    node->result_data->num_entries = res->num_entries;
+    if (!node->result_data->data)
+      flogging(F_ERROR, "Not enough memory to store result!");
+    // wait for result
+    cl_int err_code = clEnqueueReadBuffer(
+        clqueue, node->result_data->mem_id, CL_TRUE, 0,
+        res->num_entries * type_size_node, res->data, 0, nullptr, nullptr);
+    if (err_code != CL_SUCCESS) {
+      std::string msg =
+          "Unknown Error while reading the result! Error Code: " +
+          std::to_string(err_code);
+      if (err_code == CL_OUT_OF_HOST_MEMORY)
+        msg = "Not enough memory to read result!";
+      flogging(F_ERROR, msg);
+    }
+  }
+  return res;
+}
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (!initialized) {
     flintInit_gpu();
@@ -976,28 +1009,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       node->result_data->mem_id = store->mem_id;
       node->result_data->data = store->data;
     }
-    const FResultData *res = node->result_data;
-    if (res && res->mem_id && !res->data) {
-      // read result to cpu
-      int type_size_node = typeSize(node->operation->data_type);
-      node->result_data->data = malloc(res->num_entries * type_size_node);
-      node->result_data->num_entries = res->num_entries;
-      if (!node->result_data->data)
-        flogging(F_ERROR, "Not enough memory to store result!");
-      // wait for result
-      cl_int err_code = clEnqueueReadBuffer(
-          clqueue, node->result_data->mem_id, CL_TRUE, 0,
-          res->num_entries * type_size_node, res->data, 0, nullptr, nullptr);
-      if (err_code != CL_SUCCESS) {
-        std::string msg =
-            "Unknown Error while reading the result! Error Code: " +
-            std::to_string(err_code);
-        if (err_code == CL_OUT_OF_HOST_MEMORY)
-          msg = "Not enough memory to read result!";
-        flogging(F_ERROR, msg);
-      }
-    }
-    if (res)
+    if (node->result_data)
       return node;
   }
   auto start = std::chrono::high_resolution_clock::now();
@@ -1132,21 +1144,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     }
     flogging(F_ERROR, msg);
   }
-  resultData->data = malloc(total_size_node * type_size_node);
   resultData->num_entries = total_size_node;
-  if (!resultData->data)
-    flogging(F_ERROR, "Not enough memory to store result!");
-  // wait for result
-  err_code = clEnqueueReadBuffer(clqueue, result_mem, CL_TRUE, 0,
-                                 total_size_node * type_size_node,
-                                 (void *)resultData->data, 0, nullptr, nullptr);
-  if (err_code != CL_SUCCESS) {
-    string msg = "Unknown Error while reading the result! Error Code: " +
-                 std::to_string(err_code);
-    if (err_code == CL_OUT_OF_HOST_MEMORY)
-      msg = "Not enough memory to read result!";
-    flogging(F_ERROR, msg);
-  }
   elapsed = chrono::high_resolution_clock::now() - start;
   flogging(F_DEBUG, "compilation took " + to_string(compilation_time.count()) +
                         "ms, execution took " + to_string(elapsed.count()));

@@ -120,11 +120,10 @@ template <typename T> struct Tensor<T, 1> {
    * If the underlying data is not yet computed, executes this Tensor.
    */
   T &operator[](const size_t index) {
-    if (node->result_data && !node->result_data->data) {
-      fExecuteGraph_gpu(node);
-    }
     if (!node->result_data)
       execute();
+    if (!node->result_data->data)
+      fSyncMemory(node);
     return ((T *)node->result_data->data)[index];
   }
   /**
@@ -218,11 +217,10 @@ template <typename T> struct Tensor<T, 1> {
    * }
    */
   std::vector<T> operator*() {
-    if (node->result_data && !node->result_data->data) {
-      fExecuteGraph_gpu(node);
-    }
     if (!node->result_data)
       execute();
+    if (!node->result_data->data)
+      fSyncMemory(node);
     return std::vector<T>((T *)node->result_data->data,
                           (T *)node->result_data->data +
                               node->result_data->num_entries);

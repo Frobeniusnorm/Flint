@@ -188,11 +188,10 @@ template <typename T, unsigned int n> struct Tensor {
    * }
    */
   storage_type operator*() {
-    if (node->result_data && !node->result_data->data) {
-      fExecuteGraph_gpu(node);
-    }
     if (!node->result_data)
       execute();
+    if (!node->result_data->data)
+      fSyncMemory(node);
     FResultData *store = node->result_data;
     storage_type result(shape[0]);
     const std::vector<T> src =
@@ -346,11 +345,11 @@ template <typename T, unsigned int n> struct Tensor {
    * }
    */
   TensorView<T, n - 1> operator[](const size_t index) {
-    if (node->result_data && !node->result_data->data) {
-      fExecuteGraph_gpu(node);
-    }
     if (!node->result_data)
       execute();
+    if (!node->result_data->data) {
+      fSyncMemory(node);
+    }
     FResultData *store = node->result_data;
     size_t alrdindx = index;
     std::vector<size_t> ns(shape.size() - 1);

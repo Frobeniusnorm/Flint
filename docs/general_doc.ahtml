@@ -76,17 +76,17 @@ m3.execute();
                 the other 2097120 elements (128*128*128 = 2097152 elements).
                 </li>
               </ul>
-              <img src="graph.png"/><br/>
-              <small><i>Benchmarks of example programs on an Intel i5 10600K and an AMD Radeon 5700XT,<br/> time in milliseconds</i></small>
               <div class="spacer2"></div>
             </li>
             <li>
               <b>Eager Execution</b>: Each node has to be executed during construction. The OpenCL backend then resorts to the generation of general operation kernels for each operation
               (one program per operation, one kernel per possible datatype combination of the parameters).<br/>
-              <img src="graph_eager.png"/><br/>
-              <small><i>Benchmarks of example programs on an Intel i5 10600K and an AMD Radeon 5700XT,<br/> time in milliseconds</i></small>
+              This reduces the overhead of the CPU Backend alot but interferes alot with OpenCL optimizations.
             </li>
           </ul>
+          <img src="graph.png"/><br/>
+          <small><i>Benchmarks of example programs on an Intel i5 10600K and an AMD Radeon 5700XT,<br/> time in milliseconds</i></small>
+          <div class="spacer2"></div>
           As one can see from the benchmarks especially for many small operations eager execution is better for the CPU backend since the performance load is better distributed
           and it has much less overhead. For the GPU backend lazy execution is far better. The best overall performance is achieved with activating both backends, where Flint chooses
           one by some heuristics without eager execution.
