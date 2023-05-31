@@ -86,7 +86,7 @@ FGraphNode *fdeserialize(char *data) {
     total_size *= shape[i];
   }
   char *res = safe_mal<char>(total_size * typeSize((FType)data_type));
-  std::memcpy(res, &data[index], total_size * typeSize((FType)data_type));
+  memcpy(res, &data[index], total_size * typeSize((FType)data_type));
   FGraphNode *node = fCreateGraph((void *)res, total_size, (FType)data_type,
                                   shape.data(), shape.size());
   free(res);

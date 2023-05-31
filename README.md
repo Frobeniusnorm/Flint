@@ -42,3 +42,4 @@ The systems it was tested on ran Arch Linux, Gentoo, Fedora and Void. It was tes
 ## Attribution to included libraries ##
 - Benchmarking: [plf::nanotimer](https://github.com/mattreecebentley/plf_nanotimer) (zlib Licence)
 - Testing: [Doctest](https://github.com/doctest/doctest) (MIT Licence)
+- Image loading and writing: [stb](https://github.com/nothings/stb) (Public Domain)
