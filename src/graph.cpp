@@ -451,7 +451,7 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
     node->predecessors = nullptr;
     FStore *store = new FStore();
     store->data = rd->data;
-    store->mem_id = nullptr;
+    store->mem_id = rd->mem_id;
     store->num_entries = rd->num_entries;
     node->operation->additional_data = store;
   }
@@ -1235,7 +1235,9 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
 #define MAGIC_NUMBER 0x75321
 char *fserialize(FGraphNode *node, size_t *bytes_written) {
   if (!node->result_data)
-    fCalculateResult(node);
+    fExecuteGraph(node);
+  if (!node->result_data->data)
+    fSyncMemory(node);
   size_t total_size_node = node->result_data->num_entries;
   // header
   size_t data_size = 4;

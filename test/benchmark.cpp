@@ -120,7 +120,7 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   if (benchmarks & FLINT_BACKEND_ONLY_GPU) {
     // gpu tests
     flintInit(FLINT_BACKEND_ONLY_GPU);
-    Flint::setLoggingLevel(F_DEBUG);
+    fDisableEagerExecution();
     for (const auto &bench : benches) {
       flogging(F_INFO, bench.first + "...");
       std::get<1>(times[bench.first]) = bench.second();

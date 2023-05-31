@@ -335,6 +335,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     node->result_data->data = store->data;
     return node;
   }
+  if (clFinish(clqueue) != CL_SUCCESS)
+    flogging(F_ERROR, "OpenCL queue error!");
   if (node->operation->op_type == FLATTEN ||
       node->operation->op_type == FRESHAPE) {
     // just copy previous data
@@ -380,8 +382,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   cl_kernel kernel = nullptr;
   cl_int err_code;
   std::list<cl_mem> to_free;
-  if (clFinish(clqueue) != CL_SUCCESS)
-    flogging(F_ERROR, "OpenCL queue error!");
   // check if the kernel already exists or if it has to be generated
   if (prog == OCLCompilerThread::eager_cache.end()) {
     kernel = OCLCompilerThread::eager_compile(node, hash);
@@ -455,13 +455,14 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     bool do_write = false;
     size_t type_size = typeSize(op->data_type);
     size_t total_size;
-    cl_mem mem_id;
-    if (op->op_type == FSTORE) {
-      total_size = ((FStore *)op->additional_data)->num_entries;
-      mem_id = ((FStore *)op->additional_data)->mem_id;
-    } else {
+    cl_mem mem_id = nullptr;
+    if (pred->result_data) {
       total_size = pred->result_data->num_entries;
       mem_id = pred->result_data->mem_id;
+    }
+    if (op->op_type == FSTORE && !mem_id) {
+      total_size = ((FStore *)op->additional_data)->num_entries;
+      mem_id = ((FStore *)op->additional_data)->mem_id;
     }
     if (mem_id) {
       mem_obj = mem_id;
@@ -479,16 +480,20 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     if (do_write) {
       void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
                                          : pred->result_data->data;
+      if (!data) {
+        flogging(F_WARNING, "No gpu memory is found, but no cpu either! " + std::to_string((long)pred->result_data->data) + ", " + std::to_string((long)pred->result_data->mem_id) + ", " + fop_to_string[op->op_type]);
+      }
       err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_TRUE, 0,
                                       total_size * type_size, data, 0, nullptr,
                                       nullptr);
       if (err_code != CL_SUCCESS) {
         std::string msg = "Unknown Error while loading data to GPU! Error: ";
         if (err_code == CL_OUT_OF_HOST_MEMORY)
-          msg = "Not enough memory to load data to GPU!";
+          msg = "Not enough memory to load data to GPU! ";
         flogging(F_ERROR, msg + std::to_string(err_code));
       }
     }
+    flogging(F_DEBUG, std::to_string((long)mem_obj));
     if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&mem_obj) !=
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
