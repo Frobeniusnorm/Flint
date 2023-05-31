@@ -55,27 +55,27 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
 }
 static inline int operationScore(const FGraphNode *g) {
   switch (g->operation->op_type) {
-  case FMUL:
-  case FDIV:
   case FPOW:
+  case FSQRT:
+    return 1;
   case FLOG:
-  case FLOG2:
-  case FLOG10:
   case FSIN:
   case FCOS:
   case FTAN:
+  case FLOG2:
+  case FLOG10:
   case FASIN:
   case FACOS:
   case FATAN:
-  case FSQRT:
-    return 2;
+    return 3;
   case FREDUCE_SUM:
   case FREDUCE_MUL: {
-    return 4;
+    int dim = *((int*)g->operation->additional_data);
+    return 2 * g->predecessors[0]->operation->shape[dim];
   }
   case FMATMUL: {
     const FGraphNode *a = g->predecessors[0];
-    return a->operation->shape[a->operation->dimensions - 1];
+    return 5 * a->operation->shape[a->operation->dimensions - 1];
   }
   case FGRADIENT_CONVOLVE:
   case FCONVOLVE: {
@@ -98,10 +98,17 @@ static inline int operationScore(const FGraphNode *g) {
                   (i != a->operation->dimensions - 1 ? stepsize[i] : 1);
     return (int)std::sqrt(no_elems);
   }
+  case FSLICE: {
+    size_t sliced_away = 1;
+    const FGraphNode* p = g->predecessors[0];
+    for (int i = 0; i < g->operation->dimensions; i++)
+      sliced_away *= (p->operation->shape[i] - g->operation->shape[i]);
+    return sliced_away;
+  }
   default:
     break;
   }
-  return 1;
+  return 2;
 }
 static inline size_t computeScore(const FGraphNode *g, bool with_pred = true) {
   std::queue<const FGraphNode *> todo;
@@ -113,14 +120,14 @@ static inline size_t computeScore(const FGraphNode *g, bool with_pred = true) {
   while (!todo.empty()) {
     const FGraphNode *c = todo.front();
     todo.pop();
-    score += operationScore(c) * no_elems;
+    score += operationScore(c);
     if (with_pred) {
       for (int i = 0; i < c->num_predecessor; i++)
         if (!c->predecessors[i]->result_data && c->operation->op_type != FSTORE)
           todo.push(c->predecessors[i]);
     }
   }
-  return score;
+  return score * (int)sqrt(no_elems);
 }
 inline std::string typeString(FType t) {
   switch (t) {

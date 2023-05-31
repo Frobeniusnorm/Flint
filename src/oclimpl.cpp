@@ -336,8 +336,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     node->result_data->data = store->data;
     return node;
   }
-  if (clFinish(clqueue) != CL_SUCCESS)
-    flogging(F_ERROR, "OpenCL queue error!");
   if (node->operation->op_type == FLATTEN ||
       node->operation->op_type == FRESHAPE) {
     // just copy previous data

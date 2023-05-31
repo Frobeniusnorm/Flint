@@ -55,7 +55,7 @@ double gradient_fun() {
     for (int j = 0; j < 64; j++)
       d1[i][j] = i / 16.0 + j / 16.0;
   vector<vector<vector<float>>> d2(
-      16, vector<vector<float>>(64, vector<float>(64)));
+      32, vector<vector<float>>(64, vector<float>(64)));
   for (int i = 0; i < 32; i++)
     for (int j = 0; j < 64; j++)
       for (int k = 0; k < 64; k++)
@@ -127,7 +127,7 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
     }
     flintCleanup();
   }
-  if ((benchmarks & FLINT_BACKEND_BOTH) == FLINT_BACKEND_BOTH) {
+  if ((benchmarks & FLINT_BACKEND_BOTH) == FLINT_BACKEND_BOTH || benchmarks == 4) {
     // both tests
     flintInit(FLINT_BACKEND_BOTH);
     for (const auto &bench : benches) {
@@ -175,6 +175,7 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
 
 int main(int argc, char **argv) {
   int backends = 0;
+  bool lazy = false;
   if (argc > 1) {
     if (argc > 3)
       flogging(F_ERROR, "Invalid number of command line arguments! Call this "
@@ -185,12 +186,16 @@ int main(int argc, char **argv) {
         backends |= FLINT_BACKEND_ONLY_CPU;
       else if (strcmp(argv[i], "gpu") == 0) {
         backends |= FLINT_BACKEND_ONLY_GPU;
+      } else if (strcmp(argv[i], "jit") == 0) {
+        lazy = true;
       } else
         flogging(F_ERROR,
                  "Invalid argument: " + std::string(argv[i]) +
                      "! Call this program like this: benchmark [cpu] [gpu]");
     }
   }
+  if (lazy)
+    backends = 4;
   if (backends == 0)
     backends = FLINT_BACKEND_BOTH;
   call_benchmarks(backends);

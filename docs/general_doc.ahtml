@@ -88,8 +88,8 @@ m3.execute();
           <small><i>Benchmarks of example programs on an Intel i5 10600K and an AMD Radeon 5700XT,<br/> time in milliseconds</i></small>
           <div class="spacer2"></div>
           As one can see from the benchmarks especially for many small operations eager execution is better for the CPU backend since the performance load is better distributed
-          and it has much less overhead. For the GPU backend lazy execution is far better. The best overall performance is achieved with activating both backends, where Flint chooses
-          one by some heuristics without eager execution.
+          and it has much less overhead. For the GPU backend lazy execution is far better. The best overall performance is achieved with activating both backends without eager execution, 
+          where Flint chooses one by some heuristics. This yields currently a few milliseconds, but with some additional optimizations i am working on it might be much more.
         </div>
         <div style="display: block; height: 2em;" id="data"></div>
         <div class="card">

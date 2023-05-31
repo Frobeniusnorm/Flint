@@ -895,6 +895,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   list<FGraphNode *> workList;  // traverse bottom up
   list<FGraphNode *> toExecute; // in top down order
   workList.push_front(node);
+  const bool is_gpu_backend = flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU;
   // collect nodes
   while (!workList.empty()) {
     FGraphNode *curr = workList.front();
@@ -905,10 +906,10 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
     toExecute.push_front(curr);
     for (int i = 0; i < curr->num_predecessor; i++) {
       // execute on GPU if it makes more sense
-      if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU) {
+      if (is_gpu_backend) {
         FGraphNode *p = curr->predecessors[i];
-        size_t score = computeScore(p, true);
-        if (score >= 2048) {
+        const size_t score = computeScore(p, true);
+        if (score >= 1024) {
           if (inExecuteList.find(p) != inExecuteList.end())
             toExecute.remove(p);
           fSyncMemory(fExecuteGraph_gpu(p));

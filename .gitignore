@@ -30,5 +30,6 @@ test/benchmark
 libflint.a
 compile_commands.json
 build/*
+debug/*
 #vscode
 .cache
