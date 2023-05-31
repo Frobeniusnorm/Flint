@@ -306,7 +306,7 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
     cl_kernel curr =
         clCreateKernel(prog, kernel_name.second.c_str(), &err_code);
     if (err_code != CL_SUCCESS)
-      flogging(F_ERROR, "kernel compilation failed!");
+      flogging(F_ERROR, "kernel compilation failed!" + std::to_string(err_code));
     OCLCompilerThread::eager_cache.insert({kernel_name.first, curr});
     if (kernel_name.first == hash) {
       kernel = curr;
@@ -960,7 +960,7 @@ cl_kernel OCLCompilerThread::lazy_compile(FGraphNode *node, std::string code) {
   // get kernel
   kernel = clCreateKernel(prog, "execute_graph", &err_code);
   if (err_code != CL_SUCCESS)
-    flogging(F_ERROR, "kernel compilation failed!");
+    flogging(F_ERROR, "kernel compilation failed (lazy)! " + std::to_string(err_code));
   OCLCompilerThread::kernel_cache.insert({code, {prog, kernel}});
   return kernel;
 }

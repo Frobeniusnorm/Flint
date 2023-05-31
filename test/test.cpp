@@ -89,11 +89,13 @@
       FGraphNode *gn1 =
           fCreateGraph(v1.data(), v1.size(), F_FLOAT64, shape.data(), 2);
       char* data = fserialize(gn1, nullptr);
+      fFreeGraph(gn1);
       FGraphNode *gnp2 = fdeserialize(data);
       free(data);
       fCalculateResult(gnp2);
       for(int i = 0; i < 6; i++)
         CHECK_EQ(-1.5 + i*0.5, ((double*)gnp2->result_data->data)[i]);
+      fFreeGraph(gnp2);
     }
   }
   TEST_SUITE("Execution") {

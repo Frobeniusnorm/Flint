@@ -1296,8 +1296,10 @@ FGraphNode *fdeserialize(char *data) {
   }
   char *res = safe_mal<char>(total_size * typeSize((FType)data_type));
   std::memcpy(res, &data[index], total_size * typeSize((FType)data_type));
-  return fCreateGraph((void *)res, total_size, (FType)data_type, shape.data(),
+  FGraphNode* node = fCreateGraph((void *)res, total_size, (FType)data_type, shape.data(),
                       shape.size());
+  free(res);
+  return node;
 }
 FGraphNode *frandom(const size_t *shape, const int dimensions) {
   FGraphNode *node = new FGraphNode();
