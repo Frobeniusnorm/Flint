@@ -97,7 +97,10 @@ enum FLogType { F_NO_LOGGING, F_ERROR, F_WARNING, F_INFO, F_VERBOSE, F_DEBUG };
  * See also: `fSetLoggingLevel` */
 void flogging(FLogType type, const char *msg);
 /** All graph nodes that represent actual operations are after this call
- * executed eagerly, i.e. they are executed during graph construction. */
+ * executed eagerly, i.e. they are executed during graph construction.
+ *
+ * This may improve performance when only using the CPU backend, in any other
+ * case disabling eager execution should be prefered. */
 void fEnableEagerExecution();
 /** Disable eager execution, i.e. the graph is constructed without execution of
  * the nodes until a operation makes the execution of a parent graph necessary
@@ -310,14 +313,30 @@ void fFreeGraph(FGraphNode *graph);
 FGraphNode *fCopyGraph(const FGraphNode *graph);
 /** Executes the graph node operations from all yet to be executed predecessors
  * to `node` and returns a node with a `FResultData` operation in
- * which the resulting data is stored. If the graph is executed by the GPU
+ * which the resulting data is stored.
+ *
+ * If the graph is executed by the GPU
  * backend, a opencl kernel containing all selected operations (the nodes
  * operation and those indirect parent operations which were not yet
  * executed) are compiled and executed. The kernels are cashed, so it improves
  * the performance of a program if the same graph-structures are reused (not
  * necessary the same nodes, but the same combination of nodes), since then the
- * backend can reuse already compiled kernels. If the CPU backend is chosen, it
- * does not matter, since every operation is executed independently.*/
+ * backend can reuse already compiled kernels. The GPU backend is allowed to
+ * keep the Result data on the GPU without synchronizing it (so the generated
+ * `FResultData` may not have a `data` member!). To force synchronization use
+ * `fSyncMemory` or replace the call with `fCalculateResult`.
+ *
+ * If the CPU backend is chosen, it
+ * does not matter, since every operation is executed independently (here eager
+ * execution might be faster).
+ *
+ * The backend is selected by the framework if both
+ * are initialized, else the one that is initialized will be chosen. If both are
+ * uninitialized, both will be initialized prior to execution. If eager
+ * exeuction is enabled each node will be executed eagerly upon construction or
+ * with this method.
+ *
+ * Also see `fEnableEagerExecution`, `fSyncMemory`*/
 FGraphNode *fExecuteGraph(FGraphNode *node);
 /** Executes the graph node operations from all yet to be executed predecessors
  * to `node` and returns a node with a `FResultData` operation in
@@ -333,22 +352,34 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node);
  * necessary the same nodes, but the same combination of nodes), since then the
  * backend can reuse already compiled kernels. */
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node);
-/** Executes the graph node operations from all yet to be executed predecessors
- * to `node` and returns a node with a `FResultData` operation in
- * which the resulting data is stored. */
+/** Executes the graph node directly and assumes that predecessor data has
+ * already been computed. Uses the CPU backend. Mainly used by helper functions
+ * of the framework, only use it if you now what you are doing.
+ *
+ * Also see `fEnableEagerExecution`, `fExecuteGraph_cpu` and `fExecuteGraph`*/
 FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node);
-/** Executes the graph node operations from all yet to be executed predecessors
- * to `node` and returns a node with a `FResultData` operation in
- * which the resulting data is stored. For the GPU
- * backend, a opencl kernel containing all selected operations (the nodes
- * operation and those indirect parent operations which were not yet executed)
- * are compiled and executed. The kernels are cashed, so it improves the
- * performance of a program if the same graph-structures are reused (not
- * necessary the same nodes, but the same combination of nodes), since then the
- * backend can reuse already compiled kernels. */
+/** Executes the graph node directly and assumes that predecessor data has
+ * already been computed. Uses the GPU backend where for each operation and
+ * parameter type combination one eager kernel will be computed. Mainly used by
+ * helper functions of the framework, only use it if you now what you are doing.
+ *
+ *  Also see `fEnableEagerExecution`, `fExecuteGraph_gpu` and `fExecuteGraph`*/
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
-FResultData* fSyncMemory(FGraphNode *data);
-FGraphNode *fCalculateResult(FGraphNode* node);
+/** `fExecuteGraoh` does not guarantee that memory is present on the cpu (it may
+ * be kept on the GPU for performance reasons). This method enforces all GPU
+ * data to be flushed to the CPU (but never executes the node!).
+ *
+ * Also see `fCalculateResult`
+ */
+FResultData *fSyncMemory(FGraphNode *data);
+/**
+ * Convenience Method that first execute `fExecuteGraph` and then `fSyncMemory`
+ * on the node.
+ *
+ * It represents execution with one of both backends and additional memory
+ * synchronizing for the gpu framework.
+ */
+FGraphNode *fCalculateResult(FGraphNode *node);
 //  gradient calculation
 /** Calculates the overall gradient of an output node to a variable.
  * The variable must be marked as a gradient variable, see
