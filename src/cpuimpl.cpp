@@ -906,7 +906,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
     for (int i = 0; i < curr->num_predecessor; i++) {
       // execute on GPU if it makes more sense
       if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU) {
-        FGraphNode* p = curr->predecessors[i];
+        FGraphNode *p = curr->predecessors[i];
         size_t score = computeScore(p, true);
         if (score >= 2048) {
           if (inExecuteList.find(p) != inExecuteList.end())
@@ -951,7 +951,9 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
       results.insert({curr, foo});
     } else if (curr->operation->op_type == FRESHAPE && curr != node) {
       CPUResultData npd = predData[0];
-      npd.shape = std::vector<size_t>(curr->operation->shape, curr->operation->shape + curr->operation->dimensions);
+      npd.shape = std::vector<size_t>(curr->operation->shape,
+                                      curr->operation->shape +
+                                          curr->operation->dimensions);
       results.insert({curr, npd});
     } else {
       // allocate result data and execute
@@ -1011,7 +1013,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   if (!fIsEagerExecution()) {
     // free all other data
     for (auto &[gn, rd] : results) {
-      if (gn != node && gn->operation->op_type != FSTORE && !gn->result_data && gn->operation->op_type != FRESHAPE)
+      if (gn != node && gn->operation->op_type != FSTORE && !gn->result_data &&
+          gn->operation->op_type != FRESHAPE)
         free(rd.data);
     }
   } else {

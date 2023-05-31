@@ -55,7 +55,7 @@ double gradient_fun() {
     for (int j = 0; j < 64; j++)
       d1[i][j] = i / 16.0 + j / 16.0;
   vector<vector<vector<float>>> d2(
-      32, vector<vector<float>>(64, vector<float>(64)));
+      16, vector<vector<float>>(64, vector<float>(64)));
   for (int i = 0; i < 32; i++)
     for (int j = 0; j < 64; j++)
       for (int k = 0; k < 64; k++)

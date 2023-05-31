@@ -100,7 +100,7 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
   if (use_gpu && use_cpu) {
     unsigned int gpu_score = computeScore(node, true);
     return gpu_score >= 2048 ? fExecuteGraph_gpu(node)
-                                         : fExecuteGraph_cpu(node);
+                             : fExecuteGraph_cpu(node);
   }
   if (use_gpu)
     return fExecuteGraph_gpu(node);
@@ -108,7 +108,7 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
     return fExecuteGraph_cpu(node);
   return nullptr;
 }
-FGraphNode *fCalculateResult(FGraphNode* node) {
+FGraphNode *fCalculateResult(FGraphNode *node) {
   node = fExecuteGraph(node);
   fSyncMemory(node);
   return node;
@@ -129,8 +129,10 @@ void flintInit(int backends) {
 }
 int flintInitializedBackends() {
   int backends = 0;
-  if (use_cpu) backends |= FLINT_BACKEND_ONLY_CPU;
-  if (use_gpu) backends |= FLINT_BACKEND_ONLY_GPU;
+  if (use_cpu)
+    backends |= FLINT_BACKEND_ONLY_CPU;
+  if (use_gpu)
+    backends |= FLINT_BACKEND_ONLY_GPU;
   return backends;
 }
 // GRAPH METHODS
@@ -408,7 +410,6 @@ static inline void initShape_keep(FOperation *op, FOperation *a,
                 vectorString(std::vector<size_t>(src, src + op->dimensions)) +
                 " and " +
                 vectorString(std::vector<size_t>(lower, lower + lower_dim)));
-  
     }
   }
   op->shape = (size_t *)malloc(sizeof(size_t) * op->dimensions);
@@ -1298,8 +1299,8 @@ FGraphNode *fdeserialize(char *data) {
   }
   char *res = safe_mal<char>(total_size * typeSize((FType)data_type));
   std::memcpy(res, &data[index], total_size * typeSize((FType)data_type));
-  FGraphNode* node = fCreateGraph((void *)res, total_size, (FType)data_type, shape.data(),
-                      shape.size());
+  FGraphNode *node = fCreateGraph((void *)res, total_size, (FType)data_type,
+                                  shape.data(), shape.size());
   free(res);
   return node;
 }

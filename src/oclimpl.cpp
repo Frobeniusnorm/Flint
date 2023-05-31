@@ -306,7 +306,8 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
     cl_kernel curr =
         clCreateKernel(prog, kernel_name.second.c_str(), &err_code);
     if (err_code != CL_SUCCESS)
-      flogging(F_ERROR, "kernel compilation failed!" + std::to_string(err_code));
+      flogging(F_ERROR,
+               "kernel compilation failed!" + std::to_string(err_code));
     OCLCompilerThread::eager_cache.insert({kernel_name.first, curr});
     if (kernel_name.first == hash) {
       kernel = curr;
@@ -481,7 +482,11 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
                                          : pred->result_data->data;
       if (!data) {
-        flogging(F_WARNING, "No gpu memory is found, but no cpu either! " + std::to_string((long)pred->result_data->data) + ", " + std::to_string((long)pred->result_data->mem_id) + ", " + fop_to_string[op->op_type]);
+        flogging(F_WARNING,
+                 "No gpu memory is found, but no cpu either! " +
+                     std::to_string((long)pred->result_data->data) + ", " +
+                     std::to_string((long)pred->result_data->mem_id) + ", " +
+                     fop_to_string[op->op_type]);
       }
       err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_TRUE, 0,
                                       total_size * type_size, data, 0, nullptr,
@@ -964,12 +969,21 @@ cl_kernel OCLCompilerThread::lazy_compile(FGraphNode *node, std::string code) {
   }
   // get kernel
   kernel = clCreateKernel(prog, "execute_graph", &err_code);
-  if (err_code != CL_SUCCESS)
-    flogging(F_ERROR, "kernel compilation failed (lazy)! " + std::to_string(err_code));
+  if (err_code != CL_SUCCESS) {
+    // try to clear cache and retry
+    for (auto &k : OCLCompilerThread::kernel_cache) {
+      clReleaseKernel(k.second.second);
+      clReleaseProgram(k.second.first);
+    }
+    kernel = clCreateKernel(prog, "execute_graph", &err_code);
+    if (err_code != CL_SUCCESS)
+      flogging(F_ERROR,
+               "kernel compilation failed (lazy)! " + std::to_string(err_code));
+  }
   OCLCompilerThread::kernel_cache.insert({code, {prog, kernel}});
   return kernel;
 }
-FResultData *fSyncMemory(FGraphNode* node) {
+FResultData *fSyncMemory(FGraphNode *node) {
   if (node->result_data && node->result_data->data)
     return node->result_data;
   if (node->operation->op_type == FSTORE) {
@@ -979,7 +993,7 @@ FResultData *fSyncMemory(FGraphNode* node) {
     node->result_data->mem_id = store->mem_id;
     node->result_data->data = store->data;
   }
-  FResultData* res = node->result_data;
+  FResultData *res = node->result_data;
   if (res && res->mem_id && !res->data) {
     // read result to cpu
     int type_size_node = typeSize(node->operation->data_type);
@@ -992,9 +1006,8 @@ FResultData *fSyncMemory(FGraphNode* node) {
         clqueue, node->result_data->mem_id, CL_TRUE, 0,
         res->num_entries * type_size_node, res->data, 0, nullptr, nullptr);
     if (err_code != CL_SUCCESS) {
-      std::string msg =
-          "Unknown Error while reading the result! Error Code: " +
-          std::to_string(err_code);
+      std::string msg = "Unknown Error while reading the result! Error Code: " +
+                        std::to_string(err_code);
       if (err_code == CL_OUT_OF_HOST_MEMORY)
         msg = "Not enough memory to read result!";
       flogging(F_ERROR, msg);
