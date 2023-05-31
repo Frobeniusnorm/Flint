@@ -15,6 +15,7 @@
  */
 template <typename T, unsigned int n> struct Tensor {
   template <typename K, unsigned int k> friend struct Tensor;
+  friend struct Flint;
   // storage type is the vector of the recursive type
   typedef std::vector<typename Tensor<T, n - 1>::storage_type> storage_type;
   typedef std::initializer_list<typename Tensor<T, n - 1>::init_type> init_type;
@@ -164,7 +165,10 @@ template <typename T, unsigned int n> struct Tensor {
     FGraphNode *node = fconstant(value, shape.data(), dimensions);
     return Tensor(node, shape);
   }
-
+  /**
+   * Creates a Tensor filled with random values in [0, 1) with the requested
+   * shape in sizes.
+   */
   template <typename... args> static Tensor<double, n> random(args... sizes) {
     static_assert(std::is_same<T, double>(),
                   "Can only generate random double Tensors!");
@@ -1279,3 +1283,25 @@ protected:
     }
   }
 };
+
+
+struct Flint {
+/**
+ * Loads an image from the given path.
+ * The image will be stored in floating point data and the shape will be w, h, c
+ * where w is the width, h is the height and c are the chanels.
+ */
+static Tensor<float, 3> load_image(std::string path) {
+  FGraphNode *node = fLoadImage(path.c_str());
+  return Tensor<float, 3>(node, std::array<size_t, 3>{node->operation->shape[0],
+                                                   node->operation->shape[1],
+                                                   node->operation->shape[2]});
+}
+/** Sets the Logging Level of the Flint Backend */
+static void setLoggingLevel(FLogType level) { fSetLoggingLevel(level); }
+/**
+ * Deallocates any resourced allocated by the corresponding backends and allows
+ * them to shutdown their threads.
+ */
+static void cleanup() { flintCleanup(); }
+}; // namespace Flint

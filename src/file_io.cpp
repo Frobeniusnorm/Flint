@@ -92,3 +92,11 @@ FGraphNode *fdeserialize(char *data) {
   free(res);
   return node;
 }
+FGraphNode *fLoadImage(const char *path) {
+  int w, h, c;
+  float* vals = stbi_loadf(path, &w, &h, &c, 0);
+  size_t shape[3] = {(size_t)w, (size_t)h, (size_t)c};
+  FGraphNode* node = fCreateGraph(vals, w * h * c, F_FLOAT32, &shape[0], 3);
+  stbi_image_free(vals);
+  return node;
+}

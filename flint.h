@@ -426,6 +426,11 @@ char *fserialize(FGraphNode *node, size_t *bytes_written);
  * needed. Internally calls `fCreateGraph`.
  */
 FGraphNode *fdeserialize(char *data);
+/** Loads an image from the given path.
+ * The image will be stored in floating point data and the shape will be w, h, c
+ * where w is the width, h is the height and c are the chanels.
+ */
+FGraphNode *fLoadImage(const char *path);
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
 /** Elementwise substraction of `a` and `b`, i.e. `a[i] - b[i]`. */

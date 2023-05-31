@@ -181,19 +181,6 @@ template <typename K> static constexpr bool isInt() {
 template <typename T>
 using to_float = typename std::conditional<isInt<T>(), double, T>::type;
 /**
- * Contains static methods to configure Flints behaviour-
- */
-namespace Flint {
-/** Sets the Logging Level of the Flint Backend */
-inline void setLoggingLevel(FLogType level) { fSetLoggingLevel(level); }
-/**
- * Deallocates any resourced allocated by the corresponding backends and allows
- * them to shutdown their threads.
- */
-inline void cleanup() { flintCleanup(); }
-
-}; // namespace Flint
-/**
  * Encapsulates the data of a tensor. Is only valid as long as the Tensor is
  * valid. Provides an interface for index operations on multidimensional data.
  */
