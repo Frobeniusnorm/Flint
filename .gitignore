@@ -7,6 +7,7 @@
 *.o
 *.obj
 ./build/
+examples/build/
 .clangd/
 experiment/
 docs/html/

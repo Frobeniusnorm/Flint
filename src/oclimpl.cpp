@@ -159,6 +159,19 @@ static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
     *total_size = total_size_node;
   return result_mem;
 }
+cl_mem OCLCompilerThread::copy_memory(const cl_mem other, size_t num_bytes,
+                                      cl_mem_flags memory_flags) {
+  cl_int err_code;
+  cl_mem mem =
+      clCreateBuffer(context, memory_flags, num_bytes, nullptr, &err_code);
+  if (err_code == CL_OUT_OF_HOST_MEMORY)
+    flogging(F_ERROR, "Not enough memory to create buffer!");
+  if (err_code != CL_SUCCESS)
+    flogging(F_ERROR, "Unknown Error while creating gpu memory!");
+  clEnqueueCopyBuffer(clqueue, other, mem, 0, 0, num_bytes, 0, nullptr,
+                      nullptr);
+  return mem;
+}
 #include <chrono>
 #include <unordered_map>
 cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
@@ -364,9 +377,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
         flogging(F_ERROR, "Not enough memory to store result!");
       memcpy(rd->data, data, type_size * num_elems);
     } else if (gpu_data) {
-      rd->mem_id = create_gpu_memory(node, CL_MEM_READ_ONLY);
-      clEnqueueCopyBuffer(clqueue, gpu_data, rd->mem_id, 0, 0,
-                          type_size * num_elems, 0, nullptr, nullptr);
+      rd->mem_id = OCLCompilerThread::copy_memory(
+          gpu_data, type_size * num_elems, CL_MEM_READ_ONLY);
     }
     node->result_data = rd;
     return node;

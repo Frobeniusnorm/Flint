@@ -773,7 +773,7 @@ template <typename T, unsigned int n> struct Tensor {
   /** Takes the minimum of this Tensor and the constant value `other` for each
    * element.*/
   template <typename K> Tensor<stronger_return<K>, n> min(const K other) const {
-    return Tensor<stronger_return<K>, n>(fmin(node, other));
+    return Tensor<stronger_return<K>, n>(fmin(node, other), shape);
   }
   /** Takes the maximum of this tensor and `other` element wise (the higher
    * value is the result, if one tensor is smaller it will be broadcasted).*/
@@ -788,7 +788,7 @@ template <typename T, unsigned int n> struct Tensor {
   /** Takes the maximum of this Tensor and the constant value `other` for each
    * element.*/
   template <typename K> Tensor<stronger_return<K>, n> max(const K other) const {
-    return Tensor<stronger_return<K>, n>(fmax(node, other));
+    return Tensor<stronger_return<K>, n>(fmax(node, other), shape);
   }
   /**
    * Compares this tensor and `other` elementwise and returns a 0,1 integer
@@ -1297,7 +1297,7 @@ static Tensor<float, 3> load_image(std::string path) {
                                                    node->operation->shape[1],
                                                    node->operation->shape[2]});
 }
-static void store_image(Tensor<float, 3> t, std::string path, FImageFormat format) {
+static void store_image(Tensor<float, 3>& t, std::string path, FImageFormat format) {
   fstore_image(t.node, path.c_str(), format);
 }
 /** Sets the Logging Level of the Flint Backend */

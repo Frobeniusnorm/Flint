@@ -13,6 +13,7 @@
    limitations under the License. */
 
 #include "../flint.h"
+#include "ocl_comp.hpp"
 #include "utils.hpp"
 #include <cmath>
 #include <cstring>
@@ -269,26 +270,32 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
     foo->result_data = crd;
     crd->mem_id = nullptr;
     crd->num_entries = ord->num_entries;
-    size_t byte_size = crd->num_entries;
-    switch (node->operation->data_type) {
-    case F_INT32:
-      crd->data = safe_mal<int>(crd->num_entries);
-      byte_size *= sizeof(int);
-      break;
-    case F_INT64:
-      crd->data = safe_mal<long>(crd->num_entries);
-      byte_size *= sizeof(long);
-      break;
-    case F_FLOAT32:
-      crd->data = safe_mal<float>(crd->num_entries);
-      byte_size *= sizeof(float);
-      break;
-    case F_FLOAT64:
-      crd->data = safe_mal<double>(crd->num_entries);
-      byte_size *= sizeof(double);
-      break;
+    if (!ord->data) {
+      crd->mem_id = OCLCompilerThread::copy_memory(
+          ord->mem_id, ord->num_entries * typeSize(node->operation->data_type),
+          CL_MEM_READ_ONLY);
+    } else {
+      size_t byte_size = crd->num_entries;
+      switch (node->operation->data_type) {
+      case F_INT32:
+        crd->data = safe_mal<int>(crd->num_entries);
+        byte_size *= sizeof(int);
+        break;
+      case F_INT64:
+        crd->data = safe_mal<long>(crd->num_entries);
+        byte_size *= sizeof(long);
+        break;
+      case F_FLOAT32:
+        crd->data = safe_mal<float>(crd->num_entries);
+        byte_size *= sizeof(float);
+        break;
+      case F_FLOAT64:
+        crd->data = safe_mal<double>(crd->num_entries);
+        byte_size *= sizeof(double);
+        break;
+      }
+      std::memcpy(crd->data, ord->data, byte_size);
     }
-    std::memcpy(crd->data, ord->data, byte_size);
   }
   if (node->gradient_data) {
     std::unordered_set<const FGraphNode *> *other =

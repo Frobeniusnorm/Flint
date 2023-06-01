@@ -101,7 +101,7 @@ FGraphNode *fload_image(const char *path) {
   float *fvals = safe_mal<float>(w * h * c);
   for (int i = 0; i < w * h * c; i++)
     fvals[i] = vals[i] / 255.f;
-  size_t shape[3] = {(size_t)w, (size_t)h, (size_t)c};
+  size_t shape[3] = {(size_t)h, (size_t)w, (size_t)c};
   FGraphNode *node = fCreateGraph(fvals, w * h * c, F_FLOAT32, &shape[0], 3);
   stbi_image_free(vals);
   free(fvals);
@@ -113,15 +113,13 @@ void fstore_image(FGraphNode *node, const char *path, FImageFormat format) {
     flogging(F_ERROR,
              "Invalid image data for fstore_image: image nodes are expected to "
              "have 3 dimensions and to be of the float data type!");
+  int h = node->operation->shape[0], w = node->operation->shape[1], c = node->operation->shape[2];
   node = fmin_ci(fmax_ci(fconvert(fmul(node, 255.0f), F_INT32), 0), 255);
   node = fCalculateResult(node);
-  int w = node->operation->shape[0], h = node->operation->shape[1], c = node->operation->shape[2];
   char* data = nullptr;
-  if (format != F_HDR) {
-    data = safe_mal<char>(node->result_data->num_entries);
-    for(size_t i = 0; i < node->result_data->num_entries; i++)
-      data[i] = (char) ((int*) node->result_data->data)[i];
-  }
+  data = safe_mal<char>(node->result_data->num_entries);
+  for(size_t i = 0; i < node->result_data->num_entries; i++)
+    data[i] = (char) ((int*) node->result_data->data)[i];
   switch (format) {
   case F_PNG:
     if (!stbi_write_png(path, w, h, c, data, 0))
