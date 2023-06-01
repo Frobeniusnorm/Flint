@@ -92,7 +92,8 @@ void fSetLoggingLevel(int);
  *    by missuse of functions).
  */
 enum FLogType { F_NO_LOGGING, F_ERROR, F_WARNING, F_INFO, F_VERBOSE, F_DEBUG };
-
+/** Supported Image formats for fstore_image */
+enum FImageFormat { F_PNG, F_JPEG, F_BMP };
 /** Logs a NULL terminated string with the given logging level.
  * See also: `fSetLoggingLevel` */
 void flogging(FLogType type, const char *msg);
@@ -427,10 +428,14 @@ char *fserialize(FGraphNode *node, size_t *bytes_written);
  */
 FGraphNode *fdeserialize(char *data);
 /** Loads an image from the given path.
- * The image will be stored in floating point data and the shape will be w, h, c
+ * The image will be stored in floating point data and the shape will be h, w, c
  * where w is the width, h is the height and c are the chanels.
+ * Supported formats include png, jpeg, bmp, gif, hdr ... essentially everything
+ * stb_image supports
  */
-FGraphNode *fLoadImage(const char *path);
+FGraphNode *fload_image(const char *path);
+
+void fstore_image(FGraphNode* node, const char *path, FImageFormat format);
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
 /** Elementwise substraction of `a` and `b`, i.e. `a[i] - b[i]`. */

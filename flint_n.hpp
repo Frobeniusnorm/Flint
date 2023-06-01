@@ -1288,14 +1288,17 @@ protected:
 struct Flint {
 /**
  * Loads an image from the given path.
- * The image will be stored in floating point data and the shape will be w, h, c
+ * The image will be stored in floating point data and the shape will be h, w, c
  * where w is the width, h is the height and c are the chanels.
  */
 static Tensor<float, 3> load_image(std::string path) {
-  FGraphNode *node = fLoadImage(path.c_str());
+  FGraphNode *node = fload_image(path.c_str());
   return Tensor<float, 3>(node, std::array<size_t, 3>{node->operation->shape[0],
                                                    node->operation->shape[1],
                                                    node->operation->shape[2]});
+}
+static void store_image(Tensor<float, 3> t, std::string path, FImageFormat format) {
+  fstore_image(t.node, path.c_str(), format);
 }
 /** Sets the Logging Level of the Flint Backend */
 static void setLoggingLevel(FLogType level) { fSetLoggingLevel(level); }

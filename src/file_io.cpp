@@ -10,15 +10,15 @@
    distributed under the License is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
-   limitations under the License. 
+   limitations under the License.
   This file contains the implementation of IO functions for the C frontend
 */
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../flint.h"
-#include "utils.hpp"
 #include "libs/stb_image.hpp"
 #include "libs/stb_image_write.hpp"
+#include "utils.hpp"
 
 #define MAGIC_NUMBER 0x75321
 char *fserialize(FGraphNode *node, size_t *bytes_written) {
@@ -56,7 +56,7 @@ char *fserialize(FGraphNode *node, size_t *bytes_written) {
   }
   // data
   memcpy(&data[index], node->result_data->data,
-              total_size_node * typeSize(node->operation->data_type));
+         total_size_node * typeSize(node->operation->data_type));
   if (bytes_written)
     *bytes_written =
         index + total_size_node * typeSize(node->operation->data_type);
@@ -92,11 +92,48 @@ FGraphNode *fdeserialize(char *data) {
   free(res);
   return node;
 }
-FGraphNode *fLoadImage(const char *path) {
+FGraphNode *fload_image(const char *path) {
   int w, h, c;
-  float* vals = stbi_loadf(path, &w, &h, &c, 0);
+  unsigned char *vals = stbi_load(path, &w, &h, &c, 0);
+  if (!vals) {
+    flogging(F_ERROR, "Could not load image!");
+  }
+  float *fvals = safe_mal<float>(w * h * c);
+  for (int i = 0; i < w * h * c; i++)
+    fvals[i] = vals[i] / 255.f;
   size_t shape[3] = {(size_t)w, (size_t)h, (size_t)c};
-  FGraphNode* node = fCreateGraph(vals, w * h * c, F_FLOAT32, &shape[0], 3);
+  FGraphNode *node = fCreateGraph(fvals, w * h * c, F_FLOAT32, &shape[0], 3);
   stbi_image_free(vals);
+  free(fvals);
   return node;
+}
+void fstore_image(FGraphNode *node, const char *path, FImageFormat format) {
+  if (node->operation->data_type != F_FLOAT32 ||
+      node->operation->dimensions != 3)
+    flogging(F_ERROR,
+             "Invalid image data for fstore_image: image nodes are expected to "
+             "have 3 dimensions and to be of the float data type!");
+  node = fmin_ci(fmax_ci(fconvert(fmul(node, 255.0f), F_INT32), 0), 255);
+  node = fCalculateResult(node);
+  int w = node->operation->shape[0], h = node->operation->shape[1], c = node->operation->shape[2];
+  char* data = nullptr;
+  if (format != F_HDR) {
+    data = safe_mal<char>(node->result_data->num_entries);
+    for(size_t i = 0; i < node->result_data->num_entries; i++)
+      data[i] = (char) ((int*) node->result_data->data)[i];
+  }
+  switch (format) {
+  case F_PNG:
+    if (!stbi_write_png(path, w, h, c, data, 0))
+      flogging(F_ERROR, "Could not write image!");
+    break;
+  case F_JPEG:
+    if (!stbi_write_jpg(path, w, h, c, data, 70))
+      flogging(F_ERROR, "Could not write image!");
+  case F_BMP:
+    if (!stbi_write_bmp(path, w, h, c, data))
+      flogging(F_ERROR, "Could not write image!");
+  }
+  if (data)
+    free(data);
 }
