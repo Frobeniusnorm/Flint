@@ -997,7 +997,8 @@ FResultData *fSyncMemory(FGraphNode *node) {
   if (node->result_data && node->result_data->data)
     return node->result_data;
   if (node->operation->op_type == FSTORE) {
-    node->result_data = new FResultData();
+    if (!node->result_data)
+      node->result_data = new FResultData();
     FStore *store = (FStore *)node->operation->additional_data;
     node->result_data->num_entries = store->num_entries;
     node->result_data->mem_id = store->mem_id;

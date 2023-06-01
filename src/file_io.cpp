@@ -13,6 +13,7 @@
    limitations under the License.
   This file contains the implementation of IO functions for the C frontend
 */
+#include <iostream>
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../flint.h"
@@ -108,18 +109,20 @@ FGraphNode *fload_image(const char *path) {
   return node;
 }
 void fstore_image(FGraphNode *node, const char *path, FImageFormat format) {
+  FGraphNode *orig = node;
   if (node->operation->data_type != F_FLOAT32 ||
       node->operation->dimensions != 3)
     flogging(F_ERROR,
              "Invalid image data for fstore_image: image nodes are expected to "
              "have 3 dimensions and to be of the float data type!");
-  int h = node->operation->shape[0], w = node->operation->shape[1], c = node->operation->shape[2];
+  int h = node->operation->shape[0], w = node->operation->shape[1],
+      c = node->operation->shape[2];
   node = fmin_ci(fmax_ci(fconvert(fmul(node, 255.0f), F_INT32), 0), 255);
   node = fCalculateResult(node);
-  char* data = nullptr;
+  char *data = nullptr;
   data = safe_mal<char>(node->result_data->num_entries);
-  for(size_t i = 0; i < node->result_data->num_entries; i++)
-    data[i] = (char) ((int*) node->result_data->data)[i];
+  for (size_t i = 0; i < node->result_data->num_entries; i++)
+    data[i] = (char)((int *)node->result_data->data)[i];
   switch (format) {
   case F_PNG:
     if (!stbi_write_png(path, w, h, c, data, 0))
@@ -134,4 +137,7 @@ void fstore_image(FGraphNode *node, const char *path, FImageFormat format) {
   }
   if (data)
     free(data);
+  orig->reference_counter++;
+  fFreeGraph(node);
+  orig->reference_counter--;
 }
