@@ -21,12 +21,10 @@ int main() {
     img = img.reshape(c, w + 3, h + 3, 1).convolve(kernel, 1, 1, 1);
     // undo padding
     img = img.slice(TensorRange(), TensorRange(2, -2), TensorRange(2, -2));
-    img.execute();
   }
   // undo transpose
   img = img.transpose();
   img.execute();
-  flogging(F_INFO, "executed");
   for (size_t s : img.get_shape()) std::cout << s << std::endl;
   Flint::store_image(img, "experiment/flint.jpg", F_JPEG);
   flintCleanup();
