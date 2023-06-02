@@ -12,6 +12,7 @@ struct OCLCompilerThread {
   static cl_kernel eager_compile(FGraphNode *node, int hash);
   static cl_kernel lazy_compile(FGraphNode *node, std::string code);
   static cl_mem copy_memory(const cl_mem other, size_t num_bytes, cl_mem_flags memory_flags);
+  static void memory_barrier();
   // TODO hard drive caching of eager kernels here
   // TODO if we want to revisit a compiler thread ->
   //      - ONLY the compiler thread is allowed to compile code. This solves

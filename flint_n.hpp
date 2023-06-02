@@ -254,7 +254,7 @@ template <typename T, unsigned int n> struct Tensor {
    */
   void execute() {
     if (!node->result_data || !node->result_data->data) {
-      node = fExecuteGraph(node);
+      node = fOptimizeMemory(fExecuteGraph(node));
     }
   }
   /**
@@ -265,7 +265,7 @@ template <typename T, unsigned int n> struct Tensor {
    */
   void execute_cpu() {
     if (!node->result_data || !node->result_data->data) {
-      node = fExecuteGraph_cpu(node);
+      node = fOptimizeMemory(fExecuteGraph_cpu(node));
     }
   }
   /**
@@ -276,7 +276,7 @@ template <typename T, unsigned int n> struct Tensor {
    */
   void execute_gpu() {
     if (!node->result_data || !node->result_data->data) {
-      node = fExecuteGraph_gpu(node);
+      node = fOptimizeMemory(fExecuteGraph_gpu(node));
     }
   }
   /**

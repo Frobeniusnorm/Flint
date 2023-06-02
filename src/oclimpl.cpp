@@ -993,29 +993,35 @@ cl_kernel OCLCompilerThread::lazy_compile(FGraphNode *node, std::string code) {
   OCLCompilerThread::kernel_cache.insert({code, {prog, kernel}});
   return kernel;
 }
+void OCLCompilerThread::memory_barrier() {
+  clFinish(clqueue);
+}
 FResultData *fSyncMemory(FGraphNode *node) {
   if (node->result_data && node->result_data->data)
     return node->result_data;
   if (node->operation->op_type == FSTORE) {
-    if (!node->result_data)
-      node->result_data = new FResultData();
     FStore *store = (FStore *)node->operation->additional_data;
-    node->result_data->num_entries = store->num_entries;
-    node->result_data->mem_id = store->mem_id;
-    node->result_data->data = store->data;
+    if (!node->result_data) {
+      node->result_data = new FResultData();
+      node->result_data->num_entries = store->num_entries;
+    }
+    if (!node->result_data->mem_id)
+      node->result_data->mem_id = store->mem_id;
+    if (!node->result_data->data)
+      node->result_data->data = store->data;
   }
   FResultData *res = node->result_data;
   if (res && res->mem_id && !res->data) {
     // read result to cpu
     int type_size_node = typeSize(node->operation->data_type);
-    node->result_data->data = malloc(res->num_entries * type_size_node);
-    node->result_data->num_entries = res->num_entries;
+    res->data = malloc(res->num_entries * type_size_node);
+    res->num_entries = res->num_entries;
     if (!node->result_data->data)
       flogging(F_ERROR, "Not enough memory to store result!");
     // wait for result
-    cl_int err_code = clEnqueueReadBuffer(
-        clqueue, node->result_data->mem_id, CL_TRUE, 0,
-        res->num_entries * type_size_node, res->data, 0, nullptr, nullptr);
+    cl_int err_code = clEnqueueReadBuffer(clqueue, res->mem_id, CL_TRUE, 0,
+                                          res->num_entries * type_size_node,
+                                          res->data, 0, nullptr, nullptr);
     if (err_code != CL_SUCCESS) {
       std::string msg = "Unknown Error while reading the result! Error Code: " +
                         std::to_string(err_code);
@@ -1102,9 +1108,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     size_t total_size = op->op_type == FSTORE
                             ? ((FStore *)op->additional_data)->num_entries
                             : gn->result_data->num_entries;
-    cl_mem mem_id = op->op_type == FSTORE
-                        ? ((FStore *)op->additional_data)->mem_id
-                        : gn->result_data->mem_id;
+    cl_mem mem_id = gn->result_data ? gn->result_data->mem_id : nullptr;
+    if (!mem_id && op->op_type == FSTORE)
+      mem_id = ((FStore *)op->additional_data)->mem_id;
     if (mem_id) {
       mem_obj = mem_id;
     } else {

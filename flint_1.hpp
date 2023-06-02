@@ -235,7 +235,7 @@ template <typename T> struct Tensor<T, 1> {
    */
   void execute() {
     if (!node->result_data || !node->result_data->data) {
-      node = fExecuteGraph(node);
+      node = fOptimizeMemory(fExecuteGraph(node));
     }
   }
   /**
@@ -246,7 +246,7 @@ template <typename T> struct Tensor<T, 1> {
    */
   void execute_cpu() {
     if (!node->result_data || !node->result_data->data) {
-      node = fExecuteGraph_cpu(node);
+      node = fOptimizeMemory(fExecuteGraph_cpu(node));
     }
   }
   /**
@@ -257,7 +257,7 @@ template <typename T> struct Tensor<T, 1> {
    */
   void execute_gpu() {
     if (!node->result_data || !node->result_data->data) {
-      node = fExecuteGraph_gpu(node);
+      node = fOptimizeMemory(fExecuteGraph_gpu(node));
     }
   }
   /**
@@ -684,6 +684,8 @@ template <typename T> struct Tensor<T, 1> {
 protected:
   Tensor(FGraphNode *node, size_t shape) : node(node), shape{shape} {
     node->reference_counter++;
+    for (int i = 0; i < node->num_predecessor; i++)
+      fOptimizeMemory(node->predecessors[i]);
     fOptimizeMemory(node); // should be legal here, since C++ header adjust
                            // reference_counter
   }
