@@ -1168,6 +1168,39 @@ template <typename T, unsigned int n> struct Tensor {
     FGraphNode *nn = ftranspose(node, acc_trans.data());
     return Tensor<T, n>(nn, new_shape);
   }
+  /** Convolves the `n`-dimensional input tensor with a `n`-dimensional
+   * filter kernel `kernel` and a per dimensional step size `steps` with size of
+   * `n-1`. It is expected that the input and `kernel` have the same size in
+   * their last dimension (which will be completly reduced by the convolution).
+   * In all other dimensions the size of the input tensor should be larger or
+   * equal to the size of `kernel`. The `kernel` will be 'slid' over the tensor
+   * in each dimension, multiplying all values of `kernel` with the
+   * corresponding ones in the tensor and summing them up to a single value and
+   * moving the kernel further by the value given in `steps` in that
+   * corresponding dimension.
+   *
+   * The implementation does an implicit right-padding, meaning that the kernel
+   * will initially be placed so that its first element is aligned to
+   * the first element of the tensor, but it will be slid till no kernel element
+   * overlaps with any element of the tensor, multiplying all "overlapping"
+   * elements with 0. If you want to mdofiy this behaviour you can use
+   * `extend`, `slice` or similar.
+   *
+   * The resulting Tensor will therefor have a shape with dimensionality `n - 1`
+   * and size of `resulting_shape[i] = 1 + (a->operation->shape[i] - 1) /
+   * steps[i]`.
+   *
+   * @code{
+   * Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
+   *                     {{5, 6}, {7, 8}, {9, 0}},
+   *                     {{-1,-2},{-3,-4},{-5,-6}}};
+   * Tensor<float, 3> k1{{{1, 1}, {2, 2}}};
+   * Tensor<float, 2> r1 = t1.convolve(k1, 2, 1);
+   * // Tensor<FLOAT32, shape: [2, 3]>(
+   * // [[7.000000, 17.000000, 7.000000],
+   * //  [-17.000000, -29.000000, -11.000000]])
+   * }
+   */
   template <typename K, typename... args>
   Tensor<stronger_return<K>, n - 1> convolve(const Tensor<K, n> &kernel,
                                              const args... steps) const {
@@ -1185,6 +1218,34 @@ template <typename T, unsigned int n> struct Tensor {
     std::copy_n(nc->operation->shape, (n - 1), new_shape.begin());
     return Tensor<stronger_return<K>, n - 1>(nc, new_shape);
   }
+  /**
+   * Slides `kernel` along the input tensor, multiplying it with the elements of
+   * the tensor. For each element all multiplied values are summed up, so that
+   * the result has the same shape as `kernel` (every element in the result is
+   * the accumulated sum of the product of that element with all elements it was
+   * slid over). `kernel` is initially placed so that the first element of the
+   * tensor and the first element of `kernel` overlap. It is then moved for each
+   * dimension `i` by `steps[i]` elements forward except for the last (steps
+   * can have 1 dimension less then the tensor and `kernel`), just like it would
+   * be by `convolve` with the difference, that everything is accumulated for
+   * the kernel instead of the original node.
+   *
+   * The last dimension of the tensor and `kernel` should be equal, therefor it
+   * has no step in that dimension since the complete kernel is multiplied in
+   * that dimension. If you input less steps then `n-1` the remaining will be
+   * set to 1.
+   *
+   * @code{
+   * Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
+   *                     {{5, 6}, {7, 8}, {9, 0}},
+   *                     {{-1,-2},{-3,-4},{-5,-6}}};
+   * Tensor<float, 3> k1{{{1, 1}, {2, 2}}};
+   * Tensor<float, 2> r1 = t1.slide(k1, 2, 2);
+   * // Tensor<FLOAT32, shape: [1, 2, 2]>(
+   * // [[[-3.000000, -3.000000],
+   * //   [-4.000000, -4.000000]]])
+   * }
+   */
   template <typename K, typename... args>
   Tensor<stronger_return<K>, n> slide(const Tensor<K, n> &kernel,
                                       const args... steps) const {
@@ -1284,27 +1345,28 @@ protected:
   }
 };
 
-
 struct Flint {
-/**
- * Loads an image from the given path.
- * The image will be stored in floating point data and the shape will be h, w, c
- * where w is the width, h is the height and c are the chanels.
- */
-static Tensor<float, 3> load_image(std::string path) {
-  FGraphNode *node = fload_image(path.c_str());
-  return Tensor<float, 3>(node, std::array<size_t, 3>{node->operation->shape[0],
-                                                   node->operation->shape[1],
-                                                   node->operation->shape[2]});
-}
-static void store_image(Tensor<float, 3>& t, std::string path, FImageFormat format) {
-  fstore_image(t.node, path.c_str(), format);
-}
-/** Sets the Logging Level of the Flint Backend */
-static void setLoggingLevel(FLogType level) { fSetLoggingLevel(level); }
-/**
- * Deallocates any resourced allocated by the corresponding backends and allows
- * them to shutdown their threads.
- */
-static void cleanup() { flintCleanup(); }
+  /**
+   * Loads an image from the given path.
+   * The image will be stored in floating point data and the shape will be h, w,
+   * c where w is the width, h is the height and c are the chanels.
+   */
+  static Tensor<float, 3> load_image(std::string path) {
+    FGraphNode *node = fload_image(path.c_str());
+    return Tensor<float, 3>(node,
+                            std::array<size_t, 3>{node->operation->shape[0],
+                                                  node->operation->shape[1],
+                                                  node->operation->shape[2]});
+  }
+  static void store_image(Tensor<float, 3> &t, std::string path,
+                          FImageFormat format) {
+    fstore_image(t.node, path.c_str(), format);
+  }
+  /** Sets the Logging Level of the Flint Backend */
+  static void setLoggingLevel(FLogType level) { fSetLoggingLevel(level); }
+  /**
+   * Deallocates any resourced allocated by the corresponding backends and
+   * allows them to shutdown their threads.
+   */
+  static void cleanup() { flintCleanup(); }
 }; // namespace Flint

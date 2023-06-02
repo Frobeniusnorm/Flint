@@ -435,7 +435,7 @@ FGraphNode *fdeserialize(char *data);
  */
 FGraphNode *fload_image(const char *path);
 
-void fstore_image(FGraphNode* node, const char *path, FImageFormat format);
+void fstore_image(FGraphNode *node, const char *path, FImageFormat format);
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
 /** Elementwise substraction of `a` and `b`, i.e. `a[i] - b[i]`. */
@@ -739,14 +739,18 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
  * The `kernel` will be 'slid' over `a` in each dimension, multiplying all
  * values of `kernel` with the corresponding ones in `a` and summing them up to
  * a single value and moving the kernel further by the value given in `steps` in
- * that corresponding dimension. The implementation does not care about padding
- * (if `a` is in a dimension not divisable by the step size, the size is rounded
- * up. If in one step the kernel overlaps over the Tensor for one or more
- * dimensions, the overlapping values will be multiplied by `0`). If you want to
- * include it use `fextend` or similar.
+ * that corresponding dimension.
+ *
+ * The implementation does an implicit right-padding, meaning that the kernel
+ * will initially be placed so that its first element is aligned to
+ * the first element of `a`, but it will be slid till no kernel element
+ * overlaps with any element of `a`, multiplying all "overlapping"
+ * elements with 0. If you want to mdofiy this behaviour you can use
+ * `fextend`, `fslice` or similar.
  *
  * The resulting Tensor will therefor have a shape with dimensionality `n - 1`
- * and size of `resulting_shape[i] = a->operation->shape[i] / steps[i]`
+ * and size of `resulting_shape[i] = 1 + (a->operation->shape[i] - 1) /
+ * steps[i]`
  */
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
 /**
@@ -756,12 +760,14 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
  * accumulated sum of the product of that element with all elements it was slid
  * over). `kernel` is initially placed so that the first element of `a` and
  * the first element of `kernel` overlap. It is then moved for each dimension
- * `i` by `steps[i]` elements forward, just like it would be by ´fconvolve` with
- * the difference, that everything is accumulated for the kernel instead of the
- * original node.
- * The number of steps is in contrast to `fconvolve` not limited to every
- * dimension except the last, `fslide` can slide the Tensor along all dimensions
- * (NOTE: this may change in the future).
+ * `i` by `steps[i]` elements forward except for the last (steps should have 1
+ * dimension less then `a` and `kernel`), just like it would be by `fconvolve`
+ * with the difference, that everything is accumulated for the kernel instead of
+ * the original node.
+ *
+ * The last dimension of `a` and `kernel` should be equal, therefor it has no
+ * step in that dimension since the complete kernel is multiplied in that
+ * dimension.
  */
 FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
 #ifdef __cplusplus

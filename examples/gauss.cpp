@@ -11,7 +11,7 @@ int main() {
   size_t h = img.get_shape()[0], w = img.get_shape()[1], c = img.get_shape()[2];
   // put channels in first dimension
   img = img.transpose();
-  for (int i = 0; i < 10000; i++) {
+  for (int i = 0; i < 40; i++) {
     // add left padding
     img = img.extend({c, w + 1, h + 1}, {0, 1, 1});
     // gauss
