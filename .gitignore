@@ -6,13 +6,11 @@
 *.lo
 *.o
 *.obj
-./build/
 examples/build/
 .clangd/
 examples/gauss
 examples/flint.jpg
 experiment/
-docs/html/
 # Precompiled Headers
 *.gch
 *.pch
