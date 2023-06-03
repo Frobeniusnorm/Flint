@@ -1,3 +1,20 @@
+/* Copyright 2022 David Schwarzbeck
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+  This file includes the OpenCL compiler front end (and maybe someday
+  asynchronous compiler and cache)
+*/
 #include "../flint.h"
 #include <list>
 #include <thread>
@@ -11,7 +28,8 @@ struct OCLCompilerThread {
       kernel_cache;
   static cl_kernel eager_compile(FGraphNode *node, int hash);
   static cl_kernel lazy_compile(FGraphNode *node, std::string code);
-  static cl_mem copy_memory(const cl_mem other, size_t num_bytes, cl_mem_flags memory_flags);
+  static cl_mem copy_memory(const cl_mem other, size_t num_bytes,
+                            cl_mem_flags memory_flags);
   static void memory_barrier();
   // TODO hard drive caching of eager kernels here
   // TODO if we want to revisit a compiler thread ->
