@@ -12,12 +12,12 @@ Planed Language Bindings include Haskell, Scala and maybe Java.
 
 ## Concept ##
 Just as other Tensor libraries, Flint collects operations in a graph and executes multiple operations at once in one of its backends when needed.
-The Graph (i.e. all yet to be calculated indirect parent nodes to one needed leaf node) is executed when the user of the library requests the resulting data or another operation depends on the full result so that combining those operations becomes impossible (i.e. operations like matrix multiplication or reducing). The Framework allows you to choose between CPU (with a thread pool that executes the tensor operations in parallel) and GPU execution (which generates OpenCL kernels for the execution graph), or you can let the framework decide on certain heuristics which backend to use. It additionally supports eager execution, for e.g. efficient gradient calculation or debugging purposes.
+The Graph (i.e. all yet to be calculated indirect parent nodes to one needed leaf node) is executed when the user of the library requests the resulting data or another operation depends on the full result so that combining those operations becomes impossible (i.e. operations like matrix multiplication or reducing). The Framework allows you to choose between CPU (with a thread pool that executes the tensor operations in parallel) and GPU execution (which generates OpenCL kernels for the execution graph), or you can let the framework decide on certain heuristics which backend to use. It additionally supports eager execution, for e.g. efficient cpu calculation or debugging purposes.
 
 The main library only contains the implementation of the backends, the C++ frontend with the Tensor class and the operations with automatic gradient calculations. There is an example implementation of often used deep learning algorithms and concepts in the `dl/` folder in work.
 
 ## Usage ##
-There is no first official version yet. However if you want to build it you need (a recent version of) a C++ compiler, CMake and an installed OpenCL library. 
+For prebuilt versions for Linux see the releases page. However if you want to build it you need (a recent version of) a C++ compiler, CMake and an installed OpenCL library. 
 To build the library execute this inside of the project folder:
 ```
 mkdir build;
