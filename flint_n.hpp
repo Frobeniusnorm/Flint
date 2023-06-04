@@ -158,12 +158,15 @@ template <typename T, unsigned int n> struct Tensor {
    * //  [3.141592, 3.141592]]])
    * }
    */
+  static Tensor<T, n> constant(T value, std::array<size_t, n> shape) {
+    FGraphNode *node = fconstant(value, shape.data(), n);
+    return Tensor(node, shape);
+  }
   template <typename... args>
   static Tensor<T, n> constant(T value, args... sizes) {
     constexpr size_t dimensions = sizeof...(args);
     std::array<size_t, dimensions> shape{static_cast<size_t>(sizes)...};
-    FGraphNode *node = fconstant(value, shape.data(), dimensions);
-    return Tensor(node, shape);
+    return constant(value, shape);
   }
   /**
    * Creates a Tensor filled with random values in [0, 1) with the requested
