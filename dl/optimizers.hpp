@@ -13,6 +13,7 @@
    limitations under the License. */
 #ifndef FLINT_OPTIMIZERS
 #define FLINT_OPTIMIZERS
+#include "flint.h"
 #include <cmath>
 #include <flint/flint.hpp>
 #include <optional>
@@ -20,17 +21,16 @@
  * Optimizer interface that defines a update method.
  * An optimizer is intended to be instantiated once per weight
  * and optimizes only double weights (since the gradient is also always given as
- * a double Tensor). `n` is the number of dimensions of the weight. */
-template <int n> struct Optimizer {
-  virtual Tensor<double, n> update(Tensor<double, n> weights,
-                                   Tensor<double, n> gradient) = 0;
+ * a double Tensor). It uses the C interface for easy extensibility. */
+struct Optimizer {
+  virtual FGraphNode *update(FGraphNode *weights, FGraphNode *gradient) = 0;
 };
 /**
  * Implementation of the Adam algorithm (first-order gradient-based optimizer
  * for stochastic objective functions based on adaptive estimates of lower-order
  * moments)
  */
-template <int n> struct Adam : public Optimizer<n> {
+struct Adam : public Optimizer {
   double epsilon = 1e-07;
   double learning_rate, b1, b2;
   /**
@@ -49,24 +49,103 @@ template <int n> struct Adam : public Optimizer<n> {
    */
   Adam(double learning_rate = 0.05, double b1 = 0.9, double b2 = 0.999)
       : learning_rate(learning_rate), b1(b1), b2(b2) {}
+  Adam(const Adam &other) {
+    if (other.m)
+      m = fCopyGraph(other.m);
+    if (other.v)
+      v = fCopyGraph(other.v);
+    learning_rate = other.learning_rate;
+    b1 = other.b1;
+    b2 = other.b2;
+    t = other.t;
+  }
+  Adam(Adam &&other) {
+    if (other.m)
+      m = other.m;
+    if (other.v)
+      v = other.v;
+    other.m = nullptr;
+    other.v = nullptr;
+    learning_rate = other.learning_rate;
+    b1 = other.b1;
+    b2 = other.b2;
+    t = other.t;
+  }
+  Adam &operator=(const Adam &other) {
+    if (m && v) {
+      m->reference_counter--;
+      v->reference_counter--;
+      fFreeGraph(m);
+      fFreeGraph(v);
+    }
+    if (other.m)
+      m = fCopyGraph(other.m);
+    if (other.v)
+      v = fCopyGraph(other.v);
+    learning_rate = other.learning_rate;
+    b1 = other.b1;
+    b2 = other.b2;
+    t = other.t;
+    return *this;
+  }
+  Adam &operator=(Adam &&other) {
+    if (m && v) {
+      m->reference_counter--;
+      v->reference_counter--;
+      fFreeGraph(m);
+      fFreeGraph(v);
+    }
+    if (other.m)
+      m = other.m;
+    if (other.v)
+      v = other.v;
+    other.m = nullptr;
+    other.v = nullptr;
+    learning_rate = other.learning_rate;
+    b1 = other.b1;
+    b2 = other.b2;
+    t = other.t;
+    return *this;
+  }
+
+  ~Adam() {
+    if (m && v) {
+      m->reference_counter--;
+      v->reference_counter--;
+      fFreeGraph(m);
+      fFreeGraph(v);
+    }
+  }
+  FGraphNode *update(FGraphNode *weights, FGraphNode *gradient) {
+    if (!m) {
+      // initialize with weight shape
+      m = fconstant_d(0, weights->operation->shape,
+                      weights->operation->dimensions);
+      v = fconstant_d(0, weights->operation->shape,
+                      weights->operation->dimensions);
+      m->reference_counter++;
+      v->reference_counter++;
+    }
+    m = fadd(fmul_cd(m, b1), fmul_cd(gradient, (1 - b1)));
+    v = fadd(fmul_cd(v, b2), fmul(fmul_cd(gradient, (1 - b2)), gradient));
+    FGraphNode *mh = fdiv_cd(m, (1 - std::pow(b1, t)));
+    FGraphNode *vh = fdiv_cd(v, (1 - std::pow(b2, t)));
+    t++;
+    return fsub(weights, fdiv(fmul_cd(mh, learning_rate),
+                              fadd_cd(fsqrt_g(vh), epsilon)));
+  }
+
+  template <int n>
   Tensor<double, n> update(Tensor<double, n> weights,
                            Tensor<double, n> gradient) {
-    if (!m.has_value()) {
-      // initialize with weight shape
-      m = Tensor<double, n>::constant(0, weights.get_shape());
-      v = Tensor<double, n>::constant(0, weights.get_shape());
-    }
-    m = m.value() * b1 + gradient * (1 - b1);
-    v = v.value() * b2 + gradient * (1 - b2) * gradient;
-    Tensor<double, n> mh = m.value() / (1 - std::pow(b1, t));
-    Tensor<double, n> vh = v.value() / (1 - std::pow(b2, t));
-    t++;
-    return weights - mh * learning_rate  / (vh.sqrt() + epsilon);
+    return Tensor<double, n>(
+        update(weights.get_graph_node(), gradient.get_graph_node()),
+        weights.get_shape());
   }
 
 private:
-  std::optional<Tensor<double, n>> m; // 1st moment
-  std::optional<Tensor<double, n>> v; // 2nd moment
+  FGraphNode *m = nullptr; // 1st moment
+  FGraphNode *v = nullptr; // 2nd moment
   unsigned long t = 1;
 };
 

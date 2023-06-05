@@ -49,6 +49,15 @@ template <typename T> struct Tensor<T, 1> {
     node->reference_counter = 1;
   }
   /**
+   * Constructs a Tensor directly from a `FGraphNode` and a shape
+   */
+  Tensor(FGraphNode *node, std::array<size_t, 1> shape)
+      : node(node), shape(shape) {
+    node->reference_counter++;
+    fOptimizeMemory(node); // should be legal here, since C++ header adjust
+                           // reference_counter
+  }
+  /**
    * Copy constructor. Copies the underlying Graph structure by creating a new
    * node with the same operation, shape and data types. The new predecessor
    * array points to the same predecessors (memory safety is ensured with
@@ -686,12 +695,6 @@ protected:
     node->reference_counter++;
     for (int i = 0; i < node->num_predecessor; i++)
       fOptimizeMemory(node->predecessors[i]);
-    fOptimizeMemory(node); // should be legal here, since C++ header adjust
-                           // reference_counter
-  }
-  Tensor(FGraphNode *node, std::array<size_t, 1> shape)
-      : node(node), shape(shape) {
-    node->reference_counter++;
     fOptimizeMemory(node); // should be legal here, since C++ header adjust
                            // reference_counter
   }
