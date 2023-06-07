@@ -25,13 +25,16 @@
 struct Optimizer {
   virtual FGraphNode *update(FGraphNode *weights, FGraphNode *gradient) = 0;
 };
+struct OptimizerFactory {
+  virtual Optimizer *generate_optimizer() = 0;
+};
 /**
  * Implementation of the Adam algorithm (first-order gradient-based optimizer
  * for stochastic objective functions based on adaptive estimates of lower-order
  * moments)
  */
 struct Adam : public Optimizer {
-  double epsilon = 1e-07;
+  double epsilon = 1e-08;
   double learning_rate, b1, b2;
   /**
    * Initializes the Adam algorithm with some parameters that influence the
@@ -47,7 +50,7 @@ struct Adam : public Optimizer {
    *
    * You can tune the individual members later on too.
    */
-  Adam(double learning_rate = 0.05, double b1 = 0.9, double b2 = 0.999)
+  Adam(double learning_rate = 0.0015, double b1 = 0.9, double b2 = 0.999)
       : learning_rate(learning_rate), b1(b1), b2(b2) {}
   Adam(const Adam &other) {
     if (other.m)
@@ -148,5 +151,13 @@ private:
   FGraphNode *v = nullptr; // 2nd moment
   unsigned long t = 1;
 };
-
+struct AdamFactory : public OptimizerFactory {
+  double epsilon = 1e-07;
+  double learning_rate, b1, b2;
+  AdamFactory(double learning_rate = 0.0015, double b1 = 0.9, double b2 = 0.999)
+      : learning_rate(learning_rate), b1(b1), b2(b2) {}
+  Optimizer *generate_optimizer() {
+    return new Adam(learning_rate, b1, b2);
+  }
+};
 #endif

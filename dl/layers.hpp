@@ -12,6 +12,7 @@
    See the License for the specific language governing permissions and
    limitations under the License. */
 
+#include "optimizers.hpp"
 #include <flint/flint.hpp>
 namespace LayerHelper {
 /**
@@ -22,6 +23,7 @@ template <unsigned int index, int... w> class WeightRef {};
 
 template <unsigned int index, int n> struct WeightRef<index, n> {
   Tensor<double, n> *weight = nullptr;
+  Optimizer* optimizer = nullptr;
   template <unsigned int k, unsigned int f>
   void set_weight(Tensor<double, f> *w) {
     if (k != index)
@@ -38,6 +40,7 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
 template <unsigned int index, int n, int... wn>
 struct WeightRef<index, n, wn...> {
   Tensor<double, n> *weight = nullptr;
+  Optimizer* optimizer = nullptr;
   WeightRef<index + 1, wn...> others;
   template <unsigned int k, unsigned int f>
   void set_weight(Tensor<double, f> *w) {
@@ -59,7 +62,6 @@ struct WeightRef<index, n, wn...> {
  */
 template <int... wn> class Layer {
   LayerHelper::WeightRef<0, wn...> weight_refs;
-
   template <unsigned int index, unsigned int n>
   void init_weights(Tensor<double, n> *t) {
     weight_refs.template set_weight<index>(t);
@@ -78,4 +80,6 @@ public:
   template <int index, int dim> void set_weight(Tensor<double, dim> *t) {
     weight_refs.template set_weight<index>(t);
   }
+  // TODO: Optimizer Factory is set in the Model and sets them for each layer, 
+  // the layers need the capability to traverse the weights and update them
 };
