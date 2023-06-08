@@ -14,6 +14,7 @@
 
 #include "optimizers.hpp"
 #include <flint/flint.hpp>
+#include <memory>
 namespace LayerHelper {
 /**
  * FOR INTERNAL USE ONLY
@@ -40,7 +41,7 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
 template <unsigned int index, int n, int... wn>
 struct WeightRef<index, n, wn...> {
   Tensor<double, n> *weight = nullptr;
-  Optimizer* optimizer = nullptr;
+  std::unique_ptr<Optimizer> optimizer = nullptr;
   WeightRef<index + 1, wn...> others;
   template <unsigned int k, unsigned int f>
   void set_weight(Tensor<double, f> *w) {
@@ -51,6 +52,9 @@ struct WeightRef<index, n, wn...> {
       weight = w;
     } else
       others.template set_weight<k>(w);
+  }
+  void gen_optimizer(const OptimizerFactory* fac){
+    optimizer = std::unique_ptr<Optimizer>(fac->generate_optimizer());
   }
 };
 } // namespace LayerHelper
@@ -79,6 +83,9 @@ public:
   }
   template <int index, int dim> void set_weight(Tensor<double, dim> *t) {
     weight_refs.template set_weight<index>(t);
+  }
+  void generate_optimizer(OptimizerFactory* factory) {
+    
   }
   // TODO: Optimizer Factory is set in the Model and sets them for each layer, 
   // the layers need the capability to traverse the weights and update them

@@ -26,7 +26,7 @@ struct Optimizer {
   virtual FGraphNode *update(FGraphNode *weights, FGraphNode *gradient) = 0;
 };
 struct OptimizerFactory {
-  virtual Optimizer *generate_optimizer() = 0;
+  virtual Optimizer *generate_optimizer() const = 0;
 };
 /**
  * Implementation of the Adam algorithm (first-order gradient-based optimizer
@@ -139,8 +139,8 @@ struct Adam : public Optimizer {
   }
 
   template <int n>
-  Tensor<double, n> update(Tensor<double, n> weights,
-                           Tensor<double, n> gradient) {
+  Tensor<double, n> update(Tensor<double, n> &weights,
+                           Tensor<double, n> &gradient) {
     return Tensor<double, n>(
         update(weights.get_graph_node(), gradient.get_graph_node()),
         weights.get_shape());
@@ -156,8 +156,6 @@ struct AdamFactory : public OptimizerFactory {
   double learning_rate, b1, b2;
   AdamFactory(double learning_rate = 0.0015, double b1 = 0.9, double b2 = 0.999)
       : learning_rate(learning_rate), b1(b1), b2(b2) {}
-  Optimizer *generate_optimizer() {
-    return new Adam(learning_rate, b1, b2);
-  }
+  Optimizer *generate_optimizer() const { return new Adam(learning_rate, b1, b2); }
 };
 #endif
