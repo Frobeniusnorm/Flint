@@ -12,6 +12,8 @@
    See the License for the specific language governing permissions and
    limitations under the License. */
 
+#ifndef FLINT_LAYERS
+#define FLINT_LAYERS
 #include "optimizers.hpp"
 #include <flint/flint.hpp>
 #include <memory>
@@ -24,7 +26,7 @@ template <unsigned int index, int... w> class WeightRef {};
 
 template <unsigned int index, int n> struct WeightRef<index, n> {
   Tensor<double, n> *weight = nullptr;
-  Optimizer* optimizer = nullptr;
+  std::unique_ptr<Optimizer> optimizer = nullptr;
   template <unsigned int k, unsigned int f>
   void set_weight(Tensor<double, f> *w) {
     if (k != index)
@@ -35,6 +37,9 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
         "Could not set weight, wrong number of dimensions! Please specify your "
         "template for the Layer super class correctly!");
     weight = w;
+  }
+  void gen_optimizer(const OptimizerFactory *fac) {
+    optimizer = std::unique_ptr<Optimizer>(fac->generate_optimizer());
   }
 };
 
@@ -53,18 +58,26 @@ struct WeightRef<index, n, wn...> {
     } else
       others.template set_weight<k>(w);
   }
-  void gen_optimizer(const OptimizerFactory* fac){
+  void gen_optimizer(const OptimizerFactory *fac) {
     optimizer = std::unique_ptr<Optimizer>(fac->generate_optimizer());
+    others.gen_optimizer(fac);
   }
 };
 } // namespace LayerHelper
+/**
+ * Virtual super class to manage Layer implementations without templates
+ */
+struct GenericLayer {
+  //virtual constexpr int transform_dimensionality(int n);
+  virtual void generate_optimizer(OptimizerFactory *factory) = 0;
+};
 /**
  * Virtual super class of all Layer implementations with type safe weight
  * management capabilities. The variadic template describes the dimensionality
  * of the individual weights i.e. a `Layer<3,4,5>` has three weights:
  * `Tensor<double, 3>`, `Tensor<double, 4>`, `Tensor<double, 5>`.
  */
-template <int... wn> class Layer {
+template <int... wn> class Layer : public GenericLayer{
   LayerHelper::WeightRef<0, wn...> weight_refs;
   template <unsigned int index, unsigned int n>
   void init_weights(Tensor<double, n> *t) {
@@ -84,9 +97,8 @@ public:
   template <int index, int dim> void set_weight(Tensor<double, dim> *t) {
     weight_refs.template set_weight<index>(t);
   }
-  void generate_optimizer(OptimizerFactory* factory) {
-    
+  void generate_optimizer(OptimizerFactory *factory) {
+    weight_refs.gen_optimizer(factory);
   }
-  // TODO: Optimizer Factory is set in the Model and sets them for each layer, 
-  // the layers need the capability to traverse the weights and update them
 };
+#endif

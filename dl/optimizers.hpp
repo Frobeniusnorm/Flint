@@ -13,9 +13,9 @@
    limitations under the License. */
 #ifndef FLINT_OPTIMIZERS
 #define FLINT_OPTIMIZERS
-#include "flint.h"
 #include <cmath>
 #include <flint/flint.hpp>
+#include <flint/flint.h>
 #include <optional>
 /**
  * Optimizer interface that defines a update method.
