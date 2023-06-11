@@ -13,11 +13,46 @@
    limitations under the License. */
 #ifndef FLINT_MODELS
 #define FLINT_MODELS
-#include "optimizers.hpp"
 #include "layers.hpp"
+#include "optimizers.hpp"
+#include <flint/flint.h>
+#include <flint/flint_helper.hpp>
 #include <memory>
 #include <tuple>
 #include <vector>
+template <FType t>
+using FlintTypeToCpp = typename std::conditional<
+    t == F_INT32, int,
+    std::conditional<t == F_INT64, long,
+                     std::conditional<t == F_FLOAT32, float, double>>>::type;
+
+template <FType in, typename K> constexpr FType get_output_type() {
+  static_assert((std::is_base_of_v<GenericLayer, K>),
+                "SequentialModel only allows Layer that are derived from "
+                "GenericLayer!");
+  return K::transform_type(in);
+}
+template <FType in, typename K, typename... F>
+constexpr FType get_output_type() {
+  static_assert((std::is_base_of_v<GenericLayer, K>),
+                "SequentialModel only allows Layer that are derived from "
+                "GenericLayer!");
+  constexpr FType out = K::transform_type(in);
+  return get_output_type<out, F...>();
+}
+template <unsigned int in, typename K> constexpr unsigned int get_output_dim() {
+  static_assert((std::is_base_of_v<GenericLayer, K>),
+                "SequentialModel only allows Layer that are derived from "
+                "GenericLayer!");
+  return K::transform_dim(in);
+}
+template <int in, typename K, typename... F> constexpr int get_output_dim() {
+  static_assert((std::is_base_of_v<GenericLayer, K>),
+                "SequentialModel only allows Layer that are derived from "
+                "GenericLayer!");
+  constexpr int out = K::transform_dim(in);
+  return get_output_dim<out, F...>();
+}
 
 template <typename... T> struct SequentialModel {
   std::tuple<T...> layers;
@@ -31,12 +66,17 @@ template <typename... T> struct SequentialModel {
                   "SequentialModel only allows Layer that are derived from "
                   "GenericLayer!");
   }
-  void generate_optimizer(OptimizerFactory* fac) {
-    gen_opt<0>(fac);
+  void generate_optimizer(OptimizerFactory *fac) { gen_opt<0>(fac); }
+
+  template <typename K, unsigned int n>
+  Tensor<FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
+         get_output_dim<n, T...>()>
+  forward(Tensor<K, n> &in) {
+    // TODO
   }
+
 private:
-  template<int n>
-  void gen_opt(OptimizerFactory* fac) {
+  template <int n> void gen_opt(OptimizerFactory *fac) {
     if constexpr (n < sizeof...(T)) {
       std::get<n>(layers).generate_optimizer(fac);
       gen_opt<n + 1>(fac);

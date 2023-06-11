@@ -68,7 +68,12 @@ struct WeightRef<index, n, wn...> {
  * Virtual super class to manage Layer implementations without templates
  */
 struct GenericLayer {
-  //virtual constexpr int transform_dimensionality(int n);
+  virtual constexpr unsigned int transform_dimensionality(unsigned int n) {
+    return n;
+  }
+  virtual constexpr FType transform_type(FType t) {
+    return t;
+  }
   virtual void generate_optimizer(OptimizerFactory *factory) = 0;
 };
 /**
