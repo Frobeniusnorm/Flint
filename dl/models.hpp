@@ -20,11 +20,6 @@
 #include <memory>
 #include <tuple>
 #include <vector>
-template <FType t>
-using FlintTypeToCpp = typename std::conditional<
-    t == F_INT32, int,
-    std::conditional<t == F_INT64, long,
-                     std::conditional<t == F_FLOAT32, float, double>>>::type;
 
 template <FType in, typename K> constexpr FType get_output_type() {
   static_assert((std::is_base_of_v<GenericLayer, K>),
@@ -40,6 +35,7 @@ constexpr FType get_output_type() {
   constexpr FType out = K::transform_type(in);
   return get_output_type<out, F...>();
 }
+
 template <unsigned int in, typename K> constexpr unsigned int get_output_dim() {
   static_assert((std::is_base_of_v<GenericLayer, K>),
                 "SequentialModel only allows Layer that are derived from "
@@ -69,10 +65,16 @@ template <typename... T> struct SequentialModel {
   void generate_optimizer(OptimizerFactory *fac) { gen_opt<0>(fac); }
 
   template <typename K, unsigned int n>
-  Tensor<FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
+  Tensor<LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
          get_output_dim<n, T...>()>
   forward(Tensor<K, n> &in) {
-    // TODO
+    FGraphNode *out = forward(in);
+    constexpr unsigned int out_dim = get_output_dim<n, T...>();
+    return Tensor<
+        LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
+        out_dim>(out,
+                 std::array<size_t, out_dim>(out->operation->shape,
+                                             out->operation->shape + out_dim));
   }
 
 private:
@@ -81,6 +83,13 @@ private:
       std::get<n>(layers).generate_optimizer(fac);
       gen_opt<n + 1>(fac);
     }
+  }
+  template <int n> FGraphNode *forward(FGraphNode *in) {
+    if constexpr (n < sizeof...(T)) {
+      FGraphNode *out = std::get<n>(layers).forward(in);
+      return forward<n + 1>(out);
+    }
+    return in;
   }
 };
 #endif

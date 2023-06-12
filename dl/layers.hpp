@@ -63,6 +63,11 @@ struct WeightRef<index, n, wn...> {
     others.gen_optimizer(fac);
   }
 };
+template <FType t>
+using FlintTypeToCpp = typename std::conditional<
+    t == F_INT32, int,
+    std::conditional<t == F_INT64, long,
+                     std::conditional<t == F_FLOAT32, float, double>>>::type;
 } // namespace LayerHelper
 /**
  * Virtual super class to manage Layer implementations without templates
@@ -71,10 +76,12 @@ struct GenericLayer {
   virtual constexpr unsigned int transform_dimensionality(unsigned int n) {
     return n;
   }
-  virtual constexpr FType transform_type(FType t) {
-    return t;
-  }
+  virtual constexpr FType transform_type(FType t) { return t; }
   virtual void generate_optimizer(OptimizerFactory *factory) = 0;
+  virtual FGraphNode *forward(
+      FGraphNode
+          *input) = 0; // has to be a FGraphNode, since we would need templates
+                       // for Tensor, which would not work with inheritance
 };
 /**
  * Virtual super class of all Layer implementations with type safe weight
@@ -82,7 +89,7 @@ struct GenericLayer {
  * of the individual weights i.e. a `Layer<3,4,5>` has three weights:
  * `Tensor<double, 3>`, `Tensor<double, 4>`, `Tensor<double, 5>`.
  */
-template <int... wn> class Layer : public GenericLayer{
+template <int... wn> class Layer : public GenericLayer {
   LayerHelper::WeightRef<0, wn...> weight_refs;
   template <unsigned int index, unsigned int n>
   void init_weights(Tensor<double, n> *t) {
@@ -99,11 +106,19 @@ public:
   template <typename... args> Layer(args... weights) {
     init_weights<0>(weights...);
   }
+  // TODO: move and copy
   template <int index, int dim> void set_weight(Tensor<double, dim> *t) {
     weight_refs.template set_weight<index>(t);
   }
   void generate_optimizer(OptimizerFactory *factory) {
     weight_refs.gen_optimizer(factory);
   }
+};
+
+struct Connected : public Layer<2> {
+  Tensor<double, 2> weights;
+  Connected(size_t units_in, size_t units_out)
+      : weights(Tensor<double, 2>::random(units_in + 1, units_out)), Layer(&weights) {}
+  constexpr FType transform_type(FType t) { return F_FLOAT64; }
 };
 #endif
