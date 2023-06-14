@@ -1185,6 +1185,23 @@ FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
   std::vector<long> steps(dimensions, 1);
   return fextend_step(a, new_shape, insert_at, steps.data());
 }
+FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis) {
+  FOperation *op = new FOperation();
+  op->op_type = FCONCAT;
+  op->dimensions = a->operation->dimensions;
+  op->shape = safe_mal<size_t>(a->operation->dimensions);
+  std::memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
+  op->shape[axis] = a->operation->shape[axis] + b->operation->shape[axis];
+  for (int i = 0; i < op->dimensions; i++)
+    if (i != axis && a->operation->shape[axis] != b->operation->shape[axis])
+      flogging(F_ERROR,
+               "Concatenations of two nodes excpects both to have the same "
+               "size along every dimension except the concatenation one!");
+  op->data_type = a->operation->data_type;
+  op->additional_data = safe_mal<unsigned int>(1);
+  ((unsigned int *)op->additional_data)[0] = axis;
+  return addNode(op, {a, b});
+}
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
   const FOperation *ao = a->operation;
   const FOperation *bo = kernel->operation;

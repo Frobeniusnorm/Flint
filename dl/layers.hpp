@@ -113,6 +113,7 @@ concept GenericLayer =
  * `Tensor<double, 3>`, `Tensor<double, 4>`, `Tensor<double, 5>`.
  */
 template <int... wn> class Layer {
+protected:
   LayerHelper::WeightRef<0, wn...> weight_refs;
   template <unsigned int index, unsigned int n>
   void init_weights(Tensor<double, n> *t) {
@@ -123,7 +124,6 @@ template <int... wn> class Layer {
     weight_refs.template set_weight<index>(t);
     init_weights<index + 1>(weights...);
   }
-
 public:
   static constexpr FType transform_type(FType t) { return F_FLOAT64; }
   static constexpr unsigned int transform_dimensionality(unsigned int n) {
@@ -133,7 +133,6 @@ public:
   template <typename... args> Layer(args... weights) {
     init_weights<0>(weights...);
   }
-  // TODO: move and copy
   template <int index, int dim> void set_weight(Tensor<double, dim> *t) {
     weight_refs.template set_weight<index>(t);
   }
