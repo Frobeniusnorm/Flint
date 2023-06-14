@@ -21,46 +21,26 @@
 #include <tuple>
 #include <vector>
 
-template <FType in, typename K> constexpr FType get_output_type() {
-  static_assert((std::is_base_of_v<GenericLayer, K>),
-                "SequentialModel only allows Layer that are derived from "
-                "GenericLayer!");
+template <FType in, GenericLayer  K> constexpr FType get_output_type() {
   return K::transform_type(in);
 }
-template <FType in, typename K, typename... F>
+template <FType in, GenericLayer K, GenericLayer... F>
 constexpr FType get_output_type() {
-  static_assert((std::is_base_of_v<GenericLayer, K>),
-                "SequentialModel only allows Layer that are derived from "
-                "GenericLayer!");
   constexpr FType out = K::transform_type(in);
   return get_output_type<out, F...>();
 }
 
-template <unsigned int in, typename K> constexpr unsigned int get_output_dim() {
-  static_assert((std::is_base_of_v<GenericLayer, K>),
-                "SequentialModel only allows Layer that are derived from "
-                "GenericLayer!");
+template <unsigned int in, GenericLayer K> constexpr unsigned int get_output_dim() {
   return K::transform_dim(in);
 }
-template <int in, typename K, typename... F> constexpr int get_output_dim() {
-  static_assert((std::is_base_of_v<GenericLayer, K>),
-                "SequentialModel only allows Layer that are derived from "
-                "GenericLayer!");
-  constexpr int out = K::transform_dim(in);
+template <unsigned int in, GenericLayer K, GenericLayer... F> constexpr unsigned int get_output_dim() {
+  constexpr unsigned int out = K::transform_dim(in);
   return get_output_dim<out, F...>();
 }
 
-template <typename... T> struct SequentialModel {
+template <GenericLayer... T> struct SequentialModel {
   std::tuple<T...> layers;
-  SequentialModel() {
-    static_assert((std::is_base_of_v<GenericLayer, T> && ...),
-                  "SequentialModel only allows Layer that are derived from "
-                  "GenericLayer!");
-  }
   SequentialModel(T... layers) : layers(std::move(layers)...) {
-    static_assert((std::is_base_of_v<GenericLayer, T> && ...),
-                  "SequentialModel only allows Layer that are derived from "
-                  "GenericLayer!");
   }
   void generate_optimizer(OptimizerFactory *fac) { gen_opt<0>(fac); }
 

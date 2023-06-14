@@ -23,6 +23,7 @@
  * and optimizes only double weights (since the gradient is also always given as
  * a double Tensor). It uses the C interface for easy extensibility. */
 struct Optimizer {
+  virtual ~Optimizer() = default;
   virtual FGraphNode *update(FGraphNode *weights, FGraphNode *gradient) = 0;
 };
 struct OptimizerFactory {

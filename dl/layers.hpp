@@ -15,6 +15,7 @@
 #ifndef FLINT_LAYERS
 #define FLINT_LAYERS
 #include "optimizers.hpp"
+#include <concepts>
 #include <flint/flint.hpp>
 #include <memory>
 namespace LayerHelper {
@@ -66,30 +67,52 @@ struct WeightRef<index, n, wn...> {
 template <FType t>
 using FlintTypeToCpp = typename std::conditional<
     t == F_INT32, int,
-    std::conditional<t == F_INT64, long,
-                     std::conditional<t == F_FLOAT32, float, double>>>::type;
+    typename std::conditional<
+        t == F_INT64, long,
+        typename std::conditional<t == F_FLOAT32, float, double>::type>::type>::
+    type;
 } // namespace LayerHelper
-/**
- * Virtual super class to manage Layer implementations without templates
- */
-struct GenericLayer {
-  virtual constexpr unsigned int transform_dimensionality(unsigned int n) {
-    return n;
-  }
-  virtual constexpr FType transform_type(FType t) { return t; }
-  virtual void generate_optimizer(OptimizerFactory *factory) = 0;
-  virtual FGraphNode *forward(
-      FGraphNode
-          *input) = 0; // has to be a FGraphNode, since we would need templates
-                       // for Tensor, which would not work with inheritance
-};
+template <unsigned int> using helper = void;
+template <typename T>
+concept GenericLayer =
+    requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
+             Tensor<double, 2> &t3, Tensor<long, 2> &t4,
+             OptimizerFactory *fac) {
+      {
+        a.forward(t1)
+        } -> std::convertible_to<
+            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
+                   T::transform_dimensionality(2)>>;
+      {
+        a.forward(t2)
+        } -> std::convertible_to<
+            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT32)>,
+                   T::transform_dimensionality(2)>>;
+      {
+        a.forward(t3)
+        } -> std::convertible_to<
+            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT64)>,
+                   T::transform_dimensionality(2)>>;
+      {
+        a.forward(t4)
+        } -> std::convertible_to<
+            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT64)>,
+                   T::transform_dimensionality(2)>>;
+      a.generate_optimizer(fac);
+      { T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
+      // Has to be constexpr
+
+      { T::transform_type(F_INT32) } -> std::convertible_to<FType>;
+      // Has to be constexpr
+    };
+//    };
 /**
  * Virtual super class of all Layer implementations with type safe weight
  * management capabilities. The variadic template describes the dimensionality
  * of the individual weights i.e. a `Layer<3,4,5>` has three weights:
  * `Tensor<double, 3>`, `Tensor<double, 4>`, `Tensor<double, 5>`.
  */
-template <int... wn> class Layer : public GenericLayer {
+template <int... wn> class Layer {
   LayerHelper::WeightRef<0, wn...> weight_refs;
   template <unsigned int index, unsigned int n>
   void init_weights(Tensor<double, n> *t) {
@@ -102,6 +125,10 @@ template <int... wn> class Layer : public GenericLayer {
   }
 
 public:
+  static constexpr FType transform_type(FType t) { return F_FLOAT64; }
+  static constexpr unsigned int transform_dimensionality(unsigned int n) {
+    return n;
+  }
   Layer() = default;
   template <typename... args> Layer(args... weights) {
     init_weights<0>(weights...);
@@ -116,9 +143,19 @@ public:
 };
 
 struct Connected : public Layer<2> {
+  static constexpr FType transform_type(FType t) { return F_FLOAT64; }
   Tensor<double, 2> weights;
+
   Connected(size_t units_in, size_t units_out)
-      : weights(Tensor<double, 2>::random(units_in + 1, units_out)), Layer(&weights) {}
-  constexpr FType transform_type(FType t) { return F_FLOAT64; }
+      : Layer(&weights),
+        weights(Tensor<double, 2>::random(units_in + 1, units_out)) {}
+
+  template <typename T, unsigned int n>
+  Tensor<double, n> forward(Tensor<T, n> &in) {
+    return in.matmul(weights);
+  }
+  void generate_optimizer(OptimizerFactory *factory) {
+    Layer<2>::generate_optimizer(factory);
+  }
 };
 #endif
