@@ -894,7 +894,23 @@
       Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
       Tensor<float, 2> t2{{0, 0}, {3.141592, 42}};
       Tensor<float, 2> c1 = Flint::concat(t1, t2, 0); 
-      std::cout << c1() << std::endl;
+      for (int i = 0; i < 6; i++) {
+        for (int j = 0; j < 2; j++)
+          if (i < 4)
+            CHECK_EQ(t1[i][j], c1[i][j]);
+          else
+            CHECK_EQ(t2[i-4][j], c1[i][j]);
+      }
+      Tensor<float, 2> t3{{1, 2, 3, 4}, {5, 6, 7, 8}};
+      Tensor<float, 2> c2 = Flint::concat(t2, t3, 1);
+      for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 6; j++) {
+          if (j < 2)
+            CHECK_EQ(t2[i][j], c2[i][j]);
+          else
+            CHECK_EQ(t3[i][j-2], c2[i][j]);
+        }
+      }
     }
     TEST_CASE("Saving and Loading to files") {
       Tensor<double, 3> a = Tensor<double, 3>::constant(3.0, 9, 4, 1);
