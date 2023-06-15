@@ -1193,7 +1193,7 @@ FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis) {
   std::memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
   op->shape[axis] = a->operation->shape[axis] + b->operation->shape[axis];
   for (int i = 0; i < op->dimensions; i++)
-    if (i != axis && a->operation->shape[axis] != b->operation->shape[axis])
+    if (i != axis && a->operation->shape[i] != b->operation->shape[i])
       flogging(F_ERROR,
                "Concatenations of two nodes excpects both to have the same "
                "size along every dimension except the concatenation one!");

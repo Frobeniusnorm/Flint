@@ -1375,4 +1375,13 @@ struct Flint {
    * allows them to shutdown their threads.
    */
   static void cleanup() { flintCleanup(); }
+  
+  template <typename K, unsigned int n>
+  static Tensor<K, n> concat(const Tensor<K, n>& a, const Tensor<K, n>& b, unsigned int ax) {
+    FGraphNode* c = fconcat(a.get_graph_node(), b.get_graph_node(), ax);
+    std::array<size_t, n> ns;
+    for (int i = 0; i < n; i++)
+      ns[i] = c->operation->shape[i];
+    return Tensor<K, n>(c, ns);
+  }
 }; // namespace Flint

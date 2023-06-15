@@ -697,7 +697,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
  * - `insert_at` array with indices per dimension denoting where `a` is to be
  *    placed in the resulting tensor
  */
-FGraphNode *fextend(FGraphNode *a,  const size_t *new_shape,
+FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
                     const size_t *insert_at);
 /**
  * Creates a new tensor of zeroes with the requested shape. The original tensor
@@ -715,11 +715,13 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
 /**
  * Concats two nodes with each other along an axis.
  * The nodes have to have the same type and dimensions.
- * e.g. `fconcat({[[0, 1], [2, 3]], [[4, 5], [6, 7]]}, 0) = [[0, 1], [2, 3], [4, 5], [6, 7]]`
+ * e.g. `fconcat({[[0, 1], [2, 3]], [[4, 5], [6, 7]]}, 0) = [[0, 1], [2, 3], [4,
+ * 5], [6, 7]]`
  *
- * `fconcat({[[0, 1], [2, 3]], [[4, 5], [6, 7]]}, 1) = [[0, 1, 4, 5], [2, 3, 6, 7]]`
+ * `fconcat({[[0, 1], [2, 3]], [[4, 5], [6, 7]]}, 1) = [[0, 1, 4, 5], [2, 3, 6,
+ * 7]]`
  */
-FGraphNode *fconcat(FGraphNode **nodes, const unsigned int axis);
+FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis);
 /** Takes the elementwise absolute value of `a`, i.e. `|a[i]|` */
 FGraphNode *fabs_g(FGraphNode *a);
 /** Repeats dimensions of a tensor multiple times

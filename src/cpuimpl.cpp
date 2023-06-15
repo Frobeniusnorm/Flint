@@ -119,6 +119,31 @@ static void binaryExpression(T *__restrict__ result,
       }
     }
   } break;
+  case FCONCAT: {
+    FGraphNode *a = curr->predecessors[0];
+    FGraphNode *b = curr->predecessors[1];
+    unsigned int ax = ((unsigned int *)curr->operation->additional_data)[0];
+    size_t acc_size = 1;
+    for (int i = curr->operation->dimensions - 2; i >= (int)ax; i--) {
+      acc_size *= curr->operation->shape[i + 1];
+    }
+    size_t acc_size_a = acc_size * a->operation->shape[ax];
+    size_t acc_size_b = acc_size * b->operation->shape[ax];
+
+    for (size_t index = from; index < from + size; index++) {
+      size_t sx = index / acc_size;
+      if (sx < a->operation->shape[ax]) {
+        // reproject for a
+        size_t ai = (index / (acc_size * curr->operation->shape[ax])) * acc_size_a + (index % (acc_size * curr->operation->shape[ax])) * acc_size;
+
+        result[index] = data1[ai];
+      } else {
+        // reproject for a
+        size_t bi = 0;
+        result[index] = 1;
+      }
+    }
+  } break;
   case FGRADIENT_CONVOLVE: {
     const FOperation *op = curr->operation;
     const FGraphNode *gnp1 = curr->predecessors[0],
@@ -895,7 +920,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
   list<FGraphNode *> workList;  // traverse bottom up
   list<FGraphNode *> toExecute; // in top down order
   workList.push_front(node);
-  const bool is_gpu_backend = flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU;
+  const bool is_gpu_backend =
+      flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU;
   // collect nodes
   while (!workList.empty()) {
     FGraphNode *curr = workList.front();

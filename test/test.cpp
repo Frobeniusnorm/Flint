@@ -890,6 +890,12 @@
       r1 = t1.flattened().reduce_mul();
       CHECK_EQ(r1[0], -2);
     }
+    TEST_CASE("Concat") {
+      Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
+      Tensor<float, 2> t2{{0, 0}, {3.141592, 42}};
+      Tensor<float, 2> c1 = Flint::concat(t1, t2, 0); 
+      std::cout << c1() << std::endl;
+    }
     TEST_CASE("Saving and Loading to files") {
       Tensor<double, 3> a = Tensor<double, 3>::constant(3.0, 9, 4, 1);
       Tensor<float, 2> b {{1}, {-1}, {2}, {-2}};
