@@ -261,6 +261,19 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
            kernel_name});
     }
   } break;
+  case FCONCAT: {
+    std::string kernel_name;
+    for (FType param : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
+      code += generateEagerCode(node->operation->op_type, param, {param, param},
+                                kernel_name);
+      if (param == node->predecessors[0]->operation->data_type)
+        our_kernel = kernel_name;
+      all_kernels.push_back(
+          {OCLCompilerThread::generateKernelHash(node->operation->op_type,
+                                                 param, {param, param}),
+           kernel_name});
+    }
+  } break;
   default: {
     std::vector<std::vector<FType>> par_poss =
         allTypePermutations(node->num_predecessor);
@@ -431,6 +444,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
         flogging(F_ERROR, "Could not load Argument to kernel!");
     }
   } break;
+  case FCONCAT:
   case FGEN_RANDOM:
   case FGRADIENT_CONVOLVE:
   case FSLIDE:
@@ -508,7 +522,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
         flogging(F_ERROR, msg + std::to_string(err_code));
       }
     }
-    flogging(F_DEBUG, std::to_string((long)mem_obj));
     if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&mem_obj) !=
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
@@ -754,6 +767,31 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
   } break;
+  case FCONCAT: {
+    // acc_size_last, shape_ax, a_shape_ax, b_shape_ax, ax
+    FGraphNode *a = node->predecessors[0];
+    FGraphNode *b = node->predecessors[1];
+    unsigned int ax = ((unsigned int *)node->operation->additional_data)[0];
+    size_t acc_size_last = 1;
+    for (int i = node->operation->dimensions - 2; i >= (int)ax; i--) {
+      acc_size_last *= node->operation->shape[i + 1];
+    }
+    if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                       (void *)&acc_size_last) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                       (void *)&(node->operation->shape[ax])) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                       (void *)&a->operation->shape[ax]) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                       (void *)&b->operation->shape[ax]) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)&ax) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  } break;
   case FGRADIENT_CONVOLVE:
   case FSLIDE: {
     bool is_slide = node->operation->op_type == FSLIDE;
@@ -993,9 +1031,7 @@ cl_kernel OCLCompilerThread::lazy_compile(FGraphNode *node, std::string code) {
   OCLCompilerThread::kernel_cache.insert({code, {prog, kernel}});
   return kernel;
 }
-void OCLCompilerThread::memory_barrier() {
-  clFinish(clqueue);
-}
+void OCLCompilerThread::memory_barrier() { clFinish(clqueue); }
 FResultData *fSyncMemory(FGraphNode *node) {
   if (node->result_data && node->result_data->data)
     return node->result_data;

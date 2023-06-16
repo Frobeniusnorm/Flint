@@ -127,19 +127,18 @@ static void binaryExpression(T *__restrict__ result,
     for (int i = curr->operation->dimensions - 2; i >= (int)ax; i--) {
       acc_size_last *= curr->operation->shape[i + 1];
     }
-    size_t acc_size = acc_size_last * curr->operation->shape[ax];
-
     for (size_t index = from; index < from + size; index++) {
       size_t sx = index / acc_size_last;
       size_t sc = ax > 0 ? sx % curr->operation->shape[ax] : sx;
       // reproject to one of the tensors
       if (sc < a->operation->shape[ax]) {
-        size_t ai = (sx / curr->operation->shape[ax]) * acc_size_last * a->operation->shape[ax] +
-                    sc * acc_size_last +
-                    index % acc_size_last;
+        size_t ai = (sx / curr->operation->shape[ax]) * acc_size_last *
+                        a->operation->shape[ax] +
+                    sc * acc_size_last + index % acc_size_last;
         result[index] = data1[ai];
       } else {
-        size_t bi = (sx / curr->operation->shape[ax]) * acc_size_last * b->operation->shape[ax] +
+        size_t bi = (sx / curr->operation->shape[ax]) * acc_size_last *
+                        b->operation->shape[ax] +
                     (sc - a->operation->shape[ax]) * acc_size_last +
                     index % acc_size_last;
         result[index] = data2[bi];

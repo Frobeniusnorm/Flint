@@ -147,8 +147,10 @@ generateCode(FGraphNode *node,
 
       } break;
       case FGEN_RANDOM: {
-        code = type + " " + name + " = 0;\n{\n " + name + " = sin(index + time) * 43758.5453123;\n " 
-              + name + " = min(" + name + " - floor(" + name + "), 0.99999);\n"
+        code = type + " " + name + " = 0;\n{\n " + name +
+               " = sin(index + time) * 43758.5453123;\n " + name + " = min(" +
+               name + " - floor(" + name +
+               "), 0.99999);\n"
                "}\n";
         additional_params.insert("time");
       } break;
@@ -852,6 +854,14 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   case FGEN_RANDOM: {
     code += ", const long num_entriesR, const double time";
   } break;
+  case FCONCAT: {
+    code += ", const long num_entriesR, const __global " +
+            typeString(parameter_types[0]) + "* P0, const long num_entries0, const __global " +
+            typeString(parameter_types[1]) +
+            "* P1, const long num_entries1, const long acc_size_last,"
+            "const long shape_ax, const long a_shape_ax, const long "
+            "b_shape_ax, const int ax";
+  } break;
   case FSLIDE: {
     // acc_sizes, acc_sizes_pred, acc_sizes_kernel, steps
     code += ", const long num_entriesR, const __global " +
@@ -1111,6 +1121,20 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             " if(inv) di = pred_shape[d] - di - 1;\n"
             " j += di * acc_sizes_pred[d];\n}\n"
             "R[index] = set_zero ? 0 : P0[j];";
+    break;
+  case FCONCAT:
+    code += "if(index >= num_entriesR) return;\n"
+            "long sx = index / acc_size_last;\n"
+            "long sc = ax > 0 ? sx % shape_ax : sx;\n"
+            "if(sc < a_shape_ax){\n"
+            " long ai = (sx / shape_ax) * acc_size_last * a_shape_ax + sc * "
+            "acc_size_last + index % acc_size_last;\n"
+            " R[index] = P0[ai];\n"
+            "}else{\n"
+            " long bi = (sx / shape_ax) * acc_size_last * b_shape_ax + (sc - a_shape_ax) * "
+            "acc_size_last + index % acc_size_last;\n"
+            " R[index] = P1[bi];\n"
+            "}";
     break;
   case FCONVOLVE:
     code +=
