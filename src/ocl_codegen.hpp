@@ -146,6 +146,42 @@ generateCode(FGraphNode *node,
                " > v" + to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
 
       } break;
+      case FCONCAT: {
+        FGraphNode *a = node->predecessors[0];
+        FGraphNode *b = node->predecessors[1];
+        unsigned int old_idx = num_indices++;
+        unsigned int ax = ((unsigned int *)node->operation->additional_data)[0];
+        size_t acc_size_last = 1;
+        for (int i = node->operation->dimensions - 2; i >= (int)ax; i--) {
+          acc_size_last *= node->operation->shape[i + 1];
+        }
+        index_defs += "long old_index" + to_string(old_idx) + " = index;\n";
+        std::string sx = "index / " + to_string(acc_size_last);
+        std::string sc =
+            ax > 0 ? "(" + sx + ") % " + to_string(node->operation->shape[ax])
+                   : sx;
+        std::string if_em = sc + " < " + to_string(a->operation->shape[ax]);
+        index_defs += "index = " + if_em +
+                      " ? "
+                      "(" +
+                      sx + " / " + to_string(node->operation->shape[ax]) +
+                      ") * " +
+                      to_string(acc_size_last * a->operation->shape[ax]) +
+                      " + (" + sc + ") * " + to_string(acc_size_last) +
+                      " + index % " + to_string(acc_size_last) + ": (" + sx +
+                      " / " + to_string(node->operation->shape[ax]) + ") * " +
+                      to_string(acc_size_last * b->operation->shape[ax]) +
+                      " + (" + sc + " - " + to_string(a->operation->shape[ax]) +
+                      ") * " + to_string(acc_size_last) + " + index % " +
+                      to_string(acc_size_last) + ";\n";
+
+        code = type + " " + name + " = " + if_em + " ? v" +
+               to_string(variable_index + 1) + " : " +
+               to_string(variable_index + 2) +
+               ";\n"
+               "index = old_index" +
+               to_string(old_idx) + ";\n" + code;
+      } break;
       case FGEN_RANDOM: {
         code = type + " " + name + " = 0;\n{\n " + name +
                " = sin(index + time) * 43758.5453123;\n " + name + " = min(" +
@@ -856,7 +892,8 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   } break;
   case FCONCAT: {
     code += ", const long num_entriesR, const __global " +
-            typeString(parameter_types[0]) + "* P0, const long num_entries0, const __global " +
+            typeString(parameter_types[0]) +
+            "* P0, const long num_entries0, const __global " +
             typeString(parameter_types[1]) +
             "* P1, const long num_entries1, const long acc_size_last,"
             "const long shape_ax, const long a_shape_ax, const long "
@@ -1131,7 +1168,8 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "acc_size_last + index % acc_size_last;\n"
             " R[index] = P0[ai];\n"
             "}else{\n"
-            " long bi = (sx / shape_ax) * acc_size_last * b_shape_ax + (sc - a_shape_ax) * "
+            " long bi = (sx / shape_ax) * acc_size_last * b_shape_ax + (sc - "
+            "a_shape_ax) * "
             "acc_size_last + index % acc_size_last;\n"
             " R[index] = P1[bi];\n"
             "}";
