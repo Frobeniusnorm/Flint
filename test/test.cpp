@@ -911,12 +911,13 @@
             CHECK_EQ(t3[i][j-2], c2[i][j]);
         }
       }
-      Tensor<double, 2> t4 = t3.convert<double>() + t2.flattened();
+      Tensor<float, 1> t7 = t2.slice(TensorRange(1)).flattened().repeat(1);
+      Tensor<double, 2> t4 = t3.convert<double>() + t7;
       Tensor<double, 2> t5 = t4 - t3;
       Tensor<double, 2> t6 = Flint::concat(t4, t5, 0);
       for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
-          CHECK_EQ(t6[i][j], (i >= 2) ? t2[j / 2][j % 2] : t3[i][j] + t2[j/2][j % 2]);
+          CHECK_EQ(doctest::Approx(t6[i][j]).epsilon(0.00001), (i >= 2) ? (j%2 == 0 ? 3.141592 : 42) : t3[i][j] + (j%2 == 0 ? 3.141592 : 42));
         }
       }
     }
