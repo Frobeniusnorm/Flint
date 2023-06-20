@@ -161,26 +161,22 @@ generateCode(FGraphNode *node,
             ax > 0 ? "(" + sx + ") % " + to_string(node->operation->shape[ax])
                    : sx;
         std::string if_em = sc + " < " + to_string(a->operation->shape[ax]);
-        index_defs += "index = " + if_em +
-                      " ? "
-                      "(" +
-                      sx + " / " + to_string(node->operation->shape[ax]) +
-                      ") * " +
-                      to_string(acc_size_last * a->operation->shape[ax]) +
-                      " + (" + sc + ") * " + to_string(acc_size_last) +
-                      " + index % " + to_string(acc_size_last) + ": (" + sx +
-                      " / " + to_string(node->operation->shape[ax]) + ") * " +
-                      to_string(acc_size_last * b->operation->shape[ax]) +
-                      " + (" + sc + " - " + to_string(a->operation->shape[ax]) +
-                      ") * " + to_string(acc_size_last) + " + index % " +
-                      to_string(acc_size_last) + ";\n";
-
-        code = type + " " + name + " = " + if_em + " ? v" +
-               to_string(variable_index + 1) + " : " +
-               to_string(variable_index + 2) +
-               ";\n"
-               "index = old_index" +
-               to_string(old_idx) + ";\n" + code;
+        index_defs +=
+            "index = " + if_em +
+            " ? "
+            "(" +
+            sx + " / " + to_string(node->operation->shape[ax]) + ") * " +
+            to_string(acc_size_last * a->operation->shape[ax]) + " + (" + sc +
+            ") * " + to_string(acc_size_last) + " + (index % " +
+            to_string(acc_size_last) + "): (" + sx + " / " +
+            to_string(node->operation->shape[ax]) + ") * " +
+            to_string(acc_size_last * b->operation->shape[ax]) + " + ((" + sc +
+            ") - " + to_string(a->operation->shape[ax]) + ") * " +
+            to_string(acc_size_last) + " + (index % " +
+            to_string(acc_size_last) + ");\n";
+        code = "index = old_index" + to_string(old_idx) + ";\n" + type + " " +
+               name + " = " + if_em + " ? v" + to_string(variable_index + 1) +
+               " : v" + to_string(variable_index + 2) + ";\n" + code;
       } break;
       case FGEN_RANDOM: {
         code = type + " " + name + " = 0;\n{\n " + name +
