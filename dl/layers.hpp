@@ -124,6 +124,7 @@ protected:
     weight_refs.template set_weight<index>(t);
     init_weights<index + 1>(weights...);
   }
+
 public:
   static constexpr FType transform_type(FType t) { return F_FLOAT64; }
   static constexpr unsigned int transform_dimensionality(unsigned int n) {
@@ -151,7 +152,10 @@ struct Connected : public Layer<2> {
 
   template <typename T, unsigned int n>
   Tensor<double, n> forward(Tensor<T, n> &in) {
-    return in.matmul(weights);
+    std::array<size_t, n> one_shape = in.get_shape();
+    one_shape[n - 1] = 1;
+    Tensor<T, n> ones = Tensor<T, n>::constant(1, one_shape);
+    return Flint::concat(in, ones, n - 1).matmul(weights);
   }
   void generate_optimizer(OptimizerFactory *factory) {
     Layer<2>::generate_optimizer(factory);
