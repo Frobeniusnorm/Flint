@@ -911,6 +911,14 @@
             CHECK_EQ(t3[i][j-2], c2[i][j]);
         }
       }
+      Tensor<double, 2> t4 = t3.convert<double>() + t2.flattened();
+      Tensor<double, 2> t5 = t4 - t3;
+      Tensor<double, 2> t6 = Flint::concat(t4, t5, 0);
+      for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+          CHECK_EQ(t6[i][j], (i >= 2) ? t2[j / 2][j % 2] : t3[i][j] + t2[j/2][j % 2]);
+        }
+      }
     }
     TEST_CASE("Saving and Loading to files") {
       Tensor<double, 3> a = Tensor<double, 3>::constant(3.0, 9, 4, 1);
