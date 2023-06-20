@@ -158,42 +158,6 @@ template <typename T, unsigned int n> struct Tensor {
     }
   }
   /**
-   * Generates a Tensor containing the single given value in every entry.
-   * The resulting Tensor will have a dimensionality of `sizeof...(args)` and a
-   * shape denoted by each entry in `sizes`. e.g.
-   * @code{
-   * Tensor<double, 3> foo = Tensor<double, 3>::constant(3.141592, 2, 2, 2);
-   * std::cout << foo << std::endl;
-   * // Tensor<FLOAT64, shape: [2, 2, 2]>(
-   * // [[[3.141592, 3.141592],
-   * //  [3.141592, 3.141592]],
-   * // [[3.141592, 3.141592],
-   * //  [3.141592, 3.141592]]])
-   * }
-   */
-  static Tensor<T, n> constant(T value, std::array<size_t, n> shape) {
-    FGraphNode *node = fconstant(value, shape.data(), n);
-    return Tensor(node, shape);
-  }
-  template <typename... args>
-  static Tensor<T, n> constant(T value, args... sizes) {
-    constexpr size_t dimensions = sizeof...(args);
-    std::array<size_t, dimensions> shape{static_cast<size_t>(sizes)...};
-    return constant(value, shape);
-  }
-  /**
-   * Creates a Tensor filled with random values in [0, 1) with the requested
-   * shape in sizes.
-   */
-  template <typename... args> static Tensor<double, n> random(args... sizes) {
-    static_assert(std::is_same<T, double>(),
-                  "Can only generate random double Tensors!");
-    constexpr size_t dimensions = sizeof...(args);
-    std::array<size_t, dimensions> shape{static_cast<size_t>(sizes)...};
-    FGraphNode *node = frandom(shape.data(), dimensions);
-    return Tensor(node, shape);
-  }
-  /**
    * Retrieves the data of the current node and converts it into a
    * multidimensional vector. Executes the node if necessary (if it was not
    * executed prior). This operation has to duplicate the complete data.
@@ -1383,5 +1347,53 @@ struct Flint {
     for (int i = 0; i < n; i++)
       ns[i] = c->operation->shape[i];
     return Tensor<K, n>(c, ns);
+  }
+  /**
+   * Creates a Tensor filled with random values in [0, 1) with the requested
+   * shape in sizes.
+   */
+  template <typename... args> static Tensor<double, sizeof...(args)> random(args... sizes) {
+    constexpr size_t dimensions = sizeof...(args);
+    std::array<size_t, dimensions> shape{static_cast<size_t>(sizes)...};
+    FGraphNode *node = frandom(shape.data(), dimensions);
+    return Tensor<double, dimensions>(node, shape);
+  }
+  /**
+   * Generates a Tensor containing the single given value in every entry.
+   * The resulting Tensor will have a dimensionality of `sizeof...(args)` and a
+   * shape denoted by each entry in `sizes`. e.g.
+   * @code{
+   * Tensor<double, 3> foo = Tensor<double, 3>::constant(3.141592, 2, 2, 2);
+   * std::cout << foo << std::endl;
+   * // Tensor<FLOAT64, shape: [2, 2, 2]>(
+   * // [[[3.141592, 3.141592],
+   * //  [3.141592, 3.141592]],
+   * // [[3.141592, 3.141592],
+   * //  [3.141592, 3.141592]]])
+   * }
+   */
+  template <typename T, unsigned int n>
+  static Tensor<T, n> constant(T value, std::array<size_t, n> shape) {
+    FGraphNode *node = fconstant(value, shape.data(), n);
+    return Tensor<T, n>(node, shape);
+  }
+  /**
+   * Generates a Tensor containing the single given value in every entry.
+   * The resulting Tensor will have a dimensionality of `sizeof...(args)` and a
+   * shape denoted by each entry in `sizes`. e.g.
+   * @code{
+   * Tensor<double, 3> foo = Tensor<double, 3>::constant(3.141592, 2, 2, 2);
+   * std::cout << foo << std::endl;
+   * // Tensor<FLOAT64, shape: [2, 2, 2]>(
+   * // [[[3.141592, 3.141592],
+   * //  [3.141592, 3.141592]],
+   * // [[3.141592, 3.141592],
+   * //  [3.141592, 3.141592]]])
+   * }
+   */
+  template <typename T, typename... args>
+  static Tensor<T, sizeof...(args)> constant(T value, args... sizes) {
+    std::array<size_t, sizeof...(args)> shape{static_cast<size_t>(sizes)...};
+    return constant<T, sizeof...(args)>(value, shape);
   }
 }; // namespace Flint

@@ -402,7 +402,7 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(0, dw[1][1][1][0]);
     CHECK_EQ(0, dw[1][1][1][1]);
     CHECK_EQ(0, dw[1][1][1][2]);
-    Tensor<double, 3> a = Tensor<double, 3>::constant(1.0, 6, 6, 1);
+    Tensor<double, 3> a = Flint::constant(1.0, 6, 6, 1);
     a.watch();
     Tensor<double, 3> b {{{1}, {-1}, {2}, {2}}, {{2}, {3}, {-1}, {4}}};
     Tensor<double, 2> c = a.convolve(b, 5, 2);

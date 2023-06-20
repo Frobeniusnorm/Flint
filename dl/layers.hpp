@@ -148,13 +148,13 @@ struct Connected : public Layer<2> {
 
   Connected(size_t units_in, size_t units_out)
       : Layer(&weights),
-        weights(Tensor<double, 2>::random(units_in + 1, units_out)) {}
+        weights(Flint::random(units_in + 1, units_out)) {}
 
   template <typename T, unsigned int n>
   Tensor<double, n> forward(Tensor<T, n> &in) {
     std::array<size_t, n> one_shape = in.get_shape();
     one_shape[n - 1] = 1;
-    Tensor<T, n> ones = Tensor<T, n>::constant(1, one_shape);
+    Tensor<T, n> ones = Flint::constant<T, n>(1, one_shape);
     return Flint::concat(in, ones, n - 1).matmul(weights);
   }
   void generate_optimizer(OptimizerFactory *factory) {

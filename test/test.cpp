@@ -922,7 +922,7 @@
       }
     }
     TEST_CASE("Saving and Loading to files") {
-      Tensor<double, 3> a = Tensor<double, 3>::constant(3.0, 9, 4, 1);
+      Tensor<double, 3> a = Flint::constant(3.0, 9, 4, 1);
       Tensor<float, 2> b {{1}, {-1}, {2}, {-2}};
       Tensor<double, 3> c = a + b;
       std::ofstream ofile;
