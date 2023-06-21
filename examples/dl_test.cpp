@@ -11,12 +11,12 @@ int main() {
                       {{-1, -2}, {-3, -4}, {-5, -6}}};
   auto m =
       SequentialModel<Connected, Connected>{Connected(2, 4), Connected(4, 2)};
-  AdamFactory adam(0.1);
+  AdamFactory adam(0.001, 0.95);
   m.generate_optimizer(&adam);
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < 10000; i++) {
     fStartGradientContext();
     Tensor<double, 3> o =
-        ((t1 + (t1.slice(TensorRange(0, 1), TensorRange(0, 1), TensorRange(TensorRange::MAX_SCOPE, TensorRange::MAX_SCOPE, -1)).flattened())) -
+        ((t1 * (t1.slice(TensorRange(0, 1), TensorRange(0, 1), TensorRange(TensorRange::MAX_SCOPE, TensorRange::MAX_SCOPE, -1)).flattened())) -
          m.forward(t1))
             .abs();
     fStopGradientContext();
