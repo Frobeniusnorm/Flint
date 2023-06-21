@@ -17,6 +17,7 @@
 #include "utils.hpp"
 #include <cmath>
 #include <cstring>
+#include <flint/flint.h>
 #include <iostream>
 #include <list>
 #include <stdlib.h>
@@ -221,6 +222,7 @@ void fFreeGraph(FGraphNode *graph) {
   std::list<FGraphNode *> wq;
   all.insert(graph);
   wq.push_back(graph);
+  OCLCompilerThread::memory_barrier();
   while (!wq.empty()) {
     FGraphNode *gn = wq.front();
     wq.pop_front();
@@ -246,6 +248,7 @@ void fFreeGraph(FGraphNode *graph) {
         free(rd->data);
       if (rd->mem_id)
         clReleaseMemObject(rd->mem_id);
+      rd->mem_id = nullptr;
       delete rd;
     }
     if (gn->predecessors != NULL && gn->num_predecessor != 0)
@@ -259,8 +262,10 @@ void fFreeGraph(FGraphNode *graph) {
           FStore *st = (FStore *)gn->operation->additional_data;
           if (!freed_res) {
             free(st->data);
-            if (st->mem_id)
+            if (st->mem_id) {
               clReleaseMemObject(st->mem_id);
+              st->mem_id = nullptr;
+            }
           }
           delete st;
         } break;
@@ -295,8 +300,9 @@ static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
   }
   return eager_execution ? execute_eagerly(foo) : foo;
 }
-FGraphNode *fCopyGraph(const FGraphNode *node) {
+FGraphNode *fCopyGraph(FGraphNode *node) {
   FGraphNode *foo = new FGraphNode();
+  fSyncMemory(node);
   // predecessors
   foo->result_data = nullptr;
   if (node->result_data) {
@@ -306,6 +312,8 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
     crd->mem_id = nullptr;
     crd->num_entries = ord->num_entries;
     if (!ord->data) {
+      if (!ord->mem_id)
+        flogging(F_ERROR, "Result Data has no result data!");
       crd->mem_id = OCLCompilerThread::copy_memory(
           ord->mem_id, ord->num_entries * typeSize(node->operation->data_type),
           CL_MEM_READ_ONLY);
@@ -384,16 +392,28 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
       csl->end = osl->end;
       csl->step = osl->step;
     } break;
+    case FCONCAT:
     case FREDUCE_SUM:
     case FREDUCE_MUL: {
       op->additional_data = safe_mal<int>(1);
       ((int *)op->additional_data)[0] =
           ((int *)node->operation->additional_data)[0];
-    }
+    } break;
+    case FGRADIENT_CONVOLVE:
+    case FSLIDE: {
+      op->additional_data = safe_mal<unsigned int>(op->dimensions - 1);
+      memcpy(op->additional_data, node->operation->additional_data,
+             (op->dimensions - 1) * sizeof(unsigned int));
+    } break;
+    case FCONVOLVE: {
+      op->additional_data = safe_mal<unsigned int>(op->dimensions);
+      memcpy(op->additional_data, node->operation->additional_data,
+             op->dimensions * sizeof(unsigned int));
+    } break;
     default:
       break;
     }
-    if (src && data) {
+    if (data) {
       size_t byte_size = num_entries;
       switch (op->data_type) {
       case F_INT32:

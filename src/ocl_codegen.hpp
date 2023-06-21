@@ -183,7 +183,7 @@ generateCode(FGraphNode *node,
                " = sin(index + time) * 43758.5453123;\n " + name + " = min(" +
                name + " - floor(" + name +
                "), 0.99999);\n"
-               "}\n";
+               "}\n" + code;
         additional_params.insert("time");
       } break;
       case FGRADIENT_CONVOLVE: {

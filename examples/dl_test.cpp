@@ -4,8 +4,8 @@
 #include <flint/flint.hpp>
 #include <flint/flint_helper.hpp>
 int main() {
-  flintInit(FLINT_BACKEND_ONLY_GPU);
-  Flint::setLoggingLevel(F_DEBUG);
+  FlintContext _(FLINT_BACKEND_ONLY_GPU);
+  Flint::setLoggingLevel(F_VERBOSE);
   Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
                       {{5, 6}, {7, 8}, {9, 0}},
                       {{-1, -2}, {-3, -4}, {-5, -6}}};
@@ -24,5 +24,4 @@ int main() {
     std::cout << e << std::endl;
     m.optimize(o);
   }
-  flintCleanup();
 }

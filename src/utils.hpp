@@ -194,7 +194,6 @@ template <typename T> static constexpr FType toFlintType() {
   return F_INT32;
 }
 inline void freeAdditionalData(FGraphNode *gn) {
-
   switch (gn->operation->op_type) {
   case FSLICE: {
     FSlice *s = (FSlice *)gn->operation->additional_data;
@@ -209,6 +208,7 @@ inline void freeAdditionalData(FGraphNode *gn) {
     free(s->step);
     delete s;
   } break;
+  case FCONCAT:
   case FCONVOLVE:
   case FSLIDE:
   case FGRADIENT_CONVOLVE:

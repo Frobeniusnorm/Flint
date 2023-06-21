@@ -248,7 +248,8 @@ struct TensorRange {
       : start(start), end(end), step(step) {}
 };
 /**
- *
+ * Starts a gradient context on construction and stops it on destruction.
+ * See `fStartGradientContext` and `fStopGradientContext`
  */
 struct GradientContext {
   GradientContext () {
@@ -256,6 +257,21 @@ struct GradientContext {
   }
   ~GradientContext () {
     fStopGradientContext();
+  }
+};
+/**
+ * Initializes Flint on construction and cleans it up on destruction.
+ * See `flintInit` and `flintCleanup`
+ */
+struct FlintContext {
+  FlintContext () {
+    flintInit(FLINT_BACKEND_BOTH);
+  }
+  FlintContext (int backends) {
+    flintInit(backends);
+  }
+  ~FlintContext() {
+    flintCleanup();
   }
 };
 #endif

@@ -324,7 +324,7 @@ void fFreeGraph(FGraphNode *graph);
 /** Copies the graph node, the corresponding operation and additional data and
  * the predecessors (their `FGraphNode.reference_counter` is
  * incremented) */
-FGraphNode *fCopyGraph(const FGraphNode *graph);
+FGraphNode *fCopyGraph(FGraphNode *graph);
 /** Executes the graph node operations from all yet to be executed predecessors
  * to `node` and returns a node with a `FResultData` operation in
  * which the resulting data is stored.

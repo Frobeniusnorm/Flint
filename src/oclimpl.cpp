@@ -1033,6 +1033,7 @@ cl_kernel OCLCompilerThread::lazy_compile(FGraphNode *node, std::string code) {
 }
 void OCLCompilerThread::memory_barrier() { clFinish(clqueue); }
 FResultData *fSyncMemory(FGraphNode *node) {
+  void** store_data = nullptr;
   if (node->result_data && node->result_data->data)
     return node->result_data;
   if (node->operation->op_type == FSTORE) {
@@ -1045,12 +1046,15 @@ FResultData *fSyncMemory(FGraphNode *node) {
       node->result_data->mem_id = store->mem_id;
     if (!node->result_data->data)
       node->result_data->data = store->data;
+    store_data = &store->data;
   }
   FResultData *res = node->result_data;
   if (res && res->mem_id && !res->data) {
     // read result to cpu
     int type_size_node = typeSize(node->operation->data_type);
     res->data = malloc(res->num_entries * type_size_node);
+    if (store_data)
+      *store_data = res->data;
     res->num_entries = res->num_entries;
     if (!node->result_data->data)
       flogging(F_ERROR, "Not enough memory to store result!");
