@@ -171,6 +171,9 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       return nullptr;
     }
   }
+  case FCONCAT: {
+    // TODO
+  }
   case FSLIDE:
   case FCONVOLVE: {
     FGraphNode *a = y->predecessors[0];
@@ -483,6 +486,7 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     return constant_tensor(0.0, F_FLOAT64, y->operation->shape,
                            y->operation->dimensions);
   default:
+    flogging(F_WARNING, "No gradient function exists!");
     return nullptr;
   }
 }

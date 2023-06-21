@@ -19,6 +19,11 @@ template <typename T, unsigned int n> struct Tensor {
   // storage type is the vector of the recursive type
   typedef std::vector<typename Tensor<T, n - 1>::storage_type> storage_type;
   typedef std::initializer_list<typename Tensor<T, n - 1>::init_type> init_type;
+  /** 
+   * Uninitialized Tensor
+   */
+  Tensor() : node(nullptr) {
+  }
   /**
    * Creates a Tensor from a `n`-times nested `std::initializer_list`
    * (`init_type` is a recursive defined type definition).
@@ -1253,7 +1258,7 @@ template <typename T, unsigned int n> struct Tensor {
    * construction of this Tensor.
    */
   template <typename K, unsigned int k>
-  Tensor<double, k> gradient(const Tensor<K, k> &dx) {
+  Tensor<double, k> gradient(const Tensor<K, k> &dx) const {
     return Tensor<double, k>(fCalculateGradient(this->node, dx.node), dx.shape);
   }
   /** Watches this node, i.e. collects information needed to calculate the

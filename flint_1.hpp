@@ -332,6 +332,7 @@ template <typename T> struct Tensor<T, 1> {
       foo += "<not yet executed>";
     else {
       if (node->result_data) {
+        fSyncMemory(node);
         FResultData *store = node->result_data;
         foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
             (T *)store->data, (T *)store->data + store->num_entries));
@@ -677,7 +678,7 @@ template <typename T> struct Tensor<T, 1> {
    * Tensor of type `double`.
    */
   template <typename K, unsigned int k>
-  Tensor<double, k> gradient(const Tensor<K, k> &dx) {
+  Tensor<double, k> gradient(const Tensor<K, k> &dx) const {
     return Tensor<double, k>(fCalculateGradient(this->node, dx.node), dx.shape);
   }
   /** Watches this node, i.e. collects information needed to calculate the

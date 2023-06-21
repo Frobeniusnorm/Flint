@@ -59,13 +59,15 @@ template <GenericLayer... T> struct SequentialModel {
          get_output_dim<n, T...>()>(in);
   }
   template <typename K, unsigned int n>
-  void optimize(const Tensor<K, n> &error) {}
+  void optimize(const Tensor<K, n> &error) {
+    backward<0>(error);
+  }
 
 private:
-  template <int n, int k, typename K> void backward(const Tensor<K, k> &error) {
+  template <int n, typename K, unsigned int k> void backward(const Tensor<K, k> &error) {
     if constexpr (n < sizeof...(T)) {
       std::get<n>(layers).optimize_weights(error);
-      backward(error);
+      backward<n-1>(error);
     }
   }
   template <int n> void gen_opt(OptimizerFactory *fac) {

@@ -109,6 +109,18 @@ void fEnableEagerExecution();
 void fDisableEagerExecution();
 /** Returns 1 if eager execution has been enabled, else 0 */
 int fIsEagerExecution();
+/** Starts a gradient context, gradient information will be inherited until the
+ * next call to `fStopGradientContext`. A history containing information about
+ * all watched nodes in the parent graph is kept up to date within a gradient
+ * context for each node created in it. The node does not have to be watched in
+ * that particular context (it just has to be marked as watched) */
+void fStartGradientContext();
+/** Stops a gradient context, all inherited gradient information and watched
+ * nodes will be kept, but no longer inherited to new ones. */
+void fStopGradientContext();
+/** Return true if the call to this function is placed within a gradient
+ * context. */
+bool fIsGradientContext();
 /** The 4 allowed data types:
  * - `F_INT32`(integer, 32bit)
  * - `F_INT64`(integer, 64bit)

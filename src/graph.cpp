@@ -66,13 +66,16 @@ const char *fop_to_string[] = {"FSTORE",
                                "FCONVOLVE",
                                "FSLIDE",
                                "FGRADIENT_CONVOLVE"};
-static bool use_cpu, use_gpu, eager_execution = false;
+static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 // converts c++ type to flint type
 
 // EAGER EXECUTION WITH HELPER
 void fEnableEagerExecution() { eager_execution = true; }
 void fDisableEagerExecution() { eager_execution = false; }
 int fIsEagerExecution() { return eager_execution; }
+void fStartGradientContext() { gradient_context = true; }
+void fStopGradientContext() { gradient_context = false; }
+bool fIsGradientContext() { return gradient_context; }
 static inline FGraphNode *execute_eagerly(FGraphNode *f) {
   if (!use_cpu && !use_gpu)
     flintInit(FLINT_BACKEND_BOTH);
@@ -104,6 +107,8 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
 }
 static inline void
 configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
+  if (!gradient_context)
+    return;
   std::unordered_set<const FGraphNode *> *gd = nullptr;
   for (FGraphNode *p : pred) {
     if (p->gradient_data) {
@@ -388,7 +393,7 @@ FGraphNode *fCopyGraph(const FGraphNode *node) {
     default:
       break;
     }
-    if (data) {
+    if (src && data) {
       size_t byte_size = num_entries;
       switch (op->data_type) {
       case F_INT32:
@@ -459,6 +464,8 @@ void fMarkGradientVariable(FGraphNode *node) {
       node->gradient_data
           ? (std::unordered_set<const FGraphNode *> *)node->gradient_data
           : new std::unordered_set<const FGraphNode *>();
+  if (node->gradient_data && trace->contains(node))
+    return;
   trace->insert(node);
   node->gradient_data = (void *)trace;
 }

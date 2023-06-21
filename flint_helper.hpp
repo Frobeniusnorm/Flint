@@ -247,4 +247,15 @@ struct TensorRange {
   TensorRange(long start, long end = MAX_SCOPE, long step = 1)
       : start(start), end(end), step(step) {}
 };
+/**
+ *
+ */
+struct GradientContext {
+  GradientContext () {
+    fStartGradientContext();
+  }
+  ~GradientContext () {
+    fStopGradientContext();
+  }
+};
 #endif

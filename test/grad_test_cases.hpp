@@ -4,6 +4,7 @@
 #include <cmath>
 TEST_SUITE("Autodiff") {
   TEST_CASE("Two Times Matmul") {
+    GradientContext _;
     Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
     x.watch();
     Tensor<double, 2> y = {{3.0, -7.0}, {-1.0, 5.0}};
@@ -55,6 +56,7 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(dz[1][1][1], -40);
   }
   TEST_CASE("Add, Mul, Matmul") {
+    GradientContext _;
     Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
     x.watch();
     Tensor<double, 1> y = {5., -7.};
@@ -82,6 +84,7 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(70., dz[1][1]);
   }
   TEST_CASE("Sub, Mul, Div") {
+    GradientContext _;
     Tensor<double, 3> x = {{{1.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
     Tensor<double, 1> y = {5., -7.};
     Tensor<double, 2> z = {{4, 3}, {2.5, 1.5}};
@@ -105,6 +108,7 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(Approx(22.126986).epsilon(0.001), dz[1][1]);
   }
   TEST_CASE("Pow, Neg, Log") {
+    GradientContext _;
     Tensor<double, 3> x = {{{42, 75.3}, {4, 4}, {50, 3}},
                            {{7, 9}, {3.5, 77}, {10, 10}}};
     Tensor<double, 1> y = {-7, 5.5};
@@ -166,6 +170,7 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(Approx(0.256533).epsilon(0.001), dx[1][2][0]);
   }
   TEST_CASE("Min, Max, Abs") {
+    GradientContext _;
     Tensor<double, 3> x = {{{42, 75.3}, {4, 4}, {50, 3}},
                            {{7, 9}, {3.5, 77}, {10, 10}}};
     Tensor<double, 1> y = {-7, 5.5};
@@ -201,6 +206,7 @@ TEST_SUITE("Autodiff") {
         CHECK_EQ(0, dz2[i][j]);
   }
   TEST_CASE("Reduce Operations") {
+    GradientContext _;
     Tensor<float, 2> a{{0, 3, -1}, {0.5, 2.5, 1}};
     a.watch();
     Tensor<float, 1> b = a.reduce_sum(1) * 2;
@@ -254,6 +260,7 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(-10, dx[1][2][1]);
   }
   TEST_CASE("REPEAT, SLICE, TRANSPOSE") {
+    GradientContext _;
     Tensor<double, 2> t{
         {0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 0, 1}, {2, 3, 4, 5}, {6, 7, 8, 9}};
     t.watch();
@@ -287,6 +294,7 @@ TEST_SUITE("Autodiff") {
     }
   }
   TEST_CASE("SQRT") {
+    GradientContext _;
     Tensor<long, 1> y = {9, 7, 13};
     y.watch();
     Tensor<float, 1> z = (y * 0.5f).sqrt();
@@ -297,6 +305,7 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(Approx(0.09805807).epsilon(0.000001), dy[2]);
   }
   TEST_CASE("SIN, COS, TAN") {
+    GradientContext _;
     Tensor<int, 2> x = {{0, 1, -2}, {2, -3, 4}};
     Tensor<long, 1> y = {-9, 7, 13};
     x.watch();
@@ -330,6 +339,7 @@ TEST_SUITE("Autodiff") {
       CHECK_EQ(Approx(res[j]).epsilon(0.001), dy[j]);
   }
   TEST_CASE("CONVOLVE") {
+    GradientContext _;
     Tensor<int, 3> x{{{0, 1, 2},    {1, 2, 3},    {2, 3, 4}},
                      {{3, 4, 5},    {6, 7, 8},    {9, 0, -1}},
                      {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}},

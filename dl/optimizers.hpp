@@ -17,6 +17,7 @@
 #include <flint/flint.hpp>
 #include <flint/flint.h>
 #include <optional>
+#include <unordered_set>
 /**
  * Optimizer interface that defines a update method.
  * An optimizer is intended to be instantiated once per weight
@@ -130,13 +131,15 @@ struct Adam : public Optimizer {
       m->reference_counter++;
       v->reference_counter++;
     }
-    m = fadd(fmul_cd(m, b1), fmul_cd(gradient, (1 - b1)));
-    v = fadd(fmul_cd(v, b2), fmul(fmul_cd(gradient, (1 - b2)), gradient));
+    fExecuteGraph(gradient);
+    m = fOptimizeMemory(fExecuteGraph(fadd(fmul_cd(m, b1), fmul_cd(gradient, (1 - b1)))));
+    v = fOptimizeMemory(fExecuteGraph(fadd(fmul_cd(v, b2), fmul(fmul_cd(gradient, (1 - b2)), gradient))));
     FGraphNode *mh = fdiv_cd(m, (1 - std::pow(b1, t)));
     FGraphNode *vh = fdiv_cd(v, (1 - std::pow(b2, t)));
     t++;
-    return fsub(weights, fdiv(fmul_cd(mh, learning_rate),
+    FGraphNode* res = fsub(weights, fdiv(fmul_cd(mh, learning_rate),
                               fadd_cd(fsqrt_g(vh), epsilon)));
+    return res;
   }
 
   template <int n>
