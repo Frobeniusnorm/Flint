@@ -42,6 +42,14 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
   void gen_optimizer(const OptimizerFactory *fac) {
     optimizer = std::unique_ptr<Optimizer>(fac->generate_optimizer());
   }
+  template <typename T, unsigned int k>
+  void optimize(const Tensor<T, k>& error) {
+    if (optimizer && weight) {
+      const Tensor<double, n> gw = error.gradient(*weight);
+      FGraphNode* new_graph_node = optimizer->update(weight->get_graph_node(), gw.get_graph_node());
+      (*weight) = Tensor<double, n>(new_graph_node, weight->get_shape());
+    }
+  }
 };
 
 template <unsigned int index, int n, int... wn>
@@ -62,6 +70,15 @@ struct WeightRef<index, n, wn...> {
   void gen_optimizer(const OptimizerFactory *fac) {
     optimizer = std::unique_ptr<Optimizer>(fac->generate_optimizer());
     others.gen_optimizer(fac);
+  }
+  template <typename T, unsigned int k>
+  void optimize(const Tensor<T, k>& error) {
+    if (optimizer && weight) {
+      const Tensor<double, n> gw = error.gradient(*weight);
+      FGraphNode* new_graph_node = optimizer->update(weight->get_graph_node(), gw.get_graph_node());
+      (*weight) = Tensor<double, n>(new_graph_node, weight->get_shape());
+    }
+    others.optimize(error);
   }
 };
 template <FType t>
@@ -98,6 +115,10 @@ concept GenericLayer =
         } -> std::convertible_to<
             Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT64)>,
                    T::transform_dimensionality(2)>>;
+      a.optimize_weights(t1);
+      a.optimize_weights(t2);
+      a.optimize_weights(t3);
+      a.optimize_weights(t4);
       a.generate_optimizer(fac);
       { T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
       // Has to be constexpr
@@ -140,6 +161,10 @@ public:
   void generate_optimizer(OptimizerFactory *factory) {
     weight_refs.gen_optimizer(factory);
   }
+  template <typename T, unsigned int dim>
+  void optimize_weights(const Tensor<T, dim>& error) {
+    weight_refs.optimize(error);
+  }
 };
 
 struct Connected : public Layer<2> {
@@ -156,9 +181,6 @@ struct Connected : public Layer<2> {
     one_shape[n - 1] = 1;
     Tensor<T, n> ones = Flint::constant<T, n>(1, one_shape);
     return Flint::concat(in, ones, n - 1).matmul(weights);
-  }
-  void generate_optimizer(OptimizerFactory *factory) {
-    Layer<2>::generate_optimizer(factory);
   }
 };
 #endif
