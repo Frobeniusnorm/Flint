@@ -500,7 +500,7 @@ void fUnmarkGradientVariable(FGraphNode *node) {
     }
   }
 }
-FGraphNode *OptimizeMemory(FGraphNode *node) {
+FGraphNode *fOptimizeMemory(FGraphNode *node) {
   if (!node->gradient_data && node->operation->op_type != FSTORE &&
       node->result_data) {
     FResultData *rd = node->result_data;

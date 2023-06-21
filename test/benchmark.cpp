@@ -1,5 +1,6 @@
 #include "plf_nanotimer.h"
 #include "../flint.hpp"
+#include <flint/flint_helper.hpp>
 #include <iostream>
 #include <unordered_map>
 using namespace plf;
@@ -66,6 +67,7 @@ double gradient_fun() {
   t2.watch();
   timer.start();
   for (int i = 0; i < 100; i++) {
+    GradientContext _;
     Tensor<double, 1> t3 =
         (t1.sqrt().matmul(t2).pow(3.141592) * (t1.log10())).reduce_sum(1)
             .flattened()
@@ -90,6 +92,7 @@ double convolve_fun() {
   ker_t.watch();
   timer.start();
   for (int i = 0; i < 2; i++) {
+    GradientContext _;
     Tensor<float, 2> foo = img_t.convolve(ker_t, 16, 16);
     Tensor<float, 2> err = (foo - 0.7f).abs();
     Tensor<double, 3> grad = err.gradient(ker_t);

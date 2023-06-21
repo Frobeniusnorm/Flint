@@ -10,7 +10,7 @@ int main() {
                       {{5, 6}, {7, 8}, {9, 0}},
                       {{-1, -2}, {-3, -4}, {-5, -6}}};
   auto m =
-      SequentialModel<Connected, Connected>{Connected(2, 4), Connected(4, 2)};
+      SequentialModel<Connected, Connected>{Connected(2, 256), Connected(256, 2)};
   AdamFactory adam(0.001, 0.95);
   m.generate_optimizer(&adam);
   for (int i = 0; i < 10000; i++) {
