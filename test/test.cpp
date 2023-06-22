@@ -960,6 +960,52 @@ TEST_CASE("Test Example 1") {
   Tensor<double, 1> t5 = t4.reduce_mul(2).flattened();
   CHECK_EQ(20, t5[0]);
 }
+TEST_SUITE("Index operations and broadcasting") {
+  TEST_CASE("Slice") {
+    Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
+                        {{5, 6}, {7, 8}, {9, 0}},
+                        {{-1, -2}, {-3, -4}, {-5, -6}}};
+    Tensor<float, 3> o =
+        t1 * t1.slice(TensorRange(0, 1), TensorRange(0, 1), TensorRange(0, 2))
+                 .flattened();
+    auto exp = std::vector<std::vector<std::vector<float>>>{
+        {{0.000000, 1.000000}, {0.000000, 2.000000}, {0.000000, 4.000000}},
+        {{0.000000, 6.000000}, {0.000000, 8.000000}, {0.000000, 0.000000}},
+        {{-0.000000, -2.000000},
+         {-0.000000, -4.000000},
+         {-0.000000, -6.000000}}};
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        for (int k = 0; k < 2; k++)
+          CHECK_EQ(doctest::Approx(exp[i][j][k]), o[i][j][k]);
+      }
+    }
+  }
+  TEST_CASE("Repeat") {
+    Tensor<float, 2> t1{{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 0, 1}};
+    Tensor<float, 1> t2{2, 7};
+    Tensor<float, 2> o = t1 + t2.repeat(1);
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 4; j++)
+        CHECK_EQ(t1[i][j] + (j % 2 == 0 ? 2 : 7), o[i][j]);
+  }
+  TEST_CASE("Transpose") {
+    Tensor<float, 2> t1{{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 0, 1}};
+    Tensor<float, 1> t2{2, 7, 8};
+    Tensor<float, 2> o = t1.transpose() + (t2 - 1);
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 4; j++)
+        CHECK_EQ(t1[i][j] + t2[i] - 1, o[j][i]);
+
+    Tensor<float, 3> t3{{{0, 1, 2}, {2, 3, 4}, {5, 6, 7}, {8, 9, -1}},
+                        {{-3, -4, -5}, {-2, -6, -7}, {-8, -9, 0}, {1, 2, 3}}};
+    Tensor<float, 3> t4 = (t3 * t1.transpose());
+    for (int k = 0; k < 2; k++)
+      for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 3; j++)
+          CHECK_EQ(t3[k][i][j] * t1[j][i], t4[k][i][j]);
+  }
+}
 int main(int argc, char **argv) {
   bool doCPU = false, doGPU = false, eager = false;
   for (int i = 0; i < argc; i++) {
