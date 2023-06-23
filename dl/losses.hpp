@@ -31,6 +31,11 @@ public:
   Tensor<T, n> forward(Tensor<T, n> &in) {
     // TODO this can be done way more accurate and efficient
     Tensor<T, n> exp = Flint::constant((T)2.71828, in.get_shape()).pow(in);
-    return exp / exp.reduce_sum(ax < 0 ? in.get_shape()[n - ax] : in.get_shape()[ax]);
+    Tensor<T, n - 1> sum = exp.reduce_sum(ax < 0 ? in.get_shape()[n - ax] : in.get_shape()[ax]);
+    if constexpr (n == 2)
+      return exp / sum;
+    else {
+      return exp / (sum.expand(ax, in.get_shape()[ax]));
+    }
   }
 };

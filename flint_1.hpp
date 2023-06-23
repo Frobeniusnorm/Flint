@@ -655,6 +655,31 @@ template <typename T> struct Tensor<T, 1> {
     FGraphNode *nn = fslice_step(node, &start, &end, &step);
     return Tensor<T, 1>(nn, nn->operation->shape[0]);
   }
+  /**
+   * Adds a new dimension at an arbitrary position to the tensor and repeats the
+   * following dimensions to match a given shape.
+   *
+   * - `ax` the dimension prior to which the new dimension will be inserted (`0`
+   *    means a new dimension in the front, `n + 1` means as a new last
+   *    dimension).
+   * - `ax_size` the new size of that dimension (repeats the following
+   *    dimensions `ax_size - 1` times).
+   */
+  Tensor<T, 2> expand(int ax = 2, int ax_size = 0) {
+    std::array<size_t, 2> new_shape;
+    if (ax > 0)
+      std::memcpy(new_shape.data(), shape.data(), sizeof(size_t) * ax);
+    new_shape[ax] = 1;
+    if (ax < 2)
+      std::memcpy(new_shape.data() + ax + 1, shape.data() + ax,
+                  sizeof(size_t) * (2 - ax));
+    if (ax_size == 0)
+      return reshape_array<2 + 1>(new_shape);
+    std::array<int, 2 + 1> repet;
+    repet.fill(0);
+    repet[ax] = ax_size - 1;
+    return reshape_array<2 + 1>(new_shape).repeat_array(repet);
+  }
   /** Returns the underlying `FGraphNode` for use with the C-Frontend. It is
    * still memory managed by this Tensor instance, so be carefull about variable
    * lifetimes. */
@@ -672,6 +697,30 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<T, 1> repeat(int repetitions) const {
     FGraphNode *nn = frepeat(node, &repetitions);
     return Tensor<T, 1>(nn, (shape[0] * repetitions + 1));
+  }
+  /**
+   * Reshapes this Tensor to a new shape with arbitrary dimensions.
+   * It can have less dimensions, more dimensions and a completly different
+   * shape, the only assumption that has to hold is that the product of the new
+   * shape is the same as the product of the old shape (the new shape represents
+   * as many elements as the old).
+   */
+  template <typename... args>
+  Tensor<T, sizeof...(args)> reshape(args... shape) {
+    constexpr size_t newdim = sizeof...(args);
+    std::array<size_t, newdim> new_shape{static_cast<size_t>(shape)...};
+    return Tensor<T, newdim>(freshape(node, new_shape.data(), newdim),
+                             new_shape);
+  }
+  /**
+   * Reshapes this Tensor to a new shape with arbitrary dimensions.
+   * It can have less dimensions, more dimensions and a completly different
+   * shape, the only assumption that has to hold is that the product of the new
+   * shape is the same as the product of the old shape (the new shape represents
+   * as many elements as the old).
+   */
+  template <int k> Tensor<T, k> reshape_array(std::array<size_t, k> new_shape) {
+    return Tensor<T, k>(freshape(node, new_shape.data(), k), new_shape);
   }
   /**
    * Calculates the gradient of this Tensor to `dx`. A gradient is always a

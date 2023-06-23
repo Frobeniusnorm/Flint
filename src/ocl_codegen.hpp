@@ -814,7 +814,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   for (FType t : parameter_types)
     type_info += to_string(t);
   kernel_name = string(fop_to_string[operation]) + type_info;
-  string code = "__kernel void " + kernel_name + "(__global " +
+  string code = "#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void " + kernel_name + "(__global " +
                 typeString(res_type) + "* R";
   // generate parameters
   switch (operation) {

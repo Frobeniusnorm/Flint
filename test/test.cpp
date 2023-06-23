@@ -948,6 +948,19 @@ TEST_SUITE("C++ Bindings") {
         CHECK_EQ(e[i][j][0], c[i][j][0]);
     std::remove("test.flint");
   }
+  TEST_CASE("Expand") {
+    Tensor<double, 2> a = {{0, 1}, {2, 3}};
+    Tensor<double, 3> e1 = a.expand(0, 3)();
+    Tensor<double, 3> e2 = a.expand(1, 3)();
+    Tensor<double, 3> e3 = a.expand(2, 3)();
+    for (int i = 0; i < 3; i++) 
+      for (int j = 0; j < 2; j++) 
+        for (int k = 0; k < 2; k++) {
+          CHECK_EQ(a[j][k], e1[i][j][k]);
+          CHECK_EQ(a[j][k], e2[j][i][k]);
+          CHECK_EQ(a[j][k], e3[j][k][i]);
+        }
+  }
 }
 TEST_CASE("Test Example 1") {
   Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};

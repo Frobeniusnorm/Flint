@@ -1,6 +1,6 @@
 #include "plf_nanotimer.h"
 #include "../flint.hpp"
-#include <flint/flint_helper.hpp>
+#include "../flint_helper.hpp"
 #include <iostream>
 #include <unordered_map>
 using namespace plf;

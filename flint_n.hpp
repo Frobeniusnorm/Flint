@@ -2,6 +2,7 @@
 #include "flint_helper.hpp"
 #include <algorithm>
 #include <array>
+#include <concepts>
 #include <cstring>
 #include <fstream>
 #include <initializer_list>
@@ -19,11 +20,10 @@ template <typename T, unsigned int n> struct Tensor {
   // storage type is the vector of the recursive type
   typedef std::vector<typename Tensor<T, n - 1>::storage_type> storage_type;
   typedef std::initializer_list<typename Tensor<T, n - 1>::init_type> init_type;
-  /** 
+  /**
    * Uninitialized Tensor
    */
-  Tensor() : node(nullptr) {
-  }
+  Tensor() : node(nullptr) {}
   /**
    * Creates a Tensor from a `n`-times nested `std::initializer_list`
    * (`init_type` is a recursive defined type definition).
@@ -745,6 +745,41 @@ template <typename T, unsigned int n> struct Tensor {
     return Tensor<T, newdim>(freshape(node, new_shape.data(), newdim),
                              new_shape);
   }
+  /**
+   * Reshapes this Tensor to a new shape with arbitrary dimensions.
+   * It can have less dimensions, more dimensions and a completly different
+   * shape, the only assumption that has to hold is that the product of the new
+   * shape is the same as the product of the old shape (the new shape represents
+   * as many elements as the old).
+   */
+  template <int k> Tensor<T, k> reshape_array(std::array<size_t, k> new_shape) {
+    return Tensor<T, k>(freshape(node, new_shape.data(), k), new_shape);
+  }
+  /**
+   * Adds a new dimension at an arbitrary position to the tensor and repeats the
+   * following dimensions to match a given shape.
+   *
+   * - `ax` the dimension prior to which the new dimension will be inserted (`0`
+   *    means a new dimension in the front, `n + 1` means as a new last
+   *    dimension).
+   * - `ax_size` the new size of that dimension (repeats the following
+   *    dimensions `ax_size - 1` times).
+   */
+  Tensor<T, n + 1> expand(int ax = n, int ax_size = 0) {
+    std::array<size_t, n + 1> new_shape;
+    if (ax > 0)
+      std::memcpy(new_shape.data(), shape.data(), sizeof(size_t) * ax);
+    new_shape[ax] = 1;
+    if (ax < n)
+      std::memcpy(new_shape.data() + ax + 1, shape.data() + ax,
+                  sizeof(size_t) * (n - ax));
+    if (ax_size == 0)
+      return reshape_array<n + 1>(new_shape);
+    std::array<int, n + 1> repet;
+    repet.fill(0);
+    repet[ax] = ax_size - 1;
+    return reshape_array<n + 1>(new_shape).repeat_array(repet);
+  }
   /** Takes the minimum of this tensor and `other` element wise (the lower value
    * is the result, if one tensor is smaller it will be broadcasted).*/
   template <typename K, unsigned int k>
@@ -1078,9 +1113,40 @@ template <typename T, unsigned int n> struct Tensor {
    * Repeats dimensions of a tensor multiple times.
    * `repititions` is an array with the same number of entries as the tensor has
    * dimensions. If `repetitions` has in a dimension a value `x` the resulting
-   * shape in that dimension is `x` times larger than that of the origional
-   * Tensor (because it is concatenated with itself `x` times).
-   * E.g.
+   * shape in that dimension is `x + 1` times larger than that of the origional
+   * Tensor (because it is concatenated with itself `x` times),
+   * such that `0` would result in no change of the shape of that dimensions, a
+   * `1` would repeat the Tensor 1 time. E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1}, {1, 2}}, {{2, 3}, {3, 4}}};
+   * std::cout << (a.repeat(std::array<int, 3>{0, 1, 2}))() << std::endl;
+   * // Tensor<INT32, shape: [2, 4, 6]>(
+   * // [[[0, 1, 0, 1, 0, 1],
+   * //   [1, 2, 1, 2, 1, 2],
+   * //   [0, 1, 0, 1, 0, 1],
+   * //   [1, 2, 1, 2, 1, 2]],
+   * //  [[2, 3, 2, 3, 2, 3],
+   * //   [3, 4, 3, 4, 3, 4],
+   * //   [2, 3, 2, 3, 2, 3],
+   * //   [3, 4, 3, 4, 3, 4]]])
+   * }
+   */
+  Tensor<T, n> repeat_array(std::array<int, n> repetitions) const {
+    FGraphNode *nn = frepeat(node, repetitions.data());
+    std::array<size_t, n> new_shape;
+    for (size_t i = 0; i < n; i++)
+      new_shape[i] = nn->operation->shape[i];
+    return Tensor<T, n>(nn, new_shape);
+  }
+  /**
+   * Repeats dimensions of a tensor multiple times.
+   * This function allows one repetition argument per dimension (missing
+   * dimensions will be filled with `0`s. For one of such a repetition argument
+   * `x` the resulting shape in that dimension is `x + 1` times larger than that
+   * of the origional Tensor (because it is concatenated with itself `x` times),
+   * such that `0` would result in no change of the shape of that dimensions, a
+   * `1` would repeat the Tensor 1 time. E.g.
    *
    * @code{
    * Tensor<int, 3> a{{{0, 1}, {1, 2}}, {{2, 3}, {3, 4}}};
@@ -1344,10 +1410,11 @@ struct Flint {
    * allows them to shutdown their threads.
    */
   static void cleanup() { flintCleanup(); }
-  
+
   template <typename K, unsigned int n>
-  static Tensor<K, n> concat(const Tensor<K, n>& a, const Tensor<K, n>& b, unsigned int ax) {
-    FGraphNode* c = fconcat(a.get_graph_node(), b.get_graph_node(), ax);
+  static Tensor<K, n> concat(const Tensor<K, n> &a, const Tensor<K, n> &b,
+                             unsigned int ax) {
+    FGraphNode *c = fconcat(a.get_graph_node(), b.get_graph_node(), ax);
     std::array<size_t, n> ns;
     for (int i = 0; i < n; i++)
       ns[i] = c->operation->shape[i];
@@ -1357,7 +1424,8 @@ struct Flint {
    * Creates a Tensor filled with random values in [0, 1) with the requested
    * shape in sizes.
    */
-  template <typename... args> static Tensor<double, sizeof...(args)> random(args... sizes) {
+  template <typename... args>
+  static Tensor<double, sizeof...(args)> random(args... sizes) {
     constexpr size_t dimensions = sizeof...(args);
     std::array<size_t, dimensions> shape{static_cast<size_t>(sizes)...};
     FGraphNode *node = frandom(shape.data(), dimensions);

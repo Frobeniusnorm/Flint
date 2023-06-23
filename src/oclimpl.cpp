@@ -1098,7 +1098,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   list<pair<FGraphNode *, string>> parameters;
   unordered_set<string> additional_params;
   string graph_code = generateCode(node, parameters, additional_params);
-  string code = "__kernel void execute_graph(__global ";
+  string code = "#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void execute_graph(__global ";
   code += typeString(node->operation->data_type);
   code += " *R";
   // insert parameters
