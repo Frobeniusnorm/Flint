@@ -199,7 +199,6 @@ struct Connected : public Layer<2> {
 
   Connected(size_t units_in, size_t units_out)
       : Layer<2>(Flint::random(units_in + 1, units_out)) {}
-
   template <typename T, unsigned int n>
   Tensor<double, n> forward(Tensor<T, n> &in) {
     std::array<size_t, n> one_shape = in.get_shape();

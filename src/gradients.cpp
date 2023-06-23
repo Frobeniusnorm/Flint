@@ -40,9 +40,10 @@ configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
       std::unordered_set<const FGraphNode *> *other =
           (std::unordered_set<const FGraphNode *> *)p->gradient_data;
       gd->reserve(other->size() + gd->size());
-      for (const FGraphNode* g : *other){
-        // check if it is still a variable 
-        if (g->gradient_data) gd->insert(g);
+      for (const FGraphNode *g : *other) {
+        // check if it is still a variable
+        if (g->gradient_data)
+          gd->insert(g);
       }
     }
   }
@@ -172,7 +173,28 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     }
   }
   case FCONCAT: {
-    // TODO
+    FGraphNode *a = y->predecessors[0];
+    FGraphNode *b = y->predecessors[1];
+    unsigned int ax = *((unsigned int *)y->operation->additional_data);
+    if (a == dx) {
+      std::vector<long> start(a->operation->dimensions);
+      std::vector<long> stop(a->operation->dimensions);
+      for (int i = 0; i < a->operation->dimensions; i++) {
+        start[i] = 0;
+        stop[i] = a->operation->shape[i];
+      }
+      return fslice(prev_adj, start.data(), stop.data());
+    } else if (b == dx) {
+      std::vector<long> start(b->operation->dimensions);
+      std::vector<long> stop(b->operation->dimensions);
+      for (int i = 0; i < b->operation->dimensions; i++) {
+        start[i] = ax == i ? a->operation->shape[i] : 0;
+        stop[i] = ax == i ? a->operation->shape[i] + b->operation->shape[i]
+                          : b->operation->shape[i];
+      }
+      return fslice(prev_adj, start.data(), stop.data());
+    } else
+      return nullptr;
   }
   case FSLIDE:
   case FCONVOLVE: {
@@ -492,11 +514,17 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
 }
 
 FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
-  std::unordered_set<const FGraphNode*> *gd = (std::unordered_set<const FGraphNode*> *)y->gradient_data;
+  std::unordered_set<const FGraphNode *> *gd =
+      (std::unordered_set<const FGraphNode *> *)y->gradient_data;
   if (!gd)
-    flogging(F_ERROR, "no derivatives in the operational graph! Don't forget the necessary calls to fmarkGradientVariable (or in C++ .watch())");
+    flogging(F_ERROR,
+             "no derivatives in the operational graph! Don't forget the "
+             "necessary calls to fmarkGradientVariable (or in C++ .watch())");
   if (!gd->contains(dx))
-    flogging(F_WARNING, "derivative was not marked during graph construction! Don't forget the necessary calls to fmarkGradientVariable (or in C++ .watch())");
+    flogging(
+        F_WARNING,
+        "derivative was not marked during graph construction! Don't forget the "
+        "necessary calls to fmarkGradientVariable (or in C++ .watch())");
   using namespace std;
   // to store gradients per node
   unordered_map<FGraphNode *, FGraphNode *> adjoints;
@@ -523,11 +551,13 @@ FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
     for (int i = 0; i < curr->num_predecessor; i++) {
       FGraphNode *parent = curr->predecessors[i];
       // check if we need to compute this branch
-      if(parent->gradient_data) {
-        std::unordered_set<const FGraphNode*> *trace = (std::unordered_set<const FGraphNode*> *) parent->gradient_data;
+      if (parent->gradient_data) {
+        std::unordered_set<const FGraphNode *> *trace =
+            (std::unordered_set<const FGraphNode *> *)parent->gradient_data;
         if (!trace->contains(dx))
           continue;
-      } else if(parent != dx) continue;
+      } else if (parent != dx)
+        continue;
       FGraphNode *local_grad = local_gradient(curr, parent, adj);
       if (adjoints.contains(parent)) {
         adjoints[parent] =
