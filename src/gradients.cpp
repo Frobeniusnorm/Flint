@@ -368,6 +368,13 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     } else
       return nullptr;
   }
+  case FEXP: {
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx) {
+      return fmul(prev_adj, y);
+    } else
+      return nullptr;
+  }
   case FSIN: {
     FGraphNode *a = y->predecessors[0];
     if (a == dx) {

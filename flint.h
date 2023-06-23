@@ -151,6 +151,7 @@ enum FOperationType {
   FACOS,
   FATAN,
   FSQRT,
+  FEXP,
   FLATTEN,
   FMATMUL,
   FCONVERSION,
@@ -529,19 +530,21 @@ FGraphNode *flog(FGraphNode *a);
 FGraphNode *flog2(FGraphNode *a);
 /** Takes the elementwise logarithm of `a` to the basis of 10 */
 FGraphNode *flog10(FGraphNode *a);
-/** Takes the elementwise sinus of a */
+/** Takes the elementwise sinus of `a` */
 FGraphNode *fsin(FGraphNode *a);
-/** Takes the elementwise square root of a */
+/** Takes the elementwise square root of `a` */
 FGraphNode *fsqrt_g(FGraphNode *a);
-/** Takes the elementwise cosinus of a */
+/** Takes the elementwise exponential of `a` (power of the constant `e` to `a`) */
+FGraphNode *fexp(FGraphNode *a);
+/** Takes the elementwise cosinus of `a` */
 FGraphNode *fcos(FGraphNode *a);
-/** Takes the elementwise tangents of a */
+/** Takes the elementwise tangents of `a` */
 FGraphNode *ftan(FGraphNode *a);
-/** Takes the elementwise inverse sinus of a */
+/** Takes the elementwise inverse sinus of `a` */
 FGraphNode *fasin(FGraphNode *a);
-/** Takes the elementwise inverse cosinus of a */
+/** Takes the elementwise inverse cosinus of `a` */
 FGraphNode *facos(FGraphNode *a);
-/** Takes the elementwise inverse tangents of a */
+/** Takes the elementwise inverse tangents of `a` */
 FGraphNode *fatan(FGraphNode *a);
 /** Negates the elements of `a`, i.e. `-a[i]` */
 FGraphNode *fneg(FGraphNode *a);

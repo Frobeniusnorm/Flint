@@ -25,47 +25,21 @@
 #include <vector>
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
-const char *fop_to_string[] = {"FSTORE",
-                               "FGEN_RANDOM",
-                               "FGEN_CONST",
-                               "FADD",
-                               "FSUB",
-                               "FMUL",
-                               "FDIV",
-                               "FPOW",
-                               "FNEG",
-                               "FLOG",
-                               "FSIGN",
-                               "FEVEN",
-                               "FLOG2",
-                               "FLOG10",
-                               "FSIN",
-                               "FCOS",
-                               "FTAN",
-                               "FASIN",
-                               "FACOS",
-                               "FATAN",
-                               "FSQRT",
-                               "FLATTEN",
-                               "FMATMUL",
-                               "FCONVERSION",
-                               "FRESHAPE",
-                               "FMIN",
-                               "FMAX",
-                               "FREDUCE_SUM",
-                               "FREDUCE_MUL",
-                               "FSLICE",
-                               "FABS",
-                               "FREPEAT",
-                               "FTRANSPOSE",
-                               "FEXTEND",
-                               "FCONCAT",
-                               "FLESS",
-                               "FEQUAL",
-                               "FGREATER",
-                               "FCONVOLVE",
-                               "FSLIDE",
-                               "FGRADIENT_CONVOLVE"};
+const char *fop_to_string[] = {
+    "FSTORE",      "FGEN_RANDOM", "FGEN_CONST",
+    "FADD",        "FSUB",        "FMUL",
+    "FDIV",        "FPOW",        "FNEG",
+    "FLOG",        "FSIGN",       "FEVEN",
+    "FLOG2",       "FLOG10",      "FSIN",
+    "FCOS",        "FTAN",        "FASIN",
+    "FACOS",       "FATAN",       "FSQRT",
+    "FEXP",        "FLATTEN",     "FMATMUL",
+    "FCONVERSION", "FRESHAPE",    "FMIN",
+    "FMAX",        "FREDUCE_SUM", "FREDUCE_MUL",
+    "FSLICE",      "FABS",        "FREPEAT",
+    "FTRANSPOSE",  "FEXTEND",     "FCONCAT",
+    "FLESS",       "FEQUAL",      "FGREATER",
+    "FCONVOLVE",   "FSLIDE",      "FGRADIENT_CONVOLVE"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 // converts c++ type to flint type
 
@@ -818,6 +792,7 @@ FGraphNode *facos(FGraphNode *a) { return log_impl(a, FACOS); }
 FGraphNode *fatan(FGraphNode *a) { return log_impl(a, FATAN); }
 /** Takes the elementwise square root of a */
 FGraphNode *fsqrt_g(FGraphNode *a) { return log_impl(a, FSQRT); }
+FGraphNode *fexp(FGraphNode *a) { return log_impl(a, FEXP); }
 /** Negates the elements of the tensor */
 FGraphNode *fneg(FGraphNode *a) {
   FOperation *op = new FOperation();

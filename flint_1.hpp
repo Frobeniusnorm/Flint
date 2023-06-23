@@ -527,6 +527,13 @@ template <typename T> struct Tensor<T, 1> {
     return Tensor<to_float<T>, 1>(fsqrt_g(node), shape);
   }
   /**
+   * Takes the elementwise exponent of this Tensor (power of the constant `e` to
+   * this Tensor).
+   */
+  Tensor<to_float<T>, 1> exp() {
+    return Tensor<to_float<T>, 1>(fexp(node), shape);
+  }
+  /**
    * Takes the elementwise sinus of this Tensor.
    */
   Tensor<to_float<T>, 1> sin() {

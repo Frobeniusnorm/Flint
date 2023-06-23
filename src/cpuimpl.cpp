@@ -652,6 +652,11 @@ static void executeNode(const FGraphNode *node,
     for (size_t i = from; i < from + size; i++)
       result[i] = sqrt(((const T *__restrict__)pred.data)[i]);
   } break;
+  case FEXP: {
+    const CPUResultData pred = predecessor_data[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = exp(((const T *__restrict__)pred.data)[i]);
+  } break;
   case FCOS: {
     const CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)

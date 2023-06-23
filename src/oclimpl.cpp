@@ -221,6 +221,7 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
     }
   } break;
   case FSQRT:
+  case FEXP:
   case FLOG:
   case FLOG2:
   case FLOG10:

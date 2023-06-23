@@ -607,7 +607,7 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(1, t3[0]);
     CHECK_EQ(3, t3[1]);
   }
-  TEST_CASE("SQRT") {
+  TEST_CASE("SQRT, EXP") {
     Tensor<long, 1> t1 = Tensor<long, 1>({12 * 12, 42 * 42, 420000l * 420000l})
                              .sqrt()
                              .convert<long>();
@@ -627,6 +627,18 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(Approx(t2[1][0][1][0]).epsilon(0.00001), 2.23607);
     CHECK_EQ(Approx(t2[1][1][0][0]).epsilon(0.00001), 2.44949);
     CHECK_EQ(Approx(t2[1][1][1][0]).epsilon(0.00001), 2.64575);
+    Tensor<int, 2> t3 {{0, 1}, {2, -1}};
+    Tensor<double, 2> e3 = t3.exp();
+    for (int i = 0; i < 2; i++)
+      for (int j = 0; j < 2; j++) {
+        CHECK_EQ(Approx(exp(t3[i][j])), e3[i][j]);
+      }
+    Tensor<float, 2> t4 {{0, 1}, {2, -1}};
+    Tensor<float, 2> e4 = t4.exp();
+    for (int i = 0; i < 2; i++)
+      for (int j = 0; j < 2; j++) {
+        CHECK_EQ(Approx(exp(t4[i][j])), e4[i][j]);
+      }
   }
   TEST_CASE("FABS") {
     Tensor<int, 2> t1{{-1, 3}, {-7, 9}};
