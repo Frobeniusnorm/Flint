@@ -26,11 +26,17 @@ struct Loss {
 
 class SoftMax : public Loss {
   int ax = -1;
+
 public:
-  template <typename T, unsigned int n>
-  Tensor<T, n> forward(Tensor<T, n> &in) {
+  /** Initializes the SoftMax function with an optional axis parameter that
+   * describes the dimension of which the sum will be taken.
+   * Calculates `exp(in) / sum(in, ax)` */
+  SoftMax(int ax = -1) : ax(ax) {}
+
+  template <typename T, unsigned int n> Tensor<T, n> forward(Tensor<T, n> &in) {
     Tensor<T, n> exp = in.exp();
-    Tensor<T, n - 1> sum = exp.reduce_sum(ax < 0 ? in.get_shape()[n - ax] : in.get_shape()[ax]);
+    Tensor<T, n - 1> sum =
+        exp.reduce_sum(ax < 0 ? in.get_shape()[n - ax] : in.get_shape()[ax]);
     if constexpr (n == 2)
       return exp / sum;
     else {
