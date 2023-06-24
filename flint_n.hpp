@@ -932,6 +932,64 @@ template <typename T, unsigned int n> struct Tensor {
       ns[i] = shape[i + 1];
     return Tensor<T, n - 1>(freduce_mul(node, dimension), ns);
   }
+  /** Reduces one dimension of the tensor by keeping the minimum e.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1, 32}, {2, 3, 4}}, {{4, 5, -6}, {6, 7, -1}}};
+   * std::cout << e.reduce_min(0)() << std::endl;
+   * // Tensor<INT32, shape: [2, 3]>(
+   * // [[0, 1, -6],
+   * //  [2, 3, -1]])
+   * std::cout << e.reduce_min(1)() << std::endl;
+   * // Tensor<INT32, shape: [2, 3]>(
+   * // [[0, 1, 4],
+   * // [4, 5, -6]])
+   * std::cout << e.reduce_min(2)() << std::endl;
+   * // Tensor<INT32, shape: [2, 2]>(
+   * // [[0, 2],
+   * //  [-6, -1]])
+   *
+   * The results of this Tensor must be available, to
+   * ensure that the method may execute the Tensor. */
+  Tensor<T, n - 1> reduce_min(int dimension) {
+    std::array<size_t, n - 1> ns;
+    if (dimension < 0)
+      dimension = shape.size() + dimension;
+    for (int i = 0; i < dimension; i++)
+      ns[i] = shape[i];
+    for (size_t i = dimension; i < ns.size(); i++)
+      ns[i] = shape[i + 1];
+    return Tensor<T, n - 1>(freduce_min(node, dimension), ns);
+  }
+  /** Reduces one dimension of the tensor by keeping the maximum e.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1, 32}, {2, 3, 4}}, {{4, 5, -6}, {6, 7, -1}}};
+   * std::cout << e.reduce_max(0)() << std::endl;
+   * // Tensor<INT32, shape: [2, 3]>(
+   * // [[4, 5, 32],
+   * //  [6, 7, 4]])
+   * std::cout << e.reduce_max(1)() << std::endl;
+   * // Tensor<INT32, shape: [2, 3]>(
+   * // [[2, 3, 32],
+   * //  [6, 7, -1]])
+   * std::cout << e.reduce_max(2)() << std::endl;
+   * // Tensor<INT32, shape: [2, 2]>(
+   * // [[32, 4],
+   * //  [5, 7]])
+   *
+   * The results of this Tensor must be available, to
+   * ensure that the method may execute the Tensor. */
+  Tensor<T, n - 1> reduce_max(int dimension) {
+    std::array<size_t, n - 1> ns;
+    if (dimension < 0)
+      dimension = shape.size() + dimension;
+    for (int i = 0; i < dimension; i++)
+      ns[i] = shape[i];
+    for (size_t i = dimension; i < ns.size(); i++)
+      ns[i] = shape[i + 1];
+    return Tensor<T, n - 1>(freduce_max(node, dimension), ns);
+  }
   /**
    * Takes the elementwise absolute value of this Tensor (negative signs are
    * removed).

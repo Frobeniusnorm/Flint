@@ -444,6 +444,8 @@ static void executeNode(const FGraphNode *node,
       result[i] = ((const T *__restrict__)data)[src_index];
     }
   } break;
+  case FREDUCE_MIN:
+  case FREDUCE_MAX:
   case FREDUCE_SUM:
   case FREDUCE_MUL: {
     const CPUResultData pred = predecessor_data[0];
@@ -455,17 +457,42 @@ static void executeNode(const FGraphNode *node,
 
     for (size_t i = from; i < from + size; i++) {
       // iterate through to-reduce dimension
-      result[i] = node->operation->op_type == FREDUCE_SUM
-                      ? 0
-                      : 1; // init with neutral element
+      switch (node->operation->op_type) {
+        case FREDUCE_SUM: 
+          result[i] = 0;
+          break;
+        case FREDUCE_MUL:
+          result[i] = 1;
+          break;
+        case FREDUCE_MIN:
+          result[i] = ((const T *__restrict__)
+                            data)[(i / it_dim) * it_dim * pred.shape[dim] + i % it_dim];
+          break;
+        case FREDUCE_MAX:
+          result[i] = ((const T *__restrict__)
+                            data)[(i / it_dim) * it_dim * pred.shape[dim] + i % it_dim];
+          break;
+        default: break;
+      }
       for (size_t j = 0; j < pred.shape[dim]; j++) {
         const T curr = ((const T *__restrict__)
                             data)[(i / it_dim) * it_dim * pred.shape[dim] +
                                   i % it_dim + j * it_dim];
-        if (node->operation->op_type == FREDUCE_SUM)
-          result[i] += curr;
-        else
-          result[i] *= curr;
+        switch (node->operation->op_type) {
+          case FREDUCE_SUM: 
+            result[i] += curr;
+            break;
+          case FREDUCE_MUL:
+            result[i] *= curr;
+            break;
+          case FREDUCE_MIN:
+            result[i] = std::min(result[i], curr);
+            break;
+          case FREDUCE_MAX:
+            result[i] = std::max(result[i], curr);
+            break;
+          default: break;
+        }
       }
     }
   } break;

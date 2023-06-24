@@ -455,6 +455,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
                        (void *)&total_size_puffer) != CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
   } break;
+  case FREDUCE_MIN:
+  case FREDUCE_MAX:
   case FREDUCE_MUL:
   case FREDUCE_SUM: {
     int *dim = ((int *)node->operation->additional_data);
@@ -548,6 +550,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
                          (void *)&op->dimensions) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
     } break;
+    case FREDUCE_MIN:
+    case FREDUCE_MAX:
     case FREDUCE_SUM:
     case FREDUCE_MUL: {
       int dim = ((int *)node->operation->additional_data)[0];

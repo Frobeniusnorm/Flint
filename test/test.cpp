@@ -627,13 +627,13 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(Approx(t2[1][0][1][0]).epsilon(0.00001), 2.23607);
     CHECK_EQ(Approx(t2[1][1][0][0]).epsilon(0.00001), 2.44949);
     CHECK_EQ(Approx(t2[1][1][1][0]).epsilon(0.00001), 2.64575);
-    Tensor<int, 2> t3 {{0, 1}, {2, -1}};
+    Tensor<int, 2> t3{{0, 1}, {2, -1}};
     Tensor<double, 2> e3 = t3.exp();
     for (int i = 0; i < 2; i++)
       for (int j = 0; j < 2; j++) {
         CHECK_EQ(Approx(exp(t3[i][j])), e3[i][j]);
       }
-    Tensor<float, 2> t4 {{0, 1}, {2, -1}};
+    Tensor<float, 2> t4{{0, 1}, {2, -1}};
     Tensor<float, 2> e4 = t4.exp();
     for (int i = 0; i < 2; i++)
       for (int j = 0; j < 2; j++) {
@@ -826,153 +826,193 @@ TEST_SUITE("C++ Bindings") {
       CHECK_EQ(4, d[i][2]);
       CHECK_EQ(15, d[i][3]);
     }
+
+    Tensor<int, 3>e{{{0, 1, 32}, {2, 3, 4}}, {{4, 5, -6}, {6, 7, -1}}};
+    Tensor<int, 2> max1 = e.reduce_max(0)();
+    CHECK_EQ(4, max1[0][0]);
+    CHECK_EQ(5, max1[0][1]);
+    CHECK_EQ(32, max1[0][2]);
+    CHECK_EQ(6, max1[1][0]);
+    CHECK_EQ(7, max1[1][1]);
+    CHECK_EQ(4, max1[1][2]);
+    Tensor<int, 2> max2 = e.reduce_max(1)();
+    CHECK_EQ(2, max2[0][0]);
+    CHECK_EQ(3, max2[0][1]);
+    CHECK_EQ(32, max2[0][2]);
+    CHECK_EQ(6, max2[1][0]);
+    CHECK_EQ(7, max2[1][1]);
+    CHECK_EQ(-1, max2[1][2]);
+    Tensor<int, 2> max3 = e.reduce_max(2)();
+    CHECK_EQ(32, max3[0][0]);
+    CHECK_EQ(4, max3[0][1]);
+    CHECK_EQ(5, max3[1][0]);
+    CHECK_EQ(7, max3[1][1]);
+    Tensor<int, 2> min1 = e.reduce_min(0)();
+    CHECK_EQ(0, min1[0][0]);
+    CHECK_EQ(1, min1[0][1]);
+    CHECK_EQ(-6, min1[0][2]);
+    CHECK_EQ(2, min1[1][0]);
+    CHECK_EQ(3, min1[1][1]);
+    CHECK_EQ(-1, min1[1][2]);
+    Tensor<int, 2> min2 = e.reduce_min(1)();
+    CHECK_EQ(0, min2[0][0]);
+    CHECK_EQ(1, min2[0][1]);
+    CHECK_EQ(4, min2[0][2]);
+    CHECK_EQ(4, min2[1][0]);
+    CHECK_EQ(5, min2[1][1]);
+    CHECK_EQ(-6, min2[1][2]);
+    Tensor<int, 2> min3 = e.reduce_min(2)();
+    CHECK_EQ(0, min3[0][0]);
+    CHECK_EQ(2, min3[0][1]);
+    CHECK_EQ(-6, min3[1][0]);
+    CHECK_EQ(-1, min3[1][1]);
   }
-  TEST_CASE("Convolve") {
-    Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
-                        {{5, 6}, {7, 8}, {9, 0}},
-                        {{1, 2}, {3, 4}, {5, 6}}};
-    Tensor<float, 3> k1{{{1, 1}, {2, 2}}, {{2, 2}, {1, 1}}};
-    Tensor<float, 2> r1 = t1.convolve(k1, 1, 1);
-    CHECK_EQ(44, r1[0][0]);
-    CHECK_EQ(56, r1[0][1]);
-    CHECK_EQ(25, r1[0][2]);
-    CHECK_EQ(54, r1[1][0]);
-    CHECK_EQ(58, r1[1][1]);
-    CHECK_EQ(31, r1[1][2]);
-    CHECK_EQ(17, r1[2][0]);
-    CHECK_EQ(29, r1[2][1]);
-    CHECK_EQ(11, r1[2][2]);
-    Tensor<float, 3> t2{{{0}, {1}, {2}, {3}}, {{3}, {2}, {1}, {0}}};
-    Tensor<float, 3> k2{{{1}, {2}}};
-    Tensor<float, 2> r2 = t2.convolve(k2, 1, 2);
-    CHECK_EQ(2, r2[0][0]);
-    CHECK_EQ(8, r2[0][1]);
-    CHECK_EQ(7, r2[1][0]);
-    CHECK_EQ(1, r2[1][1]);
-    // in context
-    Tensor<float, 3> t4{{{0}, {1}}};
-    Tensor<double, 3> k4{{{1}, {0}, {1}, {0}}};
-    Tensor<double, 2> r4 =
-        (t4 + 1).repeat(1, 1, 1).convolve(k4.pow(2).repeat(0, 0, 1));
-    CHECK_EQ(4, r4[0][0]);
-    CHECK_EQ(8, r4[0][1]);
-    CHECK_EQ(2, r4[0][2]);
-    CHECK_EQ(4, r4[0][3]);
-    CHECK_EQ(4, r4[1][0]);
-    CHECK_EQ(8, r4[1][1]);
-    CHECK_EQ(2, r4[1][2]);
-    CHECK_EQ(4, r4[1][3]);
+}
+TEST_CASE("Convolve") {
+  Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
+                      {{5, 6}, {7, 8}, {9, 0}},
+                      {{1, 2}, {3, 4}, {5, 6}}};
+  Tensor<float, 3> k1{{{1, 1}, {2, 2}}, {{2, 2}, {1, 1}}};
+  Tensor<float, 2> r1 = t1.convolve(k1, 1, 1);
+  CHECK_EQ(44, r1[0][0]);
+  CHECK_EQ(56, r1[0][1]);
+  CHECK_EQ(25, r1[0][2]);
+  CHECK_EQ(54, r1[1][0]);
+  CHECK_EQ(58, r1[1][1]);
+  CHECK_EQ(31, r1[1][2]);
+  CHECK_EQ(17, r1[2][0]);
+  CHECK_EQ(29, r1[2][1]);
+  CHECK_EQ(11, r1[2][2]);
+  Tensor<float, 3> t2{{{0}, {1}, {2}, {3}}, {{3}, {2}, {1}, {0}}};
+  Tensor<float, 3> k2{{{1}, {2}}};
+  Tensor<float, 2> r2 = t2.convolve(k2, 1, 2);
+  CHECK_EQ(2, r2[0][0]);
+  CHECK_EQ(8, r2[0][1]);
+  CHECK_EQ(7, r2[1][0]);
+  CHECK_EQ(1, r2[1][1]);
+  // in context
+  Tensor<float, 3> t4{{{0}, {1}}};
+  Tensor<double, 3> k4{{{1}, {0}, {1}, {0}}};
+  Tensor<double, 2> r4 =
+      (t4 + 1).repeat(1, 1, 1).convolve(k4.pow(2).repeat(0, 0, 1));
+  CHECK_EQ(4, r4[0][0]);
+  CHECK_EQ(8, r4[0][1]);
+  CHECK_EQ(2, r4[0][2]);
+  CHECK_EQ(4, r4[0][3]);
+  CHECK_EQ(4, r4[1][0]);
+  CHECK_EQ(8, r4[1][1]);
+  CHECK_EQ(2, r4[1][2]);
+  CHECK_EQ(4, r4[1][3]);
+}
+TEST_CASE("Slide") {
+  Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
+                      {{5, 6}, {7, 8}, {9, 0}},
+                      {{1, 2}, {3, 4}, {5, 6}}};
+  Tensor<float, 3> k1{{{1, 1}, {2, 2}}};
+  Tensor<float, 3> r1 = t1.slide(k1);
+  CHECK_EQ(34, r1[0][0][0]);
+  CHECK_EQ(33, r1[0][0][1]);
+  CHECK_EQ(56, r1[0][1][0]);
+  CHECK_EQ(48, r1[0][1][1]);
+  Tensor<float, 3> t2{{{0}, {1}, {2}, {3}, {4}}, {{4}, {3}, {2}, {1}, {0}}};
+  Tensor<float, 3> k2{{{1}, {2}}};
+  Tensor<float, 3> r2 = t2.slide(k2, 1, 2);
+  CHECK_EQ(12, r2[0][0][0]);
+  CHECK_EQ(16, r2[0][1][0]);
+  Tensor<float, 3> k3{{{1, 1}}, {{2, 2}}};
+  Tensor<float, 3> r3 = t1.slide(k3);
+  CHECK_EQ(34, r3[0][0][0]);
+  CHECK_EQ(33, r3[0][0][1]);
+  CHECK_EQ(60, r3[0][1][0]);
+  CHECK_EQ(52, r3[0][1][1]);
+  // in context
+  Tensor<float, 3> t4{{{0}, {1}}};
+  Tensor<double, 3> k4{{{1}, {0}, {1}, {0}}};
+  Tensor<double, 2> r4 =
+      ((t4 + 1).repeat(1, 1, 1).slide(k4.pow(2).repeat(0, 0, 1)) + 1)
+          .reduce_sum(2);
+  CHECK_EQ(26, r4[0][0]);
+  CHECK_EQ(2, r4[0][1]);
+  CHECK_EQ(14, r4[0][2]);
+  CHECK_EQ(2, r4[0][3]);
+}
+TEST_CASE("Total Reduce") {
+  Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
+  Tensor<float, 1> r1 = t1.flattened().reduce_sum();
+  CHECK_EQ(r1[0], 7);
+  r1 = t1.flattened().reduce_mul();
+  CHECK_EQ(r1[0], -2);
+}
+TEST_CASE("Concat") {
+  Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
+  Tensor<float, 2> t2{{0, 0}, {3.141592, 42}};
+  Tensor<float, 2> c1 = Flint::concat(t1, t2, 0);
+  for (int i = 0; i < 6; i++) {
+    for (int j = 0; j < 2; j++)
+      if (i < 4)
+        CHECK_EQ(t1[i][j], c1[i][j]);
+      else
+        CHECK_EQ(t2[i - 4][j], c1[i][j]);
   }
-  TEST_CASE("Slide") {
-    Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
-                        {{5, 6}, {7, 8}, {9, 0}},
-                        {{1, 2}, {3, 4}, {5, 6}}};
-    Tensor<float, 3> k1{{{1, 1}, {2, 2}}};
-    Tensor<float, 3> r1 = t1.slide(k1);
-    CHECK_EQ(34, r1[0][0][0]);
-    CHECK_EQ(33, r1[0][0][1]);
-    CHECK_EQ(56, r1[0][1][0]);
-    CHECK_EQ(48, r1[0][1][1]);
-    Tensor<float, 3> t2{{{0}, {1}, {2}, {3}, {4}}, {{4}, {3}, {2}, {1}, {0}}};
-    Tensor<float, 3> k2{{{1}, {2}}};
-    Tensor<float, 3> r2 = t2.slide(k2, 1, 2);
-    CHECK_EQ(12, r2[0][0][0]);
-    CHECK_EQ(16, r2[0][1][0]);
-    Tensor<float, 3> k3{{{1, 1}}, {{2, 2}}};
-    Tensor<float, 3> r3 = t1.slide(k3);
-    CHECK_EQ(34, r3[0][0][0]);
-    CHECK_EQ(33, r3[0][0][1]);
-    CHECK_EQ(60, r3[0][1][0]);
-    CHECK_EQ(52, r3[0][1][1]);
-    // in context
-    Tensor<float, 3> t4{{{0}, {1}}};
-    Tensor<double, 3> k4{{{1}, {0}, {1}, {0}}};
-    Tensor<double, 2> r4 =
-        ((t4 + 1).repeat(1, 1, 1).slide(k4.pow(2).repeat(0, 0, 1)) + 1)
-            .reduce_sum(2);
-    CHECK_EQ(26, r4[0][0]);
-    CHECK_EQ(2, r4[0][1]);
-    CHECK_EQ(14, r4[0][2]);
-    CHECK_EQ(2, r4[0][3]);
-  }
-  TEST_CASE("Total Reduce") {
-    Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
-    Tensor<float, 1> r1 = t1.flattened().reduce_sum();
-    CHECK_EQ(r1[0], 7);
-    r1 = t1.flattened().reduce_mul();
-    CHECK_EQ(r1[0], -2);
-  }
-  TEST_CASE("Concat") {
-    Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
-    Tensor<float, 2> t2{{0, 0}, {3.141592, 42}};
-    Tensor<float, 2> c1 = Flint::concat(t1, t2, 0);
-    for (int i = 0; i < 6; i++) {
-      for (int j = 0; j < 2; j++)
-        if (i < 4)
-          CHECK_EQ(t1[i][j], c1[i][j]);
-        else
-          CHECK_EQ(t2[i - 4][j], c1[i][j]);
+  Tensor<float, 2> t3{{1, 2, 3, 4}, {5, 6, 7, 8}};
+  Tensor<float, 2> c2 = Flint::concat(t2, t3, 1);
+  for (int i = 0; i < 2; i++) {
+    for (int j = 0; j < 6; j++) {
+      if (j < 2)
+        CHECK_EQ(t2[i][j], c2[i][j]);
+      else
+        CHECK_EQ(t3[i][j - 2], c2[i][j]);
     }
-    Tensor<float, 2> t3{{1, 2, 3, 4}, {5, 6, 7, 8}};
-    Tensor<float, 2> c2 = Flint::concat(t2, t3, 1);
-    for (int i = 0; i < 2; i++) {
-      for (int j = 0; j < 6; j++) {
-        if (j < 2)
-          CHECK_EQ(t2[i][j], c2[i][j]);
-        else
-          CHECK_EQ(t3[i][j - 2], c2[i][j]);
+  }
+  Tensor<float, 1> t7 = t2.slice(TensorRange(1)).flattened().repeat(1);
+  Tensor<double, 2> t4 = t3.convert<double>() + t7;
+  Tensor<double, 2> t5 = t4 - t3;
+  Tensor<double, 2> t6 = Flint::concat(t4, t5, 0);
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      CHECK_EQ(doctest::Approx(t6[i][j]).epsilon(0.00001),
+               (i >= 2) ? (j % 2 == 0 ? 3.141592 : 42)
+                        : t3[i][j] + (j % 2 == 0 ? 3.141592 : 42));
+    }
+  }
+}
+TEST_CASE("Random") {
+  Tensor<double, 4> r1 = Flint::random(4, 4, 4, 4) + 1.0;
+  for (int i = 0; i < 4; i++)
+    for (int j = 0; j < 4; j++)
+      for (int k = 0; k < 4; k++)
+        for (int l = 0; l < 4; l++)
+          CHECK_LE(1.0, r1[i][j][k][l]);
+}
+TEST_CASE("Saving and Loading to files") {
+  Tensor<double, 3> a = Flint::constant(3.0, 9, 4, 1);
+  Tensor<float, 2> b{{1}, {-1}, {2}, {-2}};
+  Tensor<double, 3> c = a + b;
+  std::ofstream ofile;
+  ofile.open("test.flint");
+  ofile << c;
+  ofile.close();
+  std::ifstream ifile;
+  ifile.open("test.flint");
+  Tensor<double, 3> e = Tensor<double, 3>::read_from(ifile);
+  ifile.close();
+  for (int i = 0; i < 9; i++)
+    for (int j = 0; j < 4; j++)
+      CHECK_EQ(e[i][j][0], c[i][j][0]);
+  std::remove("test.flint");
+}
+TEST_CASE("Expand") {
+  Tensor<double, 2> a = {{0, 1}, {2, 3}};
+  Tensor<double, 3> e1 = a.expand(0, 3)();
+  Tensor<double, 3> e2 = a.expand(1, 3)();
+  Tensor<double, 3> e3 = a.expand(2, 3)();
+  for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 2; j++)
+      for (int k = 0; k < 2; k++) {
+        CHECK_EQ(a[j][k], e1[i][j][k]);
+        CHECK_EQ(a[j][k], e2[j][i][k]);
+        CHECK_EQ(a[j][k], e3[j][k][i]);
       }
-    }
-    Tensor<float, 1> t7 = t2.slice(TensorRange(1)).flattened().repeat(1);
-    Tensor<double, 2> t4 = t3.convert<double>() + t7;
-    Tensor<double, 2> t5 = t4 - t3;
-    Tensor<double, 2> t6 = Flint::concat(t4, t5, 0);
-    for (int i = 0; i < 4; i++) {
-      for (int j = 0; j < 4; j++) {
-        CHECK_EQ(doctest::Approx(t6[i][j]).epsilon(0.00001),
-                 (i >= 2) ? (j % 2 == 0 ? 3.141592 : 42)
-                          : t3[i][j] + (j % 2 == 0 ? 3.141592 : 42));
-      }
-    }
-  }
-  TEST_CASE("Random") {
-    Tensor<double, 4> r1 = Flint::random(4, 4, 4, 4) + 1.0;
-    for (int i = 0; i < 4; i++)
-      for (int j = 0; j < 4; j++)
-        for (int k = 0; k < 4; k++)
-          for (int l = 0; l < 4; l++)
-            CHECK_LE(1.0, r1[i][j][k][l]);
-  }
-  TEST_CASE("Saving and Loading to files") {
-    Tensor<double, 3> a = Flint::constant(3.0, 9, 4, 1);
-    Tensor<float, 2> b{{1}, {-1}, {2}, {-2}};
-    Tensor<double, 3> c = a + b;
-    std::ofstream ofile;
-    ofile.open("test.flint");
-    ofile << c;
-    ofile.close();
-    std::ifstream ifile;
-    ifile.open("test.flint");
-    Tensor<double, 3> e = Tensor<double, 3>::read_from(ifile);
-    ifile.close();
-    for (int i = 0; i < 9; i++)
-      for (int j = 0; j < 4; j++)
-        CHECK_EQ(e[i][j][0], c[i][j][0]);
-    std::remove("test.flint");
-  }
-  TEST_CASE("Expand") {
-    Tensor<double, 2> a = {{0, 1}, {2, 3}};
-    Tensor<double, 3> e1 = a.expand(0, 3)();
-    Tensor<double, 3> e2 = a.expand(1, 3)();
-    Tensor<double, 3> e3 = a.expand(2, 3)();
-    for (int i = 0; i < 3; i++) 
-      for (int j = 0; j < 2; j++) 
-        for (int k = 0; k < 2; k++) {
-          CHECK_EQ(a[j][k], e1[i][j][k]);
-          CHECK_EQ(a[j][k], e2[j][i][k]);
-          CHECK_EQ(a[j][k], e3[j][k][i]);
-        }
-  }
 }
 TEST_CASE("Test Example 1") {
   Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
