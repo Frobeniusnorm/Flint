@@ -160,6 +160,8 @@ enum FOperationType {
   FMAX,
   FREDUCE_SUM,
   FREDUCE_MUL,
+  FREDUCE_MIN,
+  FREDUCE_MAX,
   FSLICE,
   FABS,
   FREPEAT,
@@ -679,6 +681,22 @@ FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node.*/
 FGraphNode *freduce_mul(FGraphNode *a, const int dimension);
+/** Reduces one dimension of the tensor by keeping the minimum e.g.
+ *
+ * `freduce_mul([[1,32,3], [4,5,3]], 0) = [1,5,3]`,
+ * `freduce_mul([[9,2,3], [-1,5,6]], 1) = [2, -1]`
+ *
+ * The results of the predecessor node must be available; to
+ * ensure that the method may execute the parameter node.*/
+FGraphNode *freduce_min(FGraphNode *a, const int dimension);
+/** Reduces one dimension of the tensor by keeping the maximum e.g.
+ *
+ * `freduce_mul([[1,32,3], [4,5,3]], 0) = [4,32,3]`,
+ * `freduce_mul([[9,2,3], [-1,5,6]], 1) = [9, 6]`
+ *
+ * The results of the predecessor node must be available; to
+ * ensure that the method may execute the parameter node.*/
+FGraphNode *freduce_max(FGraphNode *a, const int dimension);
 /** Selects a slice of the tensor with a dimension wise start and end index.
  * `start` and `end` are arrays with as many entries
  * as the tensor has dimensions. They may contain negative values,
