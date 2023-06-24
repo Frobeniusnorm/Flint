@@ -771,21 +771,39 @@ template <typename T, unsigned int n> struct Tensor {
    *    dimension).
    * - `ax_size` the new size of that dimension (repeats the following
    *    dimensions `ax_size - 1` times).
+   *
+   * @code{
+   * Tensor<double, 2> a = {{0, 1}, {2, 3}};
+   * std::cout << a.expand(0, 3)() << std::endl;
+   * // Tensor<FLOAT64, shape: [3, 2, 2]>(
+   * // [[[0.000000, 1.000000],
+   * //   [2.000000, 3.000000]],
+   * //  [[0.000000, 1.000000],
+   * //   [2.000000, 3.000000]],
+   * //  [[0.000000, 1.000000],
+   * //   [2.000000, 3.000000]]])
+   * std::cout << a.expand(1, 3)() << std::endl;
+   * // Tensor<FLOAT64, shape: [2, 3, 2]>(
+   * // [[[0.000000, 1.000000],
+   * //   [0.000000, 1.000000],
+   * //   [0.000000, 1.000000]],
+   * //  [[2.000000, 3.000000],
+   * //   [2.000000, 3.000000],
+   * //   [2.000000, 3.000000]]])
+   * std::cout << a.expand(2, 3)() << std::endl;
+   * // Tensor<FLOAT64, shape: [2, 2, 3]>(
+   * // [[[0.000000, 0.000000, 0.000000],
+   * //   [1.000000, 1.000000, 1.000000]],
+   * //  [[2.000000, 2.000000, 2.000000],
+   * //   [3.000000, 3.000000, 3.000000]]])
+   * }
    */
   Tensor<T, n + 1> expand(int ax = n, int ax_size = 0) {
+    FGraphNode *nn = fexpand(node, ax, ax_size);
     std::array<size_t, n + 1> new_shape;
-    if (ax > 0)
-      std::memcpy(new_shape.data(), shape.data(), sizeof(size_t) * ax);
-    new_shape[ax] = 1;
-    if (ax < n)
-      std::memcpy(new_shape.data() + ax + 1, shape.data() + ax,
-                  sizeof(size_t) * (n - ax));
-    if (ax_size == 0)
-      return reshape_array<n + 1>(new_shape);
-    std::array<int, n + 1> repet;
-    repet.fill(0);
-    repet[ax] = ax_size - 1;
-    return reshape_array<n + 1>(new_shape).repeat_array(repet);
+    std::memcpy(new_shape.data(), nn->operation->shape,
+                sizeof(size_t) * (n + 1));
+    return Tensor<T, n + 1>(nn, new_shape);
   }
   /** Takes the minimum of this tensor and `other` element wise (the lower value
    * is the result, if one tensor is smaller it will be broadcasted).*/

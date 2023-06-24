@@ -536,7 +536,8 @@ FGraphNode *flog10(FGraphNode *a);
 FGraphNode *fsin(FGraphNode *a);
 /** Takes the elementwise square root of `a` */
 FGraphNode *fsqrt_g(FGraphNode *a);
-/** Takes the elementwise exponential of `a` (power of the constant `e` to `a`) */
+/** Takes the elementwise exponential of `a` (power of the constant `e` to `a`)
+ */
 FGraphNode *fexp(FGraphNode *a);
 /** Takes the elementwise cosinus of `a` */
 FGraphNode *fcos(FGraphNode *a);
@@ -755,6 +756,19 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
  * 7]]`
  */
 FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis);
+
+/**
+ * Adds a new dimension at an arbitrary position to the tensor and repeats the
+ * following dimensions to match a given shape.
+ *
+ * - `ax` the dimension prior to which the new dimension will be inserted (`0`
+ *    means a new dimension in the front, `n + 1` means as a new last
+ *    dimension).
+ * - `ax_size` the new size of that dimension (repeats the following
+ *    dimensions `ax_size - 1` times).
+ */
+FGraphNode *fexpand(FGraphNode *a, const unsigned int axis,
+                    const unsigned int size);
 /** Takes the elementwise absolute value of `a`, i.e. `|a[i]|` */
 FGraphNode *fabs_g(FGraphNode *a);
 /** Repeats dimensions of a tensor multiple times

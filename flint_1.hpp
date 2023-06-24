@@ -697,19 +697,11 @@ template <typename T> struct Tensor<T, 1> {
    *    dimensions `ax_size - 1` times).
    */
   Tensor<T, 2> expand(int ax = 2, int ax_size = 0) {
+    FGraphNode *nn = fexpand(node, ax, ax_size);
     std::array<size_t, 2> new_shape;
-    if (ax > 0)
-      std::memcpy(new_shape.data(), shape.data(), sizeof(size_t) * ax);
-    new_shape[ax] = 1;
-    if (ax < 2)
-      std::memcpy(new_shape.data() + ax + 1, shape.data() + ax,
-                  sizeof(size_t) * (2 - ax));
-    if (ax_size == 0)
-      return reshape_array<2 + 1>(new_shape);
-    std::array<int, 2 + 1> repet;
-    repet.fill(0);
-    repet[ax] = ax_size - 1;
-    return reshape_array<2 + 1>(new_shape).repeat_array(repet);
+    std::memcpy(new_shape.data(), nn->operation->shape,
+                sizeof(size_t) * 2);
+    return Tensor<T, 2>(nn, new_shape);
   }
   /** Returns the underlying `FGraphNode` for use with the C-Frontend. It is
    * still memory managed by this Tensor instance, so be carefull about variable

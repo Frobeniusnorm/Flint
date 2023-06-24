@@ -1238,6 +1238,22 @@ FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis) {
   ((unsigned int *)op->additional_data)[0] = axis;
   return addNode(op, {a, b});
 }
+FGraphNode *fexpand(FGraphNode *a, const unsigned int ax,
+                    const unsigned int ax_size) {
+  int n = a->operation->dimensions;
+  std::vector<size_t> new_shape(n + 1);
+  if (ax > 0)
+    std::memcpy(new_shape.data(), a->operation->shape, sizeof(size_t) * ax);
+  new_shape[ax] = 1;
+  if (ax < n)
+    std::memcpy(new_shape.data() + ax + 1, a->operation->shape + ax,
+                sizeof(size_t) * (n - ax));
+  if (ax_size == 0)
+    return freshape(a, new_shape.data(), n + 1);
+  std::vector<int> repet(n + 1, 0);
+  repet[ax] = ax_size - 1;
+  return frepeat(freshape(a, new_shape.data(), n + 1), repet.data());
+}
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
   const FOperation *ao = a->operation;
   const FOperation *bo = kernel->operation;
