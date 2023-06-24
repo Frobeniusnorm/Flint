@@ -866,6 +866,9 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(2, min3[0][1]);
     CHECK_EQ(-6, min3[1][0]);
     CHECK_EQ(-1, min3[1][1]);
+    Tensor<int, 1> f{0, 1, 32, 2, 3, 4, -6, 7, -4};
+    CHECK_EQ(-6, f.reduce_min()[0]);
+    CHECK_EQ(32, f.reduce_max()[0]);
   }
 }
 TEST_CASE("Convolve") {

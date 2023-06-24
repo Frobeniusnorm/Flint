@@ -213,6 +213,8 @@ inline void freeAdditionalData(FGraphNode *gn) {
   case FSLIDE:
   case FGRADIENT_CONVOLVE:
   case FTRANSPOSE:
+  case FREDUCE_MIN:
+  case FREDUCE_MAX:
   case FREDUCE_SUM:
   case FREDUCE_MUL:
     free(gn->operation->additional_data);

@@ -362,6 +362,8 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
       csl->end = osl->end;
       csl->step = osl->step;
     } break;
+    case FREDUCE_MAX:
+    case FREDUCE_MIN:
     case FCONCAT:
     case FREDUCE_SUM:
     case FREDUCE_MUL: {

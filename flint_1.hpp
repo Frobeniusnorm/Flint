@@ -210,6 +210,30 @@ template <typename T> struct Tensor<T, 1> {
    * The results of this Tensor must be available, to
    * ensure that the method may execute the Tensor. */
   Tensor<T, 1> reduce_mul() { return Tensor<T, 1>(freduce_mul(node, 0), 1); }
+  /** Reduces one dimension of the tensor by keeping the minimum e.g.
+   *
+   * @code{
+   * Tensor<int, 1> a{0, 1, 32, 2, 3, 4, -6, 7, -4}};
+   * std::cout << e.reduce_min()() << std::endl;
+   * // Tensor<INT32, shape: [1]>([-6])
+   *
+   * The results of this Tensor must be available, to
+   * ensure that the method may execute the Tensor. */
+  Tensor<T, 1> reduce_min() {
+    return Tensor<T, 1>(freduce_min(node, 0), std::array<size_t, 1>{1});
+  }
+  /** Reduces one dimension of the tensor by keeping the maximum e.g.
+   *
+   * @code{
+   * Tensor<int, 1> a{0, 1, 32, 2, 3, 4, -6, 7, -4}};
+   * std::cout << e.reduce_max()() << std::endl;
+   * // Tensor<INT32, shape: [1]>([32])
+   *
+   * The results of this Tensor must be available, to
+   * ensure that the method may execute the Tensor. */
+  Tensor<T, 1> reduce_max() {
+    return Tensor<T, 1>(freduce_max(node, 0), std::array<size_t, 1>{1});
+  }
   /** Returns the number of entries in this Tensor */
   const size_t get_shape() const { return shape[0]; }
   /**
