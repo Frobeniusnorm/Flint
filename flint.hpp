@@ -32,6 +32,8 @@
 #include "flint_n.hpp"
 
 struct Flint {
+  /** Sets the Logging Level of the Flint Backend */
+  static void setLoggingLevel(FLogType level) { fSetLoggingLevel(level); }
   /**
    * Loads an image from the given path.
    * The image will be stored in floating point data and the shape will be h, w,
@@ -48,13 +50,6 @@ struct Flint {
                           FImageFormat format) {
     fstore_image(t.node, path.c_str(), format);
   }
-  /** Sets the Logging Level of the Flint Backend */
-  static void setLoggingLevel(FLogType level) { fSetLoggingLevel(level); }
-  /**
-   * Deallocates any resourced allocated by the corresponding backends and
-   * allows them to shutdown their threads.
-   */
-  static void cleanup() { flintCleanup(); }
 
   template <typename K, unsigned int n>
   static Tensor<K, n> concat(const Tensor<K, n> &a, const Tensor<K, n> &b,
