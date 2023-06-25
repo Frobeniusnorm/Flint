@@ -145,6 +145,18 @@ concept GenericLayer =
       // Has to be constexpr
     };
 //    };
+/** Implements blank methods for every method of GenericLayer that is not needed for a Layer that is not trainable */
+struct UntrainableLayer {
+  // to fulfill generic layer
+  void generate_optimizer(OptimizerFactory *factory) {}
+  // to fulfill generic layer
+  template <typename T, unsigned int dim>
+  void optimize_weights(const Tensor<T, dim> &error) {}
+  static constexpr FType transform_type(FType t) { return t; }
+  static constexpr unsigned int transform_dimensionality(unsigned int n) {
+    return n;
+  }
+};
 /**
  * Virtual super class of all Layer implementations with type safe weight
  * management capabilities. The variadic template describes the dimensionality
