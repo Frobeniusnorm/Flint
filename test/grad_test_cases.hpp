@@ -2,6 +2,7 @@
 #include "../flint.hpp"
 #include "doctest.h"
 #include <cmath>
+#include <math.h>
 TEST_SUITE("Autodiff") {
   TEST_CASE("Two Times Matmul") {
     GradientContext _;
@@ -340,12 +341,11 @@ TEST_SUITE("Autodiff") {
   }
   TEST_CASE("CONVOLVE") {
     GradientContext _;
-    Tensor<int, 3> x{{{0, 1, 2},    {1, 2, 3},    {2, 3, 4}},
-                     {{3, 4, 5},    {6, 7, 8},    {9, 0, -1}},
+    Tensor<int, 3> x{{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}},
+                     {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}},
                      {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}},
-                     {{1, 2, 3},    {4, 5, 6},    {7, 8, 9}}};
-    Tensor<int, 3> k{{{1, 1, 1},    {2, 2, 2}}, 
-                     {{-3, -3, -3}, {1, 1, 1}}};
+                     {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}};
+    Tensor<int, 3> k{{{1, 1, 1}, {2, 2, 2}}, {{-3, -3, -3}, {1, 1, 1}}};
     x.watch();
     k.watch();
     Tensor<int, 2> y = x.convolve(k, 1, 2);
@@ -376,14 +376,13 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(3, dx[3][1][0]);
     CHECK_EQ(-2, dx[3][2][0]);
     // check if last dimension is same
-    for(int i = 0; i < 4; i++)
-      for(int j = 0; j < 3; j++)
-	      for(int k = 1; k < 3; k++)
-	        CHECK_EQ(dx[i][j][k], dx[i][j][k-1]);
-    Tensor<double, 4> w{{{{0.1, 0.2, 0.3}, {-0.9, -0.8, -0.7}}, 
-                         {{1, 2, 3}, {0, 0, 0}}}, 
-                        {{{3,4,5}, {-1,-1,-1}},
-                         {{0, 0, 0}, {1, 2, 0.1}}}};
+    for (int i = 0; i < 4; i++)
+      for (int j = 0; j < 3; j++)
+        for (int k = 1; k < 3; k++)
+          CHECK_EQ(dx[i][j][k], dx[i][j][k - 1]);
+    Tensor<double, 4> w{
+        {{{0.1, 0.2, 0.3}, {-0.9, -0.8, -0.7}}, {{1, 2, 3}, {0, 0, 0}}},
+        {{{3, 4, 5}, {-1, -1, -1}}, {{0, 0, 0}, {1, 2, 0.1}}}};
     Tensor<double, 4> f{{{{3, 2, 1}, {-1, 1, -1}}}};
     w.watch();
     Tensor<double, 3> z = w.convolve(f, 1, 2, 2);
@@ -414,7 +413,7 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(0, dw[1][1][1][2]);
     Tensor<double, 3> a = Flint::constant(1.0, 6, 6, 1);
     a.watch();
-    Tensor<double, 3> b {{{1}, {-1}, {2}, {2}}, {{2}, {3}, {-1}, {4}}};
+    Tensor<double, 3> b{{{1}, {-1}, {2}, {2}}, {{2}, {3}, {-1}, {4}}};
     Tensor<double, 2> c = a.convolve(b, 5, 2);
     Tensor<double, 3> da = c.gradient(a);
     CHECK_EQ(1, da[0][0][0]);
@@ -429,8 +428,8 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(7, da[1][3][0]);
     CHECK_EQ(1, da[1][4][0]);
     CHECK_EQ(7, da[1][5][0]);
-    for(int i = 0; i < 3; i++)
-      for(int j = 0; j < 6; j++)
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 6; j++)
         CHECK_EQ(0, da[2 + i][j][0]);
     CHECK_EQ(1, da[5][0][0]);
     CHECK_EQ(-1, da[5][1][0]);
@@ -450,22 +449,44 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(s1[1][1][1], dk[1][1][1]);
     CHECK_EQ(s1[1][1][2], dk[1][1][2]);
     dx = s1.gradient(x);
-    for(int i = 0; i < 3; i++){
+    for (int i = 0; i < 3; i++) {
       CHECK_EQ(1, dx[0][0][i]);
       CHECK_EQ(2, dx[0][1][i]);
       CHECK_EQ(1, dx[0][2][i]);
-      for(int j = 1; j < 4; j++){
+      for (int j = 1; j < 4; j++) {
         CHECK_EQ(-2, dx[j][0][i]);
         CHECK_EQ(3, dx[j][1][i]);
         CHECK_EQ(-2, dx[j][2][i]);
       }
     }
     Tensor<double, 3> dxk = dx.gradient(k);
-    for(int i = 0; i < 3; i++){
+    for (int i = 0; i < 3; i++) {
       CHECK_EQ(8, dxk[0][0][i]);
       CHECK_EQ(4, dxk[0][1][i]);
       CHECK_EQ(6, dxk[1][0][i]);
       CHECK_EQ(3, dxk[1][1][i]);
     }
+  }
+  TEST_CASE("Concat, Exponential") {
+    GradientContext _;
+    Tensor<int, 2> a{{0, 1}, {2, 3}};
+    a.watch();
+    Tensor<int, 2> b{{4, 5}, {6, 7}};
+    Tensor<double, 1> e{4.2, -6, 7, 4};
+    Tensor<double, 2> c = (Flint::concat(a, b, 1) * e);
+    Tensor<double, 2> da = c.gradient(a);
+    CHECK_EQ(doctest::Approx((4.2)), da[0][0]);
+    CHECK_EQ(doctest::Approx((-6)), da[0][1]);
+    CHECK_EQ(doctest::Approx((4.2)), da[1][0]);
+    CHECK_EQ(doctest::Approx((-6)), da[1][1]);
+    e.watch();
+    Tensor<double, 1> eexp = e.exp() * 2;
+    Tensor<double, 1> de = eexp.gradient(e);
+    Tensor<double, 1> dec = (e * 2).exp();
+    for (int i = 0; i < 4; i++)
+      CHECK_EQ(dec[i], dec[i]);
+  }
+  TEST_CASE("Reduce_min/max") {
+
   }
 }

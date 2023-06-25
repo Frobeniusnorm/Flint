@@ -421,8 +421,10 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   case FREDUCE_MIN: {
     FGraphNode *a = y->predecessors[0];
     unsigned int ax = ((unsigned int*) y->operation->additional_data)[0];
-    // work with the principal of extend to readjust the node to the same shape as before by repetition,
-    // then compare it with equal and multiply to 0-1 tensor with previous adjoint.
+    // work with extend to readjust the node to the same shape as before by repetition,
+    // then compare it with equal and multiply the 0-1 tensor with previous adjoint.
+    FGraphNode* n = fexpand(y, ax, a->operation->shape[ax]);
+    return fmul(prev_adj, fequal(a, n));
   }
   case FREDUCE_SUM: {
     FGraphNode *a = y->predecessors[0];
