@@ -487,6 +487,34 @@ TEST_SUITE("Autodiff") {
       CHECK_EQ(dec[i], dec[i]);
   }
   TEST_CASE("Reduce_min/max") {
-
+    GradientContext _;
+    Tensor<int, 3> a{{{0, 9, 4}, {-1, 7, 4}, {7, 7, 2}}};
+    a.watch();
+    Tensor<float, 2> a1 = a.reduce_max(0) * 42.0f;
+    Tensor<double, 3> da1 = a1.gradient(a);
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++) {
+        CHECK_EQ(doctest::Approx(42.0), da1[0][i][j]);
+      }
+    Tensor<float, 2> a2 = a.reduce_max(1) * 42.0f;
+    Tensor<double, 3> da2 = a2.gradient(a);
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++) {
+        if ((i == 0 && j == 1) || ((i == 0 || i == 1) && j == 2) ||
+            (i == 2 && j == 0))
+          CHECK_EQ(doctest::Approx(42.0), da2[0][i][j]);
+        else
+          CHECK_EQ(doctest::Approx(0.0), da2[0][i][j]);
+      }
+    Tensor<float, 2> a3 = a.reduce_max(2) * 42.0f;
+    Tensor<double, 3> da3 = a3.gradient(a);
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++) {
+        if ((i == 0 && j == 1) || (i == 1 && j == 1) ||
+            (i == 2 && (j == 0 || j == 1)))
+          CHECK_EQ(doctest::Approx(42.0), da3[0][i][j]);
+        else
+          CHECK_EQ(doctest::Approx(0.0), da3[0][i][j]);
+      }
   }
 }
