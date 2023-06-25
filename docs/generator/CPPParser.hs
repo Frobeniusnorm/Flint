@@ -86,11 +86,11 @@ module CPPParser where
         selectHelper dd sel ("." `elem` sel)
         where
             selectHelper sd@(SymDoc name doc) selection all =
-                [sd | (stripFctname name) `elem` selection || null selection || all]
+                [([], sd) | (stripFctname name) `elem` selection || null selection || all]
             selectHelper sd@(StructDoc name doc c) selection all = do
                 let contains = (stripFctname name) `elem` selection
                 if contains || null selection || all then
-                    (sd : (concatMap (\x -> selectHelper x (selection) contains) c)) else []
+                    (([], sd) : (concatMap (\x -> map (\(p1, p2) -> (name : p1, p2)) (selectHelper x (selection) contains)) c)) else []
 
     functionNameHighlighting str fn_names =
         unpack (foldl (\curr fn_name ->
@@ -117,37 +117,33 @@ module CPPParser where
 
     compileTOCForCPP str selection = do
         let fcts_tree = parseCpp str
-        let fcts_defs = concatMap (`selectFcts` selection) fcts_tree
-        let map_sym_html a = "<li><a href=\"#" ++ stripFctname (name a) ++ "\">" ++ (highlightName (name a)) ++ "</a></li>"
-        let ovw_fcts = concatMap map_sym_html
-                (filter (\x -> not (isDataNode $ name x)) fcts_defs)
-        let ovw_types = concatMap map_sym_html
-                (filter (isDataNode . name) fcts_defs)
+        let fcts_hyra = concatMap (\t -> (selectFcts t selection)) fcts_tree
+        let fcts_defs = map (snd) fcts_hyra
+        let map_sym_html (b, a) = (concat ["&nbsp;" | i <- [0 .. (length b)]]) ++ "&#x2022;&nbsp;<a href=\"#" ++ stripFctname (name a) ++ "\">" ++ (highlightName (name a)) ++ "</a><br/>"
+        let ovw_fcts = concatMap map_sym_html fcts_hyra
         "<div class=\"card\">" ++
             "    <span class=\"card_header\">Overview</span>" ++
             "</div><br /><div class=\"card\">\
-            \<span class=\"card_header\" style=\"font-size:1.2em\">Types</span><ul>"
-            ++ ovw_types ++
-            "</ul>\
-            \<span class=\"card_header\" style=\"font-size:1.2em\">Functions</span><ul>"
+            \<span class=\"card_header\" style=\"font-size:1.2em\">Types and Functions</span><div class=\"spacer\" style=\"height:1em\"></div>"
             ++ ovw_fcts ++
-            "</ul></div>"
+            "<br/></div>"
         where
             isDataNode::[Char] -> Bool
             isDataNode x = "struct " `isInfixOf` x || "enum " `isInfixOf` x || "class " `isInfixOf` x
 
     compileCppToHtml str selection = do
         let fcts_tree = parseCpp str
-        let fcts_defs = concatMap (`selectFcts` selection) fcts_tree
+        let fcts_hyra = concatMap (\t -> (selectFcts t selection)) fcts_tree
+        let fcts_defs = map (snd) fcts_hyra
         let fct_names = sortOn (\a -> -length a) (map (stripFctname . name) fcts_defs)
-        concatMap (\a ->
+        concatMap (\(b, a) ->
             "<div id=\""
                 ++ stripFctname (name a) ++
-                "\"></div><div class=\"card\"><pre class=\"card_header_code\">"
+                "\"></div><div style=\"margin-left: " ++ show (length b) ++ "em;\" class=\"card\"><pre class=\"card_header_code\">"
                 ++ highlightName (name a) ++
-                "</pre></div>\n<br />\n<div class=\"card\"><div style=\"padding: 5px;\">"
+                "</pre></div>\n<br />\n<div style=\"margin-left: " ++ show (length b) ++ "em;\" class=\"card\"><div style=\"padding: 5px;\">"
                 ++ highlightDoc (parseDoc (docu a) "") fct_names ++
-                "</div></div><div style=\"display: block; height: 2em;\"></div>\n") fcts_defs
+                "</div></div><div style=\"display: block; height: 2em;\"></div>\n") fcts_hyra
         where
             parseDoc ('\n':t) res = do
                 let stripped = dropWhile (\x -> x == ' ' || x == '\t') t

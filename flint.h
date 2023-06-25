@@ -109,18 +109,6 @@ void fEnableEagerExecution();
 void fDisableEagerExecution();
 /** Returns 1 if eager execution has been enabled, else 0 */
 int fIsEagerExecution();
-/** Starts a gradient context, gradient information will be inherited until the
- * next call to `fStopGradientContext`. A history containing information about
- * all watched nodes in the parent graph is kept up to date within a gradient
- * context for each node created in it. The node does not have to be watched in
- * that particular context (it just has to be marked as watched) */
-void fStartGradientContext();
-/** Stops a gradient context, all inherited gradient information and watched
- * nodes will be kept, but no longer inherited to new ones. */
-void fStopGradientContext();
-/** Return true if the call to this function is placed within a gradient
- * context. */
-bool fIsGradientContext();
 /** The 4 allowed data types:
  * - `F_INT32`(integer, 32bit)
  * - `F_INT64`(integer, 64bit)
@@ -400,13 +388,31 @@ FGraphNode *fCalculateResult(FGraphNode *node);
 //  gradient calculation
 /** Calculates the overall gradient of an output node to a variable.
  * The variable must be marked as a gradient variable, see
- * `fMarkGradientVariable`.
+ * `fMarkGradientVariable` and the output node `outputfct` must be constructed
+ * in an gradient context (to remember which variables are directly or
+ * indirectly present in which operation), which can be started with
+ * `fStartGradientContext`.
  *
  * - `outputfct`: the Node which represents the chain of functions of which
  *    the gradient is to be computed.
  * - `dx`: the variable for which outputfct is derived for
  */
 FGraphNode *fCalculateGradient(FGraphNode *outputfct, const FGraphNode *dx);
+/** Starts a gradient context, gradient information will be inherited until the
+ * next call to `fStopGradientContext`. A history containing information about
+ * all watched nodes in the parent graph is kept up to date within a gradient
+ * context for each node created in it. The node does not have to be watched in
+ * that particular context (it just has to be marked as watched), but only for
+ * operations which are constructed inside such a gradient context a gradient to
+ * a variable may be computed. Since this context introduces overhead and limits
+ * `fOptimizeMemory` significantly, it should be closed as soon as possible. */
+void fStartGradientContext();
+/** Stops a gradient context, all inherited gradient information and watched
+ * nodes will be kept, but no longer inherited to new ones. */
+void fStopGradientContext();
+/** Return true if the call to this function is placed within a gradient
+ * context. */
+bool fIsGradientContext();
 /** Marks this node as a node for which a gradient might be calculated later.
  * It is only possible to calculate the gradient for this node (as a derivative)
  * in operations that occur AFTER a call to this method (all subsequent
@@ -756,7 +762,6 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
  * 7]]`
  */
 FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis);
-
 /**
  * Adds a new dimension at an arbitrary position to the tensor and repeats the
  * following dimensions to match a given shape.

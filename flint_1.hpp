@@ -747,7 +747,9 @@ template <typename T> struct Tensor<T, 1> {
   }
   /**
    * Calculates the gradient of this Tensor to `dx`. A gradient is always a
-   * Tensor of type `double`.
+   * Tensor of type `double`. `dx` needs to have been marked with `watch` before
+   * construction of this Tensor and this Tensor must be constructed inside a gradient context, either started by
+   * `fStartGradientContext` or a `GradientContext` object.
    */
   template <typename K, unsigned int k>
   Tensor<double, k> gradient(const Tensor<K, k> &dx) const {

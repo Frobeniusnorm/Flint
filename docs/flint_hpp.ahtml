@@ -10,25 +10,27 @@
   <div id="showcase_background" style="min-height: 18em; background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(214,103,61,1) 0%, rgba(159,33,228,1) 100%);">
     <center style="margin-top:2em">
       <h1>
-        Documentation <u>flint.hpp</u>
+        Documentation <u>flint.hpp</u>, <u>flint_helper.hpp</u>
       </h1>
     </center>
   </div>
   <center>
     <div class="content" style="margin-top: -3.1em">
         <div class="card">
-          <span class="card_header">Overview</span>
+          <span class="card_header">Introduction</span>
         </div><br />
         <div class="card" style="padding: 20px 15px">
-          The C++ Documentation (contained completly in <pre class="inline_code">flint.hpp</pre>) is splitted into two parts:
+          The C++ Documentation (contained completly in <pre class="inline_code">flint.hpp</pre>) is splitted into three parts (and sites):
           <ul>
             <li>The 1-dimensional implementation of the <pre class="inline_code">Tensor</pre> template <a href="flint_tensor_1.html">template &lt;typename T&gt; Tensor&lt;T, 1&gt;</a></li>
             <li>The n-dimensional implementation of the <pre class="inline_code">Tensor</pre> template <a href="flint_tensor_n.html">template &lt;typename T, unsigned int n&gt; Tensor&lt;T, n&gt;</a></li>
+            <li>Helper methods and structs managing the eco-system of Flint, described on this site bellow.
           </ul>
-          For the most operations the interface and implementation is the same and exists twice just for type safety,
+          For the most operations on Tensors the interface and implementation is the same and exists twice just for type safety,
           so it should suffice to have a look at 
           the multidimensional variant, but for some dimension specific operations
-          the implementation may differ slightly.
+          the implementation may differ slightly.<br>
+          What follows are the documentations of <a href="#flint_hpp">flint.hpp</a> (static functions for Tensor and generators like image loading, random or constant Tensors) and <a href="#flint_helper">flint_helper.hpp</a> (structures and helper functions used and returned by some methods of the Tensor implementations).
         </div>
         <div style="display: block; height: 2em;"></div>
         <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
@@ -37,7 +39,15 @@
           and joining Threads. The function <pre class="inline_code">Flint::cleanup()</pre> automatically cleans up all initialized backends.
         </div>
         <div style="display: block; height: 2em;"></div>
-        @from_code("../flint_helper.hpp", s-_typename_T__unsigned_int_n__struct_Tensor)
+        <h1 id="flint_hpp"><u>flint.hpp</u></h1>
+        @gen_toc("../flint.hpp")
+        <div style="display: block; height: 2em;"></div>
+        @from_code("../flint.hpp")
+        <div style="display: block; height: 2em;"></div>
+        <h1 id="flint_helper"><u>flint_helper.hpp</u></h1>
+        @gen_toc("../flint_helper.hpp")
+        <div style="display: block; height: 2em;"></div>
+        @from_code("../flint_helper.hpp")
     </div>
 </center>
 @include("footer.html")

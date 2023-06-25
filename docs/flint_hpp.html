@@ -21,25 +21,27 @@
   <div id="showcase_background" style="min-height: 18em; background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(214,103,61,1) 0%, rgba(159,33,228,1) 100%);">
     <center style="margin-top:2em">
       <h1>
-        Documentation <u>flint.hpp</u>
+        Documentation <u>flint.hpp</u>, <u>flint_helper.hpp</u>
       </h1>
     </center>
   </div>
   <center>
     <div class="content" style="margin-top: -3.1em">
         <div class="card">
-          <span class="card_header">Overview</span>
+          <span class="card_header">Introduction</span>
         </div><br />
         <div class="card" style="padding: 20px 15px">
-          The C++ Documentation (contained completly in <pre class="inline_code">flint.hpp</pre>) is splitted into two parts:
+          The C++ Documentation (contained completly in <pre class="inline_code">flint.hpp</pre>) is splitted into three parts (and sites):
           <ul>
             <li>The 1-dimensional implementation of the <pre class="inline_code">Tensor</pre> template <a href="flint_tensor_1.html">template &lt;typename T&gt; Tensor&lt;T, 1&gt;</a></li>
             <li>The n-dimensional implementation of the <pre class="inline_code">Tensor</pre> template <a href="flint_tensor_n.html">template &lt;typename T, unsigned int n&gt; Tensor&lt;T, n&gt;</a></li>
+            <li>Helper methods and structs managing the eco-system of Flint, described on this site bellow.
           </ul>
-          For the most operations the interface and implementation is the same and exists twice just for type safety,
+          For the most operations on Tensors the interface and implementation is the same and exists twice just for type safety,
           so it should suffice to have a look at 
           the multidimensional variant, but for some dimension specific operations
-          the implementation may differ slightly.
+          the implementation may differ slightly.<br>
+          What follows are the documentations of <a href="#flint_hpp">flint.hpp</a> (static functions for Tensor and generators like image loading, random or constant Tensors) and <a href="#flint_helper">flint_helper.hpp</a> (structures and helper functions used and returned by some methods of the Tensor implementations).
         </div>
         <div style="display: block; height: 2em;"></div>
         <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
@@ -48,33 +50,196 @@
           and joining Threads. The function <pre class="inline_code">Flint::cleanup()</pre> automatically cleans up all initialized backends.
         </div>
         <div style="display: block; height: 2em;"></div>
-        <div id="s-_typename_T__unsigned_int_n__struct_Tensor"></div><div class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor</b></pre></div>
+        <h1 id="flint_hpp"><u>flint.hpp</u></h1>
+        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_float__3__load_image_std::string_path__">static Tensor&lt;float, 3&gt; <b>load_image</b>(std::string path) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-void_setLoggingLevel_FLogType_level__">static void <b>setLoggingLevel</b>(FLogType level) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-void_cleanup___">static void <b>cleanup</b>() </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___static_Tensor_double__sizeof____args___random_args____sizes__">template &lt;typename... args&gt;
+  static Tensor&lt;double, sizeof...(args)&gt; <b>random</b>(args... sizes) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_n___static_Tensor_T__n__constant_T_value__std::array_size_t__n__shape__">template &lt;typename T, unsigned int n&gt;
+  static Tensor&lt;T, n&gt; <b>constant</b>(T value, std::array<size_t, n> shape) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__typename____args___static_Tensor_T__sizeof____args___constant_T_value__args____sizes__">template &lt;typename T, typename... args&gt;
+  static Tensor&lt;T, sizeof...(args)&gt; <b>constant</b>(T value, args... sizes) </a><br/><br/></div>
+        <div style="display: block; height: 2em;"></div>
+        <div id="s-Tensor_float__3__load_image_std::string_path__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">static Tensor&lt;float, 3&gt; <b>load_image</b>(std::string path) </pre></div>
 <br />
-<div class="card"><div style="padding: 5px;">
- This is the base class of the C++ implementation of Flint.<div style="display:block; height: 0.5em"></div>
- Instances of a implementation of this template wrap around the <pre class="inline_code">FGraphNode</pre>
- struct by providing C++ style operations and a template representing the
- underlying datatype of the node (adding type safety) and its dimensionality
- (sometimes refered to as rank). That allows conversion to STL objects like
- the <pre class="inline_code">operator*</pre> does and dimensionality safety for operations like
- <pre class="inline_code">operator[]</pre> or <pre class="inline_code">slice</pre>.<div style="display:block; height: 0.5em"></div>
- When using it it behaves like a single Tensor representation (i.e. operations
- can be called on it, its data may be queried), but internally it may rather
- store applied operations and parameters for later lazy execution.<div style="display:block; height: 0.5em"></div>
- When you apply an operation to an instance it usually returns a new <pre class="inline_code">Tensor</pre>
- object, representing that operation applied to the old object. If eager
- execution is enabled (see <pre class="inline_code">Flint::enable_eager_execution()</pre>) the operation is
- directly executed with the generation of the new object, else it only
- executes if you query its data (with <pre class="inline_code">operator*</pre> or <pre class="inline_code">operator[]</pre>) or if a
- previous operation requires its data (keep in mind that some operations have
- to execute the operations of their parameters directly, because their data
- is already completly needed during execution e.g. reduce operations or matrix
- multiplication).<div style="display:block; height: 0.5em"></div>
- The template is recursively defined on the dimensionality <pre class="inline_code">n</pre>. Meaning there
- are two implementations: one for the basis case <pre class="inline_code">n=1</pre> and one for the general
- case <pre class="inline_code">n&gt;1</pre>. The interface should not differ much, except that some operations
- that are dimension specific behave differently.
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Loads an image from the given path.
+ The image will be stored in floating point data and the shape will be h, w,
+ c where w is the width, h is the height and c are the chanels.
 </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-void_setLoggingLevel_FLogType_level__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">static void <b>setLoggingLevel</b>(FLogType level) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Sets the Logging Level of the Flint Backend </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-void_cleanup___"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">static void <b>cleanup</b>() </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Deallocates any resourced allocated by the corresponding backends and
+ allows them to shutdown their threads.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename____args___static_Tensor_double__sizeof____args___random_args____sizes__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename... args&gt;
+  static Tensor&lt;double, sizeof...(args)&gt; <b>random</b>(args... sizes) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Creates a Tensor filled with random values in [0, 1) with the requested
+ shape in sizes.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T__unsigned_int_n___static_Tensor_T__n__constant_T_value__std::array_size_t__n__shape__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt;
+  static Tensor&lt;T, n&gt; <b>constant</b>(T value, std::array<size_t, n> shape) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Generates a Tensor containing the single given value in every entry.
+ The resulting Tensor will have a dimensionality of <pre class="inline_code">sizeof...(args)</pre> and a
+ shape denoted by each entry in <pre class="inline_code">sizes</pre>. e.g.
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt; foo = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>);
+ std::cout &lt;&lt; foo &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>]],</span>
+ <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>]]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T__typename____args___static_Tensor_T__sizeof____args___constant_T_value__args____sizes__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T, typename... args&gt;
+  static Tensor&lt;T, sizeof...(args)&gt; <b>constant</b>(T value, args... sizes) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Generates a Tensor containing the single given value in every entry.
+ The resulting Tensor will have a dimensionality of <pre class="inline_code">sizeof...(args)</pre> and a
+ shape denoted by each entry in <pre class="inline_code">sizes</pre>. e.g.
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt; foo = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>);
+ std::cout &lt;&lt; foo &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>]],</span>
+ <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>]]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+
+        <div style="display: block; height: 2em;"></div>
+        <h1 id="flint_helper"><u>flint_helper.hpp</u></h1>
+        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_n__struct_Tensor">template &lt;typename T, unsigned int n&gt; struct <b>Tensor</b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FLINT_HPP_HELPER_">namespace FLINT_HPP_HELPER </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T_static_inline_std::string_vectorString_const_std::vector_T__&vec________________________________________std::string_indentation_=_""__">template &lt;typename T&gt;
+static inline std::string <b>vectorString</b>(const std::vector<T> &vec,
+                                       std::string indentation = "") </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__size_t_n_static_inline_std::string_arrayString_const_std::array_T__n__&vec__">template &lt;typename T, size_t n&gt;
+static inline std::string <b>arrayString</b>(const std::array<T, n> &vec) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__static_constexpr_void_isTensorType___">template &lt;typename T&gt; static constexpr void <b>isTensorType</b>() </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__typename_V__static_constexpr_bool_isStronger___">template &lt;typename K, typename V&gt; static constexpr bool <b>isStronger</b>() </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__static_constexpr_FType_toFlintType___">template &lt;typename T&gt; static constexpr FType <b>toFlintType</b>() </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T_using_to_float_=_typename_std::conditional_isInt_T_____double__T_::type">template &lt;typename T&gt;
+using to_float = typename std::conditional&lt;isInt&lt;T&gt;(), double, T&gt;::type</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_dimensions__class_TensorView">template &lt;typename T, unsigned int dimensions&gt; class <b>TensorView</b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__class_TensorView_T__1__">template &lt;typename T&gt; class <b>TensorView</b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&operator[]_size_t_index__">T <b>&operator[]</b>(size_t index) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_n__class_TensorView_">template &lt;typename T, unsigned int n&gt; class <b>TensorView </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__operator[]_size_t_index__">TensorView&lt;T, n - 1&gt; <b>operator[]</b>(size_t index) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-TensorRange_">struct <b>TensorRange </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-GradientContext_">struct <b>GradientContext </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FlintContext_">struct <b>FlintContext </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-"><b>FlintContext</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-backends__"><b>FlintContext</b>(int backends) </a><br/><br/></div>
+        <div style="display: block; height: 2em;"></div>
+        <div id="s-_typename_T__unsigned_int_n__struct_Tensor"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor</b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ This is the base class of the C++ implementation of Flint.<div style="display:block; height: 0.5em"></div>
+ Instances of a implementation of this template wrap around the
+ <pre class="inline_code">FGraphNode</pre> struct by providing C++ style operations and a template
+ representing the underlying datatype of the node (adding type safety) and
+ its dimensionality (sometimes refered to as rank). That allows conversion
+ to STL objects like the <pre class="inline_code">operator*</pre> does and dimensionality safety for
+ operations like <pre class="inline_code">operator[]</pre> or <pre class="inline_code">slice</pre>.<div style="display:block; height: 0.5em"></div>
+ When using it it behaves like a single Tensor representation (i.e.
+ operations can be called on it, its data may be queried), but internally
+ it may rather store applied operations and parameters for later lazy
+ execution.<div style="display:block; height: 0.5em"></div>
+ When you apply an operation to an instance it usually returns a new
+ <pre class="inline_code">Tensor</pre> object, representing that operation applied to the old object.
+ If eager execution is enabled (see <pre class="inline_code">Flint::enable_eager_execution()</pre>) the
+ operation is directly executed with the generation of the new object,
+ else it only executes if you query its data (with <pre class="inline_code">operator*</pre> or
+ <pre class="inline_code">operator[]</pre>) or if a previous operation requires its data (keep in mind
+ that some operations have to execute the operations of their parameters
+ directly, because their data is already completly needed during execution
+ e.g. reduce operations or matrix multiplication).<div style="display:block; height: 0.5em"></div>
+ The template is recursively defined on the dimensionality <pre class="inline_code">n</pre>. Meaning
+ there are two implementations: one for the basis case <pre class="inline_code">n=1</pre> and one for
+ the general case <pre class="inline_code">n&gt;1</pre>. The interface should not differ much, except that
+ some operations that are dimension specific behave differently.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-FLINT_HPP_HELPER_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">namespace FLINT_HPP_HELPER </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Useful helper functions used by the library itself.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T_static_inline_std::string_vectorString_const_std::vector_T__&vec________________________________________std::string_indentation_=_""__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename T&gt;
+static inline std::string <b>vectorString</b>(const std::vector<T> &vec,
+                                       std::string indentation = "") </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Transforms a vector of arbitrary recursive dimensions to a string
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T__size_t_n_static_inline_std::string_arrayString_const_std::array_T__n__&vec__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename T, size_t n&gt;
+static inline std::string <b>arrayString</b>(const std::array<T, n> &vec) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Transforms an array of arbitrary recursive dimensions to a string
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T__static_constexpr_void_isTensorType___"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt; static constexpr void <b>isTensorType</b>() </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> statically checks if the given type is one of the allowed tensor types </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_K__typename_V__static_constexpr_bool_isStronger___"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename K, typename V&gt; static constexpr bool <b>isStronger</b>() </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> checks type precedence (e.g. <pre class="inline_code">isStronger&lt;int, double&gt;() = false,
+ isStronger&lt;float, long&gt;() = true</pre>)</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T__static_constexpr_FType_toFlintType___"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt; static constexpr FType <b>toFlintType</b>() </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Transforms a C/C++ type to a <pre class="inline_code">FType</pre> </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T_using_to_float_=_typename_std::conditional_isInt_T_____double__T_::type"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt;
+using to_float = typename std::conditional&lt;isInt&lt;T&gt;(), double, T&gt;::type</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Transforms integer types to doubles (for all other types returns identity)
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T__unsigned_int_dimensions__class_TensorView"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T, unsigned int dimensions&gt; class <b>TensorView</b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Encapsulates the data of a tensor. Is only valid as long as the Tensor is
+ valid. Provides an interface for index operations on multidimensional data.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T__class_TensorView_T__1__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt; class <b>TensorView</b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> One dimensional TensorView, either of a one dimensional Tensor or an already
+ indexed one. Directly accesses the result data. This TensorView is only valid
+ as long as the original Tensor (and its data) is valid.</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-&operator[]_size_t_index__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">T <b>&operator[]</b>(size_t index) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Returns a read-write-reference to the index data entry of the Tensor-data.
+ Only valid as long as the original Tensor is valid.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T__unsigned_int_n__class_TensorView_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; class <b>TensorView </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Multi dimensional TensorView. Indirectly indexes the data, which is only
+ accessible when as many indices as dimensions are given. This TensorView is
+ only valid as long as the original Tensor (and its data) is valid. Needed to
+ abstract multidimensional indexing. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-n_-_1__operator[]_size_t_index__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">TensorView&lt;T, n - 1&gt; <b>operator[]</b>(size_t index) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Returns a new TensorView object with one more index for the current
+ dimension (i.e. the new TensorView has one dimension less). Only valid as
+ long as the original Tensor is valid.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-TensorRange_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>TensorRange </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Describes a slice operation for one dimension.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-GradientContext_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>GradientContext </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Starts a gradient context on construction and stops it on destruction.
+ Because of the overhead it is advised to stop a gradient context as soon as
+ possible, so try to keep the lifetime of this object as short as possible as
+ well.
+ For all Tensors which were constructed during the lifetime of this object the
+ gradient to a watched variable may be computed. See <pre class="inline_code">fStartGradientContext</pre>
+ and <pre class="inline_code">fStopGradientContext</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-FlintContext_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>FlintContext </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Initializes Flint on construction and cleans it up on destruction.
+ See <pre class="inline_code">flintInit</pre> and <pre class="inline_code">flintCleanup</pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>FlintContext</b>() </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Initializes both backends </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-backends__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>FlintContext</b>(int backends) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Received a value of <pre class="inline_code">FLINT_BACKEND_BOTH</pre>, <pre class="inline_code">FLINT_BACKEND_CPU</pre> and
+ <pre class="inline_code">FLINT_BACKEND_GPU</pre> </div></div><div style="display: block; height: 2em;"></div>
 
     </div>
 </center>

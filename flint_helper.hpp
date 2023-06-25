@@ -8,31 +8,32 @@
 /**
  * This is the base class of the C++ implementation of Flint.
  *
- * Instances of a implementation of this template wrap around the `FGraphNode`
- * struct by providing C++ style operations and a template representing the
- * underlying datatype of the node (adding type safety) and its dimensionality
- * (sometimes refered to as rank). That allows conversion to STL objects like
- * the `operator*` does and dimensionality safety for operations like
- * `operator[]` or `slice`.
+ * Instances of a implementation of this template wrap around the
+ * `FGraphNode` struct by providing C++ style operations and a template
+ * representing the underlying datatype of the node (adding type safety) and
+ * its dimensionality (sometimes refered to as rank). That allows conversion
+ * to STL objects like the `operator*` does and dimensionality safety for
+ * operations like `operator[]` or `slice`.
  *
- * When using it it behaves like a single Tensor representation (i.e. operations
- * can be called on it, its data may be queried), but internally it may rather
- * store applied operations and parameters for later lazy execution.
+ * When using it it behaves like a single Tensor representation (i.e.
+ * operations can be called on it, its data may be queried), but internally
+ * it may rather store applied operations and parameters for later lazy
+ * execution.
  *
- * When you apply an operation to an instance it usually returns a new `Tensor`
- * object, representing that operation applied to the old object. If eager
- * execution is enabled (see `Flint::enable_eager_execution()`) the operation is
- * directly executed with the generation of the new object, else it only
- * executes if you query its data (with `operator*` or `operator[]`) or if a
- * previous operation requires its data (keep in mind that some operations have
- * to execute the operations of their parameters directly, because their data
- * is already completly needed during execution e.g. reduce operations or matrix
- * multiplication).
+ * When you apply an operation to an instance it usually returns a new
+ * `Tensor` object, representing that operation applied to the old object.
+ * If eager execution is enabled (see `Flint::enable_eager_execution()`) the
+ * operation is directly executed with the generation of the new object,
+ * else it only executes if you query its data (with `operator*` or
+ * `operator[]`) or if a previous operation requires its data (keep in mind
+ * that some operations have to execute the operations of their parameters
+ * directly, because their data is already completly needed during execution
+ * e.g. reduce operations or matrix multiplication).
  *
- * The template is recursively defined on the dimensionality `n`. Meaning there
- * are two implementations: one for the basis case `n=1` and one for the general
- * case `n>1`. The interface should not differ much, except that some operations
- * that are dimension specific behave differently.
+ * The template is recursively defined on the dimensionality `n`. Meaning
+ * there are two implementations: one for the basis case `n=1` and one for
+ * the general case `n>1`. The interface should not differ much, except that
+ * some operations that are dimension specific behave differently.
  */
 template <typename T, unsigned int n> struct Tensor;
 /**
@@ -146,13 +147,14 @@ inline std::string typeString(FType t) {
   return "";
 }
 }; // namespace FLINT_HPP_HELPER
-// checks if the given type is one of the allowed tensor types
+/** statically checks if the given type is one of the allowed tensor types */
 template <typename T> static constexpr void isTensorType() {
   static_assert(std::is_same<T, int>() || std::is_same<T, float>() ||
                     std::is_same<T, long>() || std::is_same<T, double>(),
                 "Only integer and floating-point Tensor types are allowed");
 }
-// checks which of both types the flint backend will choose
+/** checks type precedence (e.g. `isStronger<int, double>() = false,
+ * isStronger<float, long>() = true`)*/
 template <typename K, typename V> static constexpr bool isStronger() {
   const int a = std::is_same<K, int>()     ? 0
                 : std::is_same<K, long>()  ? 1
@@ -164,6 +166,7 @@ template <typename K, typename V> static constexpr bool isStronger() {
                                            : 3;
   return a >= b;
 }
+/** Transforms a C/C++ type to a `FType` */
 template <typename T> static constexpr FType toFlintType() {
   if (std::is_same<T, int>())
     return F_INT32;
@@ -178,6 +181,8 @@ template <typename T> static constexpr FType toFlintType() {
 template <typename K> static constexpr bool isInt() {
   return std::is_same<K, int>() || std::is_same<K, long>();
 }
+/** Transforms integer types to doubles (for all other types returns identity)
+ */
 template <typename T>
 using to_float = typename std::conditional<isInt<T>(), double, T>::type;
 /**
@@ -185,6 +190,9 @@ using to_float = typename std::conditional<isInt<T>(), double, T>::type;
  * valid. Provides an interface for index operations on multidimensional data.
  */
 template <typename T, unsigned int dimensions> class TensorView;
+/** One dimensional TensorView, either of a one dimensional Tensor or an already
+ * indexed one. Directly accesses the result data. This TensorView is only valid
+ * as long as the original Tensor (and its data) is valid.*/
 template <typename T> class TensorView<T, 1> {
   T *data;
   const size_t already_indexed;
@@ -201,6 +209,10 @@ public:
   T &operator[](size_t index) { return data[already_indexed + index]; }
   size_t size() const { return shape; }
 };
+/** Multi dimensional TensorView. Indirectly indexes the data, which is only
+ * accessible when as many indices as dimensions are given. This TensorView is
+ * only valid as long as the original Tensor (and its data) is valid. Needed to
+ * abstract multidimensional indexing. */
 template <typename T, unsigned int n> class TensorView {
   T *data;
   const size_t already_indexed;
@@ -249,29 +261,27 @@ struct TensorRange {
 };
 /**
  * Starts a gradient context on construction and stops it on destruction.
- * See `fStartGradientContext` and `fStopGradientContext`
+ * Because of the overhead it is advised to stop a gradient context as soon as
+ * possible, so try to keep the lifetime of this object as short as possible as
+ * well.
+ * For all Tensors which were constructed during the lifetime of this object the
+ * gradient to a watched variable may be computed. See `fStartGradientContext`
+ * and `fStopGradientContext`.
  */
 struct GradientContext {
-  GradientContext () {
-    fStartGradientContext();
-  }
-  ~GradientContext () {
-    fStopGradientContext();
-  }
+  GradientContext() { fStartGradientContext(); }
+  ~GradientContext() { fStopGradientContext(); }
 };
 /**
  * Initializes Flint on construction and cleans it up on destruction.
  * See `flintInit` and `flintCleanup`
  */
 struct FlintContext {
-  FlintContext () {
-    flintInit(FLINT_BACKEND_BOTH);
-  }
-  FlintContext (int backends) {
-    flintInit(backends);
-  }
-  ~FlintContext() {
-    flintCleanup();
-  }
+  /** Initializes both backends */
+  FlintContext() { flintInit(FLINT_BACKEND_BOTH); }
+  /** Received a value of `FLINT_BACKEND_BOTH`, `FLINT_BACKEND_CPU` and
+   * `FLINT_BACKEND_GPU` */
+  FlintContext(int backends) { flintInit(backends); }
+  ~FlintContext() { flintCleanup(); }
 };
 #endif
