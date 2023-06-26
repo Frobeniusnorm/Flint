@@ -950,6 +950,32 @@ template <typename T, unsigned int n> struct Tensor {
       ns[i] = shape[i + 1];
     return Tensor<T, n - 1>(freduce_mul(node, dimension), ns);
   }
+  /** Reduces all dimension of the tensor by multiplicatione.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1, 32}, {2, 3, 4}}, {{4, 5, -6}, {6, 7, -1}}};
+   * std::cout << e.reduce_sum()() << std::endl;
+   * // Tensor<INT32, shape: [1]>([0])
+   * }
+   *
+   * The results of this Tensor must be available, to
+   * ensure that the method may execute the Tensor. */
+  Tensor<T, 1> reduce_mul() {
+    return flattened().reduce_mul(); 
+  }
+  /** Reduces all dimension of the tensor by summation e.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1, 32}, {2, 3, 4}}, {{4, 5, -6}, {6, 7, -1}}};
+   * std::cout << e.reduce_sum()() << std::endl;
+   * // Tensor<INT32, shape: [1]>([57])
+   * }
+   *
+   * The results of this Tensor must be available, to
+   * ensure that the method may execute the Tensor. */
+  Tensor<T, 1> reduce_sum() {
+    return flattened().reduce_sum(); 
+  }
   /** Reduces one dimension of the tensor by keeping the minimum e.g.
    *
    * @code{
@@ -966,6 +992,7 @@ template <typename T, unsigned int n> struct Tensor {
    * // Tensor<INT32, shape: [2, 2]>(
    * // [[0, 2],
    * //  [-6, -1]])
+   * }
    *
    * The results of this Tensor must be available, to
    * ensure that the method may execute the Tensor. */
@@ -978,6 +1005,19 @@ template <typename T, unsigned int n> struct Tensor {
     for (size_t i = dimension; i < ns.size(); i++)
       ns[i] = shape[i + 1];
     return Tensor<T, n - 1>(freduce_min(node, dimension), ns);
+  }
+  /** Reduces all dimension of the tensor by keeping the maximum value e.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1, 32}, {2, 3, 4}}, {{4, 5, -6}, {6, 7, -1}}};
+   * std::cout << e.reduce_min()() << std::endl;
+   * // Tensor<INT32, shape: [1]>([-6])
+   * }
+   *
+   * The results of this Tensor must be available, to
+   * ensure that the method may execute the Tensor. */
+  Tensor<T, 1> reduce_min() {
+    return flattened().reduce_min(); 
   }
   /** Reduces one dimension of the tensor by keeping the maximum e.g.
    *
@@ -995,6 +1035,7 @@ template <typename T, unsigned int n> struct Tensor {
    * // Tensor<INT32, shape: [2, 2]>(
    * // [[32, 4],
    * //  [5, 7]])
+   * }
    *
    * The results of this Tensor must be available, to
    * ensure that the method may execute the Tensor. */
@@ -1007,6 +1048,19 @@ template <typename T, unsigned int n> struct Tensor {
     for (size_t i = dimension; i < ns.size(); i++)
       ns[i] = shape[i + 1];
     return Tensor<T, n - 1>(freduce_max(node, dimension), ns);
+  }
+  /** Reduces all dimension of the tensor by keeping the maximum value e.g.
+   *
+   * @code{
+   * Tensor<int, 3> a{{{0, 1, 32}, {2, 3, 4}}, {{4, 5, -6}, {6, 7, -1}}};
+   * std::cout << e.reduce_max()() << std::endl;
+   * // Tensor<INT32, shape: [1]>([32])
+   * }
+   *
+   * The results of this Tensor must be available, to
+   * ensure that the method may execute the Tensor. */
+  Tensor<T, 1> reduce_max() {
+    return flattened().reduce_max(); 
   }
   /**
    * Takes the elementwise absolute value of this Tensor (negative signs are

@@ -138,6 +138,7 @@ concept GenericLayer =
       a.optimize_weights(t3);
       a.optimize_weights(t4);
       a.generate_optimizer(fac);
+      a.training = true;
       { T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
       // Has to be constexpr
 
@@ -145,8 +146,10 @@ concept GenericLayer =
       // Has to be constexpr
     };
 //    };
-/** Implements blank methods for every method of GenericLayer that is not needed for a Layer that is not trainable */
+/** Implements blank methods for every method of GenericLayer that is not needed
+ * for a Layer that is not trainable */
 struct UntrainableLayer {
+  bool training = false;
   // to fulfill generic layer
   void generate_optimizer(OptimizerFactory *factory) {}
   // to fulfill generic layer
@@ -183,6 +186,7 @@ protected:
   }
 
 public:
+  bool training = false;
   static constexpr FType transform_type(FType t) { return F_FLOAT64; }
   static constexpr unsigned int transform_dimensionality(unsigned int n) {
     return n;
@@ -207,8 +211,6 @@ public:
 };
 
 struct Connected : public Layer<2> {
-  static constexpr FType transform_type(FType t) { return F_FLOAT64; }
-
   Connected(size_t units_in, size_t units_out)
       : Layer<2>(Flint::random(units_in + 1, units_out)) {}
   template <typename T, unsigned int n>
@@ -217,6 +219,29 @@ struct Connected : public Layer<2> {
     one_shape[n - 1] = 1;
     Tensor<T, n> ones = Flint::constant<T, n>(1, one_shape);
     return Flint::concat(in, ones, n - 1).matmul(Layer<2>::get_weight<0>());
+  }
+};
+/** Randomly sets some values in the input to 0 with a probability of `p`.
+ * Reduces over fitting. Degenerates to an identity function when `training` is
+ * false. */
+class Dropout : public UntrainableLayer {
+  double p;
+
+public:
+  static constexpr FType transform_type(FType t) { return F_FLOAT64; }
+
+  Dropout(double p) : p(p) {}
+  template <typename T, unsigned int n>
+  Tensor<double, n> forward(Tensor<T, n> &in) {
+    if (!training) {
+      if constexpr (std::is_same<T, double>()) {
+        return in;
+      } else {
+        return in.template convert<double>();
+      }
+    }
+    Tensor<double, n> r = Flint::random(in.get_shape());
+    return (in * (r > p)) * (1.0 / (1.0 - p));
   }
 };
 #endif

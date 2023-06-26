@@ -14,6 +14,7 @@
 #ifndef FLINT_MODELS
 #define FLINT_MODELS
 #include "layers.hpp"
+#include "losses.hpp"
 #include "optimizers.hpp"
 #include <flint/flint.h>
 #include <flint/flint_helper.hpp>
@@ -21,9 +22,7 @@
 #include <tuple>
 #include <vector>
 
-template <FType in> constexpr FType get_output_type() {
-  return in;
-}
+template <FType in> constexpr FType get_output_type() { return in; }
 template <FType in, GenericLayer K> constexpr FType get_output_type() {
   return K::transform_type(in);
 }
@@ -32,8 +31,7 @@ constexpr FType get_output_type() {
   constexpr FType out = K2::transform_type(K1::transform_type(in));
   return get_output_type<out, F...>();
 }
-template <unsigned int in>
-constexpr unsigned int get_output_dim() {
+template <unsigned int in> constexpr unsigned int get_output_dim() {
   return in;
 }
 template <unsigned int in, GenericLayer K>
@@ -42,7 +40,8 @@ constexpr unsigned int get_output_dim() {
 }
 template <unsigned int in, GenericLayer K1, GenericLayer K2, GenericLayer... F>
 constexpr unsigned int get_output_dim() {
-  constexpr unsigned int out = K2::transform_dimensionality(K1::transform_dimensionality(in));
+  constexpr unsigned int out =
+      K2::transform_dimensionality(K1::transform_dimensionality(in));
   return get_output_dim<out, F...>();
 }
 
@@ -55,25 +54,43 @@ template <GenericLayer... T> struct SequentialModel {
   Tensor<LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
          get_output_dim<n, T...>()>
   forward(Tensor<K, n> &in) {
-    return forward_helper<0, LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
-         get_output_dim<n, T...>()>(in);
+    return forward_helper<
+        0,
+        LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
+        get_output_dim<n, T...>()>(in);
   }
   template <typename K, unsigned int n>
   void optimize(const Tensor<K, n> &error) {
     backward<0>(error);
   }
+  template <typename T1, int n1, typename T2, int n2, GenericLoss L>
+  void train(Tensor<T1, n1> &X, Tensor<T2, n2> &Y, L loss, int batch_size = 32,
+             int epochs = 1) {
+    set_training<0>(true);
+    for (int i = 0; i < epochs; i++) {
+      // TODO
+    }
+    set_training<0>(false);
+  }
 
 private:
-  template <int n, typename K, unsigned int k> void backward(const Tensor<K, k> &error) {
+  template <int n, typename K, unsigned int k>
+  void backward(const Tensor<K, k> &error) {
     if constexpr (n < sizeof...(T)) {
       std::get<n>(layers).optimize_weights(error);
-      backward<n-1>(error);
+      backward<n - 1>(error);
     }
   }
   template <int n> void gen_opt(OptimizerFactory *fac) {
     if constexpr (n < sizeof...(T)) {
       std::get<n>(layers).generate_optimizer(fac);
       gen_opt<n + 1>(fac);
+    }
+  }
+  template <int n> void set_training(bool b) {
+    if constexpr (n < sizeof...(T)) {
+      std::get<n>(layers).training = b;
+      set_training<n + 1>(b);
     }
   }
   template <int layer, typename T2, unsigned int n2, typename T1,

@@ -64,6 +64,15 @@ struct Flint {
    * Creates a Tensor filled with random values in [0, 1) with the requested
    * shape in sizes.
    */
+  template <int n>
+  static Tensor<double, n> random(std::array<size_t, n> shape) {
+    FGraphNode *node = frandom(shape.data(), n);
+    return Tensor<double, n>(node, shape);
+  }
+  /**
+   * Creates a Tensor filled with random values in [0, 1) with the requested
+   * shape in sizes.
+   */
   template <typename... args>
   static Tensor<double, sizeof...(args)> random(args... sizes) {
     constexpr size_t dimensions = sizeof...(args);

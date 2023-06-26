@@ -13,6 +13,7 @@
    limitations under the License. */
 #include "layers.hpp"
 
+/** SoftMax activation Layer. For multiclass classification. */
 class SoftMax : public UntrainableLayer {
   int ax = -1;
 
