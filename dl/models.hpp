@@ -18,6 +18,7 @@
 #include "optimizers.hpp"
 #include <flint/flint.h>
 #include <flint/flint_helper.hpp>
+#include <math.h>
 #include <memory>
 #include <tuple>
 #include <vector>
@@ -63,12 +64,25 @@ template <GenericLayer... T> struct SequentialModel {
   void optimize(const Tensor<K, n> &error) {
     backward<0>(error);
   }
+  // TODO train with Datagenerators
   template <typename T1, int n1, typename T2, int n2, GenericLoss L>
-  void train(Tensor<T1, n1> &X, Tensor<T2, n2> &Y, L loss, int batch_size = 32,
-             int epochs = 1) {
+  void train(Tensor<T1, n1> &X, Tensor<T2, n2> &Y, L loss, int epochs = 1, int batch_size = 32) {
     set_training<0>(true);
+    const size_t batches = X.get_shape()[0];
+    if (Y.get_shape()[0] != batches)
+      flogging(F_ERROR,
+               "Input and Target Datas batch size does not correspond!");
     for (int i = 0; i < epochs; i++) {
-      // TODO
+      // TODO shuffle each iteration
+      for (int b = 0; b < batches / batch_size + 1; b++) {
+        long slice_to = (b + 1) * batch_size;
+        if (slice_to > batches)
+          slice_to = batches;
+        auto error = loss.calculate_error(
+            forward(X.slice(TensorRange(b * batch_size, slice_to))),
+            Y.slice(TensorRange(b * batch_size, slice_to)));
+        optimize(error);
+      }
     }
     set_training<0>(false);
   }

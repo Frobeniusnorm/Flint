@@ -1,4 +1,5 @@
 #include "../dl/layers.hpp"
+#include "../dl/activations.hpp"
 #include "../dl/models.hpp"
 #include <flint/flint.h>
 #include <flint/flint.hpp>
@@ -10,21 +11,14 @@ int main() {
                       {{5, 6}, {7, 8}, {9, 0}},
                       {{-1, -2}, {-3, -4}, {-5, -6}}};
   auto m = SequentialModel{
-      Connected(2, 4), Connected(4, 2)};
+    Flatten(),
+    Connected(18, 32),
+    Relu(),
+    Dropout(0.2),
+    Connected(32, 10),
+    SoftMax()
+  };
   AdamFactory adam (0.05);
   m.generate_optimizer(&adam);
-  for (int i = 0; i < 1000; i++) {
-    fStartGradientContext();
-    Tensor<double, 3> o =
-        ((t1 * (t1.slice(TensorRange(0, 1), TensorRange(0, 1),
-                         TensorRange(TensorRange::MAX_SCOPE,
-                                     TensorRange::MAX_SCOPE, -1))
-                    .flattened())) -
-         m.forward(t1))
-            .abs();
-    fStopGradientContext();
-    Tensor<double, 1> e = o.reduce_sum(0).reduce_sum(0).reduce_sum()();
-    std::cout << e << std::endl;
-    m.optimize(o);
-  }
+  // TODO load data m.train(X, Y, CrossEntropyLoss(), 100);
 }

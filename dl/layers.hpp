@@ -226,10 +226,8 @@ struct Connected : public Layer<2> {
  * false. */
 class Dropout : public UntrainableLayer {
   double p;
-
 public:
   static constexpr FType transform_type(FType t) { return F_FLOAT64; }
-
   Dropout(double p) : p(p) {}
   template <typename T, unsigned int n>
   Tensor<double, n> forward(Tensor<T, n> &in) {
@@ -242,6 +240,18 @@ public:
     }
     Tensor<double, n> r = Flint::random(in.get_shape());
     return (in * (r > p)) * (1.0 / (1.0 - p));
+  }
+};
+struct Flatten : public UntrainableLayer {
+  static constexpr unsigned int transform_dimensionality(unsigned int n) {
+    return 2;
+  }
+  /** Flattens every feature axis into one single axis, does not touch the batch-axis (the first) */
+  template <typename T, unsigned int n>
+  Tensor<T, 2> forward(Tensor<T, n> &in) {
+    if constexpr (n <= 2)
+      return in;
+    else forward(in.flattened(n - 1));
   }
 };
 #endif
