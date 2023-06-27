@@ -20,7 +20,13 @@
 #include "libs/stb_image.hpp"
 #include "libs/stb_image_write.hpp"
 #include "utils.hpp"
-
+/* Dataformat
+ * Magic Number
+ * data_type (4 bytes)
+ * dimensions (4 bytes)
+ * list of sizes per dimension (each 4 bytes)
+ * data
+ */
 #define MAGIC_NUMBER 0x75321
 char *fserialize(FGraphNode *node, size_t *bytes_written) {
   if (!node->result_data)
