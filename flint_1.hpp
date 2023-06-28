@@ -33,6 +33,14 @@ template <typename T> struct Tensor<T, 1> {
     node->reference_counter = 1;
   }
   /**
+   * Constructs a Tensor directly from a `FGraphNode` and a shape
+   */
+  Tensor(FGraphNode *node, size_t shape) : node(node), shape{shape} {
+    node->reference_counter++;
+    fOptimizeMemory(node); // should be legal here, since C++ header adjust
+                           // reference_counter
+  }
+  /**
    * Creates a Tensor from a `std::initializer_list`.
    * (`init_type` is a recursive defined type definition, for `n=1` it is just
    * an alias for `std::initializer_list`). E.g.
@@ -235,7 +243,7 @@ template <typename T> struct Tensor<T, 1> {
     return Tensor<T, 1>(freduce_max(node, 0), std::array<size_t, 1>{1});
   }
   /** Returns the number of entries in this Tensor */
-  const size_t get_shape() const { return shape[0]; }
+  const std::array<size_t, 1> get_shape() const { return shape; }
   /**
    * Retrieves the data of the current node and converts it into a vector.
    * Executes the node if necessary (if it was not executed prior). This
@@ -686,6 +694,36 @@ template <typename T> struct Tensor<T, 1> {
     FGraphNode *nn = fslice_step(node, &start, &end, &step);
     return Tensor<T, 1>(nn, nn->operation->shape[0]);
   }
+  /** 
+   * Compability version of `slice`.
+   * Calls the overloaded one dimensional slice operation with the corresponding attributes of `r1`.
+   *
+   * Copied Documentation of that function:
+   *
+   * Slices a selection of the Tensor beginning by `start` (inclusive), ending
+   * with `end` (exclusive) by a step size `step`. The step size may be negative
+   * in which case traversal order changes, therefor `start > end` must hold
+   * (for forward traversal of course `end > start`). E.g.
+   *
+   * @code{
+   * Tensor<int, 1> a{1, 2, 3, 4, 5, 6, 7, 8};
+   * std::cout << (a.slice(6, 1, -2))() << std::endl;
+   * // Tensor<INT32, shape: 3>([7, 5, 3])
+   * }
+   *
+   * To help with indexing there is the value
+   * `TensorRange::MAX_SCOPE` which describes a index depending on the traversal
+   * order in that dimension (i.e. the sign of step):
+   * - for forward traversel it denotes in start the shape of this Tensor -
+   *   1 (which is the last element start can index) and for end the shape of
+   *   this Tensor.
+   * - for backward traversal it denotes in start 0 and in end the element
+   *   before 0 (this is necessary since otherwise it would not be possible to
+   *   just inverse a dimension without eliminating values).
+   */
+  Tensor<T, 1> slice(TensorRange r1) {
+    return slice(r1.start, r1.end, r1.step);
+  }
   /**
    * Adds a new dimension at an arbitrary position to the tensor and repeats the
    * following dimensions to match a given shape.
@@ -766,13 +804,6 @@ template <typename T> struct Tensor<T, 1> {
   void unwatch() { fUnmarkGradientVariable(node); }
 
 protected:
-  Tensor(FGraphNode *node, size_t shape) : node(node), shape{shape} {
-    node->reference_counter++;
-    for (int i = 0; i < node->num_predecessor; i++)
-      fOptimizeMemory(node->predecessors[i]);
-    fOptimizeMemory(node); // should be legal here, since C++ header adjust
-                           // reference_counter
-  }
   FGraphNode *node;
   std::array<size_t, 1> shape;
 };

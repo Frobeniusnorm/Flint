@@ -15,7 +15,7 @@ int reverseInt(int i) {
   c4 = (i >> 24) & 255;
   return ((int)c1 << 24) + ((int)c2 << 16) + ((int)c3 << 8) + c4;
 }
-static Tensor<double, 3> load_mnist_images(const std::string path) {
+static Tensor<float, 3> load_mnist_images(const std::string path) {
   using namespace std;
   errno = 0;
   ifstream file(path);
@@ -32,7 +32,7 @@ static Tensor<double, 3> load_mnist_images(const std::string path) {
     h = reverseInt(h);
     file.read((char *)&w, sizeof(w));
     w = reverseInt(w);
-    std::vector<double> data(no * h * w);
+    std::vector<float> data(no * h * w);
     for (int i = 0; i < no; i++) {
       for (int j = 0; j < h; j++) {
         for (int k = 0; k < w; k++) {
@@ -43,19 +43,59 @@ static Tensor<double, 3> load_mnist_images(const std::string path) {
       }
     }
     std::array<size_t, 3> shape{(size_t)no, (size_t)h, (size_t)w};
-    return Tensor<double, 3>(fCreateGraph(data.data(), no * h * w, F_FLOAT64,
+    return Tensor<float, 3>(fCreateGraph(data.data(), no * h * w, F_FLOAT32,
                                          shape.data(), shape.size()),
                             shape);
   } else
     throw std::runtime_error("Could not load file! Please download it from "
                              "http://yann.lecun.com/exdb/mnist/");
 }
-static Tensor<int, 2> load_mnist_labels(const std::string path) {}
+static Tensor<int, 2> load_mnist_labels(const std::string path) {
+  using namespace std;
+  errno = 0;
+  ifstream file(path);
+  if (file.is_open()) {
+    int magic_number = 0;
+    int no = 0;
+    file.read((char *)&magic_number, sizeof(magic_number));
+    magic_number = reverseInt(magic_number);
+    file.read((char *)&no, sizeof(no));
+    no = reverseInt(no);
+    std::vector<int> data(no * 10);
+    for (int i = 0; i < no; i++) {
+      unsigned char value;
+      file.read((char *)&value, 1);
+      for (int j = 0; j < 10; j++) {
+        data[i * 10 + j] = i == j ? 1 : 0;
+      }
+    }
+    std::array<size_t, 2> shape {(size_t)no, 10};
+    return Tensor<int, 2>(fCreateGraph(data.data(), no * 10, F_INT32,
+                                         shape.data(), 2),
+                            shape);
+  } else
+    throw std::runtime_error("Could not load file! Please download it from "
+                             "http://yann.lecun.com/exdb/mnist/");
+}
 
 // download and extract to the desired folder from
 // http://yann.lecun.com/exdb/mnist/
 int main() {
   FlintContext _(FLINT_BACKEND_ONLY_CPU);
-  read_mnist("train-images.idx3-ubyte");
-  Tensor<double, 3> ims = load_mnist_images("train-images.idx3-ubyte");
+  fSetLoggingLevel(F_INFO);
+  Tensor<float, 3> ims = load_mnist_images("train-images.idx3-ubyte");
+  Tensor<double, 2> lbs = load_mnist_labels("train-labels.idx1-ubyte").convert<double>();
+  std::cout << ims.get_shape()[0] << " images à " << ims.get_shape()[1] << "x" << ims.get_shape()[1] << " (and " << lbs.get_shape()[0] << " labels)" << std::endl;
+  std::cout << "loaded data. Starting training." << std::endl;
+  auto m = SequentialModel{
+    Flatten(),
+    Connected(784, 32),
+    Relu(),
+    Dropout(0.2),
+    Connected(32, 10),
+    SoftMax()
+  };
+  AdamFactory opt;
+  m.generate_optimizer(&opt);
+  m.train(ims, lbs, CrossEntropyLoss(), 100, 4000);
 }

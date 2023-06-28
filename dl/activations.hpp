@@ -29,8 +29,8 @@ public:
     // numerical stability
     Tensor<T, n> exp =
         (in - in.reduce_max(axis).expand(axis, in.get_shape()[axis])).exp();
-    Tensor<T, n - 1> sum = exp.reduce_sum(in.get_shape()[axis]);
-    if (ax == -1)
+    Tensor<T, n - 1> sum = exp.reduce_sum(axis);
+    if (ax == 0)
       return exp / sum;
     else {
       return exp / (sum.expand(axis, in.get_shape()[axis]));

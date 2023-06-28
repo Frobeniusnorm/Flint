@@ -598,12 +598,12 @@ TEST_SUITE("C++ Bindings") {
     CHECK_EQ(2, f2[0]);
     CHECK_EQ(4, f2[1]);
     CHECK_EQ(6, f2[2]);
-    CHECK_EQ(3, f2.get_shape());
+    CHECK_EQ(3, f2.get_shape()[0]);
     // with negative indices
     Tensor<long, 3> i1 =
         t1.slice(TensorRange(-1, -3, -1), TensorRange(-1, -4, -2));
     Tensor<long, 1> t3 = i1.flattened().slice(-2, 0, -3);
-    CHECK_EQ(2, t3.get_shape());
+    CHECK_EQ(2, t3.get_shape()[0]);
     CHECK_EQ(1, t3[0]);
     CHECK_EQ(3, t3[1]);
   }

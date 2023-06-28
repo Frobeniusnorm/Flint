@@ -62,12 +62,12 @@ struct Flint {
   }
   /**
    * Creates a Tensor filled with random values in [0, 1) with the requested
-   * shape in sizes.
+   * shape (given as an array instead of a variadic template).
    */
-  template <int n>
-  static Tensor<double, n> random(std::array<size_t, n> shape) {
-    FGraphNode *node = frandom(shape.data(), n);
-    return Tensor<double, n>(node, shape);
+  template <size_t n>
+  static Tensor<double, (unsigned int)n> random_array(std::array<size_t, n> shape) {
+    FGraphNode *node = frandom(shape.data(), (unsigned int)n);
+    return Tensor<double, (unsigned int)n>(node, shape);
   }
   /**
    * Creates a Tensor filled with random values in [0, 1) with the requested
@@ -82,10 +82,10 @@ struct Flint {
   }
   /**
    * Generates a Tensor containing the single given value in every entry.
-   * The resulting Tensor will have a dimensionality of `sizeof...(args)` and a
-   * shape denoted by each entry in `sizes`. e.g.
+   * The resulting Tensor will have a dimensionality of `n` and a
+   * shape denoted by each entry in `shape`. e.g.
    * @code{
-   * Tensor<double, 3> foo = Tensor<double, 3>::constant(3.141592, 2, 2, 2);
+   * Tensor<double, 3> foo = Flint::constant_array(3.141592, std::array<size_t, 3>(2, 2, 2));
    * std::cout << foo << std::endl;
    * // Tensor<FLOAT64, shape: [2, 2, 2]>(
    * // [[[3.141592, 3.141592],
@@ -94,10 +94,10 @@ struct Flint {
    * //  [3.141592, 3.141592]]])
    * }
    */
-  template <typename T, unsigned int n>
-  static Tensor<T, n> constant(T value, std::array<size_t, n> shape) {
-    FGraphNode *node = fconstant(value, shape.data(), n);
-    return Tensor<T, n>(node, shape);
+  template <typename T, size_t n>
+  static Tensor<T, (unsigned int)n> constant_array(T value, std::array<size_t, n> shape) {
+    FGraphNode *node = fconstant(value, shape.data(), (unsigned int)n);
+    return Tensor<T, (unsigned int)n>(node, shape);
   }
   /**
    * Generates a Tensor containing the single given value in every entry.
@@ -116,7 +116,7 @@ struct Flint {
   template <typename T, typename... args>
   static Tensor<T, sizeof...(args)> constant(T value, args... sizes) {
     std::array<size_t, sizeof...(args)> shape{static_cast<size_t>(sizes)...};
-    return constant<T, sizeof...(args)>(value, shape);
+    return constant_array<T, sizeof...(args)>(value, shape);
   }
 }; // namespace Flint
 #endif

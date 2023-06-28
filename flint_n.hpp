@@ -851,7 +851,7 @@ template <typename T, unsigned int n> struct Tensor {
    * integer Tensor. `0` denotes that `this >= other`, `1` that `this < other`.
    */
   template <typename K> Tensor<int, n> operator<(const K other) const {
-    return Tensor<int, n>(fless(node, other));
+    return Tensor<int, n>(fless(node, other), shape);
   }
   /**
    * Compares this tensor and `other` elementwise and returns a 0,1 integer
@@ -869,7 +869,7 @@ template <typename T, unsigned int n> struct Tensor {
    * integer Tensor. `0` denotes that `this <= other`, `1` that `this > other`.
    */
   template <typename K> Tensor<int, n> operator>(const K other) const {
-    return Tensor<int, n>(fgreater(node, other));
+    return Tensor<int, n>(fgreater(node, other), shape);
   }
   /**
    * Compares this tensor and `other` elementwise and returns a 0,1 integer
@@ -887,7 +887,7 @@ template <typename T, unsigned int n> struct Tensor {
    * integer Tensor. `0` denotes that `this != other`, `1` that `this == other`.
    */
   template <typename K> Tensor<int, n> equal(const K other) const {
-    return Tensor<int, n>(fequal(node, other));
+    return Tensor<int, n>(fequal(node, other), shape);
   }
   /** Reduces one dimension of the tensor by additive folding e.g.
    *

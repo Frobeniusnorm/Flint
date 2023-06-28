@@ -217,7 +217,7 @@ struct Connected : public Layer<2> {
   Tensor<double, n> forward(Tensor<T, n> &in) {
     std::array<size_t, n> one_shape = in.get_shape();
     one_shape[n - 1] = 1;
-    Tensor<T, n> ones = Flint::constant<T, n>(1, one_shape);
+    Tensor<T, n> ones = Flint::constant_array<T, n>(1, one_shape);
     return Flint::concat(in, ones, n - 1).matmul(Layer<2>::get_weight<0>());
   }
 };
@@ -238,7 +238,7 @@ public:
         return in.template convert<double>();
       }
     }
-    Tensor<double, n> r = Flint::random(in.get_shape());
+    Tensor<double, n> r = Flint::random_array(in.get_shape());
     return (in * (r > p)) * (1.0 / (1.0 - p));
   }
 };
@@ -248,10 +248,10 @@ struct Flatten : public UntrainableLayer {
   }
   /** Flattens every feature axis into one single axis, does not touch the batch-axis (the first) */
   template <typename T, unsigned int n>
-  Tensor<T, 2> forward(Tensor<T, n> &in) {
+  Tensor<T, 2> forward(const Tensor<T, n> &in) {
     if constexpr (n <= 2)
       return in;
-    else forward(in.flattened(n - 1));
+    else return forward(in.flattened(n - 1)); 
   }
 };
 #endif

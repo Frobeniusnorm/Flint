@@ -65,8 +65,10 @@ template <GenericLayer... T> struct SequentialModel {
     backward<0>(error);
   }
   // TODO train with Datagenerators
-  template <typename T1, int n1, typename T2, int n2, GenericLoss L>
-  void train(Tensor<T1, n1> &X, Tensor<T2, n2> &Y, L loss, int epochs = 1, int batch_size = 32) {
+  template <typename T1, unsigned int n1, typename T2, unsigned int n2,
+            GenericLoss L>
+  void train(Tensor<T1, n1> &X, Tensor<T2, n2> &Y, L loss, int epochs = 1,
+             int batch_size = 32) {
     set_training<0>(true);
     const size_t batches = X.get_shape()[0];
     if (Y.get_shape()[0] != batches)
@@ -74,15 +76,24 @@ template <GenericLayer... T> struct SequentialModel {
                "Input and Target Datas batch size does not correspond!");
     for (int i = 0; i < epochs; i++) {
       // TODO shuffle each iteration
-      for (int b = 0; b < batches / batch_size + 1; b++) {
+      size_t number_batches = batches / batch_size + 1;
+      double total_error = 0;
+      for (int b = 0; b < number_batches; b++) {
         long slice_to = (b + 1) * batch_size;
         if (slice_to > batches)
           slice_to = batches;
-        auto error = loss.calculate_error(
-            forward(X.slice(TensorRange(b * batch_size, slice_to))),
-            Y.slice(TensorRange(b * batch_size, slice_to)));
+
+        auto input = X.slice(TensorRange(b * batch_size, slice_to));
+        auto expected = Y.slice(TensorRange(b * batch_size, slice_to));
+        auto output = forward(input);
+        auto error = loss.calculate_error(output, expected);
+        double local_error = (double)(error.reduce_sum()[0]);
+        std::cout << "\r\e[Kbatch error: " << local_error << std::flush; 
+        total_error += local_error / number_batches;
         optimize(error);
       }
+      flogging(F_INFO, "\rMean loss for epoch #" + std::to_string(i + 1) + ": " +
+                           std::to_string(total_error));
     }
     set_training<0>(false);
   }
