@@ -66,7 +66,7 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
       unsigned char value;
       file.read((char *)&value, 1);
       for (int j = 0; j < 10; j++) {
-        data[i * 10 + j] = i == j ? 1 : 0;
+        data[i * 10 + j] = value == j ? 1 : 0;
       }
     }
     std::array<size_t, 2> shape {(size_t)no, 10};
@@ -81,7 +81,7 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // download and extract to the desired folder from
 // http://yann.lecun.com/exdb/mnist/
 int main() {
-  FlintContext _(FLINT_BACKEND_ONLY_CPU);
+  FlintContext _(FLINT_BACKEND_BOTH);
   fSetLoggingLevel(F_INFO);
   Tensor<float, 3> ims = load_mnist_images("train-images.idx3-ubyte");
   Tensor<double, 2> lbs = load_mnist_labels("train-labels.idx1-ubyte").convert<double>();
@@ -95,7 +95,7 @@ int main() {
     Connected(32, 10),
     SoftMax()
   };
-  AdamFactory opt;
+  AdamFactory opt (0.0015, 0.9, 0.98);
   m.generate_optimizer(&opt);
-  m.train(ims, lbs, CrossEntropyLoss(), 100, 4000);
+  m.train(ims, lbs, CrossEntropyLoss(), 100, 6000);
 }

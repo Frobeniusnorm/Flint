@@ -18,6 +18,7 @@
 #include "optimizers.hpp"
 #include <flint/flint.h>
 #include <flint/flint_helper.hpp>
+#include <iomanip>
 #include <math.h>
 #include <memory>
 #include <tuple>
@@ -82,17 +83,28 @@ template <GenericLayer... T> struct SequentialModel {
         long slice_to = (b + 1) * batch_size;
         if (slice_to > batches)
           slice_to = batches;
-
+        if (b * batch_size == slice_to) break;
         auto input = X.slice(TensorRange(b * batch_size, slice_to));
         auto expected = Y.slice(TensorRange(b * batch_size, slice_to));
+        fStartGradientContext();
         auto output = forward(input);
         auto error = loss.calculate_error(output, expected);
-        double local_error = (double)(error.reduce_sum()[0]);
-        std::cout << "\r\e[Kbatch error: " << local_error << std::flush; 
+        fStopGradientContext();
+        double local_error = (double)(error[0]);
         total_error += local_error / number_batches;
-        optimize(error);
+        backward<0>(error);
+        //print metrics
+        std::cout << "\r\e[Kbatch error: " << std::setprecision(3) << local_error << " [";
+        for (int k = 0; k < 15; k++) {
+          if ((k + 1.0) / 15.0 <= (b + 1.0) / number_batches)
+            std::cout << "#";
+          else
+            std::cout << " ";
+        }
+        std::cout << "]" << std::flush;
       }
-      flogging(F_INFO, "\rMean loss for epoch #" + std::to_string(i + 1) + ": " +
+      std::cout << "\r\e";
+      flogging(F_INFO, "Mean loss for epoch #" + std::to_string(i + 1) + ": " +
                            std::to_string(total_error));
     }
     set_training<0>(false);
@@ -103,7 +115,7 @@ private:
   void backward(const Tensor<K, k> &error) {
     if constexpr (n < sizeof...(T)) {
       std::get<n>(layers).optimize_weights(error);
-      backward<n - 1>(error);
+      backward<n + 1>(error);
     }
   }
   template <int n> void gen_opt(OptimizerFactory *fac) {

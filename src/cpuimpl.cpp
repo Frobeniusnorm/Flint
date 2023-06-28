@@ -23,6 +23,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <flint/flint.h>
 #include <iostream>
 #include <list>
 #include <queue>
@@ -458,40 +459,44 @@ static void executeNode(const FGraphNode *node,
     for (size_t i = from; i < from + size; i++) {
       // iterate through to-reduce dimension
       switch (node->operation->op_type) {
-        case FREDUCE_SUM: 
-          result[i] = 0;
-          break;
-        case FREDUCE_MUL:
-          result[i] = 1;
-          break;
-        case FREDUCE_MIN:
-          result[i] = ((const T *__restrict__)
-                            data)[(i / it_dim) * it_dim * pred.shape[dim] + i % it_dim];
-          break;
-        case FREDUCE_MAX:
-          result[i] = ((const T *__restrict__)
-                            data)[(i / it_dim) * it_dim * pred.shape[dim] + i % it_dim];
-          break;
-        default: break;
+      case FREDUCE_SUM:
+        result[i] = 0;
+        break;
+      case FREDUCE_MUL:
+        result[i] = 1;
+        break;
+      case FREDUCE_MIN:
+        result[i] =
+            ((const T *__restrict__)
+                 data)[(i / it_dim) * it_dim * pred.shape[dim] + i % it_dim];
+        break;
+      case FREDUCE_MAX:
+        result[i] =
+            ((const T *__restrict__)
+                 data)[(i / it_dim) * it_dim * pred.shape[dim] + i % it_dim];
+        break;
+      default:
+        break;
       }
       for (size_t j = 0; j < pred.shape[dim]; j++) {
         const T curr = ((const T *__restrict__)
                             data)[(i / it_dim) * it_dim * pred.shape[dim] +
                                   i % it_dim + j * it_dim];
         switch (node->operation->op_type) {
-          case FREDUCE_SUM: 
-            result[i] += curr;
-            break;
-          case FREDUCE_MUL:
-            result[i] *= curr;
-            break;
-          case FREDUCE_MIN:
-            result[i] = std::min(result[i], curr);
-            break;
-          case FREDUCE_MAX:
-            result[i] = std::max(result[i], curr);
-            break;
-          default: break;
+        case FREDUCE_SUM:
+          result[i] += curr;
+          break;
+        case FREDUCE_MUL:
+          result[i] *= curr;
+          break;
+        case FREDUCE_MIN:
+          result[i] = std::min(result[i], curr);
+          break;
+        case FREDUCE_MAX:
+          result[i] = std::max(result[i], curr);
+          break;
+        default:
+          break;
         }
       }
     }
@@ -889,13 +894,15 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
     // build predecessor data
     for (int i = 0; i < node->num_predecessor; i++) {
       FGraphNode *pred = node->predecessors[i];
-      if (pred->operation->op_type == FSTORE) {
+      if (pred->result_data) {
+        if (!pred->result_data->data)
+          fSyncMemory(pred);
+        pred_data[i].data = pred->result_data->data;
+        pred_data[i].num_entries = pred->result_data->num_entries;
+      } else if (pred->operation->op_type == FSTORE) {
         FStore *store = (FStore *)pred->operation->additional_data;
         pred_data[i].data = store->data;
         pred_data[i].num_entries = store->num_entries;
-      } else if (pred->result_data) {
-        pred_data[i].data = pred->result_data->data;
-        pred_data[i].num_entries = pred->result_data->num_entries;
       } else { // FConst
         pred_data[i].num_entries = 1;
         pred_data[i].data = ((FConst *)pred->operation)->value;

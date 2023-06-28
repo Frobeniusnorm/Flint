@@ -51,6 +51,8 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
           Tensor<double, n>(new_graph_node, weight.get_shape());
       weight = std::move(nw);
       weight.watch();
+    }else{
+      flogging(F_WARNING, "No Optimizer for weight!");
     }
   }
   template <int i, unsigned int k> Tensor<double, k> &get_weight() {
@@ -89,6 +91,8 @@ struct WeightRef<index, n, wn...> {
           Tensor<double, n>(new_graph_node, weight.get_shape());
       weight = std::move(nw);
       weight.watch();
+    }else{
+      flogging(F_WARNING, "No Optimizer for weight!");
     }
     others.optimize(error);
   }
@@ -239,7 +243,7 @@ public:
       }
     }
     Tensor<double, n> r = Flint::random_array(in.get_shape());
-    return (in * (r > p)) * (1.0 / (1.0 - p));
+    return (in * (r > p)) / (1.0 - p);
   }
 };
 struct Flatten : public UntrainableLayer {

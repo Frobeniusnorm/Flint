@@ -14,6 +14,7 @@
 #include "layers.hpp"
 #include <concepts>
 #include <flint/flint.hpp>
+#include <limits>
 /**
  * Defines the general concept of a Loss function.
  * It receives two tensors: the actual output and the expected one.
@@ -52,7 +53,10 @@ struct CrossEntropyLoss {
   template <typename T, unsigned int n>
   Tensor<double, transform_dimensionality(n)> calculate_error(Tensor<T, n> &in,
                                         Tensor<T, n> &expected) {
-  // TODO sparse categorical cross entropy loss
-    return -(expected() * in.log()()).reduce_sum();
+    // TODO sparse categorical cross entropy loss
+    size_t total_size = 1;
+    for (int i = 0; i < n - 1; i++)
+      total_size *= in.get_shape()[i];
+    return (-(expected * (in + 1e-9).log()).reduce_sum() / (double)total_size);
   }
 };

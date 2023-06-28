@@ -8,8 +8,9 @@
 *.obj
 examples/build/
 .clangd/
-examples/gauss
-examples/flint.jpg
+examples/gauss/gauss
+examples/gauss/flint.jpg
+examples/dl_test_1/dl_test
 experiment/
 # Precompiled Headers
 *.gch

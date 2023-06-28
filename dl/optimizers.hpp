@@ -16,6 +16,7 @@
 #include <cmath>
 #include <flint/flint.hpp>
 #include <flint/flint.h>
+#include <limits>
 #include <optional>
 #include <unordered_set>
 /**
@@ -36,7 +37,7 @@ struct OptimizerFactory {
  * moments)
  */
 struct Adam : public Optimizer {
-  double epsilon = 1e-08;
+  double epsilon = std::numeric_limits<double>::epsilon();
   double learning_rate, b1, b2;
   /**
    * Initializes the Adam algorithm with some parameters that influence the

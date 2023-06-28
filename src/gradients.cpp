@@ -329,8 +329,10 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     // reproject adjacent into previous shape, should be okay since
     // shape(prev_adj) = shape(y)
     FGraphNode *prev = y->predecessors[0];
-    return freshape(prev_adj, prev->operation->shape,
+    if (prev == dx)
+      return freshape(prev_adj, prev->operation->shape,
                     prev->operation->dimensions);
+    else return nullptr;
   }
   case FCONVERSION:
     return prev_adj;
@@ -482,7 +484,7 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     long rep_mul = 1;
     for (int i = 0; i < start.size(); i++) {
       if (y->operation->shape[i] != a->operation->shape[i])
-        end[i] = y->operation->shape[i] / a->operation->shape[i];
+        end[i] = a->operation->shape[i];
       else
         end[i] = y->operation->shape[i];
       rep_mul *= (y->operation->shape[i] / a->operation->shape[i]);
