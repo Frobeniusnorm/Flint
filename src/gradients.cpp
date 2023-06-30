@@ -329,10 +329,8 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     // reproject adjacent into previous shape, should be okay since
     // shape(prev_adj) = shape(y)
     FGraphNode *prev = y->predecessors[0];
-    if (prev == dx)
-      return freshape(prev_adj, prev->operation->shape,
+    return freshape(prev_adj, prev->operation->shape,
                     prev->operation->dimensions);
-    else return nullptr;
   }
   case FCONVERSION:
     return prev_adj;
@@ -422,10 +420,11 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   case FREDUCE_MAX:
   case FREDUCE_MIN: {
     FGraphNode *a = y->predecessors[0];
-    unsigned int ax = ((unsigned int*) y->operation->additional_data)[0];
-    // work with extend to readjust the node to the same shape as before by repetition,
-    // then compare it with equal and multiply the 0-1 tensor with previous adjoint.
-    FGraphNode* n = fequal(a, fexpand(y, ax, a->operation->shape[ax]));
+    unsigned int ax = ((unsigned int *)y->operation->additional_data)[0];
+    // work with extend to readjust the node to the same shape as before by
+    // repetition, then compare it with equal and multiply the 0-1 tensor with
+    // previous adjoint.
+    FGraphNode *n = fequal(a, fexpand(y, ax, a->operation->shape[ax]));
     return fmul(fexpand(prev_adj, ax, a->operation->shape[ax]), n);
   }
   case FREDUCE_SUM: {
@@ -483,12 +482,11 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     std::vector<long> end(y->operation->dimensions);
     long rep_mul = 1;
     for (int i = 0; i < start.size(); i++) {
-      if (y->operation->shape[i] != a->operation->shape[i])
-        end[i] = a->operation->shape[i];
-      else
-        end[i] = y->operation->shape[i];
+      end[i] = a->operation->shape[i];
       rep_mul *= (y->operation->shape[i] / a->operation->shape[i]);
     }
+    // TODO this is not correct, since prev_adj would have other values at other places
+    // we would need to talk the sum along all of those slices i.e. we need to accumulate all repetitions
     return fmul(fslice(prev_adj, start.data(), end.data()), rep_mul);
   }
   case FTRANSPOSE: {

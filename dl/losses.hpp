@@ -11,6 +11,8 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License. */
+#ifndef FLINT_LOSSES
+#define FLINT_LOSSES
 #include "layers.hpp"
 #include <concepts>
 #include <flint/flint.hpp>
@@ -49,14 +51,17 @@ concept GenericLoss =
  * */
 struct CrossEntropyLoss {
   static constexpr FType transform_type(FType t) { return F_FLOAT64; }
-  static constexpr unsigned int transform_dimensionality(int n) { return n - 1 < 1 ? 1 : n - 1; }
+  static constexpr unsigned int transform_dimensionality(int n) { return 1; }
   template <typename T, unsigned int n>
   Tensor<double, transform_dimensionality(n)> calculate_error(Tensor<T, n> &in,
                                         Tensor<T, n> &expected) {
     // TODO sparse categorical cross entropy loss
-    size_t total_size = 1;
-    for (int i = 0; i < n - 1; i++)
-      total_size *= in.get_shape()[i];
-    return (-(expected * (in + 1e-9).log()).reduce_sum() / (double)total_size);
-  }
+    auto pred = (in / in.reduce_sum(n-1).expand(n-1, in.get_shape()[n-1])).max(1e-7).min(1 - 1e-7);
+    auto t1 = (expected * -pred.log()).reduce_sum();
+      size_t total_size = 1;
+      for (int i = 0; i < n - 1; i++)
+        total_size *= in.get_shape()[i];
+      return (t1 / (double)total_size);
+  } 
 };
+#endif

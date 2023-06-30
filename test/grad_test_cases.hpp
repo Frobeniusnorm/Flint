@@ -516,5 +516,36 @@ TEST_SUITE("Autodiff") {
         else
           CHECK_EQ(doctest::Approx(0.0), da3[0][i][j]);
       }
+    Tensor<float, 3> b{{{0.1234, 9.7152, 4.1111},
+                        {-1.1111, 7.42313574159321333, 4.1111},
+                        {7.42313574159321333, 7.42313574159321333, 2}}};
+    b.watch();
+    Tensor<float, 2> b4 = b.reduce_max(2) * 42.0f;
+    Tensor<double, 3> db4 = b4.gradient(b);
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++) {
+        if ((i == 0 && j == 1) || (i == 1 && j == 1) ||
+            (i == 2 && (j == 0 || j == 1)))
+          CHECK_EQ(doctest::Approx(42.0), db4[0][i][j]);
+        else
+          CHECK_EQ(doctest::Approx(0.0), db4[0][i][j]);
+      }
+  }
+  TEST_CASE("Reduce and calculate with itself") {
+    Tensor<float, 3> in = {{{77, -3, 76, 79}, {123, 54, 1024, 1023}},
+                           {{0.5, 0.9, -312, 2}, {-5, -6, -7, -8}}};
+    in.watch();
+    Tensor<float, 3> expected = {{{0, 0, 1, 0}, {0, 0, 1, 0}},
+                                 {{0, 1, 0, 0}, {0, 1, 0, 0}}};
+    Tensor<float, 3> pred =
+        (in / in.reduce_sum(2).expand(2, in.get_shape()[2]));
+    Tensor<double, 3> grad = pred.gradient(in);
+    for (int j = 0; j < 4; j++) {
+      for (int i = 0; i < 2; i++) {
+        CHECK_EQ(0, grad[0][i][j]);
+      }
+      CHECK_EQ(doctest::Approx(2.33e-10), grad[1][0][j]);
+      CHECK_EQ(doctest::Approx(3.73e-09), grad[1][1][j]);
+    }
   }
 }

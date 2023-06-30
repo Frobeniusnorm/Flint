@@ -161,10 +161,25 @@ private:
   unsigned long t = 1;
 };
 struct AdamFactory : public OptimizerFactory {
-  double epsilon = 1e-07;
   double learning_rate, b1, b2;
   AdamFactory(double learning_rate = 0.0015, double b1 = 0.9, double b2 = 0.999)
       : learning_rate(learning_rate), b1(b1), b2(b2) {}
   Optimizer *generate_optimizer() const { return new Adam(learning_rate, b1, b2); }
+};
+
+struct Sgd : public Optimizer {
+double learning_rate;
+  Sgd() = default;
+  Sgd(double learning_rate) : learning_rate(learning_rate) {}
+
+  FGraphNode *update(FGraphNode *weights, FGraphNode *gradient) {
+    return fExecuteGraph(fsub(weights, fmul_cd(gradient, learning_rate)));  
+  }
+};
+struct SgdFactory: public OptimizerFactory {
+  double learning_rate;
+  SgdFactory(double learning_rate = 0.0015)
+      : learning_rate(learning_rate) {}
+  Optimizer *generate_optimizer() const { return new Sgd(learning_rate); }
 };
 #endif

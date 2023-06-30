@@ -11,6 +11,8 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License. */
+#ifndef FLINT_ACTIVATIONS
+#define FLINT_ACTIVATIONS
 #include "layers.hpp"
 
 /** SoftMax activation Layer. For multiclass classification. */
@@ -30,7 +32,7 @@ public:
     Tensor<T, n> exp =
         (in - in.reduce_max(axis).expand(axis, in.get_shape()[axis])).exp();
     Tensor<T, n - 1> sum = exp.reduce_sum(axis);
-    if (ax == 0)
+    if (ax == 0 || n == 1)
       return exp / sum;
     else {
       return exp / (sum.expand(axis, in.get_shape()[axis]));
@@ -42,3 +44,4 @@ struct Relu : public UntrainableLayer {
     return in.max(0);
   }
 };
+#endif

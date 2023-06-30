@@ -44,12 +44,12 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
   template <typename T, unsigned int k>
   void optimize(const Tensor<T, k> &error) {
     if (optimizer) {
-      const Tensor<double, n> gw = error.gradient(weight);
+      Tensor<double, n> gw = error.gradient(weight);
       FGraphNode *new_graph_node =
           optimizer->update(weight.get_graph_node(), gw.get_graph_node());
       Tensor<double, n> nw =
           Tensor<double, n>(new_graph_node, weight.get_shape());
-      weight = std::move(nw);
+      weight = nw;
       weight.watch();
     }else{
       flogging(F_WARNING, "No Optimizer for weight!");
@@ -253,7 +253,7 @@ struct Flatten : public UntrainableLayer {
   /** Flattens every feature axis into one single axis, does not touch the batch-axis (the first) */
   template <typename T, unsigned int n>
   Tensor<T, 2> forward(const Tensor<T, n> &in) {
-    if constexpr (n <= 2)
+    if constexpr (n == 2)
       return in;
     else return forward(in.flattened(n - 1)); 
   }
