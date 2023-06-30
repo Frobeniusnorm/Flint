@@ -117,24 +117,24 @@ template <typename T> static std::string printNode(FGraphNode *node) {
   int b = 0;
   return printNode<T>(node, 0, &b);
 }
-static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
+static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
                                   FGraphNode *prev_adj) {
+  FGraphNode *dx = y->predecessors[dx_i];
   switch (y->operation->op_type) {
   case FADD:
-    return (dx == y->predecessors[0] || dx == y->predecessors[1]) ? prev_adj
-                                                                  : nullptr;
+    return (dx_i == 0 || dx_i == 1) ? prev_adj : nullptr;
   case FSUB: {
-    if (dx == y->predecessors[0])
+    if (dx_i == 0)
       return prev_adj;
-    else if (dx == y->predecessors[1])
+    else if (dx_i == 1)
       return fneg(prev_adj);
     else
       return nullptr;
   }
   case FMUL: {
-    if (y->predecessors[0] == dx) {
+    if (0 == dx_i) {
       return fmul(prev_adj, y->predecessors[1]);
-    } else if (y->predecessors[1] == dx) {
+    } else if (1 == dx_i) {
       return fmul(prev_adj, y->predecessors[0]);
     } else
       return nullptr;
@@ -142,10 +142,10 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   case FDIV: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];
-    if (a == dx) {
+    if (0 == dx_i) {
       // d(a / b)/da = d(a * b^(-1))/da = b^(-1)
       return fdiv(prev_adj, b);
-    } else if (b == dx) {
+    } else if (1 == dx_i) {
       // d(a / b)/db = d(a * b^(-1))/db = -a * b^(-2)
       return fneg(fdiv(fmul(prev_adj, a), fpow(b, 2.)));
     } else
@@ -154,14 +154,14 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   case FMATMUL: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];
-    if (a == dx) {
+    if (0 == dx_i) {
       std::vector<int> perm(b->operation->dimensions);
       for (int i = 0; i < perm.size() - 2; i++)
         perm[i] = i;
       perm[perm.size() - 2] = perm.size() - 1;
       perm[perm.size() - 1] = perm.size() - 2;
       return fmatmul(prev_adj, ftranspose(b, perm.data()));
-    } else if (b == dx) {
+    } else if (1 == dx_i) {
       std::vector<int> perm(a->operation->dimensions);
       for (int i = 0; i < perm.size() - 2; i++)
         perm[i] = i;
@@ -176,7 +176,7 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];
     unsigned int ax = *((unsigned int *)y->operation->additional_data);
-    if (a == dx) {
+    if (0 == dx_i) {
       std::vector<long> start(a->operation->dimensions);
       std::vector<long> stop(a->operation->dimensions);
       for (int i = 0; i < a->operation->dimensions; i++) {
@@ -184,7 +184,7 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
         stop[i] = a->operation->shape[i];
       }
       return fslice(prev_adj, start.data(), stop.data());
-    } else if (b == dx) {
+    } else if (1 == dx_i) {
       std::vector<long> start(b->operation->dimensions);
       std::vector<long> stop(b->operation->dimensions);
       for (int i = 0; i < b->operation->dimensions; i++) {
@@ -200,7 +200,7 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   case FCONVOLVE: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *kernel = y->predecessors[1];
-    if (a == dx) {
+    if (0 == dx_i) {
       const unsigned int *steps = (unsigned int *)y->operation->additional_data;
       // fuck this noise, i am writing a custom function i cant take this
       // anymore
@@ -228,7 +228,7 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       gradient->operation = op;
       configureGradientInformation(gradient, {kernel, prev_adj});
       return gradient;
-    } else if (kernel == dx) {
+    } else if (1 == dx_i) {
       if (y->operation->op_type == FCONVOLVE) {
         // last dimension has been reduced
         std::vector<size_t> ns(prev_adj->operation->dimensions + 1);
@@ -249,7 +249,7 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
     // for the derivation of a derivation
     FGraphNode *kernel = y->predecessors[0];
     FGraphNode *a = y->predecessors[1];
-    if (a == dx) {
+    if (1 == dx_i) {
       const unsigned int *steps = (unsigned int *)y->operation->additional_data;
       // fuck this noise, i am writing a custom function i cant take this
       // anymore
@@ -277,7 +277,7 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
       gradient->operation = op;
       configureGradientInformation(gradient, {kernel, prev_adj});
       return gradient;
-    } else if (kernel == dx) {
+    } else if (0 == dx_i) {
       return fslide(prev_adj, a, (unsigned int *)y->operation->additional_data);
     }
     return nullptr;
@@ -285,10 +285,10 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   case FPOW: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];
-    if (a == dx) {
+    if (0 == dx_i) {
       // x^b / dx = b*x^(b-1)
       return fmul(prev_adj, fmul(b, fpow(a, fsub(b, 1))));
-    } else if (b == dx) {
+    } else if (1 == dx_i) {
       // a^x / dx = a^x * ln(a)
       // has to be zero when a < 0 since not differentiable
       return fmul(prev_adj, fmul(fmul(fadd(fsign(a), 1), 0.5),
@@ -337,9 +337,9 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   case FMIN: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];
-    if (a == dx) {
+    if (0 == dx_i) {
       return fmul(prev_adj, fadd(fless(a, b), fequal(a, b)));
-    } else if (b == dx)
+    } else if (1 == dx_i)
       return fmul(prev_adj, fgreater(a, b));
     else
       return nullptr;
@@ -347,9 +347,9 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   case FMAX: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];
-    if (a == dx)
+    if (0 == dx_i)
       return fmul(prev_adj, fadd(fgreater(a, b), fequal(a, b)));
-    else if (b == dx)
+    else if (1 == dx_i)
       return fmul(prev_adj, fless(a, b));
     else
       return nullptr;
@@ -478,16 +478,32 @@ static FGraphNode *local_gradient(FGraphNode *y, FGraphNode *dx,
   }
   case FREPEAT: {
     FGraphNode *a = y->predecessors[0];
-    std::vector<long> start(y->operation->dimensions, 0);
-    std::vector<long> end(y->operation->dimensions);
-    long rep_mul = 1;
-    for (int i = 0; i < start.size(); i++) {
-      end[i] = a->operation->shape[i];
-      rep_mul *= (y->operation->shape[i] / a->operation->shape[i]);
+    // TODO this is not correct, since prev_adj would have other values at other
+    // places we would need to talk the sum along all of those slices i.e. we
+    // need to accumulate all repetitions
+    FGraphNode *grad = prev_adj;
+    std::vector<size_t> orig_shape(prev_adj->operation->shape,
+                                   prev_adj->operation->shape +
+                                       prev_adj->operation->dimensions);
+    for (int i = 0; i < a->operation->dimensions; i++) {
+      if (a->operation->shape[i] != y->operation->shape[i]) {
+        // reduce repeated gradient into correct shape
+        std::vector<size_t> new_shape(orig_shape.size() + 1);
+        // add extra dimension for reducing
+        if (i > 0)
+          std::memcpy(new_shape.data(), grad->operation->shape,
+                      sizeof(size_t) * i);
+        new_shape[i] = orig_shape[i] / a->operation->shape[i];
+        new_shape[i + 1] = a->operation->shape[i];
+        if (orig_shape.size() - i > 1)
+          std::memcpy(new_shape.data() + i + 2, grad->operation->shape + i + 1,
+                      sizeof(size_t) * (orig_shape.size() - i - 1));
+        // reduce along that axis
+        grad =
+            freduce_sum(freshape(grad, new_shape.data(), new_shape.size()), i);
+      }
     }
-    // TODO this is not correct, since prev_adj would have other values at other places
-    // we would need to talk the sum along all of those slices i.e. we need to accumulate all repetitions
-    return fmul(fslice(prev_adj, start.data(), end.data()), rep_mul);
+    return grad;
   }
   case FTRANSPOSE: {
     int *transp = ((int *)y->operation->additional_data);
@@ -567,14 +583,15 @@ FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
     for (int i = 0; i < curr->num_predecessor; i++) {
       FGraphNode *parent = curr->predecessors[i];
       // check if we need to compute this branch
-      if (parent->gradient_data) {
-        std::unordered_set<const FGraphNode *> *trace =
-            (std::unordered_set<const FGraphNode *> *)parent->gradient_data;
-        if (!trace->contains(dx))
-          continue;
-      } else if (parent != dx)
-        continue;
-      FGraphNode *local_grad = local_gradient(curr, parent, adj);
+      //      if (parent->gradient_data) {
+      //        std::unordered_set<const FGraphNode *> *trace =
+      //            (std::unordered_set<const FGraphNode *>
+      //            *)parent->gradient_data;
+      //        if (!trace->contains(dx))
+      //          continue;
+      //      } else if (parent != dx)
+      //        continue;
+      FGraphNode *local_grad = local_gradient(curr, i, adj);
       if (adjoints.contains(parent)) {
         adjoints[parent] =
             fadd(adjoints[parent], unbroadcast(local_grad, parent));

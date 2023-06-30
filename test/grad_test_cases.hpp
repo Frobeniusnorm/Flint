@@ -532,6 +532,7 @@ TEST_SUITE("Autodiff") {
       }
   }
   TEST_CASE("Reduce and calculate with itself") {
+    GradientContext _;
     Tensor<float, 3> in = {{{77, -3, 76, 79}, {123, 54, 1024, 1023}},
                            {{0.5, 0.9, -312, 2}, {-5, -6, -7, -8}}};
     in.watch();
@@ -547,5 +548,19 @@ TEST_SUITE("Autodiff") {
       CHECK_EQ(doctest::Approx(2.33e-10), grad[1][0][j]);
       CHECK_EQ(doctest::Approx(3.73e-09), grad[1][1][j]);
     }
+  }
+  TEST_CASE("Use one variable multiple times") {
+    GradientContext _;
+    Tensor<float, 3> in = {{{77, -3, 76, 79}, {123, 54, 1024, 1023}},
+                           {{0.5, 0.9, -312, 2}, {-5, -6, -7, -8}}};
+    in.watch();
+    auto v = in * 7;
+    auto t1 = v / v;
+    auto t2 = v / (in * 7);
+    auto g1 = t1.gradient(in);
+    auto g2 = t2.gradient(in);
+    CHECK_EQ((t1.equal(t2) - 1).reduce_sum()[0], 0);
+    CHECK_EQ((g1.equal(g2) - 1).reduce_sum()[0], 0);
+    in.watch();
   }
 }

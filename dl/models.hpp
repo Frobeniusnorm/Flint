@@ -75,6 +75,10 @@ template <GenericLayer... T> struct SequentialModel {
     if (Y.get_shape()[0] != batches)
       flogging(F_ERROR,
                "Input and Target Datas batch size does not correspond!");
+    std::cout << "\r\e[Kbatch error: ... " ;
+    for (int k = 0; k < 15; k++)
+      std::cout << "▱";
+    std::cout << std::flush;
     for (int i = 0; i < epochs; i++) {
       // TODO shuffle each iteration
       size_t number_batches = batches / batch_size + 1;
@@ -83,7 +87,8 @@ template <GenericLayer... T> struct SequentialModel {
         long slice_to = (b + 1) * batch_size;
         if (slice_to > batches)
           slice_to = batches;
-        if (b * batch_size == slice_to) break;
+        if (b * batch_size == slice_to)
+          break;
         fStartGradientContext();
         auto input = X.slice(TensorRange(b * batch_size, slice_to));
         auto expected = Y.slice(TensorRange(b * batch_size, slice_to));
@@ -93,15 +98,16 @@ template <GenericLayer... T> struct SequentialModel {
         double local_error = (double)(error[0]);
         total_error += local_error / number_batches;
         backward<0>(error);
-        //print metrics
-        std::cout << "\r\e[Kbatch error: " << std::setprecision(3) << local_error << " [";
+        // print metrics
+        std::cout << "\r\e[Kbatch error: " << std::setprecision(3)
+                  << local_error << " ";
         for (int k = 0; k < 15; k++) {
-          if ((k + 1.0) / 15.0 <= (b + 1.0) / number_batches)
-            std::cout << "#";
+          if (k / 15.0 <= (b + 1.0) / number_batches)
+            std::cout << "▰";
           else
-            std::cout << " ";
+            std::cout << "▱";
         }
-        std::cout << "]" << std::flush;
+        std::cout << std::flush;
       }
       std::cout << "\r\e";
       flogging(F_INFO, "Mean loss for epoch #" + std::to_string(i + 1) + ": " +
