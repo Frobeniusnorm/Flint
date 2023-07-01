@@ -95,14 +95,14 @@ template <GenericLayer... T> struct SequentialModel {
         auto output = forward(input);
         auto error = loss.calculate_error(output, expected);
         fStopGradientContext();
-        double local_error = (double)(error[0]);
-        total_error += local_error / number_batches;
         backward<0>(error);
+        double local_error = (double)(error.reduce_sum()[0]);
+        total_error += local_error / number_batches;
         // print metrics
         std::cout << "\r\e[Kbatch error: " << std::setprecision(3)
                   << local_error << " ";
         for (int k = 0; k < 15; k++) {
-          if (k / 15.0 <= (b + 1.0) / number_batches)
+          if ((k + 1) / 15.0 <= (b + 1.0) / number_batches)
             std::cout << "▰";
           else
             std::cout << "▱";

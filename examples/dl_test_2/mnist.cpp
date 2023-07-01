@@ -38,7 +38,7 @@ static Tensor<float, 3> load_mnist_images(const std::string path) {
         for (int k = 0; k < w; k++) {
           unsigned char value;
           file.read((char *)&value, 1);
-          data[i * h * w + j * w + k] = value / 255.0;
+          data[i * h * w + j * w + k] = (float)value / 255.0;
         }
       }
     }
@@ -83,18 +83,18 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 int main() {
   FlintContext _(FLINT_BACKEND_BOTH);
   fSetLoggingLevel(F_INFO);
-  Tensor<float, 3> ims = load_mnist_images("train-images.idx3-ubyte");
-  Tensor<double, 2> lbs = load_mnist_labels("train-labels.idx1-ubyte").convert<double>();
+  Tensor<float, 3> ims = load_mnist_images("train-images.idx3-ubyte").slice(TensorRange(0, 12000));
+  Tensor<double, 2> lbs = load_mnist_labels("train-labels.idx1-ubyte").convert<double>().slice(TensorRange(0, 12000));
   std::cout << ims.get_shape()[0] << " images à " << ims.get_shape()[1] << "x" << ims.get_shape()[1] << " (and " << lbs.get_shape()[0] << " labels)" << std::endl;
   std::cout << "loaded data. Starting training." << std::endl;
   auto m = SequentialModel{
     Flatten(),
-    Connected(784, 32),
+    Connected(784, 32), // a second layer somehow destroys everything: TODO investigate
     Relu(),
     Connected(32, 10),
     SoftMax()
   };
-  SgdFactory opt (0.015);
+  AdamFactory opt (0.003, 0.9, 0.999);
   m.generate_optimizer(&opt);
-  m.train(ims, lbs, CrossEntropyLoss(), 100, 6000);
+  m.train(ims, lbs, CrossEntropyLoss(), 100, 4000);
 }

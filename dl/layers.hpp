@@ -51,7 +51,7 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
           Tensor<double, n>(new_graph_node, weight.get_shape());
       weight = nw;
       weight.watch();
-    }else{
+    } else {
       flogging(F_WARNING, "No Optimizer for weight!");
     }
   }
@@ -91,7 +91,7 @@ struct WeightRef<index, n, wn...> {
           Tensor<double, n>(new_graph_node, weight.get_shape());
       weight = std::move(nw);
       weight.watch();
-    }else{
+    } else {
       flogging(F_WARNING, "No Optimizer for weight!");
     }
     others.optimize(error);
@@ -113,42 +113,41 @@ using FlintTypeToCpp = typename std::conditional<
 } // namespace LayerHelper
 template <unsigned int> using helper = void;
 template <typename T>
-concept GenericLayer =
-    requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
-             Tensor<double, 2> &t3, Tensor<long, 2> &t4,
-             OptimizerFactory *fac) {
-      {
-        a.forward(t1)
-        } -> std::convertible_to<
-            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
-                   T::transform_dimensionality(2)>>;
-      {
-        a.forward(t2)
-        } -> std::convertible_to<
-            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT32)>,
-                   T::transform_dimensionality(2)>>;
-      {
-        a.forward(t3)
-        } -> std::convertible_to<
-            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT64)>,
-                   T::transform_dimensionality(2)>>;
-      {
-        a.forward(t4)
-        } -> std::convertible_to<
-            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT64)>,
-                   T::transform_dimensionality(2)>>;
-      a.optimize_weights(t1);
-      a.optimize_weights(t2);
-      a.optimize_weights(t3);
-      a.optimize_weights(t4);
-      a.generate_optimizer(fac);
-      a.training = true;
-      { T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
-      // Has to be constexpr
+concept GenericLayer = requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
+                                Tensor<double, 2> &t3, Tensor<long, 2> &t4,
+                                OptimizerFactory *fac) {
+  {
+    a.forward(t1)
+    } -> std::convertible_to<
+        Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
+               T::transform_dimensionality(2)>>;
+  {
+    a.forward(t2)
+    } -> std::convertible_to<
+        Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT32)>,
+               T::transform_dimensionality(2)>>;
+  {
+    a.forward(t3)
+    } -> std::convertible_to<
+        Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT64)>,
+               T::transform_dimensionality(2)>>;
+  {
+    a.forward(t4)
+    } -> std::convertible_to<
+        Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT64)>,
+               T::transform_dimensionality(2)>>;
+  a.optimize_weights(t1);
+  a.optimize_weights(t2);
+  a.optimize_weights(t3);
+  a.optimize_weights(t4);
+  a.generate_optimizer(fac);
+  a.training = true;
+  { T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
+  // Has to be constexpr
 
-      { T::transform_type(F_INT32) } -> std::convertible_to<FType>;
-      // Has to be constexpr
-    };
+  { T::transform_type(F_INT32) } -> std::convertible_to<FType>;
+  // Has to be constexpr
+};
 //    };
 /** Implements blank methods for every method of GenericLayer that is not needed
  * for a Layer that is not trainable */
@@ -216,13 +215,13 @@ public:
 
 struct Connected : public Layer<2> {
   Connected(size_t units_in, size_t units_out)
-      : Layer<2>(Flint::random(units_in + 1, units_out)) {}
+      : Layer<2>((Flint::random(units_in + 1, units_out) - 0.5) * 2.) {}
   template <typename T, unsigned int n>
   Tensor<double, n> forward(Tensor<T, n> &in) {
     std::array<size_t, n> one_shape = in.get_shape();
     one_shape[n - 1] = 1;
     Tensor<T, n> ones = Flint::constant_array<T, n>(1, one_shape);
-    return Flint::concat(in, ones, n - 1).matmul(Layer<2>::get_weight<0>());
+    return Flint::concat(in, ones, n - 1).matmul(get_weight<0>());
   }
 };
 /** Randomly sets some values in the input to 0 with a probability of `p`.
@@ -230,6 +229,7 @@ struct Connected : public Layer<2> {
  * false. */
 class Dropout : public UntrainableLayer {
   double p;
+
 public:
   static constexpr FType transform_type(FType t) { return F_FLOAT64; }
   Dropout(double p) : p(p) {}
@@ -250,12 +250,14 @@ struct Flatten : public UntrainableLayer {
   static constexpr unsigned int transform_dimensionality(unsigned int n) {
     return 2;
   }
-  /** Flattens every feature axis into one single axis, does not touch the batch-axis (the first) */
+  /** Flattens every feature axis into one single axis, does not touch the
+   * batch-axis (the first) */
   template <typename T, unsigned int n>
   Tensor<T, 2> forward(const Tensor<T, n> &in) {
     if constexpr (n == 2)
       return in;
-    else return forward(in.flattened(n - 1)); 
+    else
+      return forward(in.flattened(n - 1));
   }
 };
 #endif

@@ -3,6 +3,8 @@
 #include "doctest.h"
 #include <cmath>
 #include <math.h>
+#include <unordered_map>
+#include <unordered_set>
 TEST_SUITE("Autodiff") {
   TEST_CASE("Two Times Matmul") {
     GradientContext _;
@@ -561,6 +563,16 @@ TEST_SUITE("Autodiff") {
     auto g2 = t2.gradient(in);
     CHECK_EQ((t1.equal(t2) - 1).reduce_sum()[0], 0);
     CHECK_EQ((g1.equal(g2) - 1).reduce_sum()[0], 0);
-    in.watch();
+
+    auto t3 = in * 7;
+    t3 = t3 / (in * 7).reduce_sum(2).expand(2, 4);
+    auto t4 = in * 7;
+    t4 = t4 / t4.reduce_sum(2).expand(2, 4);
+    auto g3 = t3.gradient(in);
+    std::cout << g3() << std::endl;
+    auto g4 = t4.gradient(in);
+    std::cout << g4() << std::endl;
+    CHECK_EQ((t3.equal(t4) - 1).reduce_sum()[0], 0);
+    CHECK_EQ(((g3 - g4).abs() > 0.0001).reduce_sum()[0], 0);
   }
 }

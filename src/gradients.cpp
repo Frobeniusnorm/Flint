@@ -350,7 +350,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     if (0 == dx_i)
       return fmul(prev_adj, fadd(fgreater(a, b), fequal(a, b)));
     else if (1 == dx_i)
-      return fmul(prev_adj, fless(a, b));
+      return fmul(prev_adj, fadd(fless(a, b), fequal(a, b)));
     else
       return nullptr;
   }
@@ -478,9 +478,6 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
   }
   case FREPEAT: {
     FGraphNode *a = y->predecessors[0];
-    // TODO this is not correct, since prev_adj would have other values at other
-    // places we would need to talk the sum along all of those slices i.e. we
-    // need to accumulate all repetitions
     FGraphNode *grad = prev_adj;
     std::vector<size_t> orig_shape(prev_adj->operation->shape,
                                    prev_adj->operation->shape +
@@ -544,7 +541,27 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     return nullptr;
   }
 }
-
+static void collect(FGraphNode* x, std::list<FGraphNode*>& stack, std::unordered_set<FGraphNode*>& visited, const FGraphNode* dx) {
+  // TODO could be made more performant with explicit todo stack and a push_back before continuing on the parents
+  visited.insert(x);
+  for (int i = 0; i < x->num_predecessor; i++) {
+    FGraphNode* parent = x->predecessors[i];
+    // check if visited
+    if (visited.contains(parent)) continue;
+    // check if it contains dx
+    if (parent->gradient_data) {
+      std::unordered_set<const FGraphNode *> *trace =
+          (std::unordered_set<const FGraphNode *>
+          *)parent->gradient_data;
+      if (!trace->contains(dx))
+        continue;
+    } else if (parent != dx)
+      continue;
+    // recurse
+    collect(parent, stack, visited, dx);
+  }
+  stack.push_front(x);
+}
 FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
   std::unordered_set<const FGraphNode *> *gd =
       (std::unordered_set<const FGraphNode *> *)y->gradient_data;
@@ -560,20 +577,19 @@ FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
   using namespace std;
   // to store gradients per node
   unordered_map<FGraphNode *, FGraphNode *> adjoints;
-  // fixpoint iteration
-  list<FGraphNode *> working;
-  unordered_set<FGraphNode *> in_working;
-  working.push_back(y);
-  in_working.insert(y);
-
+  list<FGraphNode *> todo;
+  {
+    std::unordered_set<FGraphNode*> visited;
+    collect(y, todo, visited, dx);
+  }
   // initialize
   adjoints[y] = constant_tensor(1., F_FLOAT64, y->operation->shape,
                                 y->operation->dimensions);
   FGraphNode *sol = nullptr;
-  while (!working.empty()) {
-    FGraphNode *curr = working.front();
-    working.pop_front();
-    in_working.erase(curr);
+  while (!todo.empty()) {
+    // TODO topological ordering
+    FGraphNode *curr = todo.front();
+    todo.pop_front();
     if (curr == dx) {
       sol = adjoints[curr];
     }
@@ -582,25 +598,12 @@ FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
     FGraphNode *adj = adjoints[curr];
     for (int i = 0; i < curr->num_predecessor; i++) {
       FGraphNode *parent = curr->predecessors[i];
-      // check if we need to compute this branch
-      //      if (parent->gradient_data) {
-      //        std::unordered_set<const FGraphNode *> *trace =
-      //            (std::unordered_set<const FGraphNode *>
-      //            *)parent->gradient_data;
-      //        if (!trace->contains(dx))
-      //          continue;
-      //      } else if (parent != dx)
-      //        continue;
       FGraphNode *local_grad = local_gradient(curr, i, adj);
       if (adjoints.contains(parent)) {
         adjoints[parent] =
             fadd(adjoints[parent], unbroadcast(local_grad, parent));
       } else {
         adjoints.insert({parent, unbroadcast(local_grad, parent)});
-      }
-      if (!in_working.contains(parent)) {
-        working.push_back(parent);
-        in_working.insert(parent);
       }
     }
   }
