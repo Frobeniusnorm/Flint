@@ -26,7 +26,7 @@ concept Initializer = requires(T i) {
     i.template initialize<float>(std::array<size_t, 2>{6, 5})
     } -> std::convertible_to<Tensor<float, 2>>;
 };
-template<unsigned int n>
+template<long unsigned int n>
 static void compute_fans(std::array<size_t, n> shape, unsigned int& fan_in, unsigned int& fan_out) {
   if constexpr (n == 1) {
     fan_in = shape[0];
@@ -66,7 +66,7 @@ struct GlorotUniform{
     unsigned int fan_in, fan_out;
     compute_fans(shape, fan_in, fan_out);
     double limit = std::sqrt(6. / (fan_in + fan_out));
-    // TODO normal distribution
+    return Flint::random_normal(shape, limit); 
   }
 };
 

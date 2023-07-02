@@ -30,6 +30,7 @@
 #include "flint_1.hpp"
 // includes the n dimensional implementation
 #include "flint_n.hpp"
+#include <cmath>
 
 struct Flint {
   /** Sets the Logging Level of the Flint Backend */
@@ -65,7 +66,8 @@ struct Flint {
    * shape (given as an array instead of a variadic template).
    */
   template <size_t n>
-  static Tensor<double, (unsigned int)n> random_array(std::array<size_t, n> shape) {
+  static Tensor<double, (unsigned int)n>
+  random_array(std::array<size_t, n> shape) {
     FGraphNode *node = frandom(shape.data(), (unsigned int)n);
     return Tensor<double, (unsigned int)n>(node, shape);
   }
@@ -81,12 +83,31 @@ struct Flint {
     return Tensor<double, dimensions>(node, shape);
   }
   /**
+   * Creates a Tensor filled with random, normally distributed (
+   * `mu` is the mean, `sigma` is the variance) random numbers.
+   * It works by implementing the Box-Muller transformation.
+   */
+  template <size_t n>
+  static Tensor<double, (unsigned int)n>
+  random_normal(std::array<size_t, n> shape, double sigma = 1,
+                      double mu = 0) {
+    FGraphNode *node1 = fmax(frandom(shape.data(), (unsigned int)n),
+                             std::numeric_limits<double>::epsilon());
+    FGraphNode *node2 = fmax(frandom(shape.data(), (unsigned int)n),
+                             std::numeric_limits<double>::epsilon());
+    return Tensor<double, (unsigned int)n>(
+        fadd_cd(fmul(fmul_cd(fsqrt_g(fmul_cd(flog(node1), -2)), sigma),
+                     fcos(fmul_cd(node2, 2 * M_PI))),
+                mu),
+        shape);
+  }
+  /**
    * Generates a Tensor containing the single given value in every entry.
    * The resulting Tensor will have a dimensionality of `n` and a
    * shape denoted by each entry in `shape`. e.g.
    * @code{
-   * Tensor<double, 3> foo = Flint::constant_array(3.141592, std::array<size_t, 3>(2, 2, 2));
-   * std::cout << foo << std::endl;
+   * Tensor<double, 3> foo = Flint::constant_array(3.141592, std::array<size_t,
+   * 3>(2, 2, 2)); std::cout << foo << std::endl;
    * // Tensor<FLOAT64, shape: [2, 2, 2]>(
    * // [[[3.141592, 3.141592],
    * //  [3.141592, 3.141592]],
@@ -95,7 +116,8 @@ struct Flint {
    * }
    */
   template <typename T, size_t n>
-  static Tensor<T, (unsigned int)n> constant_array(T value, std::array<size_t, n> shape) {
+  static Tensor<T, (unsigned int)n>
+  constant_array(T value, std::array<size_t, n> shape) {
     FGraphNode *node = fconstant(value, shape.data(), (unsigned int)n);
     return Tensor<T, (unsigned int)n>(node, shape);
   }

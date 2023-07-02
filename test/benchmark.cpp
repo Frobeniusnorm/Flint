@@ -84,14 +84,14 @@ double gradient_fun() {
 double convolve_fun() {
   nanotimer timer;
   vector<vector<vector<float>>> image(
-      2048, vector<vector<float>>(2048, vector<float>(3, 0.8)));
+      2048, vector<vector<float>>(1024, vector<float>(3, 0.8)));
   vector<vector<vector<float>>> filter(
-      32, vector<vector<float>>(32, vector<float>(3, 0.5)));
+      32, vector<vector<float>>(16, vector<float>(3, 0.5)));
   Tensor<float, 3> img_t(image);
   Tensor<float, 3> ker_t(filter);
   ker_t.watch();
   timer.start();
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 10; i++) {
     GradientContext _;
     Tensor<float, 2> foo = img_t.convolve(ker_t, 16, 16);
     Tensor<float, 2> err = (foo - 0.7f).abs();

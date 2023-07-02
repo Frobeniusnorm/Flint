@@ -49,6 +49,3 @@ if(${BUILD_BENCHMARK})
   target_link_libraries(benchmark OpenCL::OpenCL)
   target_link_libraries(benchmark flint)
 endif()
-if(${BUILD_DEEP_LEARNING})
-
-endif()

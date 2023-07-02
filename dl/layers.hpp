@@ -215,13 +215,21 @@ public:
 };
 
 struct Connected : public Layer<2> {
-  template<Initializer InitWeights, Initializer InitBias>
-  Connected(size_t units_in, size_t units_out, InitWeights init_weights, InitBias init_bias)
-      : Layer<2>(Flint::concat(init_weights.template initialize<double>(std::array<size_t, 2>{units_in, units_out}), 
-                  init_bias.template initialize<double>(std::array<size_t, 2>{1, units_out}), 0)) {}
+  template <Initializer InitWeights, Initializer InitBias>
+  Connected(size_t units_in, size_t units_out, InitWeights init_weights,
+            InitBias init_bias)
+      : Layer<2>(Flint::concat(init_weights.template initialize<double>(
+                                   std::array<size_t, 2>{units_in, units_out}),
+                               init_bias.template initialize<double>(
+                                   std::array<size_t, 2>{1, units_out}),
+                               0)) {}
   Connected(size_t units_in, size_t units_out)
-      : Layer<2>(Flint::concat(UniformRandom().template initialize<double>(std::array<size_t, 2>{units_in, units_out}), 
-                  ConstantInitializer().template initialize<double>(std::array<size_t, 2>{1, units_out}), 0)) {}
+      : Layer<2>(
+            Flint::concat(GlorotUniform().template initialize<double>(
+                              std::array<size_t, 2>{units_in, units_out}),
+                          ConstantInitializer().template initialize<double>(
+                              std::array<size_t, 2>{1, units_out}),
+                          0)) {}
   template <typename T, unsigned int n>
   Tensor<double, n> forward(Tensor<T, n> &in) {
     std::array<size_t, n> one_shape = in.get_shape();
