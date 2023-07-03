@@ -164,6 +164,7 @@ enum FOperationType {
   FGRADIENT_CONVOLVE, // only for internal use!
   FINDEX,
   FSET_INDEX,
+  FPERMUTATE,
   FNUM_OPERATION_TYPES
 };
 /**
@@ -867,6 +868,11 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices, unsigned int axis);
  */
 FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices,
                        unsigned int ax);
+/**
+ * Randomly permutates (=swaps multiple elements with each other without
+ * creating, copying or deleting new ones) one axis of the input tensor.
+ */
+FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
 #ifdef __cplusplus
 }
 // no c++ bindings, but function overloading for c++ header
