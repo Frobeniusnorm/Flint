@@ -535,21 +535,14 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     // push dimensions on demand
     switch (node->operation->op_type) {
     case FMATMUL:
-      if (clSetKernelArg(kernel, par_index++, sizeof(int),
-                         (void *)&op->dimensions) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      break;
-    case FGRADIENT_CONVOLVE: {
-      if (clSetKernelArg(kernel, par_index++, sizeof(int),
-                         (void *)&op->dimensions) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-    } break;
+    case FGRADIENT_CONVOLVE:
     case FSLIDE:
     case FCONVOLVE: {
       if (clSetKernelArg(kernel, par_index++, sizeof(int),
                          (void *)&op->dimensions) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
     } break;
+      // TODO outsource in helper methods
     case FREDUCE_MIN:
     case FREDUCE_MAX:
     case FREDUCE_SUM:
@@ -763,6 +756,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   }
   // parameters for functions that dont set them per parent
   switch (node->operation->op_type) {
+    // TODO outsource in helper methods
   case FGEN_RANDOM: {
     // push time parameter
     std::chrono::duration<double, std::nano> tm =
@@ -1038,7 +1032,7 @@ cl_kernel OCLCompilerThread::lazy_compile(FGraphNode *node, std::string code) {
 }
 void OCLCompilerThread::memory_barrier() { clFinish(clqueue); }
 FResultData *fSyncMemory(FGraphNode *node) {
-  void** store_data = nullptr;
+  void **store_data = nullptr;
   if (node->result_data && node->result_data->data)
     return node->result_data;
   if (node->operation->op_type == FSTORE) {
@@ -1103,7 +1097,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   list<pair<FGraphNode *, string>> parameters;
   unordered_set<string> additional_params;
   string graph_code = generateCode(node, parameters, additional_params);
-  string code = "#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void execute_graph(__global ";
+  string code = "#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void "
+                "execute_graph(__global ";
   code += typeString(node->operation->data_type);
   code += " *R";
   // insert parameters
@@ -1144,6 +1139,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     flogging(F_ERROR, "Not enough memory to create buffer!");
   int index = 1;
   std::vector<cl_event> writeEvents;
+  // upload or link parameters
   for (auto &[gn, name] : parameters) {
     FOperation *op = gn->operation;
     // TODO keep track of when data in Store is changed
@@ -1188,6 +1184,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
   }
+  // link resource memory
   if (clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&result_mem) !=
       CL_SUCCESS)
     flogging(F_ERROR, "Could not set Kernel Argument for the result!");

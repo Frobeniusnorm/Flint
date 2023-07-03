@@ -162,6 +162,8 @@ enum FOperationType {
   FCONVOLVE,
   FSLIDE,
   FGRADIENT_CONVOLVE, // only for internal use!
+  FINDEX,
+  FSET_INDEX,
   FNUM_OPERATION_TYPES
 };
 /**
@@ -833,6 +835,38 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
  * dimension.
  */
 FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
+/**
+ * Selects single elements with a index-tensor (integer tensor containing
+ * indices for the selected dimension).
+ * It indexes the selected dimension of the input tensor and the result also has
+ * the shape of the input tensor. If the index tensor is multidimensional it is
+ * assumed that except for the last entry its shape is a prefix of the shape of
+ * the input tensor and the indexing will occur in the matched subsets. E.g.
+ *
+ * `findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [1, 0], 0)
+ * = [[[4, 5], [6, 7]], [[0, 1], [2, 3]]]`
+ *
+ * `findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [0, 0, 1],
+ * 1) = [[[0, 1], [0, 1], [1, 2]], [[3, 4], [3, 4], [5, 6]], [[7, 8], [7, 8],
+ * [9, 10]]]`
+ *
+ * `findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [[0], [1],
+ * [0]], 2) = [[[0], [2]], [[5], [7]], [[8], [10]]]`
+ *
+ * `findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [[0, 0],
+ * [1, 0], [0, 1]], 2) = [[[0, 0], [2, 2]], [[5, 4], [7, 6]], [[8, 9], [10,
+ * 11]]]`
+ */
+FGraphNode *findex(FGraphNode *a, FGraphNode *indices, unsigned int axis);
+/**
+ * The indexing works for `a`, `indices` and `axis` just as for `findex`, except
+ * that the selected view of `a` wont be returned but replaced by `b`. I.e. this
+ * method returns a new Tensor with the same shape and values of `a` except for
+ * the selected `indices` which will contain the values of `b`. `b` has to have
+ * the same shape as the indexing of `a` with `indices`.
+ */
+FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices,
+                       unsigned int ax);
 #ifdef __cplusplus
 }
 // no c++ bindings, but function overloading for c++ header
