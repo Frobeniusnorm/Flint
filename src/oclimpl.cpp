@@ -352,6 +352,7 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
            "Compilation took " + std::to_string(elapsed.count()) + "ms");
   return kernel;
 }
+// pushes additional per-parameter parameters to a opencl function
 static void pushParameterVals(FGraphNode* node, FGraphNode* pred, cl_kernel kernel, int& par_index, std::list<cl_mem>& to_free) {
     cl_int err_code;
     FOperation* op = pred->operation;
@@ -364,7 +365,6 @@ static void pushParameterVals(FGraphNode* node, FGraphNode* pred, cl_kernel kern
                          (void *)&op->dimensions) != CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
     } break;
-      // TODO outsource in helper methods
     case FREDUCE_MIN:
     case FREDUCE_MAX:
     case FREDUCE_SUM:
@@ -576,192 +576,9 @@ static void pushParameterVals(FGraphNode* node, FGraphNode* pred, cl_kernel kern
       break;
     }
 }
-FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
-  if (node->result_data)
-    return node;
-  if (node->operation->op_type == FSTORE) {
-    node->result_data = new FResultData();
-    FStore *store = (FStore *)node->operation->additional_data;
-    node->result_data->num_entries = store->num_entries;
-    node->result_data->mem_id = store->mem_id;
-    node->result_data->data = store->data;
-    return node;
-  }
-  if (node->operation->op_type == FLATTEN ||
-      node->operation->op_type == FRESHAPE) {
-    // just copy previous data
-    const FGraphNode *prev = node->predecessors[0];
-    void const *data;
-    cl_mem gpu_data;
-    size_t num_elems;
-    if (prev->result_data) {
-      data = prev->result_data->data;
-      gpu_data = prev->result_data->mem_id;
-      num_elems = prev->result_data->num_entries;
-    } else {
-      const FStore *store = (FStore *)prev->operation->additional_data;
-      data = store->data;
-      gpu_data = store->mem_id;
-      num_elems = store->num_entries;
-    }
-    FResultData *rd = new FResultData();
-    rd->data = nullptr;
-    rd->num_entries = num_elems;
-    rd->mem_id = nullptr;
-    int type_size = typeSize(node->operation->data_type);
-    if (data) {
-      rd->data = malloc(type_size * num_elems);
-      if (!rd->data)
-        flogging(F_ERROR, "Not enough memory to store result!");
-      memcpy(rd->data, data, type_size * num_elems);
-    } else if (gpu_data) {
-      rd->mem_id = OCLCompilerThread::copy_memory(
-          gpu_data, type_size * num_elems, CL_MEM_READ_ONLY);
-    }
-    node->result_data = rd;
-    return node;
-  }
-  std::vector<FType> params_types(node->num_predecessor);
-  for (int i = 0; i < node->num_predecessor; i++)
-    params_types[i] = node->predecessors[i]->operation->data_type;
-  // because the operation type should be at the same position
-  int hash = OCLCompilerThread::generateKernelHash(
-      node->operation->op_type, node->operation->data_type, params_types);
-  const auto prog = OCLCompilerThread::eager_cache.find(hash);
-  cl_kernel kernel = nullptr;
+static void pushAdditonalVals(FGraphNode* node, cl_kernel kernel, int& par_index, std::list<cl_mem>& to_free){
   cl_int err_code;
-  std::list<cl_mem> to_free;
-  // check if the kernel already exists or if it has to be generated
-  if (prog == OCLCompilerThread::eager_cache.end()) {
-    kernel = OCLCompilerThread::eager_compile(node, hash);
-  } else {
-    kernel = prog->second;
-    flogging(F_DEBUG, "Loaded existing eager kernel");
-  }
-  // result buffer
-  size_t total_size_node;
-  cl_mem res_mem = create_gpu_memory(node, CL_MEM_READ_WRITE, &total_size_node);
-  node->result_data = new FResultData();
-  node->result_data->mem_id = res_mem;
-  node->result_data->num_entries = total_size_node;
-  node->result_data->data = nullptr;
-  // load parameters
-  std::vector<cl_event> write_events;
-  int par_index = 0;
-  if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&res_mem) !=
-      CL_SUCCESS)
-    flogging(F_ERROR, "Could not load Argument to kernel!");
-  // push operation information on demand
   switch (node->operation->op_type) {
-  case FMATMUL: {
-    long total_size_puffer = total_size_node;
-    if (clSetKernelArg(kernel, par_index++, sizeof(long),
-                       (void *)&total_size_puffer) != CL_SUCCESS)
-      flogging(F_ERROR, "Could not load Argument to kernel!");
-    const FGraphNode *gnp1 = node->predecessors[0],
-                     *gnp2 = node->predecessors[1];
-    long l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
-    long m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
-    long n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
-    for (long *mmd : {&l, &m, &n}) {
-      if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)mmd) !=
-          CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-    }
-  } break;
-  case FCONCAT:
-  case FGEN_RANDOM:
-  case FGRADIENT_CONVOLVE:
-  case FSLIDE:
-  case FCONVOLVE: {
-    long total_size_puffer = total_size_node;
-    if (clSetKernelArg(kernel, par_index++, sizeof(long),
-                       (void *)&total_size_puffer) != CL_SUCCESS)
-      flogging(F_ERROR, "Could not load Argument to kernel!");
-  } break;
-  case FREDUCE_MIN:
-  case FREDUCE_MAX:
-  case FREDUCE_MUL:
-  case FREDUCE_SUM: {
-    int *dim = ((int *)node->operation->additional_data);
-    if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)dim) !=
-        CL_SUCCESS)
-      flogging(F_ERROR, "Could not load Argument to kernel!");
-  } break;
-  case FEXTEND:
-  case FREPEAT:
-  case FSLICE: {
-    long total_size_puffer = total_size_node;
-    if (clSetKernelArg(kernel, par_index++, sizeof(long),
-                       (void *)&total_size_puffer) != CL_SUCCESS)
-      flogging(F_ERROR, "Could not load Argument to kernel!");
-  }
-  default:
-    break;
-  }
-  // process parameters i.e. predecessors
-  for (int i = 0; i < node->num_predecessor; i++) {
-    FGraphNode *pred = node->predecessors[i];
-    FOperation *op = pred->operation;
-    cl_mem mem_obj = nullptr;
-    bool do_write = false;
-    size_t type_size = typeSize(op->data_type);
-    size_t total_size;
-    cl_mem mem_id = nullptr;
-    if (pred->result_data) {
-      total_size = pred->result_data->num_entries;
-      mem_id = pred->result_data->mem_id;
-    }
-    if (op->op_type == FSTORE && !mem_id) {
-      total_size = ((FStore *)op->additional_data)->num_entries;
-      mem_id = ((FStore *)op->additional_data)->mem_id;
-    }
-    if (mem_id) {
-      mem_obj = mem_id;
-    } else {
-      mem_obj = create_gpu_memory(pred, CL_MEM_READ_ONLY, &total_size);
-      if (op->op_type == FSTORE) {
-        ((FStore *)op->additional_data)->mem_id = mem_obj;
-        if (pred->result_data)
-          pred->result_data->mem_id = mem_obj;
-      } else {
-        pred->result_data->mem_id = mem_obj;
-      }
-      do_write = true;
-    }
-    if (do_write) {
-      void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
-                                         : pred->result_data->data;
-      if (!data) {
-        flogging(F_WARNING,
-                 "No gpu memory is found, but no cpu either! " +
-                     std::to_string((long)pred->result_data->data) + ", " +
-                     std::to_string((long)pred->result_data->mem_id) + ", " +
-                     fop_to_string[op->op_type]);
-      }
-      err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_TRUE, 0,
-                                      total_size * type_size, data, 0, nullptr,
-                                      nullptr);
-      if (err_code != CL_SUCCESS) {
-        std::string msg = "Unknown Error while loading data to GPU! Error: ";
-        if (err_code == CL_OUT_OF_HOST_MEMORY)
-          msg = "Not enough memory to load data to GPU! ";
-        flogging(F_ERROR, msg + std::to_string(err_code));
-      }
-    }
-    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&mem_obj) !=
-        CL_SUCCESS)
-      flogging(F_ERROR, "Could not load Argument to kernel!");
-    // push total element size
-    if (clSetKernelArg(kernel, par_index++, sizeof(long),
-                       (void *)&total_size) != CL_SUCCESS)
-      flogging(F_ERROR, "Could not load Argument to kernel!");
-    // push per-parameter values
-    pushParameterVals(node, pred, kernel, par_index, to_free);
-  }
-  // parameters for functions that dont set them per parent
-  switch (node->operation->op_type) {
-    // TODO outsource in helper methods
   case FGEN_RANDOM: {
     // push time parameter
     std::chrono::duration<double, std::nano> tm =
@@ -960,6 +777,192 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   default:
     break;
   }
+}
+FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
+  if (node->result_data)
+    return node;
+  if (node->operation->op_type == FSTORE) {
+    node->result_data = new FResultData();
+    FStore *store = (FStore *)node->operation->additional_data;
+    node->result_data->num_entries = store->num_entries;
+    node->result_data->mem_id = store->mem_id;
+    node->result_data->data = store->data;
+    return node;
+  }
+  if (node->operation->op_type == FLATTEN ||
+      node->operation->op_type == FRESHAPE) {
+    // just copy previous data
+    const FGraphNode *prev = node->predecessors[0];
+    void const *data;
+    cl_mem gpu_data;
+    size_t num_elems;
+    if (prev->result_data) {
+      data = prev->result_data->data;
+      gpu_data = prev->result_data->mem_id;
+      num_elems = prev->result_data->num_entries;
+    } else {
+      const FStore *store = (FStore *)prev->operation->additional_data;
+      data = store->data;
+      gpu_data = store->mem_id;
+      num_elems = store->num_entries;
+    }
+    FResultData *rd = new FResultData();
+    rd->data = nullptr;
+    rd->num_entries = num_elems;
+    rd->mem_id = nullptr;
+    int type_size = typeSize(node->operation->data_type);
+    if (data) {
+      rd->data = malloc(type_size * num_elems);
+      if (!rd->data)
+        flogging(F_ERROR, "Not enough memory to store result!");
+      memcpy(rd->data, data, type_size * num_elems);
+    } else if (gpu_data) {
+      rd->mem_id = OCLCompilerThread::copy_memory(
+          gpu_data, type_size * num_elems, CL_MEM_READ_ONLY);
+    }
+    node->result_data = rd;
+    return node;
+  }
+  std::vector<FType> params_types(node->num_predecessor);
+  for (int i = 0; i < node->num_predecessor; i++)
+    params_types[i] = node->predecessors[i]->operation->data_type;
+  // because the operation type should be at the same position
+  int hash = OCLCompilerThread::generateKernelHash(
+      node->operation->op_type, node->operation->data_type, params_types);
+  const auto prog = OCLCompilerThread::eager_cache.find(hash);
+  cl_kernel kernel = nullptr;
+  cl_int err_code;
+  std::list<cl_mem> to_free;
+  // check if the kernel already exists or if it has to be generated
+  if (prog == OCLCompilerThread::eager_cache.end()) {
+    kernel = OCLCompilerThread::eager_compile(node, hash);
+  } else {
+    kernel = prog->second;
+    flogging(F_DEBUG, "Loaded existing eager kernel");
+  }
+  // result buffer
+  size_t total_size_node;
+  cl_mem res_mem = create_gpu_memory(node, CL_MEM_READ_WRITE, &total_size_node);
+  node->result_data = new FResultData();
+  node->result_data->mem_id = res_mem;
+  node->result_data->num_entries = total_size_node;
+  node->result_data->data = nullptr;
+  // load parameters
+  std::vector<cl_event> write_events;
+  int par_index = 0;
+  if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&res_mem) !=
+      CL_SUCCESS)
+    flogging(F_ERROR, "Could not load Argument to kernel!");
+  // push operation information on demand
+  switch (node->operation->op_type) {
+  case FMATMUL: {
+    long total_size_puffer = total_size_node;
+    if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                       (void *)&total_size_puffer) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    const FGraphNode *gnp1 = node->predecessors[0],
+                     *gnp2 = node->predecessors[1];
+    long l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
+    long m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
+    long n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
+    for (long *mmd : {&l, &m, &n}) {
+      if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)mmd) !=
+          CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+    }
+  } break;
+  case FCONCAT:
+  case FGEN_RANDOM:
+  case FGRADIENT_CONVOLVE:
+  case FSLIDE:
+  case FCONVOLVE: {
+    long total_size_puffer = total_size_node;
+    if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                       (void *)&total_size_puffer) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  } break;
+  case FREDUCE_MIN:
+  case FREDUCE_MAX:
+  case FREDUCE_MUL:
+  case FREDUCE_SUM: {
+    int *dim = ((int *)node->operation->additional_data);
+    if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)dim) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  } break;
+  case FEXTEND:
+  case FREPEAT:
+  case FSLICE: {
+    long total_size_puffer = total_size_node;
+    if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                       (void *)&total_size_puffer) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  }
+  default:
+    break;
+  }
+  // process parameters i.e. predecessors
+  for (int i = 0; i < node->num_predecessor; i++) {
+    FGraphNode *pred = node->predecessors[i];
+    FOperation *op = pred->operation;
+    cl_mem mem_obj = nullptr;
+    bool do_write = false;
+    size_t type_size = typeSize(op->data_type);
+    size_t total_size;
+    cl_mem mem_id = nullptr;
+    if (pred->result_data) {
+      total_size = pred->result_data->num_entries;
+      mem_id = pred->result_data->mem_id;
+    }
+    if (op->op_type == FSTORE && !mem_id) {
+      total_size = ((FStore *)op->additional_data)->num_entries;
+      mem_id = ((FStore *)op->additional_data)->mem_id;
+    }
+    if (mem_id) {
+      mem_obj = mem_id;
+    } else {
+      mem_obj = create_gpu_memory(pred, CL_MEM_READ_ONLY, &total_size);
+      if (op->op_type == FSTORE) {
+        ((FStore *)op->additional_data)->mem_id = mem_obj;
+        if (pred->result_data)
+          pred->result_data->mem_id = mem_obj;
+      } else {
+        pred->result_data->mem_id = mem_obj;
+      }
+      do_write = true;
+    }
+    if (do_write) {
+      void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
+                                         : pred->result_data->data;
+      if (!data) {
+        flogging(F_WARNING,
+                 "No gpu memory is found, but no cpu either! " +
+                     std::to_string((long)pred->result_data->data) + ", " +
+                     std::to_string((long)pred->result_data->mem_id) + ", " +
+                     fop_to_string[op->op_type]);
+      }
+      err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_TRUE, 0,
+                                      total_size * type_size, data, 0, nullptr,
+                                      nullptr);
+      if (err_code != CL_SUCCESS) {
+        std::string msg = "Unknown Error while loading data to GPU! Error: ";
+        if (err_code == CL_OUT_OF_HOST_MEMORY)
+          msg = "Not enough memory to load data to GPU! ";
+        flogging(F_ERROR, msg + std::to_string(err_code));
+      }
+    }
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&mem_obj) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    // push total element size
+    if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                       (void *)&total_size) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    // push per-parameter values
+    pushParameterVals(node, pred, kernel, par_index, to_free);
+  }
+  // parameters for functions that dont set them per parent
+  pushAdditonalVals(node, kernel, par_index, to_free);
   // execute it
   err_code = clEnqueueNDRangeKernel(
       clqueue, kernel, 1, nullptr, &total_size_node, nullptr,
