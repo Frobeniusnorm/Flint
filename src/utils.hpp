@@ -17,6 +17,7 @@
 #include "../flint.h"
 #include <cmath>
 #include <condition_variable>
+#include <limits>
 #include <list>
 #include <mutex>
 #include <queue>
@@ -192,6 +193,14 @@ template <typename T> static constexpr FType toFlintType() {
   if (std::is_same<T, double>())
     return F_FLOAT64;
   return F_INT32;
+}
+static std::string epsilonForType(FType type) {
+  switch (type) {
+    case F_FLOAT32: return "1.192093e-07";
+    case F_FLOAT64: return "2.220446e-16";
+    default:
+        return "0";
+  }
 }
 inline void freeAdditionalData(FGraphNode *gn) {
   switch (gn->operation->op_type) {

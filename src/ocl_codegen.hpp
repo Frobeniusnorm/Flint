@@ -137,8 +137,12 @@ generateCode(FGraphNode *node,
 
       } break;
       case FEQUAL: {
+        FOperation *x = node->predecessors[0]->operation;
+        FOperation *y = node->predecessors[1]->operation;
         code = type + " " + name + " = v" + to_string(variable_index + 1) +
-               " == v" + to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
+               " + " + epsilonForType(x->data_type) + " >= v" + to_string(variable_index + 2) + " && "
+               "v" + to_string(variable_index + 1) + " <= v" + to_string(variable_index + 2) + " + " + epsilonForType(y->data_type) + 
+               "? 1 : 0;\n" + code;
 
       } break;
       case FGREATER: {
@@ -1112,7 +1116,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
     code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
     code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
-    code += "R[index] = a == b ? 1 : 0;";
+    code += "R[index] = a + " + epsilonForType(parameter_types[0]) + " >= b && a <= b + " + epsilonForType(parameter_types[1]) + " ? 1 : 0;";
     break;
   case FGREATER:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";

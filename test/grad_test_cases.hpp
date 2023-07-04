@@ -545,7 +545,7 @@ TEST_SUITE("Autodiff") {
     Tensor<double, 3> grad = pred.gradient(in);
     for (int j = 0; j < 4; j++) {
       for (int i = 0; i < 2; i++) {
-        CHECK_EQ(0, grad[0][i][j]);
+        CHECK_EQ(doctest::Approx(0), grad[0][i][j]);
       }
       CHECK_EQ(doctest::Approx(2.33e-10), grad[1][0][j]);
       CHECK_EQ(doctest::Approx(3.73e-09), grad[1][1][j]);
@@ -563,15 +563,12 @@ TEST_SUITE("Autodiff") {
     auto g2 = t2.gradient(in);
     CHECK_EQ((t1.equal(t2) - 1).reduce_sum()[0], 0);
     CHECK_EQ((g1.equal(g2) - 1).reduce_sum()[0], 0);
-
     auto t3 = in * 7;
     t3 = t3 / (in * 7).reduce_sum(2).expand(2, 4);
     auto t4 = in * 7;
     t4 = t4 / t4.reduce_sum(2).expand(2, 4);
     auto g3 = t3.gradient(in);
-    std::cout << g3() << std::endl;
     auto g4 = t4.gradient(in);
-    std::cout << g4() << std::endl;
     CHECK_EQ((t3.equal(t4) - 1).reduce_sum()[0], 0);
     CHECK_EQ(((g3 - g4).abs() > 0.0001).reduce_sum()[0], 0);
   }
