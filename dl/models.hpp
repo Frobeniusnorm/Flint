@@ -75,10 +75,10 @@ template <GenericLayer... T> struct SequentialModel {
     if (Y.get_shape()[0] != batches)
       flogging(F_ERROR,
                "Input and Target Datas batch size does not correspond!");
-    std::cout << "\r\e[Kbatch error: ... " ;
+    std::cout << "\r\e[Kbatch error: ... \e[1;30m" ;
     for (int k = 0; k < 15; k++)
-      std::cout << "▱";
-    std::cout << std::flush;
+      std::cout << "―";
+    std::cout << "\033[0m" << std::flush;
     for (int i = 0; i < epochs; i++) {
       // TODO shuffle each iteration
       size_t number_batches = batches / batch_size + 1;
@@ -100,14 +100,18 @@ template <GenericLayer... T> struct SequentialModel {
         total_error += local_error / number_batches;
         // print metrics
         std::cout << "\r\e[Kbatch error: " << std::setprecision(3)
-                  << local_error << " ";
+                  << local_error << " \e[1;96m";
         for (int k = 0; k < 15; k++) {
           if ((k + 1) / 15.0 <= (b + 1.0) / number_batches)
-            std::cout << "▰";
-          else
-            std::cout << "▱";
+            std::cout << "―";
+          else {
+            std::cout << "\e[1;30m";
+            for (int l = k; l < 15; l++)
+              std::cout << "―";
+            break;
+          }
         }
-        std::cout << std::flush;
+        std::cout << "\033[0m" << std::flush;
       }
       std::cout << "\r\e";
       flogging(F_INFO, "Mean loss for epoch #" + std::to_string(i + 1) + ": " +
