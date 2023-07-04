@@ -45,12 +45,12 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
   template <typename T, unsigned int k>
   void optimize(const Tensor<T, k> &error) {
     if (optimizer) {
-      Tensor<double, n> gw = error.gradient(weight);
+      const Tensor<double, n> gw = error.gradient(weight); // this line - somehow - is the problem
       FGraphNode *new_graph_node =
           optimizer->update(weight.get_graph_node(), gw.get_graph_node());
       Tensor<double, n> nw =
           Tensor<double, n>(new_graph_node, weight.get_shape());
-      weight = nw;
+      weight = std::move(nw);
       weight.watch();
     } else {
       flogging(F_WARNING, "No Optimizer for weight!");

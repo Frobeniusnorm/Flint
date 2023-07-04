@@ -351,8 +351,13 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
       crd->mem_id = nullptr;
       crd->num_entries = ord->num_entries;
       num_entries = crd->num_entries;
-      src = ord->data;
-      data = &crd->data;
+      if (node->result_data) {
+        crd->data = node->result_data->data;
+        crd->mem_id = node->result_data->mem_id;
+      } else {
+        src = ord->data;
+        data = &crd->data;
+      }
     } break;
     case FSLICE: {
       FSlice *osl = (FSlice *)node->operation->additional_data;

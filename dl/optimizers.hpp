@@ -142,7 +142,7 @@ struct Adam : public Optimizer {
     FGraphNode *mh = fdiv_cd(m, (1 - std::pow(b1, t)));
     FGraphNode *vh = fdiv_cd(v, (1 - std::pow(b2, t)));
     t++;
-    FGraphNode* res = (fExecuteGraph(fsub(weights, fdiv(fmul_cd(mh, learning_rate),
+    FGraphNode* res = fOptimizeMemory(fExecuteGraph(fsub(weights, fdiv(fmul_cd(mh, learning_rate),
                               fadd_cd(fsqrt_g(vh), epsilon)))));
     return res;
   }
@@ -173,7 +173,7 @@ double learning_rate;
   Sgd(double learning_rate) : learning_rate(learning_rate) {}
 
   FGraphNode *update(FGraphNode *weights, FGraphNode *gradient) {
-    return fExecuteGraph(fsub(weights, fmul_cd(gradient, learning_rate)));  
+    return fOptimizeMemory(fExecuteGraph(fsub(weights, fmul_cd(gradient, learning_rate))));  
   }
 };
 struct SgdFactory: public OptimizerFactory {

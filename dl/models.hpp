@@ -89,9 +89,9 @@ template <GenericLayer... T> struct SequentialModel {
           slice_to = batches;
         if (b * batch_size == slice_to)
           break;
-        fStartGradientContext();
         auto input = X.slice(TensorRange(b * batch_size, slice_to));
         auto expected = Y.slice(TensorRange(b * batch_size, slice_to));
+        fStartGradientContext();
         auto output = forward(input);
         auto error = loss.calculate_error(output, expected);
         fStopGradientContext();
