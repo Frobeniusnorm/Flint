@@ -563,6 +563,7 @@ static void collect(FGraphNode* x, std::list<FGraphNode*>& stack, std::unordered
   stack.push_front(x);
 }
 FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
+  // TODO more than one derivative to reuse calculated adjoints
   std::unordered_set<const FGraphNode *> *gd =
       (std::unordered_set<const FGraphNode *> *)y->gradient_data;
   if (!gd)
@@ -578,39 +579,43 @@ FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
   // to store gradients per node
   unordered_map<FGraphNode *, FGraphNode *> adjoints;
   list<FGraphNode *> todo;
+  std::unordered_set<FGraphNode*> visited;
   {
-    std::unordered_set<FGraphNode*> visited;
     collect(y, todo, visited, dx);
   }
   // initialize
   adjoints[y] = constant_tensor(1., F_FLOAT64, y->operation->shape,
                                 y->operation->dimensions);
   FGraphNode *sol = nullptr;
+  list<FGraphNode*> tofree;
   while (!todo.empty()) {
-    // TODO topological ordering
     FGraphNode *curr = todo.front();
     todo.pop_front();
     if (curr == dx) {
       sol = adjoints[curr];
+      return sol;
     }
-    if (curr->operation->op_type == FSTORE)
-      continue;
     FGraphNode *adj = adjoints[curr];
     for (int i = 0; i < curr->num_predecessor; i++) {
       FGraphNode *parent = curr->predecessors[i];
+      if (!visited.contains(parent)) continue;
       FGraphNode *local_grad = local_gradient(curr, i, adj);
       if (adjoints.contains(parent)) {
         adjoints[parent] =
             fadd(adjoints[parent], unbroadcast(local_grad, parent));
       } else {
-        adjoints.insert({parent, unbroadcast(local_grad, parent)});
+        FGraphNode* nadj = unbroadcast(local_grad, parent);
+        adjoints.insert({parent, nadj});
       }
     }
   }
+  // try to delete all adjoints, thanks to reference counting, no still needed nodes for sol will be freed
+  for (FGraphNode* x : tofree) {
+    if (x != sol)
+      fFreeGraph(x);
+  }
   if (!sol)
     flogging(F_WARNING, "Operation graph did not contain the derivative!");
-  if (sol->operation->data_type != F_FLOAT64)
-    flogging(F_ERROR, "I did something wrong!"); // TODO remove this
   return sol;
 }
 #endif
