@@ -83,7 +83,6 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 int main() {
   FlintContext _(FLINT_BACKEND_ONLY_CPU);
   fSetLoggingLevel(F_INFO);
-  fEnableEagerExecution();
   Tensor<float, 3> ims = load_mnist_images("train-images.idx3-ubyte");
   Tensor<double, 2> lbs = load_mnist_labels("train-labels.idx1-ubyte").convert<double>();
   std::cout << ims.get_shape()[0] << " images à " << ims.get_shape()[1] << "x" << ims.get_shape()[1] << " (and " << lbs.get_shape()[0] << " labels)" << std::endl;
@@ -97,5 +96,5 @@ int main() {
   };
   AdamFactory opt (0.003, 0.9, 0.999);
   m.generate_optimizer(&opt);
-  m.train(ims, lbs, CrossEntropyLoss(), 10000, 2000);
+  m.train(ims, lbs, CrossEntropyLoss(), 50, 2000);
 }

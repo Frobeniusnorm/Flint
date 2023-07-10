@@ -37,7 +37,8 @@
                         const long *step)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fextend_FGraphNode_*a__const_size_t_*new_shape_____________________const_size_t_*insert_at_">FGraphNode <b>*fextend</b>(FGraphNode *a, const size_t *new_shape,
                     const size_t *insert_at)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fextend_step_FGraphNode_*a__const_size_t_*new_shape__________________________const_size_t_*insert_at__const_long_*step_size_">FGraphNode <b>*fextend_step</b>(FGraphNode *a, const size_t *new_shape,
                          const size_t *insert_at, const long *step_size)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fconcat_FGraphNode_*a__FGraphNode_*b__const_unsigned_int_axis_">FGraphNode <b>*fconcat</b>(FGraphNode *a, FGraphNode *b, const unsigned int axis)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fexpand_FGraphNode_*a__const_unsigned_int_axis_____________________const_unsigned_int_size_">FGraphNode <b>*fexpand</b>(FGraphNode *a, const unsigned int axis,
-                    const unsigned int size)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fabs_g_FGraphNode_*a_">FGraphNode <b>*fabs_g</b>(FGraphNode *a)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-frepeat_FGraphNode_*a__int_*repititions_">FGraphNode <b>*frepeat</b>(FGraphNode *a, int *repititions)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-ftranspose_FGraphNode_*a__int_*transpositions_">FGraphNode <b>*ftranspose</b>(FGraphNode *a, int *transpositions)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fconvolve_FGraphNode_*a__FGraphNode_*kernel__unsigned_int_*steps_">FGraphNode <b>*fconvolve</b>(FGraphNode *a, FGraphNode *kernel, unsigned int *steps)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fslide_FGraphNode_*a__FGraphNode_*kernel__unsigned_int_*steps_">FGraphNode <b>*fslide</b>(FGraphNode *a, FGraphNode *kernel, unsigned int *steps)</a><br/><br/></div>
+                    const unsigned int size)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fabs_g_FGraphNode_*a_">FGraphNode <b>*fabs_g</b>(FGraphNode *a)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-frepeat_FGraphNode_*a__int_*repititions_">FGraphNode <b>*frepeat</b>(FGraphNode *a, int *repititions)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-ftranspose_FGraphNode_*a__int_*transpositions_">FGraphNode <b>*ftranspose</b>(FGraphNode *a, int *transpositions)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fconvolve_FGraphNode_*a__FGraphNode_*kernel__unsigned_int_*steps_">FGraphNode <b>*fconvolve</b>(FGraphNode *a, FGraphNode *kernel, unsigned int *steps)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fslide_FGraphNode_*a__FGraphNode_*kernel__unsigned_int_*steps_">FGraphNode <b>*fslide</b>(FGraphNode *a, FGraphNode *kernel, unsigned int *steps)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-findex_FGraphNode_*a__FGraphNode_*indices__unsigned_int_axis_">FGraphNode <b>*findex</b>(FGraphNode *a, FGraphNode *indices, unsigned int axis)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-findex_set_FGraphNode_*a__FGraphNode_*b__FGraphNode_*indices________________________unsigned_int_ax_">FGraphNode <b>*findex_set</b>(FGraphNode *a, FGraphNode *b, FGraphNode *indices,
+                       unsigned int ax)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fpermutate_FGraphNode_*a__unsigned_int_ax_">FGraphNode <b>*fpermutate</b>(FGraphNode *a, unsigned int ax)</a><br/><br/></div>
         <div style="display: block; height: 2em;"></div>
         <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
           The C-Backend has a memory management system optimized for easy usage in C++, which makes it a little bit weird in C.
@@ -829,6 +830,42 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
  The last dimension of <pre class="inline_code">a</pre> and <pre class="inline_code">kernel</pre> should be equal, therefor it has no
  step in that dimension since the complete kernel is multiplied in that
  dimension.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-findex_FGraphNode_*a__FGraphNode_*indices__unsigned_int_axis_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">FGraphNode <b>*findex</b>(FGraphNode *a, FGraphNode *indices, unsigned int axis)</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Selects single elements with a index-tensor (integer tensor containing
+ indices for the selected dimension).
+ It indexes the selected dimension of the input tensor and the result also has
+ the shape of the input tensor. If the index tensor is multidimensional it is
+ assumed that except for the last entry its shape is a prefix of the shape of
+ the input tensor and the indexing will occur in the matched subsets. E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="inline_code">findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [1, 0], 0)
+ = [[[4, 5], [6, 7]], [[0, 1], [2, 3]]]</pre><div style="display:block; height: 0.5em"></div>
+ <pre class="inline_code">findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [0, 0, 1],
+ 1) = [[[0, 1], [0, 1], [1, 2]], [[3, 4], [3, 4], [5, 6]], [[7, 8], [7, 8],
+ [9, 10]]]</pre><div style="display:block; height: 0.5em"></div>
+ <pre class="inline_code">findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [[0], [1],
+ [0]], 2) = [[[0], [2]], [[5], [7]], [[8], [10]]]</pre><div style="display:block; height: 0.5em"></div>
+ <pre class="inline_code">findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [[0, 0],
+ [1, 0], [0, 1]], 2) = [[[0, 0], [2, 2]], [[5, 4], [7, 6]], [[8, 9], [10,
+ 11]]]</pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-findex_set_FGraphNode_*a__FGraphNode_*b__FGraphNode_*indices________________________unsigned_int_ax_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">FGraphNode <b>*findex_set</b>(FGraphNode *a, FGraphNode *b, FGraphNode *indices,
+                       unsigned int ax)</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ The indexing works for <pre class="inline_code">a</pre>, <pre class="inline_code">indices</pre> and <pre class="inline_code">axis</pre> just as for <pre class="inline_code">findex</pre>, except
+ that the selected view of <pre class="inline_code">a</pre> wont be returned but replaced by <pre class="inline_code">b</pre>. I.e. this
+ method returns a new Tensor with the same shape and values of <pre class="inline_code">a</pre> except for
+ the selected <pre class="inline_code">indices</pre> which will contain the values of <pre class="inline_code">b</pre>. <pre class="inline_code">b</pre> has to have
+ the same shape as the indexing of <pre class="inline_code">a</pre> with <pre class="inline_code">indices</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-fpermutate_FGraphNode_*a__unsigned_int_ax_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">FGraphNode <b>*fpermutate</b>(FGraphNode *a, unsigned int ax)</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Randomly permutates (=swaps multiple elements with each other without
+ creating, copying or deleting new ones) one axis of the input tensor.
 </div></div><div style="display: block; height: 2em;"></div>
 
     </div>

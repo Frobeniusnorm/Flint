@@ -51,26 +51,34 @@
         </div>
         <div style="display: block; height: 2em;"></div>
         <h1 id="flint_hpp"><u>flint.hpp</u></h1>
-        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_float__3__load_image_std::string_path__">static Tensor&lt;float, 3&gt; <b>load_image</b>(std::string path) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-void_setLoggingLevel_FLogType_level__">static void <b>setLoggingLevel</b>(FLogType level) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-void_cleanup___">static void <b>cleanup</b>() </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___static_Tensor_double__sizeof____args___random_args____sizes__">template &lt;typename... args&gt;
-  static Tensor&lt;double, sizeof...(args)&gt; <b>random</b>(args... sizes) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_n___static_Tensor_T__n__constant_T_value__std::array_size_t__n__shape__">template &lt;typename T, unsigned int n&gt;
-  static Tensor&lt;T, n&gt; <b>constant</b>(T value, std::array<size_t, n> shape) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__typename____args___static_Tensor_T__sizeof____args___constant_T_value__args____sizes__">template &lt;typename T, typename... args&gt;
+        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-void_setLoggingLevel_FLogType_level__">static void <b>setLoggingLevel</b>(FLogType level) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_float__3__load_image_std::string_path__">static Tensor&lt;float, 3&gt; <b>load_image</b>(std::string path) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_size_t_n___static_Tensor_double___unsigned_int_n___random_array_std::array_size_t__n__shape__">template &lt;size_t n&gt;
+  static Tensor&lt;double, (unsigned int)n&gt;
+  <b>random_array</b>(std::array<size_t, n> shape) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___static_Tensor_double__sizeof____args___random_args____sizes__">template &lt;typename... args&gt;
+  static Tensor&lt;double, sizeof...(args)&gt; <b>random</b>(args... sizes) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_size_t_n___static_Tensor_double___unsigned_int_n___random_normal_std::array_size_t__n__shape__double_sigma_=_1_______________________double_mu_=_0__">template &lt;size_t n&gt;
+  static Tensor&lt;double, (unsigned int)n&gt;
+  <b>random_normal</b>(std::array<size_t, n> shape, double sigma = 1,
+                      double mu = 0) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__size_t_n___static_Tensor_T___unsigned_int_n___constant_array_T_value__std::array_size_t__n__shape__">template &lt;typename T, size_t n&gt;
+  static Tensor&lt;T, (unsigned int)n&gt;
+  <b>constant_array</b>(T value, std::array<size_t, n> shape) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__typename____args___static_Tensor_T__sizeof____args___constant_T_value__args____sizes__">template &lt;typename T, typename... args&gt;
   static Tensor&lt;T, sizeof...(args)&gt; <b>constant</b>(T value, args... sizes) </a><br/><br/></div>
         <div style="display: block; height: 2em;"></div>
-        <div id="s-Tensor_float__3__load_image_std::string_path__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">static Tensor&lt;float, 3&gt; <b>load_image</b>(std::string path) </pre></div>
+        <div id="s-void_setLoggingLevel_FLogType_level__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">static void <b>setLoggingLevel</b>(FLogType level) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Sets the Logging Level of the Flint Backend </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Tensor_float__3__load_image_std::string_path__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">static Tensor&lt;float, 3&gt; <b>load_image</b>(std::string path) </pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Loads an image from the given path.
  The image will be stored in floating point data and the shape will be h, w,
  c where w is the width, h is the height and c are the chanels.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-void_setLoggingLevel_FLogType_level__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">static void <b>setLoggingLevel</b>(FLogType level) </pre></div>
-<br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Sets the Logging Level of the Flint Backend </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-void_cleanup___"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">static void <b>cleanup</b>() </pre></div>
+<div id="s-_size_t_n___static_Tensor_double___unsigned_int_n___random_array_std::array_size_t__n__shape__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;size_t n&gt;
+  static Tensor&lt;double, (unsigned int)n&gt;
+  <b>random_array</b>(std::array<size_t, n> shape) </pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Deallocates any resourced allocated by the corresponding backends and
- allows them to shutdown their threads.
+ Creates a Tensor filled with random values in [0, 1) with the requested
+ shape (given as an array instead of a variadic template).
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-_typename____args___static_Tensor_double__sizeof____args___random_args____sizes__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename... args&gt;
   static Tensor&lt;double, sizeof...(args)&gt; <b>random</b>(args... sizes) </pre></div>
@@ -79,16 +87,27 @@
  Creates a Tensor filled with random values in [0, 1) with the requested
  shape in sizes.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_T__unsigned_int_n___static_Tensor_T__n__constant_T_value__std::array_size_t__n__shape__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt;
-  static Tensor&lt;T, n&gt; <b>constant</b>(T value, std::array<size_t, n> shape) </pre></div>
+<div id="s-_size_t_n___static_Tensor_double___unsigned_int_n___random_normal_std::array_size_t__n__shape__double_sigma_=_1_______________________double_mu_=_0__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;size_t n&gt;
+  static Tensor&lt;double, (unsigned int)n&gt;
+  <b>random_normal</b>(std::array<size_t, n> shape, double sigma = 1,
+                      double mu = 0) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Creates a Tensor filled with random, normally distributed (
+ <pre class="inline_code">mu</pre> is the mean, <pre class="inline_code">sigma</pre> is the variance) random numbers.
+ It works by implementing the Box-Muller transformation.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T__size_t_n___static_Tensor_T___unsigned_int_n___constant_array_T_value__std::array_size_t__n__shape__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T, size_t n&gt;
+  static Tensor&lt;T, (unsigned int)n&gt;
+  <b>constant_array</b>(T value, std::array<size_t, n> shape) </pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Generates a Tensor containing the single given value in every entry.
- The resulting Tensor will have a dimensionality of <pre class="inline_code">sizeof...(args)</pre> and a
- shape denoted by each entry in <pre class="inline_code">sizes</pre>. e.g.
+ The resulting Tensor will have a dimensionality of <pre class="inline_code">n</pre> and a
+ shape denoted by each entry in <pre class="inline_code">shape</pre>. e.g.
  <pre class="card code" style="margin: 5px;">
- <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt; foo = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>);
- std::cout &lt;&lt; foo &lt;&lt; std::endl;
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt; foo = Flint::constant_array(<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, std::array&lt;<span style="color: #FFF030">double</span>,
+ <span style="color: #30F0FF">3</span>&gt;(<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>)); std::cout &lt;&lt; foo &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
  <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
  <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>]],</span>
