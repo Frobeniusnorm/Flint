@@ -269,7 +269,7 @@ struct Flatten : public UntrainableLayer {
   template <typename T, unsigned int n>
   Tensor<T, 2> forward(const Tensor<T, n> &in) {
     if constexpr (n == 2)
-      return in;
+      return Tensor<T, 2>(in);
     else
       return forward(in.flattened(n - 1));
   }

@@ -81,10 +81,11 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // download and extract to the desired folder from
 // http://yann.lecun.com/exdb/mnist/
 int main() {
-  FlintContext _(FLINT_BACKEND_BOTH);
+  FlintContext _(FLINT_BACKEND_ONLY_CPU);
   fSetLoggingLevel(F_INFO);
-  Tensor<float, 3> ims = load_mnist_images("train-images.idx3-ubyte").slice(TensorRange(0, 8000));
-  Tensor<double, 2> lbs = load_mnist_labels("train-labels.idx1-ubyte").convert<double>().slice(TensorRange(0, 8000));
+  fEnableEagerExecution();
+  Tensor<float, 3> ims = load_mnist_images("train-images.idx3-ubyte");
+  Tensor<double, 2> lbs = load_mnist_labels("train-labels.idx1-ubyte").convert<double>();
   std::cout << ims.get_shape()[0] << " images à " << ims.get_shape()[1] << "x" << ims.get_shape()[1] << " (and " << lbs.get_shape()[0] << " labels)" << std::endl;
   std::cout << "loaded data. Starting training." << std::endl;
   auto m = SequentialModel{

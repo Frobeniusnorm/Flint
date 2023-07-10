@@ -279,6 +279,7 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
     FResultData *ord = node->result_data;
     FResultData *crd = new FResultData();
     foo->result_data = crd;
+    crd->data = nullptr;
     crd->mem_id = nullptr;
     crd->num_entries = ord->num_entries;
     if (!ord->data) {
@@ -351,9 +352,9 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
       crd->mem_id = nullptr;
       crd->num_entries = ord->num_entries;
       num_entries = crd->num_entries;
-      if (node->result_data) {
-        crd->data = node->result_data->data;
-        crd->mem_id = node->result_data->mem_id;
+      if (foo->result_data) {
+        crd->data = foo->result_data->data;
+        crd->mem_id = foo->result_data->mem_id;
       } else {
         src = ord->data;
         data = &crd->data;
@@ -363,9 +364,12 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
       FSlice *osl = (FSlice *)node->operation->additional_data;
       FSlice *csl = new FSlice();
       op->additional_data = (void *)csl;
-      csl->start = osl->start;
-      csl->end = osl->end;
-      csl->step = osl->step;
+      csl->start = safe_mal<long>(node->operation->dimensions);
+      std::memcpy(csl->start, osl->start, node->operation->dimensions * sizeof(long));
+      csl->end = safe_mal<long>(node->operation->dimensions);
+      std::memcpy(csl->end, osl->end, node->operation->dimensions * sizeof(long));
+      csl->step = safe_mal<long>(node->operation->dimensions);
+      std::memcpy(csl->step, osl->step, node->operation->dimensions * sizeof(long));
     } break;
     case FREDUCE_MAX:
     case FREDUCE_MIN:

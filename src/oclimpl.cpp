@@ -800,12 +800,13 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       data = prev->result_data->data;
       gpu_data = prev->result_data->mem_id;
       num_elems = prev->result_data->num_entries;
-    } else {
+    } else if(prev->operation->op_type == FSTORE) {
       const FStore *store = (FStore *)prev->operation->additional_data;
       data = store->data;
       gpu_data = store->mem_id;
       num_elems = store->num_entries;
-    }
+    } else
+      flogging(F_ERROR, "Unknown Case: previous node does not appear to be a data node in eager execution!");
     FResultData *rd = new FResultData();
     rd->data = nullptr;
     rd->num_entries = num_elems;
