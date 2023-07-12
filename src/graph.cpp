@@ -13,7 +13,7 @@
    limitations under the License. */
 
 #include "../flint.h"
-#include "ocl_comp.hpp"
+#include "backend_ocl/comp.hpp"
 #include "utils.hpp"
 #include <cmath>
 #include <cstring>

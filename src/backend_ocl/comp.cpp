@@ -14,8 +14,8 @@
 
   This file includes the OpenCL compiler front end symbols
 */
-#include "ocl_comp.hpp"
-#include "utils.hpp"
+#include "comp.hpp"
+#include "../utils.hpp"
 #include <algorithm>
 #include <variant>
 

@@ -15,7 +15,7 @@
   This file includes the OpenCL compiler front end (and maybe someday
   asynchronous compiler and cache)
 */
-#include "../flint.h"
+#include "../../flint.h"
 #include <list>
 #include <thread>
 #include <unordered_map>

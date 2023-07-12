@@ -13,7 +13,7 @@
    limitations under the License.
 
   This file includes methods to pass parameters to the kernels */
-#include "../flint.h"
+#include "../../flint.h"
 #include <CL/cl.h>
 #include <list>
 #include <mutex>

@@ -18,8 +18,8 @@
 
 #ifndef OCL_CODEGEN_HPP
 #define OCL_CODEGEN_HPP
-#include "../flint.h"
-#include "utils.hpp"
+#include "../../flint.h"
+#include "../utils.hpp"
 #include <list>
 #include <string>
 #include <tuple>
