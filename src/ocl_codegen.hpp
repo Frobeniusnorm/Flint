@@ -839,40 +839,35 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     type_info += to_string(t);
   kernel_name = string(fop_to_string[operation]) + type_info;
   string code = "#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void " + kernel_name + "(__global " +
-                typeString(res_type) + "* R";
+                typeString(res_type) + "* R, long num_entriesR";
   // generate parameters
   switch (operation) {
-  case FSTORE:
-  case FLATTEN:
-  case FRESHAPE:
-  case FNUM_OPERATION_TYPES:
-    break; // should not happen
   case FMATMUL:
-    code += ", long num_entriesR, long l, long m, long n";
     for (int i = 0; i < 2; i++) {
       code += ", const __global " + typeString(parameter_types[i]) + "* P" +
               to_string(i) + ", long num_entries" + to_string(i) +
               ", int dimensions" + to_string(i);
     }
+    code += ", long l, long m, long n";
     break;
   case FREDUCE_MIN:
   case FREDUCE_MAX:
   case FREDUCE_SUM:
   case FREDUCE_MUL:
-    code += ", int reduce_dim";
     code += ", const __global " + typeString(parameter_types[0]) +
             "* P0, const long num_entries0, const int dimensions0, const long "
             "it_dim0, const long shape_dim0";
+    code += ", int reduce_dim";
     break;
   case FSLICE: {
-    code += ", const long num_entriesR, const __global " +
+    code += ", const __global " +
             typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
     code += ", __constant long* steps, const long start";
   } break;
   case FREPEAT: {
-    code += ", const long num_entriesR, const __global " +
+    code += ", const __global " +
             typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes_d, __constant long* acc_sizes_s";
@@ -884,7 +879,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "long* acc_sizes_d, __constant long* acc_sizes_s";
   } break;
   case FEXTEND: {
-    code += ", const long num_entriesR, const __global " +
+    code += ", const __global " +
             typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
@@ -893,7 +888,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   } break;
   case FCONVOLVE: {
     // acc_sizes, acc_sizes_pred, acc_sizes_kernel, steps
-    code += ", const long num_entriesR, const __global " +
+    code += ", const __global " +
             typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", const __global " + typeString(parameter_types[1]) + "* P1";
@@ -903,7 +898,6 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     code += ", __constant int* steps";
   } break;
   case FGRADIENT_CONVOLVE: {
-    code += ", const long num_entriesR";
     code += ", const __global " + typeString(parameter_types[0]) + "* P1";
     code +=
         ", const long num_entries1, const int dimensions1, const __global "
@@ -915,10 +909,10 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     code += ", __constant int* steps, __constant long* shape1";
   } break;
   case FGEN_RANDOM: {
-    code += ", const long num_entriesR, const double time";
+    code += ", const double time";
   } break;
   case FCONCAT: {
-    code += ", const long num_entriesR, const __global " +
+    code += ", const __global " +
             typeString(parameter_types[0]) +
             "* P0, const long num_entries0, const __global " +
             typeString(parameter_types[1]) +
@@ -928,7 +922,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   } break;
   case FSLIDE: {
     // acc_sizes, acc_sizes_pred, acc_sizes_kernel, steps
-    code += ", const long num_entriesR, const __global " +
+    code += ", const __global " +
             typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", const __global " + typeString(parameter_types[1]) + "* P1";
