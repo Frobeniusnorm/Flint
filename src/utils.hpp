@@ -168,6 +168,8 @@ inline FType higherType(const FType a, const FType b) {
 }
 inline std::vector<std::vector<FType>> allTypePermutations(int num) {
   using namespace std;
+  if (num == 0)
+    return vector<vector<FType>>{};
   if (num == 1)
     return vector<vector<FType>>{
         {F_INT32}, {F_FLOAT32}, {F_INT64}, {F_FLOAT64}};
@@ -217,6 +219,7 @@ inline void freeAdditionalData(FGraphNode *gn) {
     free(s->step);
     delete s;
   } break;
+  case FGEN_CONSTANT:
   case FCONCAT:
   case FCONVOLVE:
   case FSLIDE:

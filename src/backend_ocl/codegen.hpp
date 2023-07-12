@@ -53,12 +53,12 @@ generateCode(FGraphNode *node,
     string type = typeString(node->operation->data_type);
     const string opstr = string(fop_to_string[node->operation->op_type]);
     // need to be outside switch to include result_data
-    if (node->operation->op_type == FSTORE || node->result_data) {
-      push_pred = false;
+    if (node->operation->op_type == FSTORE || node->result_data || node->operation->op_type == FGEN_CONSTANT) {
+      push_pred = false; 
       size_t num_entries =
           node->operation->op_type == FSTORE
               ? ((FStore *)node->operation->additional_data)->num_entries
-              : node->result_data->num_entries;
+              : (node->operation->op_type == FGEN_CONSTANT ? 1 : node->result_data->num_entries);
       if (assigned_params.find(node) == assigned_params.end()) {
         size_t pid = assigned_params.size();
         assigned_params.insert({node, "P" + to_string(pid)});
@@ -911,6 +911,9 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   case FGEN_RANDOM: {
     code += ", const double time";
   } break;
+  case FGEN_CONSTANT: {
+    code += ", const " + typeString(res_type) + " constant_val";
+  } break;
   case FCONCAT: {
     code += ", const __global " +
             typeString(parameter_types[0]) +
@@ -1246,6 +1249,10 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
         "}\n"
         "R[index] = res;";
     break;
+  case FGEN_CONSTANT: {
+    code += "if(index >= num_entriesR) return;\n"
+            "R[index] = constant_val;\n";
+  } break;
   case FGEN_RANDOM: {
     code += "if(index >= num_entriesR) return;\n"
             "double v = sin(index + time) * 43758.5453123;\n"

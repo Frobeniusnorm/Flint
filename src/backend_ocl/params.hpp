@@ -29,7 +29,9 @@
 #include <unordered_set>
 #include <vector>
 // values for a single operation (not related directly to parameters)
-inline void pushAdditonalVals(FGraphNode* node, cl_kernel kernel, cl_context context, int& par_index, std::list<cl_mem>& to_free){
+inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
+                              cl_context context, int &par_index,
+                              std::list<cl_mem> &to_free) {
   cl_int err_code;
   switch (node->operation->op_type) {
   case FMATMUL: {
@@ -52,6 +54,34 @@ inline void pushAdditonalVals(FGraphNode* node, cl_kernel kernel, cl_context con
     if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)dim) !=
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
+  } break;
+  case FGEN_CONSTANT: {
+    switch (node->operation->data_type) {
+    case F_INT32: {
+      int val = ((int *)node->operation->additional_data)[0];
+      if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)&val) !=
+          CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+    } break;
+    case F_INT64: {
+      long val = ((long *)node->operation->additional_data)[0];
+      if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&val) !=
+          CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+    } break;
+    case F_FLOAT32: {
+      float val = ((float *)node->operation->additional_data)[0];
+      if (clSetKernelArg(kernel, par_index++, sizeof(float), (void *)&val) !=
+          CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+    } break;
+    case F_FLOAT64: {
+      double val = ((double *)node->operation->additional_data)[0];
+      if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&val) !=
+          CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+    } break;
+    }
   } break;
   case FGEN_RANDOM: {
     // push time parameter
@@ -254,226 +284,225 @@ inline void pushAdditonalVals(FGraphNode* node, cl_kernel kernel, cl_context con
 }
 
 // parameters per operand
-inline void pushParameterVals(FGraphNode* node, FGraphNode* pred, cl_kernel kernel, cl_context context, int& par_index, std::list<cl_mem>& to_free) {
-    cl_int err_code;
-    FOperation* op = pred->operation;
-    switch (node->operation->op_type) {
-    case FMATMUL:
-    case FGRADIENT_CONVOLVE:
-    case FSLIDE:
-    case FCONVOLVE: {
-      if (clSetKernelArg(kernel, par_index++, sizeof(int),
-                         (void *)&op->dimensions) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-    } break;
-    case FREDUCE_MIN:
-    case FREDUCE_MAX:
-    case FREDUCE_SUM:
-    case FREDUCE_MUL: {
-      int dim = ((int *)node->operation->additional_data)[0];
-      const FOperation *pred = node->predecessors[0]->operation;
-      long it_dim = 1; // iteration size <=> product of all dimensions along dim
-      for (size_t d = dim + 1; d < pred->dimensions; d++)
-        it_dim *= pred->shape[d];
-      const long shape_dim = pred->shape[dim];
-      if (clSetKernelArg(kernel, par_index++, sizeof(int),
-                         (void *)&op->dimensions) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&it_dim) !=
-          CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      if (clSetKernelArg(kernel, par_index++, sizeof(long),
-                         (void *)&shape_dim) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-    } break;
-    case FTRANSPOSE: {
-      if (clSetKernelArg(kernel, par_index++, sizeof(int),
-                         (void *)&op->dimensions) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      std::vector<long> acc_sizes_d(op->dimensions);
-      std::vector<long> acc_sizes_s(op->dimensions);
-      acc_sizes_d[op->dimensions - 1] = 1;
-      acc_sizes_s[op->dimensions - 1] = 1;
-      for (int dim = op->dimensions - 2; dim >= 0; dim--) {
-        acc_sizes_d[dim] =
-            acc_sizes_d[dim + 1] * node->operation->shape[dim + 1];
-        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op->shape[dim + 1];
-      }
-      const int *transpositions = (int *)node->operation->additional_data;
-      std::vector<long> acc_sizes_st(op->dimensions);
-      for (int i = 0; i < op->dimensions; i++) {
-        acc_sizes_st[i] = acc_sizes_s[transpositions[i]];
-      }
-      cl_mem asd_mem = clCreateBuffer(
-          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-          op->dimensions * sizeof(long), acc_sizes_d.data(), &err_code);
-      if (!asd_mem)
-        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
-                              std::to_string(err_code));
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                         (void *)&asd_mem) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      cl_mem ass_mem = clCreateBuffer(
-          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-          op->dimensions * sizeof(long), acc_sizes_st.data(), &err_code);
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                         (void *)&ass_mem) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      if (!ass_mem)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      to_free.push_back(asd_mem);
-      to_free.push_back(ass_mem);
-    } break;
-    case FSLICE: {
-      if (clSetKernelArg(kernel, par_index++, sizeof(int),
-                         (void *)&op->dimensions) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      FSlice *slice = (FSlice *)node->operation->additional_data;
-      // flattened shape data
-      std::vector<size_t> acc_sizes(node->operation->dimensions);
-      std::vector<size_t> acc_sizes_pred(acc_sizes.size());
-      for (long d = node->operation->dimensions - 1; d >= 0; d--) {
-        if (d == node->operation->dimensions - 1) {
-          acc_sizes[d] = 1;
-          acc_sizes_pred[d] = 1;
-        } else {
-          acc_sizes_pred[d] = acc_sizes_pred[d + 1] * op->shape[d + 1];
-          acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
-        }
-      }
-      cl_mem acc_mem = clCreateBuffer(
-          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-          op->dimensions * sizeof(long), acc_sizes.data(), &err_code);
-      if (!acc_mem)
-        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
-                              std::to_string(err_code));
-      cl_mem acc_pred_mem = clCreateBuffer(
-          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-          op->dimensions * sizeof(long), acc_sizes_pred.data(), &err_code);
-      if (!acc_pred_mem)
-        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
-                              std::to_string(err_code));
-      // allocate steps
-      cl_mem steps =
-          clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                         op->dimensions * sizeof(long), slice->step, &err_code);
-      if (!steps)
-        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
-                              std::to_string(err_code));
-      // calculate start and step size in flattened array
-      long start = 0;
-      for (unsigned int d = 0; d < node->operation->dimensions; d++) {
-        start += slice->start[d] * acc_sizes_pred[d];
-      }
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                         (void *)&acc_mem) != CL_SUCCESS ||
-          clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                         (void *)&acc_pred_mem) != CL_SUCCESS ||
-          clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&steps) !=
-              CL_SUCCESS ||
-          clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&start) !=
-              CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      to_free.push_back(acc_mem);
-      to_free.push_back(acc_pred_mem);
-      to_free.push_back(steps);
-    } break;
-    case FREPEAT: {
-      if (clSetKernelArg(kernel, par_index++, sizeof(int),
-                         (void *)&op->dimensions) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      std::vector<long> acc_sizes_d(op->dimensions);
-      std::vector<long> acc_sizes_s(op->dimensions);
-      acc_sizes_d[op->dimensions - 1] = 1;
-      acc_sizes_s[op->dimensions - 1] = 1;
-      for (int dim = op->dimensions - 2; dim >= 0; dim--) {
-        acc_sizes_d[dim] =
-            acc_sizes_d[dim + 1] * node->operation->shape[dim + 1];
-        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op->shape[dim + 1];
-      }
-      cl_mem asd_mem = clCreateBuffer(
-          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-          op->dimensions * sizeof(long), acc_sizes_d.data(), &err_code);
-      if (!asd_mem)
-        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
-                              std::to_string(err_code));
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                         (void *)&asd_mem) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      cl_mem ass_mem = clCreateBuffer(
-          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-          op->dimensions * sizeof(long), acc_sizes_s.data(), &err_code);
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                         (void *)&ass_mem) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      if (!ass_mem)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      cl_mem predshape_mem =
-          clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                         op->dimensions * sizeof(long), op->shape, &err_code);
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                         (void *)&predshape_mem) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      to_free.push_back(asd_mem);
-      to_free.push_back(ass_mem);
-      to_free.push_back(predshape_mem);
-    } break;
-    case FEXTEND: {
-      if (clSetKernelArg(kernel, par_index++, sizeof(int),
-                         (void *)&op->dimensions) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      std::vector<long> acc_sizes_d(op->dimensions);
-      std::vector<long> acc_sizes_s(op->dimensions);
-      acc_sizes_d[op->dimensions - 1] = 1;
-      acc_sizes_s[op->dimensions - 1] = 1;
-      for (int dim = op->dimensions - 2; dim >= 0; dim--) {
-        acc_sizes_d[dim] =
-            acc_sizes_d[dim + 1] * node->operation->shape[dim + 1];
-        acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op->shape[dim + 1];
-      }
-      cl_mem asd_mem = clCreateBuffer(
-          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-          op->dimensions * sizeof(long), acc_sizes_d.data(), &err_code);
-      if (!asd_mem)
-        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
-                              std::to_string(err_code));
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                         (void *)&asd_mem) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      cl_mem ass_mem = clCreateBuffer(
-          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-          op->dimensions * sizeof(long), acc_sizes_s.data(), &err_code);
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                         (void *)&ass_mem) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      if (!ass_mem)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      const FExtend *extend = (FExtend *)node->operation->additional_data;
-      cl_mem steps_mem = clCreateBuffer(
-          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-          op->dimensions * sizeof(long), extend->step, &err_code);
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                         (void *)&steps_mem) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      cl_mem start_mem = clCreateBuffer(
-          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-          op->dimensions * sizeof(long), extend->start, &err_code);
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                         (void *)&start_mem) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      cl_mem predshape_mem =
-          clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                         op->dimensions * sizeof(long), op->shape, &err_code);
-      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-                         (void *)&predshape_mem) != CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
-      to_free.push_back(asd_mem);
-      to_free.push_back(ass_mem);
-      to_free.push_back(steps_mem);
-      to_free.push_back(start_mem);
-      to_free.push_back(predshape_mem);
-    } break;
-    default:
-      break;
+inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
+                              cl_kernel kernel, cl_context context,
+                              int &par_index, std::list<cl_mem> &to_free) {
+  cl_int err_code;
+  FOperation *op = pred->operation;
+  switch (node->operation->op_type) {
+  case FMATMUL:
+  case FGRADIENT_CONVOLVE:
+  case FSLIDE:
+  case FCONVOLVE: {
+    if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                       (void *)&op->dimensions) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  } break;
+  case FREDUCE_MIN:
+  case FREDUCE_MAX:
+  case FREDUCE_SUM:
+  case FREDUCE_MUL: {
+    int dim = ((int *)node->operation->additional_data)[0];
+    const FOperation *pred = node->predecessors[0]->operation;
+    long it_dim = 1; // iteration size <=> product of all dimensions along dim
+    for (size_t d = dim + 1; d < pred->dimensions; d++)
+      it_dim *= pred->shape[d];
+    const long shape_dim = pred->shape[dim];
+    if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                       (void *)&op->dimensions) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&it_dim) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&shape_dim) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  } break;
+  case FTRANSPOSE: {
+    if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                       (void *)&op->dimensions) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    std::vector<long> acc_sizes_d(op->dimensions);
+    std::vector<long> acc_sizes_s(op->dimensions);
+    acc_sizes_d[op->dimensions - 1] = 1;
+    acc_sizes_s[op->dimensions - 1] = 1;
+    for (int dim = op->dimensions - 2; dim >= 0; dim--) {
+      acc_sizes_d[dim] = acc_sizes_d[dim + 1] * node->operation->shape[dim + 1];
+      acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op->shape[dim + 1];
     }
+    const int *transpositions = (int *)node->operation->additional_data;
+    std::vector<long> acc_sizes_st(op->dimensions);
+    for (int i = 0; i < op->dimensions; i++) {
+      acc_sizes_st[i] = acc_sizes_s[transpositions[i]];
+    }
+    cl_mem asd_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        op->dimensions * sizeof(long), acc_sizes_d.data(), &err_code);
+    if (!asd_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&asd_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    cl_mem ass_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        op->dimensions * sizeof(long), acc_sizes_st.data(), &err_code);
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&ass_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (!ass_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    to_free.push_back(asd_mem);
+    to_free.push_back(ass_mem);
+  } break;
+  case FSLICE: {
+    if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                       (void *)&op->dimensions) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    FSlice *slice = (FSlice *)node->operation->additional_data;
+    // flattened shape data
+    std::vector<size_t> acc_sizes(node->operation->dimensions);
+    std::vector<size_t> acc_sizes_pred(acc_sizes.size());
+    for (long d = node->operation->dimensions - 1; d >= 0; d--) {
+      if (d == node->operation->dimensions - 1) {
+        acc_sizes[d] = 1;
+        acc_sizes_pred[d] = 1;
+      } else {
+        acc_sizes_pred[d] = acc_sizes_pred[d + 1] * op->shape[d + 1];
+        acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
+      }
+    }
+    cl_mem acc_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        op->dimensions * sizeof(long), acc_sizes.data(), &err_code);
+    if (!acc_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    cl_mem acc_pred_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        op->dimensions * sizeof(long), acc_sizes_pred.data(), &err_code);
+    if (!acc_pred_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    // allocate steps
+    cl_mem steps =
+        clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                       op->dimensions * sizeof(long), slice->step, &err_code);
+    if (!steps)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    // calculate start and step size in flattened array
+    long start = 0;
+    for (unsigned int d = 0; d < node->operation->dimensions; d++) {
+      start += slice->start[d] * acc_sizes_pred[d];
+    }
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&acc_mem) !=
+            CL_SUCCESS ||
+        clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                       (void *)&acc_pred_mem) != CL_SUCCESS ||
+        clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&steps) !=
+            CL_SUCCESS ||
+        clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&start) !=
+            CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    to_free.push_back(acc_mem);
+    to_free.push_back(acc_pred_mem);
+    to_free.push_back(steps);
+  } break;
+  case FREPEAT: {
+    if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                       (void *)&op->dimensions) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    std::vector<long> acc_sizes_d(op->dimensions);
+    std::vector<long> acc_sizes_s(op->dimensions);
+    acc_sizes_d[op->dimensions - 1] = 1;
+    acc_sizes_s[op->dimensions - 1] = 1;
+    for (int dim = op->dimensions - 2; dim >= 0; dim--) {
+      acc_sizes_d[dim] = acc_sizes_d[dim + 1] * node->operation->shape[dim + 1];
+      acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op->shape[dim + 1];
+    }
+    cl_mem asd_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        op->dimensions * sizeof(long), acc_sizes_d.data(), &err_code);
+    if (!asd_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&asd_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    cl_mem ass_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        op->dimensions * sizeof(long), acc_sizes_s.data(), &err_code);
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&ass_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (!ass_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    cl_mem predshape_mem =
+        clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                       op->dimensions * sizeof(long), op->shape, &err_code);
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                       (void *)&predshape_mem) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    to_free.push_back(asd_mem);
+    to_free.push_back(ass_mem);
+    to_free.push_back(predshape_mem);
+  } break;
+  case FEXTEND: {
+    if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                       (void *)&op->dimensions) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    std::vector<long> acc_sizes_d(op->dimensions);
+    std::vector<long> acc_sizes_s(op->dimensions);
+    acc_sizes_d[op->dimensions - 1] = 1;
+    acc_sizes_s[op->dimensions - 1] = 1;
+    for (int dim = op->dimensions - 2; dim >= 0; dim--) {
+      acc_sizes_d[dim] = acc_sizes_d[dim + 1] * node->operation->shape[dim + 1];
+      acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op->shape[dim + 1];
+    }
+    cl_mem asd_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        op->dimensions * sizeof(long), acc_sizes_d.data(), &err_code);
+    if (!asd_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&asd_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    cl_mem ass_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        op->dimensions * sizeof(long), acc_sizes_s.data(), &err_code);
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&ass_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (!ass_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    const FExtend *extend = (FExtend *)node->operation->additional_data;
+    cl_mem steps_mem =
+        clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                       op->dimensions * sizeof(long), extend->step, &err_code);
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                       (void *)&steps_mem) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    cl_mem start_mem =
+        clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                       op->dimensions * sizeof(long), extend->start, &err_code);
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                       (void *)&start_mem) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    cl_mem predshape_mem =
+        clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                       op->dimensions * sizeof(long), op->shape, &err_code);
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                       (void *)&predshape_mem) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    to_free.push_back(asd_mem);
+    to_free.push_back(ass_mem);
+    to_free.push_back(steps_mem);
+    to_free.push_back(start_mem);
+    to_free.push_back(predshape_mem);
+  } break;
+  default:
+    break;
+  }
 }
