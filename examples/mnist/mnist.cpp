@@ -95,6 +95,6 @@ int main() {
     SoftMax()
   };
   AdamFactory opt (0.003, 0.9, 0.999);
-  m.generate_optimizer(&opt);
+  m.generate_optimizer(opt);
   m.train(ims, lbs, CrossEntropyLoss(), 50, 2000);
 }

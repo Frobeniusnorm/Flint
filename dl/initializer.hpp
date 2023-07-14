@@ -16,7 +16,7 @@
 #define FLINT_INITIALIZER
 #include <cmath>
 #include <flint/flint.hpp>
-
+#include <limits>
 template <typename T>
 concept Initializer = requires(T i) {
   {

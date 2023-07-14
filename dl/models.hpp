@@ -50,7 +50,9 @@ constexpr unsigned int get_output_dim() {
 template <GenericLayer... T> struct SequentialModel {
   std::tuple<T...> layers;
   SequentialModel(T... layers) : layers(std::move(layers)...) {}
-  void generate_optimizer(OptimizerFactory *fac) { gen_opt<0>(fac); }
+
+  template<OptimizerFactory Fac>
+  void generate_optimizer(Fac fac) { gen_opt<0>(fac); }
 
   template <typename K, unsigned int n>
   Tensor<LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
@@ -130,7 +132,8 @@ private:
       backward<n + 1>(error);
     }
   }
-  template <int n> void gen_opt(OptimizerFactory *fac) {
+  template <int n, OptimizerFactory Fac>
+  void gen_opt(Fac fac) {
     if constexpr (n < sizeof...(T)) {
       std::get<n>(layers).generate_optimizer(fac);
       gen_opt<n + 1>(fac);
