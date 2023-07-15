@@ -91,10 +91,11 @@ int main() {
     Flatten(),
     Connected(784, 32),
     Relu(),
+    Dropout(0.1),
     Connected(32, 10),
     SoftMax()
   };
-  AdamFactory opt (0.003, 0.9, 0.999);
+  AdamFactory opt (0.003);
   m.generate_optimizer(opt);
-  m.train(ims, lbs, CrossEntropyLoss(), 50, 2000);
+  m.train(ims, lbs, CrossEntropyLoss(), 50, 4000);
 }

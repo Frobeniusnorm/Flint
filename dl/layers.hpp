@@ -256,7 +256,8 @@ public:
       }
     }
     Tensor<double, n> r = Flint::random_array(in.get_shape());
-    return (in * (r > p)) / (1.0 - p);
+    Tensor<double, n> o = (in * (r > p)) / (1.0 - p);
+    return o;
   }
 };
 struct Flatten : public UntrainableLayer {
