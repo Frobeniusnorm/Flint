@@ -541,7 +541,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     return nullptr;
   }
 }
-static void collect(FGraphNode* x, std::list<FGraphNode*>& stack, std::unordered_set<FGraphNode*>& visited, const FGraphNode* dx) {
+static void collect(FGraphNode* x, std::list<FGraphNode*>& stack, std::unordered_set<FGraphNode*>& visited, const std::unordered_set<const FGraphNode*> dxs) {
   // TODO could be made more performant with explicit todo stack and a push_back before continuing on the parents
   visited.insert(x);
   for (int i = 0; i < x->num_predecessor; i++) {
@@ -553,69 +553,78 @@ static void collect(FGraphNode* x, std::list<FGraphNode*>& stack, std::unordered
       std::unordered_set<const FGraphNode *> *trace =
           (std::unordered_set<const FGraphNode *>
           *)parent->gradient_data;
-      if (!trace->contains(dx))
-        continue;
-    } else if (parent != dx)
+      bool skip = true;
+      for (const FGraphNode* dx : dxs) {
+        if (trace->contains(dx)) {
+          skip = false;
+          continue;
+        }
+      }
+      if (skip) continue;
+    } else if (!dxs.contains(parent))
       continue;
     // recurse
-    collect(parent, stack, visited, dx);
+    collect(parent, stack, visited, dxs);
   }
   stack.push_front(x);
 }
 FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
-  // TODO more than one derivative to reuse calculated adjoints
-  std::unordered_set<const FGraphNode *> *gd =
-      (std::unordered_set<const FGraphNode *> *)y->gradient_data;
+  FGraphNode *res;
+  fCalculateGradients(y, &dx, 1, &res);
+  return res;
+}
+void fCalculateGradients(FGraphNode *y, const FGraphNode **dx,
+                         const unsigned int num_gradients,
+                         FGraphNode **gradients) {
+  using namespace std;
+  unordered_set<const FGraphNode *> *gd =
+      (unordered_set<const FGraphNode *> *)y->gradient_data;
   if (!gd)
     flogging(F_ERROR,
              "no derivatives in the operational graph! Don't forget the "
-             "necessary calls to fmarkGradientVariable (or in C++ .watch())");
-  if (!gd->contains(dx))
-    flogging(
-        F_WARNING,
-        "derivative was not marked during graph construction! Don't forget the "
-        "necessary calls to fmarkGradientVariable (or in C++ .watch())");
-  using namespace std;
-  // to store gradients per node
-  unordered_map<FGraphNode *, FGraphNode *> adjoints;
-  list<FGraphNode *> todo;
-  std::unordered_set<FGraphNode*> visited;
-  {
-    collect(y, todo, visited, dx);
+             "necessary calls to fMarkGradientVariable (or in C++ .watch())");
+  std::unordered_set<const FGraphNode *> vars(num_gradients);
+  for (int i = 0; i < num_gradients; i++) {
+    vars.insert(dx[i]);
+    if (!gd->contains(dx[i]))
+      flogging(F_WARNING,
+               "derivative was not marked during graph construction! Don't "
+               "forget the "
+               "necessary calls to fMarkGradientVariable (or in C++ .watch())");
   }
+  // to store gradients per node
+  unordered_map<const FGraphNode *, FGraphNode *> adjoints;
+  list<FGraphNode *> todo;
+  std::unordered_set<FGraphNode *> visited;
+  collect(y, todo, visited, vars);
   // initialize
   adjoints[y] = constant_tensor(1., F_FLOAT64, y->operation->shape,
                                 y->operation->dimensions);
-  FGraphNode *sol = nullptr;
-  list<FGraphNode*> tofree;
   while (!todo.empty()) {
     FGraphNode *curr = todo.front();
     todo.pop_front();
-    if (curr == dx) {
-      sol = adjoints[curr];
-      return sol;
-    }
     FGraphNode *adj = adjoints[curr];
     for (int i = 0; i < curr->num_predecessor; i++) {
       FGraphNode *parent = curr->predecessors[i];
-      if (!visited.contains(parent)) continue;
+      if (!visited.contains(parent))
+        continue;
       FGraphNode *local_grad = local_gradient(curr, i, adj);
       if (adjoints.contains(parent)) {
         adjoints[parent] =
             fadd(adjoints[parent], unbroadcast(local_grad, parent));
       } else {
-        FGraphNode* nadj = unbroadcast(local_grad, parent);
+        FGraphNode *nadj = unbroadcast(local_grad, parent);
         adjoints.insert({parent, nadj});
       }
     }
   }
-  // try to delete all adjoints, thanks to reference counting, no still needed nodes for sol will be freed
-  for (FGraphNode* x : tofree) {
-    if (x != sol)
-      fFreeGraph(x);
+  for (int i = 0; i < num_gradients; i++) {
+    if (adjoints.contains(dx[i]))
+      gradients[i] = adjoints[dx[i]];
+    else {
+      flogging(F_WARNING, "Operation graph did not contain the derivative!");
+      gradients[i] = nullptr;
+    }
   }
-  if (!sol)
-    flogging(F_WARNING, "Operation graph did not contain the derivative!");
-  return sol;
 }
 #endif

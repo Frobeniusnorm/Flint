@@ -394,13 +394,31 @@ FGraphNode *fCalculateResult(FGraphNode *node);
  * `fMarkGradientVariable` and the output node `outputfct` must be constructed
  * in an gradient context (to remember which variables are directly or
  * indirectly present in which operation), which can be started with
- * `fStartGradientContext`.
+ * `fStartGradientContext`. If you need to compute multiple gradients for one
+ * output use `fCalculateGradients` since it is far more efficient.
  *
  * - `outputfct`: the Node which represents the chain of functions of which
  *    the gradient is to be computed.
  * - `dx`: the variable for which outputfct is derived for
  */
 FGraphNode *fCalculateGradient(FGraphNode *outputfct, const FGraphNode *dx);
+/** Calculates the overall gradient of an output node to multiple variables.
+ * The variables must be marked as a gradient variable, see
+ * `fMarkGradientVariable` and the output node `outputfct` must be constructed
+ * in an gradient context (to remember which variables are directly or
+ * indirectly present in which operation), which can be started with
+ * `fStartGradientContext`.
+ *
+ * - `outputfct`: the Node which represents the chain of functions of which
+ *    the gradients are to be computed.
+ * - `dx`: array of variables for which outputfct is derived for.
+ * - `num_gradients`: the number of variables in `dx`.
+ * - `gradients`: an array of size `num_gradients` in which the resulting
+ *    gradients will be stored per variable.
+ */
+void fCalculateGradients(FGraphNode *outputfct, const FGraphNode **dx,
+                         const unsigned int num_gradients,
+                         FGraphNode **gradients);
 /** Starts a gradient context, gradient information will be inherited until the
  * next call to `fStopGradientContext`. A history containing information about
  * all watched nodes in the parent graph is kept up to date within a gradient
