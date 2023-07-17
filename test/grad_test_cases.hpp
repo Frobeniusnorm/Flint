@@ -40,15 +40,18 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(dz[1][1][1], -10);
     Tensor<double, 3> zy = z.matmul(y);
     w = (x.matmul(y)).matmul(zy);
-    dy = w.gradient(y);
+    const FGraphNode* dxs[3] = {y.get_graph_node(), x.get_graph_node(), z.get_graph_node()};
+    FGraphNode* grd[3];
+    fCalculateGradients(w.get_graph_node(), &(dxs[0]), 3, &(grd[0]));
+    dy = Tensor<double, 2>(grd[0], y.get_shape());
     CHECK_EQ(dy[0][0], 67);
     CHECK_EQ(dy[0][1], 67);
     CHECK_EQ(dy[1][0], 67);
     CHECK_EQ(dy[1][1], 67);
-    dx = w.gradient(x);
+    dx = Tensor<double, 3>(grd[1], x.get_shape());
     CHECK_EQ(dx[0][0][0], 0);
     CHECK_EQ(dx[1][1][1], 0);
-    dz = w.gradient(z);
+    dz = Tensor<double, 3>(grd[2], z.get_shape());
     CHECK_EQ(dz[0][0][0], -20);
     CHECK_EQ(dz[0][0][1], 20);
     CHECK_EQ(dz[0][1][0], 4);
@@ -120,8 +123,11 @@ TEST_SUITE("Autodiff") {
     y.watch();
     z.watch();
     Tensor<double, 3> w = x.pow(y).log();
-    Tensor<double, 3> dx = w.gradient(x);
-    Tensor<double, 1> dy = w.gradient(y);
+    const FGraphNode* dxs[] = {x.get_graph_node(), y.get_graph_node()};
+    FGraphNode* grds[2];
+    fCalculateGradients(w.get_graph_node(), &dxs[0], 2, &grds[0]);
+    Tensor<double, 3> dx = Tensor<double, 3>(grds[0], x.get_shape());
+    Tensor<double, 1> dy = Tensor<double, 1>(grds[1], y.get_shape());
     using doctest::Approx;
     CHECK_EQ(Approx(-0.1666666).epsilon(0.001), dx[0][0][0]);
     CHECK_EQ(Approx(0.07304117).epsilon(0.001), dx[0][0][1]);
@@ -132,7 +138,6 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(Approx(0.55).epsilon(0.001), dx[1][2][1]);
     CHECK_EQ(Approx(14.537247).epsilon(0.001), dy[0]);
     CHECK_EQ(Approx(15.650002).epsilon(0.001), dy[1]);
-    // TODO: test with negative values with integer y
     Tensor<float, 4> t = {{{{-0.5, 3}, {1.5, -1}},
                            {{-3, -2.5}, {1.5, 2.5}},
                            {{-42, -75.3}, {4, -4}}}};
@@ -183,7 +188,10 @@ TEST_SUITE("Autodiff") {
     z.watch();
     Tensor<double, 2> m1 = (z.min(y) * 0.3).abs();
     Tensor<double, 3> m2 = (y.min(z) * 0.3).max(x).abs() * y.abs();
-    Tensor<double, 3> dx2 = m2.gradient(x);
+    const FGraphNode* m2dx[] = {x.get_graph_node(), y.get_graph_node(), z.get_graph_node()};
+    FGraphNode* m2grds[3];
+    fCalculateGradients(m2.get_graph_node(), &m2dx[0], 3, &m2grds[0]);
+    Tensor<double, 3> dx2(m2grds[0], x.get_shape());
     for (int i = 0; i < 2; i++) {
       for (int j = 0; j < 3; j++) {
         CHECK_EQ(7, dx2[i][j][0]);
@@ -193,7 +201,7 @@ TEST_SUITE("Autodiff") {
     Tensor<double, 1> dy1 = m1.gradient(y);
     CHECK_EQ(-0.6, dy1[0]);
     CHECK_EQ(0, dy1[1]);
-    Tensor<double, 1> dy2 = m2.gradient(y);
+    Tensor<double, 1> dy2(m2grds[1], y.get_shape());
     CHECK_EQ(-116.5, dy2[0]);
     CHECK_EQ(178.3, dy2[1]);
     Tensor<double, 2> dz1 = m1.gradient(z);
@@ -203,7 +211,7 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(0.3, dz1[1][1]);
     CHECK_EQ(0., dz1[2][0]);
     CHECK_EQ(-0.3, dz1[2][1]);
-    Tensor<double, 2> dz2 = m2.gradient(z);
+    Tensor<double, 2> dz2(m2grds[2], z.get_shape());
     for (int i = 0; i < 3; i++)
       for (int j = 0; j < 2; j++)
         CHECK_EQ(0, dz2[i][j]);
@@ -441,7 +449,10 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(1, da[5][5][0]);
 
     Tensor<int, 3> s1 = x.slide(k, 1, 2);
-    dk = s1.gradient(k);
+    const FGraphNode* dxs[] = {k.get_graph_node(), x.get_graph_node()};
+    FGraphNode* grads[2];
+    fCalculateGradients(s1.get_graph_node(), &dxs[0], 2, &grads[0]);
+    dk = Tensor<double, 3>(grads[0], dk.get_shape());
     CHECK_EQ(s1[0][0][0], dk[0][0][0]);
     CHECK_EQ(s1[0][0][1], dk[0][0][1]);
     CHECK_EQ(s1[0][0][2], dk[0][0][2]);
@@ -450,7 +461,7 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(s1[1][1][0], dk[1][1][0]);
     CHECK_EQ(s1[1][1][1], dk[1][1][1]);
     CHECK_EQ(s1[1][1][2], dk[1][1][2]);
-    dx = s1.gradient(x);
+    dx = Tensor<double, 3>(grads[1], x.get_shape());
     for (int i = 0; i < 3; i++) {
       CHECK_EQ(1, dx[0][0][i]);
       CHECK_EQ(2, dx[0][1][i]);
