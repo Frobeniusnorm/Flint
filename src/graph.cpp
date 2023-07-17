@@ -365,11 +365,14 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
       FSlice *csl = new FSlice();
       op->additional_data = (void *)csl;
       csl->start = safe_mal<long>(node->operation->dimensions);
-      std::memcpy(csl->start, osl->start, node->operation->dimensions * sizeof(long));
+      std::memcpy(csl->start, osl->start,
+                  node->operation->dimensions * sizeof(long));
       csl->end = safe_mal<long>(node->operation->dimensions);
-      std::memcpy(csl->end, osl->end, node->operation->dimensions * sizeof(long));
+      std::memcpy(csl->end, osl->end,
+                  node->operation->dimensions * sizeof(long));
       csl->step = safe_mal<long>(node->operation->dimensions);
-      std::memcpy(csl->step, osl->step, node->operation->dimensions * sizeof(long));
+      std::memcpy(csl->step, osl->step,
+                  node->operation->dimensions * sizeof(long));
     } break;
     case FREDUCE_MAX:
     case FREDUCE_MIN:
@@ -607,22 +610,14 @@ static FGraphNode *addConstWithNode(FOperation *op, const T b, FGraphNode *a) {
 template <typename T>
 static inline FGraphNode *constant(const T value, const size_t *shape,
                                    const int dimensions) {
-  // TODO: better: store with 1 element and repeat
   FOperation *op = new FOperation();
   op->dimensions = dimensions;
   op->shape = safe_mal<size_t>(dimensions);
   memcpy(op->shape, shape, op->dimensions * sizeof(size_t));
-  op->op_type = FSTORE;
+  op->op_type = FGEN_CONSTANT;
   op->data_type = toFlintType<T>();
-  FStore *store = new FStore();
-  op->additional_data = store;
-  size_t total_size = 1;
-  for (int i = 0; i < dimensions; i++)
-    total_size *= shape[i];
-  store->data = safe_mal<T>(total_size);
-  std::fill((T *)store->data, (T *)store->data + total_size, value);
-  store->num_entries = total_size;
-  store->mem_id = nullptr;
+  op->additional_data = safe_mal<T>(1);
+  ((T *)op->additional_data)[0] = value;
   return addNode(op, {});
 }
 

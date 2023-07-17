@@ -198,6 +198,18 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
                              node->operation->data_type, {}, our_kernel);
     all_kernels.push_back({hash, our_kernel});
   } break;
+  case FGEN_CONSTANT: {
+    for (FType ret_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
+      std::string kernel_name;
+      code += generateEagerCode(node->operation->op_type, ret_type, {},
+                                kernel_name);
+      all_kernels.push_back({OCLCompilerThread::generateKernelHash(
+                                 node->operation->op_type, ret_type, {}),
+                             kernel_name});
+      if (ret_type == node->operation->data_type)
+        our_kernel = kernel_name;
+    }
+  } break;
   case FSIGN:
   case FEQUAL:
   case FLESS:
@@ -335,7 +347,8 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
         clCreateKernel(prog, kernel_name.second.c_str(), &err_code);
     if (err_code != CL_SUCCESS)
       flogging(F_ERROR,
-               "kernel compilation failed!" + std::to_string(err_code));
+               "kernel compilation failed! Kernel name: " + kernel_name.second +
+                   ", error_code: " + std::to_string(err_code));
     OCLCompilerThread::eager_cache.insert({kernel_name.first, curr});
     if (kernel_name.first == hash) {
       kernel = curr;
@@ -376,13 +389,14 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       data = prev->result_data->data;
       gpu_data = prev->result_data->mem_id;
       num_elems = prev->result_data->num_entries;
-    } else if(prev->operation->op_type == FSTORE) {
+    } else if (prev->operation->op_type == FSTORE) {
       const FStore *store = (FStore *)prev->operation->additional_data;
       data = store->data;
       gpu_data = store->mem_id;
       num_elems = store->num_entries;
     } else
-      flogging(F_ERROR, "Unknown Case: previous node does not appear to be a data node in eager execution!");
+      flogging(F_ERROR, "Unknown Case: previous node does not appear to be a "
+                        "data node in eager execution!");
     FResultData *rd = new FResultData();
     rd->data = nullptr;
     rd->num_entries = num_elems;
@@ -683,13 +697,13 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   // upload or link parameters
   for (auto &[gn, name] : parameters) {
     FOperation *op = gn->operation;
-    // TODO keep track of when data in Store is changed
     cl_mem mem_obj = nullptr;
     bool do_write = false;
     size_t type_size = typeSize(op->data_type);
-    size_t total_size = op->op_type == FSTORE
-                            ? ((FStore *)op->additional_data)->num_entries
-                            : gn->result_data->num_entries;
+    size_t total_size =
+        op->op_type == FSTORE
+            ? ((FStore *)op->additional_data)->num_entries
+            : (op->op_type == FGEN_CONSTANT ? 1 : gn->result_data->num_entries);
     cl_mem mem_id = gn->result_data ? gn->result_data->mem_id : nullptr;
     if (!mem_id && op->op_type == FSTORE)
       mem_id = ((FStore *)op->additional_data)->mem_id;
@@ -702,6 +716,11 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
         flogging(F_ERROR, "Not enough memory to create buffer!");
       if (op->op_type == FSTORE)
         ((FStore *)op->additional_data)->mem_id = mem_obj;
+      if (op->op_type == FGEN_CONSTANT && !gn->result_data) {
+        gn->result_data = new FResultData();
+        gn->result_data->data = nullptr;
+        gn->result_data->num_entries = 1;
+      }
       if (gn->result_data)
         gn->result_data->mem_id = mem_obj;
       do_write = true;
@@ -709,7 +728,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     // actually write the buffer
     if (do_write) {
       void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
-                                         : gn->result_data->data;
+                   : gn->operation->op_type == FGEN_CONSTANT
+                       ? gn->operation->additional_data
+                       : gn->result_data->data;
       writeEvents.emplace_back();
       err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_FALSE, 0,
                                       total_size * type_size, data, 0, nullptr,

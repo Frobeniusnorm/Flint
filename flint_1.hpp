@@ -629,7 +629,7 @@ template <typename T> struct Tensor<T, 1> {
    * for that element.
    */
   template <typename K> Tensor<int, 1> operator<(const K other) const {
-    return Tensor<int, 1>(fless(node, other));
+    return Tensor<int, 1>(fless(node, other), shape);
   }
   /**
    * Compares this tensor and `other` elementwise and returns a 0,1 integer
@@ -646,7 +646,7 @@ template <typename T> struct Tensor<T, 1> {
    * for that element.
    */
   template <typename K> Tensor<int, 1> operator>(const K other) const {
-    return Tensor<int, 1>(fgreater(node, other));
+    return Tensor<int, 1>(fgreater(node, other), shape);
   }
   /**
    * Compares this tensor and `other` elementwise and returns a 0,1 integer
@@ -661,7 +661,7 @@ template <typename T> struct Tensor<T, 1> {
    * integer Tensor. `0` denotes that `this != other`, `1` that `this == other`.
    */
   template <typename K> Tensor<int, 1> equal(const K other) const {
-    return Tensor<int, 1>(fequal(node, other));
+    return Tensor<int, 1>(fequal(node, other), shape);
   }
   /**
    * Slices a selection of the Tensor beginning by `start` (inclusive), ending

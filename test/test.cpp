@@ -13,6 +13,7 @@
    limitations under the License. */
 
 #include "../flint.h"
+#include <cmath>
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
 #include "testutils.hpp"
@@ -388,6 +389,26 @@ TEST_SUITE("Execution") {
 }
 #include <chrono>
 TEST_SUITE("C++ Bindings") {
+  TEST_CASE("Constant Functions") {
+    Tensor<float, 3> t1 = Flint::constant(1.123f, 20, 10, 2);
+    Tensor<double, 3> t2 = Flint::constant(0.123, 20, 10, 2);
+    Tensor<double, 3> t3 = ((t1 - t2) * M_PI).sin();
+    for (int i = 0; i < 20; i++)
+      for (int j = 0; j < 10; j++)
+        for (int k = 0; k < 2; k++)
+          CHECK_EQ(doctest::Approx(0.0), t3[i][j][k]);
+    Tensor<double, 3> t4 = Flint::constant(1.0, 4, 2, 2);
+    Tensor<double, 2> t5 = (t1 - t2).convolve(t4, 4, 2);
+    for (int i = 0; i < t5.get_shape()[0]; i++)
+      for (int j = 0; j < t5.get_shape()[1]; j++)
+        CHECK_EQ(doctest::Approx(16.0), t5[i][j]);
+    Tensor<double, 2> t6 = Flint::constant(1.0, 2, 4);
+    Tensor<double, 3> t7 = (t1 - t2).matmul(t6);
+    for (int i = 0; i < 20; i++)
+      for (int j = 0; j < 10; j++)
+        for (int k = 0; k < 4; k++)
+          CHECK_EQ(doctest::Approx(2.0), t7[i][j][k]);
+  }
   TEST_CASE("Basic Functions and Classes") {
     Tensor<float, 3> t1({{{0}, {1}}, {{2}, {3}}});
     Tensor<long, 1> t2({3});
@@ -827,7 +848,7 @@ TEST_SUITE("C++ Bindings") {
       CHECK_EQ(15, d[i][3]);
     }
 
-    Tensor<int, 3>e{{{0, 1, 32}, {2, 3, 4}}, {{4, 5, -6}, {6, 7, -1}}};
+    Tensor<int, 3> e{{{0, 1, 32}, {2, 3, 4}}, {{4, 5, -6}, {6, 7, -1}}};
     Tensor<int, 2> max1 = e.reduce_max(0)();
     CHECK_EQ(4, max1[0][0]);
     CHECK_EQ(5, max1[0][1]);

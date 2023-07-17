@@ -18,25 +18,29 @@
 #include <flint/flint.h>
 #include <limits>
 #include <optional>
+#include <type_traits>
 #include <unordered_set>
 /**
  * Optimizer interface that defines a update method.
  * An optimizer is intended to be instantiated once per weight
  * and optimizes only double weights (since the gradient is also always given as
  * a double Tensor). It uses the C interface for easy extensibility. */
+template<int n>
 struct Optimizer {
   virtual ~Optimizer() = default;
-  virtual FGraphNode *update(FGraphNode *weights, FGraphNode *gradient) = 0;
+  virtual Tensor<double, n> update(Tensor<double, n>& weights, Tensor<double, n>& gradient) = 0;
 };
-struct OptimizerFactory {
-  virtual Optimizer *generate_optimizer() const = 0;
+template<typename T>
+concept OptimizerFactory = requires(T fac){
+  { (fac.template generate_optimizer<2>()) } -> std::convertible_to<Optimizer<2>*>;
 };
 /**
  * Implementation of the Adam algorithm (first-order gradient-based optimizer
  * for stochastic objective functions based on adaptive estimates of lower-order
  * moments)
  */
-struct Adam : public Optimizer {
+template<int n>
+struct Adam : public Optimizer<n> {
   double epsilon = std::numeric_limits<double>::epsilon();
   double learning_rate, b1, b2;
   /**
@@ -55,131 +59,34 @@ struct Adam : public Optimizer {
    */
   Adam(double learning_rate = 0.0015, double b1 = 0.9, double b2 = 0.999)
       : learning_rate(learning_rate), b1(b1), b2(b2) {}
-  Adam(const Adam &other) {
-    if (other.m)
-      m = fCopyGraph(other.m);
-    if (other.v)
-      v = fCopyGraph(other.v);
-    learning_rate = other.learning_rate;
-    b1 = other.b1;
-    b2 = other.b2;
-    t = other.t;
-  }
-  Adam(Adam &&other) {
-    if (other.m)
-      m = other.m;
-    if (other.v)
-      v = other.v;
-    other.m = nullptr;
-    other.v = nullptr;
-    learning_rate = other.learning_rate;
-    b1 = other.b1;
-    b2 = other.b2;
-    t = other.t;
-  }
-  Adam &operator=(const Adam &other) {
-    if (m && v) {
-      m->reference_counter--;
-      v->reference_counter--;
-      fFreeGraph(m);
-      fFreeGraph(v);
+  Tensor<double, n> update(Tensor<double, n>& weight, Tensor<double, n>& grad) {
+    if (!init) {
+      init = true;
+      m = Flint::constant_array(0.0, weight.get_shape());
+      v = Flint::constant_array(0.0, weight.get_shape());
     }
-    if (other.m)
-      m = fCopyGraph(other.m);
-    if (other.v)
-      v = fCopyGraph(other.v);
-    learning_rate = other.learning_rate;
-    b1 = other.b1;
-    b2 = other.b2;
-    t = other.t;
-    return *this;
+    grad.execute();
+    m = m * b1 + grad * (1 - b1);
+    v = v * b2 + grad * grad * (1 - b2);
+    m.execute();
+    v.execute();
+    Tensor<double, n> mh = m / (1 - std::pow(b1, t));
+    Tensor<double, n> vh = v / (1 - std::pow(b2, t));
+    t += 1;
+    return weight - (mh * learning_rate) / (vh.sqrt() + epsilon);
   }
-  Adam &operator=(Adam &&other) {
-    if (m && v) {
-      m->reference_counter--;
-      v->reference_counter--;
-      fFreeGraph(m);
-      fFreeGraph(v);
-    }
-    if (other.m)
-      m = other.m;
-    if (other.v)
-      v = other.v;
-    other.m = nullptr;
-    other.v = nullptr;
-    learning_rate = other.learning_rate;
-    b1 = other.b1;
-    b2 = other.b2;
-    t = other.t;
-    return *this;
-  }
-
-  ~Adam() {
-    if (m && v) {
-      m->reference_counter--;
-      v->reference_counter--;
-      fFreeGraph(m);
-      fFreeGraph(v);
-    }
-  }
-  FGraphNode *update(FGraphNode *weights, FGraphNode *gradient) {
-    if (!m) {
-      // initialize with weight shape
-      m = fconstant_d(0, weights->operation->shape,
-                      weights->operation->dimensions);
-      v = fconstant_d(0, weights->operation->shape,
-                      weights->operation->dimensions);
-      m->reference_counter++;
-      v->reference_counter++;
-    }
-    fExecuteGraph(gradient);
-    m->reference_counter--;
-    m = fOptimizeMemory(fExecuteGraph(fadd(fmul_cd(m, b1), fmul_cd(gradient, (1 - b1)))));
-    m->reference_counter++;
-    v->reference_counter--;
-    v = fOptimizeMemory(fExecuteGraph(fadd(fmul_cd(v, b2), fmul(fmul_cd(gradient, (1 - b2)), gradient))));
-    v->reference_counter++;
-    FGraphNode *mh = fdiv_cd(m, (1 - std::pow(b1, t)));
-    FGraphNode *vh = fdiv_cd(v, (1 - std::pow(b2, t)));
-    t++;
-    FGraphNode* res = fOptimizeMemory(fExecuteGraph(fsub(weights, fdiv(fmul_cd(mh, learning_rate),
-                              fadd_cd(fsqrt_g(vh), epsilon)))));
-    return res;
-  }
-
-  template <int n>
-  Tensor<double, n> update(Tensor<double, n> &weights,
-                           Tensor<double, n> &gradient) {
-    return Tensor<double, n>(
-        update(weights.get_graph_node(), gradient.get_graph_node()),
-        weights.get_shape());
-  }
-
 private:
-  FGraphNode *m = nullptr; // 1st moment
-  FGraphNode *v = nullptr; // 2nd moment
+  Tensor<double, n> m;
+  Tensor<double, n> v;
+  bool init = false;
   unsigned long t = 1;
 };
-struct AdamFactory : public OptimizerFactory {
+struct AdamFactory{
   double learning_rate, b1, b2;
   AdamFactory(double learning_rate = 0.0015, double b1 = 0.9, double b2 = 0.999)
       : learning_rate(learning_rate), b1(b1), b2(b2) {}
-  Optimizer *generate_optimizer() const { return new Adam(learning_rate, b1, b2); }
+  template<int n>
+  Optimizer<n> *generate_optimizer() const { return new Adam<n>(learning_rate, b1, b2); }
 };
 
-struct Sgd : public Optimizer {
-double learning_rate;
-  Sgd() = default;
-  Sgd(double learning_rate) : learning_rate(learning_rate) {}
-
-  FGraphNode *update(FGraphNode *weights, FGraphNode *gradient) {
-    return fOptimizeMemory(fExecuteGraph(fsub(weights, fmul_cd(gradient, learning_rate))));  
-  }
-};
-struct SgdFactory: public OptimizerFactory {
-  double learning_rate;
-  SgdFactory(double learning_rate = 0.0015)
-      : learning_rate(learning_rate) {}
-  Optimizer *generate_optimizer() const { return new Sgd(learning_rate); }
-};
 #endif

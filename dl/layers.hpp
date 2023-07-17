@@ -28,7 +28,7 @@ template <unsigned int index, int... w> class WeightRef {};
 
 template <unsigned int index, int n> struct WeightRef<index, n> {
   Tensor<double, n> weight;
-  std::unique_ptr<Optimizer> optimizer = nullptr;
+  std::unique_ptr<Optimizer<n>> optimizer = nullptr;
   template <unsigned int k, unsigned int f>
   void set_weight(Tensor<double, f> &w) {
     static_assert(k == index, "Invalid weight index!");
@@ -39,17 +39,16 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
     weight = w;
     weight.watch();
   }
-  void gen_optimizer(const OptimizerFactory *fac) {
-    optimizer = std::unique_ptr<Optimizer>(fac->generate_optimizer());
+  template<OptimizerFactory Fac>
+  void gen_optimizer(const Fac fac) {
+    optimizer = std::unique_ptr<Optimizer<n>>(fac.template generate_optimizer<n>());
   }
   template <typename T, unsigned int k>
   void optimize(const Tensor<T, k> &error) {
     if (optimizer) {
-      const Tensor<double, n> gw = error.gradient(weight); // this line - somehow - is the problem
-      FGraphNode *new_graph_node =
-          optimizer->update(weight.get_graph_node(), gw.get_graph_node());
-      Tensor<double, n> nw =
-          Tensor<double, n>(new_graph_node, weight.get_shape());
+      Tensor<double, n> gw = error.gradient(weight); // this line - somehow - is the problem
+      Tensor<double, n> nw = optimizer->update(weight, gw);
+      nw.execute();
       weight = std::move(nw);
       weight.watch();
     } else {
@@ -65,7 +64,7 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
 template <unsigned int index, int n, int... wn>
 struct WeightRef<index, n, wn...> {
   Tensor<double, n> weight;
-  std::unique_ptr<Optimizer> optimizer = nullptr;
+  std::unique_ptr<Optimizer<n>> optimizer = nullptr;
   WeightRef<index + 1, wn...> others;
   template <unsigned int k, unsigned int f>
   void set_weight(Tensor<double, f> &w) {
@@ -78,18 +77,16 @@ struct WeightRef<index, n, wn...> {
     } else
       others.template set_weight<k>(w);
   }
-  void gen_optimizer(const OptimizerFactory *fac) {
-    optimizer = std::unique_ptr<Optimizer>(fac->generate_optimizer());
+  template<OptimizerFactory Fac>
+  void gen_optimizer(const Fac fac) {
+    optimizer = std::unique_ptr<Optimizer<n>>(fac.template generate_optimizer<n>());
     others.gen_optimizer(fac);
   }
   template <typename T, unsigned int k>
   void optimize(const Tensor<T, k> &error) {
     if (optimizer) {
-      const Tensor<double, n> gw = error.gradient(weight);
-      FGraphNode *new_graph_node =
-          optimizer->update(weight.get_graph_node(), gw.get_graph_node());
-      Tensor<double, n> nw =
-          Tensor<double, n>(new_graph_node, weight.get_shape());
+      Tensor<double, n> gw = error.gradient(weight);
+      Tensor<double, n> nw = optimizer->update(weight, gw);
       weight = std::move(nw);
       weight.watch();
     } else {
@@ -116,7 +113,7 @@ template <unsigned int> using helper = void;
 template <typename T>
 concept GenericLayer = requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
                                 Tensor<double, 2> &t3, Tensor<long, 2> &t4,
-                                OptimizerFactory *fac) {
+                                AdamFactory fac) {
   {
     a.forward(t1)
     } -> std::convertible_to<
@@ -141,7 +138,7 @@ concept GenericLayer = requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
   a.optimize_weights(t2);
   a.optimize_weights(t3);
   a.optimize_weights(t4);
-  a.generate_optimizer(fac);
+  //a.generate_optimizer(fac);
   a.training = true;
   { T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
   // Has to be constexpr
@@ -155,7 +152,8 @@ concept GenericLayer = requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
 struct UntrainableLayer {
   bool training = false;
   // to fulfill generic layer
-  void generate_optimizer(OptimizerFactory *factory) {}
+  template<OptimizerFactory Fac>
+  void generate_optimizer(Fac factory) {}
   // to fulfill generic layer
   template <typename T, unsigned int dim>
   void optimize_weights(const Tensor<T, dim> &error) {}
@@ -205,7 +203,8 @@ public:
   template <int index> Tensor<double, get_dim<index, wn...>()> &get_weight() {
     return weight_refs.template get_weight<index, get_dim<index, wn...>()>();
   }
-  void generate_optimizer(OptimizerFactory *factory) {
+  template<OptimizerFactory Fac>
+  void generate_optimizer(Fac factory) {
     weight_refs.gen_optimizer(factory);
   }
   template <typename T, unsigned int dim>
@@ -257,7 +256,8 @@ public:
       }
     }
     Tensor<double, n> r = Flint::random_array(in.get_shape());
-    return (in * (r > p)) / (1.0 - p);
+    Tensor<double, n> o = (in * (r > p)) / (1.0 - p);
+    return o;
   }
 };
 struct Flatten : public UntrainableLayer {

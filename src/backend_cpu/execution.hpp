@@ -367,6 +367,11 @@ static void executeNode(const FGraphNode *node,
     for (size_t i = from; i < from + size; i++)
       result[i] = (double)rand() / (double)RAND_MAX;
   } break;
+  case FGEN_CONSTANT: {
+    T value = ((T *)node->operation->additional_data)[0];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = value;
+  } break;
   case FREPEAT: {
     const FOperation *op = node->operation;
     const CPUResultData pred = predecessor_data[0];
