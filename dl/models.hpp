@@ -85,12 +85,13 @@ template <GenericLayer... T> struct SequentialModel {
       // TODO shuffle each iteration
       size_t number_batches = batches / batch_size + 1;
       double total_error = 0;
-      for (int b = 0; b < number_batches; b++) {
-        long slice_to = (b + 1) * batch_size;
+      for (size_t b = 0; b < number_batches; b++) {
+        size_t slice_to = (b + 1) * batch_size;
         if (slice_to > batches)
           slice_to = batches;
         if (b * batch_size == slice_to)
           break;
+        // run batch and calculate error
         auto input = X.slice(TensorRange(b * batch_size, slice_to));
         auto expected = Y.slice(TensorRange(b * batch_size, slice_to));
         input.execute();
@@ -99,7 +100,28 @@ template <GenericLayer... T> struct SequentialModel {
         auto output = forward(input);
         auto error = loss.calculate_error(output, expected);
         fStopGradientContext();
-        backward<0>(error);
+        // optimize weights 
+        backward<0>(error); // TODO remove
+        if (false) { // TODO does not work yet!
+          std::vector<std::vector<FGraphNode*>> vars;
+          collect_weights<0>(vars);
+          std::vector<FGraphNode*> flat_vars;
+          for (unsigned int i = 0; i < vars.size(); i++)
+            flat_vars.insert(flat_vars.end(), vars[i].begin(), vars[i].end());
+          std::vector<FGraphNode*> grads(flat_vars.size());
+          // fCalculateGradients(error.get_graph_node(), flat_vars.data(), flat_vars.size(), grads.data());
+          // REPLACEMENT:
+          for (unsigned int i = 0; i < flat_vars.size(); i++)
+            grads[i] = fOptimizeMemory(fExecuteGraph(fCalculateGradient(error.get_graph_node(), flat_vars[i])));
+          // END
+          std::vector<std::vector<FGraphNode*>> plgrads(vars.size());
+          int index = 0;
+          for (unsigned int i = 0; i < vars.size(); i++) {
+            plgrads[i] = std::vector<FGraphNode*>(vars[i].size());
+            for (unsigned int j = 0; j < vars[i].size(); j++)
+              plgrads[i][j] = grads[index++];
+          }
+        }
         double local_error = (double)(error.reduce_sum()[0]);
         total_error += local_error / number_batches;
         // print metrics
@@ -132,6 +154,13 @@ private:
       backward<n + 1>(error);
     }
   }
+  template <int n>
+  void backward(const std::vector<std::vector<FGraphNode*>> grads) {
+    if constexpr (n < sizeof...(T)) {
+      std::get<n>(layers).optimize_weights(grads[n]);
+      backward<n + 1>(grads);
+    }
+  }
   template <int n, OptimizerFactory Fac>
   void gen_opt(Fac fac) {
     if constexpr (n < sizeof...(T)) {
@@ -143,6 +172,12 @@ private:
     if constexpr (n < sizeof...(T)) {
       std::get<n>(layers).training = b;
       set_training<n + 1>(b);
+    }
+  }
+  template <int n> void collect_weights(std::vector<std::vector<FGraphNode*>>& vars) {
+    if constexpr (n < sizeof...(T)) {
+      vars.push_back(std::get<n>(layers).collect_weights());
+      collect_weights<n + 1>(vars);
     }
   }
   template <int layer, typename T2, unsigned int n2, typename T1,

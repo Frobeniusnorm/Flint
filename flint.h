@@ -401,7 +401,7 @@ FGraphNode *fCalculateResult(FGraphNode *node);
  *    the gradient is to be computed.
  * - `dx`: the variable for which outputfct is derived for
  */
-FGraphNode *fCalculateGradient(FGraphNode *outputfct, const FGraphNode *dx);
+FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx);
 /** Calculates the overall gradient of an output node to multiple variables.
  * The variables must be marked as a gradient variable, see
  * `fMarkGradientVariable` and the output node `outputfct` must be constructed
@@ -416,7 +416,7 @@ FGraphNode *fCalculateGradient(FGraphNode *outputfct, const FGraphNode *dx);
  * - `gradients`: an array of size `num_gradients` in which the resulting
  *    gradients will be stored per variable.
  */
-void fCalculateGradients(FGraphNode *outputfct, const FGraphNode **dx,
+void fCalculateGradients(FGraphNode *outputfct, FGraphNode **dx,
                          const unsigned int num_gradients,
                          FGraphNode **gradients);
 /** Starts a gradient context, gradient information will be inherited until the

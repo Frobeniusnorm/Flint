@@ -59,7 +59,7 @@ struct CrossEntropyLoss {
     auto pred = (in / in.reduce_sum(n-1).expand(n-1, in.get_shape()[n-1])).max(1e-7).min(1 - 1e-7);
     auto t1 = (expected * -pred.log()).reduce_sum();
       size_t total_size = 1;
-      for (int i = 0; i < n - 1; i++)
+      for (unsigned int i = 0; i < n - 1; i++)
         total_size *= in.get_shape()[i];
       return (t1 / (double)total_size);
   } 

@@ -571,12 +571,12 @@ static void collect(FGraphNode* x, std::list<FGraphNode*>& stack, std::unordered
   }
   stack.push_front(x);
 }
-FGraphNode *fCalculateGradient(FGraphNode *y, const FGraphNode *dx) {
+FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
   FGraphNode *res;
   fCalculateGradients(y, &dx, 1, &res);
   return res;
 }
-void fCalculateGradients(FGraphNode *y, const FGraphNode **dx,
+void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
                          const unsigned int num_gradients,
                          FGraphNode **gradients) {
   using namespace std;

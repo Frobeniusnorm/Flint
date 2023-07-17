@@ -39,14 +39,15 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
     weight = w;
     weight.watch();
   }
-  template<OptimizerFactory Fac>
-  void gen_optimizer(const Fac fac) {
-    optimizer = std::unique_ptr<Optimizer<n>>(fac.template generate_optimizer<n>());
+  template <OptimizerFactory Fac> void gen_optimizer(const Fac fac) {
+    optimizer =
+        std::unique_ptr<Optimizer<n>>(fac.template generate_optimizer<n>());
   }
   template <typename T, unsigned int k>
   void optimize(const Tensor<T, k> &error) {
     if (optimizer) {
-      Tensor<double, n> gw = error.gradient(weight); // this line - somehow - is the problem
+      Tensor<double, n> gw =
+          error.gradient(weight); // this line - somehow - is the problem
       Tensor<double, n> nw = optimizer->update(weight, gw);
       nw.execute();
       weight = std::move(nw);
@@ -58,6 +59,19 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
   template <int i, unsigned int k> Tensor<double, k> &get_weight() {
     static_assert(i == index, "Invalid weight index!");
     return weight;
+  }
+  void collect_weights(std::vector<FGraphNode *> &nodes) {
+    nodes[index] = weight.get_graph_node();
+  }
+  void update_weights(std::vector<FGraphNode *> &grads) {
+    if (optimizer) {
+      Tensor<double, n> gw(grads[index], weight.get_shape());
+      Tensor<double, n> nw = optimizer->update(weight, gw);
+      weight = std::move(nw);
+      weight.watch();
+    } else {
+      flogging(F_WARNING, "No Optimizer for weight!");
+    }
   }
 };
 
@@ -77,9 +91,9 @@ struct WeightRef<index, n, wn...> {
     } else
       others.template set_weight<k>(w);
   }
-  template<OptimizerFactory Fac>
-  void gen_optimizer(const Fac fac) {
-    optimizer = std::unique_ptr<Optimizer<n>>(fac.template generate_optimizer<n>());
+  template <OptimizerFactory Fac> void gen_optimizer(const Fac fac) {
+    optimizer =
+        std::unique_ptr<Optimizer<n>>(fac.template generate_optimizer<n>());
     others.gen_optimizer(fac);
   }
   template <typename T, unsigned int k>
@@ -100,6 +114,21 @@ struct WeightRef<index, n, wn...> {
     else
       others.template get_weight<i, k>();
   }
+  void collect_weights(std::vector<FGraphNode *> &nodes) {
+    nodes[index] = weight.get_graph_node();
+    others.collect_weights(nodes);
+  }
+  void update_weights(std::vector<FGraphNode *> &grads) {
+    if (optimizer) {
+      Tensor<double, n> gw(grads[index], weight.get_shape());
+      Tensor<double, n> nw = optimizer->update(weight, gw);
+      weight = std::move(nw);
+      weight.watch();
+    } else {
+      flogging(F_WARNING, "No Optimizer for weight!");
+    }
+    others.update_weights(grads);
+  }
 };
 template <FType t>
 using FlintTypeToCpp = typename std::conditional<
@@ -111,52 +140,52 @@ using FlintTypeToCpp = typename std::conditional<
 } // namespace LayerHelper
 template <unsigned int> using helper = void;
 template <typename T>
-concept GenericLayer = requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
-                                Tensor<double, 2> &t3, Tensor<long, 2> &t4,
-                                AdamFactory fac) {
-  {
-    a.forward(t1)
-    } -> std::convertible_to<
-        Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
-               T::transform_dimensionality(2)>>;
-  {
-    a.forward(t2)
-    } -> std::convertible_to<
-        Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT32)>,
-               T::transform_dimensionality(2)>>;
-  {
-    a.forward(t3)
-    } -> std::convertible_to<
-        Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT64)>,
-               T::transform_dimensionality(2)>>;
-  {
-    a.forward(t4)
-    } -> std::convertible_to<
-        Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT64)>,
-               T::transform_dimensionality(2)>>;
-  a.optimize_weights(t1);
-  a.optimize_weights(t2);
-  a.optimize_weights(t3);
-  a.optimize_weights(t4);
-  //a.generate_optimizer(fac);
-  a.training = true;
-  { T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
-  // Has to be constexpr
-
-  { T::transform_type(F_INT32) } -> std::convertible_to<FType>;
-  // Has to be constexpr
-};
-//    };
+concept GenericLayer =
+    requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
+             Tensor<double, 2> &t3, Tensor<long, 2> &t4, AdamFactory fac,
+             std::vector<FGraphNode *> grads) {
+      {
+        a.forward(t1)
+        } -> std::convertible_to<
+            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
+                   T::transform_dimensionality(2)>>;
+      {
+        a.forward(t2)
+        } -> std::convertible_to<
+            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT32)>,
+                   T::transform_dimensionality(2)>>;
+      {
+        a.forward(t3)
+        } -> std::convertible_to<
+            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT64)>,
+                   T::transform_dimensionality(2)>>;
+      {
+        a.forward(t4)
+        } -> std::convertible_to<
+            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT64)>,
+                   T::transform_dimensionality(2)>>;
+      a.optimize_weights(t1);
+      a.optimize_weights(t2);
+      a.optimize_weights(t3);
+      a.optimize_weights(t4);
+      { a.collect_weights() } -> std::convertible_to<std::vector<FGraphNode *>>;
+      a.optimize_weights(grads);
+      a.generate_optimizer(fac);
+      a.training = true;
+      { T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
+      { T::transform_type(F_INT32) } -> std::convertible_to<FType>;
+    };
 /** Implements blank methods for every method of GenericLayer that is not needed
  * for a Layer that is not trainable */
 struct UntrainableLayer {
   bool training = false;
   // to fulfill generic layer
-  template<OptimizerFactory Fac>
-  void generate_optimizer(Fac factory) {}
+  template <OptimizerFactory Fac> void generate_optimizer(Fac factory) {}
   // to fulfill generic layer
   template <typename T, unsigned int dim>
   void optimize_weights(const Tensor<T, dim> &error) {}
+  void optimize_weights(std::vector<FGraphNode *> grads) {}
+  std::vector<FGraphNode *> collect_weights() { return {}; }
   static constexpr FType transform_type(FType t) { return t; }
   static constexpr unsigned int transform_dimensionality(unsigned int n) {
     return n;
@@ -203,13 +232,20 @@ public:
   template <int index> Tensor<double, get_dim<index, wn...>()> &get_weight() {
     return weight_refs.template get_weight<index, get_dim<index, wn...>()>();
   }
-  template<OptimizerFactory Fac>
-  void generate_optimizer(Fac factory) {
+  template <OptimizerFactory Fac> void generate_optimizer(Fac factory) {
     weight_refs.gen_optimizer(factory);
   }
   template <typename T, unsigned int dim>
   void optimize_weights(const Tensor<T, dim> &error) {
     weight_refs.optimize(error);
+  }
+  std::vector<FGraphNode *> collect_weights() {
+    std::vector<FGraphNode *> nodes(sizeof...(wn));
+    weight_refs.collect_weights(nodes);
+    return nodes;
+  }
+  void optimize_weights(std::vector<FGraphNode*> grads) {
+    weight_refs.update_weights(grads);
   }
 };
 
@@ -235,6 +271,57 @@ struct Connected : public Layer<2> {
     one_shape[n - 1] = 1;
     Tensor<T, n> ones = Flint::constant_array<T, n>(1, one_shape);
     return Flint::concat(in, ones, n - 1).matmul(get_weight<0>());
+  }
+};
+template <int n> class Convolution : public Layer<n> {
+  constexpr std::array<size_t, n> weight_shape(unsigned int filters,
+                                               unsigned int kernel_size,
+                                               size_t units_in) {
+    std::array<size_t, n> res;
+    res[0] = filters;
+    for (int i = 1; i < n - 1; i++) {
+      res[i] = kernel_size;
+    }
+    res[n - 1] = units_in;
+  }
+  std::array<unsigned int, n> stride;
+
+public:
+  template <Initializer InitWeights>
+  Convolution(size_t units_in, unsigned int filters, unsigned int kernel_size,
+              InitWeights init, std::array<unsigned int, n - 2> stride = {})
+      : Layer<n>(init.template initialize<double>(
+            weight_shape(filters, kernel_size, units_in))),
+        stride(stride) {}
+
+  template <typename T, unsigned int k>
+  Tensor<double, k> forward(Tensor<T, k> &in) {
+    const unsigned int filters =
+        Layer<n>::template get_weight<0>().get_shape()[0];
+    std::array<size_t, n> shape;
+    shape[0] = in.get_shape()[0]; // batch size
+    for (int i = 1; i < k - 1; i++)
+      shape[i] = in.get_shape()[i] / stride[i - 1];
+    shape[k] = 1;
+    std::array<unsigned int, n - 1> acc_stride;
+    acc_stride[0] = 1;
+    for (int i = 0; i < n - 2; i++)
+      acc_stride[i + 1] = stride[i];
+    Tensor<double, k> res = Flint::constant_array(0.0, shape);
+    for (unsigned int i = 0; i < filters; i++) {
+      // in has shape [batch, dim1, ..., units_in]
+      // has shape [1, kernel_size, ..., units_in]
+      Tensor<double, n> filter =
+          Layer<n>::template get_weight<0>().slice(TensorRange(i, i + 1));
+      Tensor<double, n - 1> filter_res = in.convolve(filter, acc_stride);
+      std::array<size_t, n> new_shape;
+      for (int i = 0; i < n - 1; i++)
+        new_shape[i] = filter_res[i];
+      new_shape[n - 1] = 1;
+      filter_res.execute();
+      res = Flint::concat(res, filter_res.reshape_array(new_shape), n - 1);
+    }
+    return res;
   }
 };
 /** Randomly sets some values in the input to 0 with a probability of `p`.
