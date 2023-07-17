@@ -206,6 +206,8 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
       // anymore
       if (!kernel->result_data)
         fExecuteGraph(kernel);
+      if (!prev_adj->result_data)
+        fExecuteGraph(prev_adj);
       FGraphNode *gradient = new FGraphNode();
       gradient->num_predecessor = 2;
       gradient->predecessors = safe_mal<FGraphNode *>(2);
@@ -543,6 +545,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 }
 static void collect(FGraphNode* x, std::list<FGraphNode*>& stack, std::unordered_set<FGraphNode*>& visited, const std::unordered_set<const FGraphNode*> dxs) {
   // TODO could be made more performant with explicit todo stack and a push_back before continuing on the parents
+  if (visited.contains(x)) return;
   visited.insert(x);
   for (int i = 0; i < x->num_predecessor; i++) {
     FGraphNode* parent = x->predecessors[i];
