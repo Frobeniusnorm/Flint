@@ -4,7 +4,7 @@
       <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
       <a class="item" href="index.html">About</a>
       <a class="item selected" href="documentation.html">Documentation</a>
-      <a class="item">Tutorial</a>
+      <a class="item" href="tutorial.html">Tutorial</a>
     </div>
   </div>
   <div id="showcase_background" style="min-height: 18em; background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(195,225,100,1) 0%, rgba(50,228,100,1) 100%);">
