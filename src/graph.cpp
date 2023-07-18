@@ -266,7 +266,8 @@ static FGraphNode *addNode(FOperation *op, std::vector<FGraphNode *> pre) {
       pre.size() == 0 ? NULL : safe_mal<FGraphNode *>(pre.size());
   for (size_t i = 0; i < pre.size(); i++) {
     foo->predecessors[i] = pre[i];
-    pre[i]->reference_counter++;
+    if (pre[i]->reference_counter++ > 2 && !eager_execution) 
+      fExecuteGraph(pre[i]);
   }
   return eager_execution ? execute_eagerly(foo) : foo;
 }
@@ -322,7 +323,8 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
     foo->predecessors = safe_mal<FGraphNode *>(foo->num_predecessor);
     for (int i = 0; i < foo->num_predecessor; i++) {
       foo->predecessors[i] = node->predecessors[i];
-      node->predecessors[i]->reference_counter++;
+      if(node->predecessors[i]->reference_counter++ > 2 && !eager_execution)
+        fExecuteGraph(node->predecessors[i]);
     }
   }
 
@@ -945,7 +947,8 @@ FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions) {
   node->predecessors = safe_mal<FGraphNode *>(1);
   node->predecessors[0] = a;
   node->reference_counter = 0;
-  a->reference_counter++;
+  if(a->reference_counter++ > 2 && !eager_execution)
+    fExecuteGraph(a);
   return eager_execution ? execute_eagerly(node) : node;
 }
 FGraphNode *fconvert(FGraphNode *a, FType newtype) {
@@ -956,7 +959,8 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
   foo->predecessors[0] = a;
-  a->reference_counter++;
+  if(a->reference_counter++ > 2 && !eager_execution)
+    fExecuteGraph(a);
   foo->operation = new FOperation();
   foo->operation->data_type = newtype;
   foo->operation->dimensions = a->operation->dimensions;
@@ -981,7 +985,8 @@ static inline FGraphNode *reduce_operation(FGraphNode *x, const int dimension,
   foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
   foo->predecessors[0] = a;
-  a->reference_counter++;
+  if(a->reference_counter++ > 2 && !eager_execution)
+    fExecuteGraph(a);
   FOperation *op = new FOperation();
   FOperation *other = a->operation;
   foo->operation = op;
@@ -1027,7 +1032,8 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
   foo->predecessors = safe_mal<FGraphNode *>(1);
   foo->predecessors[0] = a;
   foo->reference_counter = 0;
-  a->reference_counter++;
+  if(a->reference_counter++ > 2 && !eager_execution)
+    fExecuteGraph(a);
   FOperation *op = new FOperation();
   foo->operation = op;
   op->op_type = FSLICE;
@@ -1199,7 +1205,8 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
   foo->predecessors = safe_mal<FGraphNode *>(1);
   foo->predecessors[0] = a;
   foo->reference_counter = 0;
-  a->reference_counter++;
+  if (a->reference_counter++ > 2 && !eager_execution)
+    fExecuteGraph(a);
   // construct operation
   const int dimensions = a->operation->dimensions;
   FOperation *op = new FOperation();
