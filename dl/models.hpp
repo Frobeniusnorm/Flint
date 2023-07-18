@@ -51,8 +51,9 @@ template <GenericLayer... T> struct SequentialModel {
   std::tuple<T...> layers;
   SequentialModel(T... layers) : layers(std::move(layers)...) {}
 
-  template<OptimizerFactory Fac>
-  void generate_optimizer(Fac fac) { gen_opt<0>(fac); }
+  template <OptimizerFactory Fac> void generate_optimizer(Fac fac) {
+    gen_opt<0>(fac);
+  }
 
   template <typename K, unsigned int n>
   Tensor<LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
@@ -77,7 +78,7 @@ template <GenericLayer... T> struct SequentialModel {
     if (Y.get_shape()[0] != batches)
       flogging(F_ERROR,
                "Input and Target Datas batch size does not correspond!");
-    std::cout << "\r\e[Kbatch error: ... \e[1;30m" ;
+    std::cout << "\r\e[Kbatch error: ... \e[1;30m";
     for (int k = 0; k < 15; k++)
       std::cout << "―";
     std::cout << "\033[0m" << std::flush;
@@ -100,35 +101,34 @@ template <GenericLayer... T> struct SequentialModel {
         auto output = forward(input);
         auto error = loss.calculate_error(output, expected);
         fStopGradientContext();
-        // optimize weights 
-        backward<0>(error); // TODO remove
-        if (false) { // TODO does not work yet!
-          std::vector<std::vector<FGraphNode*>> vars;
-          collect_weights<0>(vars);
-          std::vector<FGraphNode*> flat_vars;
-          for (unsigned int i = 0; i < vars.size(); i++)
-            flat_vars.insert(flat_vars.end(), vars[i].begin(), vars[i].end());
-          std::vector<FGraphNode*> grads(flat_vars.size());
-          // fCalculateGradients(error.get_graph_node(), flat_vars.data(), flat_vars.size(), grads.data());
-          // REPLACEMENT:
-          for (unsigned int i = 0; i < flat_vars.size(); i++)
-            grads[i] = fOptimizeMemory(fExecuteGraph(fCalculateGradient(error.get_graph_node(), flat_vars[i])));
-          // END
-          std::vector<std::vector<FGraphNode*>> plgrads(vars.size());
-          int index = 0;
-          for (unsigned int i = 0; i < vars.size(); i++) {
-            plgrads[i] = std::vector<FGraphNode*>(vars[i].size());
-            for (unsigned int j = 0; j < vars[i].size(); j++)
-              plgrads[i][j] = grads[index++];
-          }
+        // optimize weights
+        // flatten all vars, but keep original structure for reconstruction
+        std::vector<std::vector<FGraphNode *>> vars;
+        collect_weights<0>(vars);
+        std::vector<FGraphNode *> flat_vars;
+        for (unsigned int i = 0; i < vars.size(); i++)
+          flat_vars.insert(flat_vars.end(), vars[i].begin(), vars[i].end());
+        std::vector<FGraphNode *> grads(flat_vars.size());
+        // calculate gradients
+        fCalculateGradients(error.get_graph_node(), flat_vars.data(),
+                            flat_vars.size(), grads.data());
+        // reconstruct for layers
+        std::vector<std::vector<FGraphNode *>> plgrads(vars.size());
+        int index = 0;
+        for (unsigned int i = 0; i < vars.size(); i++) {
+          plgrads[i] = std::vector<FGraphNode *>(vars[i].size());
+          for (unsigned int j = 0; j < vars[i].size(); j++)
+            plgrads[i][j] = grads[index++];
         }
+        backward<0>(plgrads);
+        // calculate error value
         double local_error = (double)(error.reduce_sum()[0]);
         total_error += local_error / number_batches;
         // print metrics
         std::cout << "\r\e[Kbatch error: " << std::setprecision(3)
                   << local_error << " \e[1;96m";
         for (int k = 0; k < 15; k++) {
-          if ((k + 1) / 15.0 <= (b + 1.0) / number_batches)
+          if ((k) / 15.0 <= (b + 1.0) / number_batches)
             std::cout << "―";
           else {
             std::cout << "\e[1;30m";
@@ -155,14 +155,13 @@ private:
     }
   }
   template <int n>
-  void backward(const std::vector<std::vector<FGraphNode*>> grads) {
+  void backward(const std::vector<std::vector<FGraphNode *>> grads) {
     if constexpr (n < sizeof...(T)) {
       std::get<n>(layers).optimize_weights(grads[n]);
       backward<n + 1>(grads);
     }
   }
-  template <int n, OptimizerFactory Fac>
-  void gen_opt(Fac fac) {
+  template <int n, OptimizerFactory Fac> void gen_opt(Fac fac) {
     if constexpr (n < sizeof...(T)) {
       std::get<n>(layers).generate_optimizer(fac);
       gen_opt<n + 1>(fac);
@@ -174,7 +173,8 @@ private:
       set_training<n + 1>(b);
     }
   }
-  template <int n> void collect_weights(std::vector<std::vector<FGraphNode*>>& vars) {
+  template <int n>
+  void collect_weights(std::vector<std::vector<FGraphNode *>> &vars) {
     if constexpr (n < sizeof...(T)) {
       vars.push_back(std::get<n>(layers).collect_weights());
       collect_weights<n + 1>(vars);
