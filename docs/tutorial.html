@@ -127,6 +127,50 @@ std::vector&lt;std::vector&lt;<span style="color: #FFF030">float</span>&gt;&gt; 
         <br/>
         The Tensor class supports move operations (which will be essentially free performance and memory wise) and copy operations, that have to copy
         the complete graph structure and result data, which are therefore very inefficient (and to be avoided wherever possible).
+        <h4>Generating Data</h4>
+        Most of the times you want to generate your Tensors from constants, random values or load it from files:
+        <br/>
+        <pre class="card code" style="margin: 5px;">
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; zeros = Flint::constant(<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>); 
+<span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
+<span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+<span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>]],</span>
+<span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+<span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>]],</span>
+<span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
+<span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>]]])</span>
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; zeros_alt = Flint::constant_array(<span style="color: #30F0FF">0</span>, std::array&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}); 
+<span style="color: #D0D0D0">// same as zeros, for cases were variadic templates isn't what you want</span>
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt; randoms = Flint::random(<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>); <span style="color: #D0D0D0">// in [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>)</span>
+<span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: [<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+<span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">6</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">8</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">2</span><span style="color: #30F0FF">8</span><span style="color: #30F0FF">7</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">4</span>],</span>
+<span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">3</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">8</span><span style="color: #30F0FF">3</span><span style="color: #30F0FF">8</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">7</span>]],</span>
+<span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">8</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">7</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">3</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">7</span>],</span>
+<span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">8</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">8</span>, <span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">3</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">3</span><span style="color: #30F0FF">2</span>]],</span>
+<span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">5</span><span style="color: #30F0FF">6</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">3</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">8</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">7</span>],</span>
+<span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">3</span><span style="color: #30F0FF">6</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">8</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">6</span><span style="color: #30F0FF">3</span><span style="color: #30F0FF">3</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">4</span>]]])</span>
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt; randoms_alt = Flint::random_array(std::array&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>});
+<span style="color: #D0D0D0">// same as randoms</span></pre>
+        <br/>
+        You can store and load a Tensor into a binary file:
+        <br/>
+        <pre class="card code" style="margin: 5px;">
+<span style="color: #D0D0D0">// store to file</span>
+std::ofstream my_store("zeros.flint");
+my_store &lt;&lt; zeros;
+my_store.close();
+<span style="color: #D0D0D0">// load from file</span>
+std::ifstream my_load("zeros.flint");
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt; loaded = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;::read_from(my_load);
+my_load.close();</pre>
+        <br/>
+        and load and store images to and from Tensors:
+        <br/>
+        <pre class="card code" style="margin: 5px;">
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">3</span>&gt; img = Flint::load_image("icon.png"); <span style="color: #D0D0D0">// height, width, channels</span>
+<span style="color: #D0D0D0">// values are between <span style="color: #30F0FF">0</span> and <span style="color: #30F0FF">1</span>, channels are <span style="color: #30F0FF">4</span> for rgba, <span style="color: #30F0FF">3</span> for rgb, <span style="color: #30F0FF">1</span> for greyscale, ...</span>
+Flint::store_image(img, "icon2.png", F_PNG); 
+<span style="color: #D0D0D0">// has to have the data format as third argument</span></pre>
       </div>
     </div>
   </center>

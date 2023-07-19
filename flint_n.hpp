@@ -370,7 +370,7 @@ template <typename T, unsigned int n> struct Tensor {
     return foo;
   }
   /**
-   * Calls `deserialize` on this Tensor and pipes the returned data to the
+   * Calls `serialize` on this Tensor and pipes the returned data to the
    * stream.
    */
   friend std::ofstream &operator<<(std::ofstream &os, Tensor<T, n> &t) {

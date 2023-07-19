@@ -856,7 +856,8 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
  Selects single elements with a index-tensor (integer tensor containing
  indices for the selected dimension).
  It indexes the selected dimension of the input tensor and the result also has
- the shape of the input tensor. If the index tensor is multidimensional it is
+ the shape of the input tensor except for the indexed dimension. 
+ If the index tensor is multidimensional it is
  assumed that except for the last entry its shape is a prefix of the shape of
  the input tensor and the indexing will occur in the matched subsets. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="inline_code">findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [1, 0], 0)

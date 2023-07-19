@@ -858,7 +858,8 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
  * Selects single elements with a index-tensor (integer tensor containing
  * indices for the selected dimension).
  * It indexes the selected dimension of the input tensor and the result also has
- * the shape of the input tensor. If the index tensor is multidimensional it is
+ * the shape of the input tensor except for the indexed dimension. 
+ * If the index tensor is multidimensional it is
  * assumed that except for the last entry its shape is a prefix of the shape of
  * the input tensor and the indexing will occur in the matched subsets. E.g.
  *

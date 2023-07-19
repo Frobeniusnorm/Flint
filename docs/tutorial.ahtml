@@ -126,6 +126,53 @@ std::vector<std::vector<float>> v1 = *t1;
         <br/>
         The Tensor class supports move operations (which will be essentially free performance and memory wise) and copy operations, that have to copy
         the complete graph structure and result data, which are therefore very inefficient (and to be avoided wherever possible).
+        <h4>Generating Data</h4>
+        Most of the times you want to generate your Tensors from constants, random values or load it from files:
+        <br/>
+        @code{
+Tensor<int, 3> zeros = Flint::constant(0, 3, 2, 3); 
+// Tensor<INT32, shape: [3, 2, 3]>(
+// [[[0, 0, 0],
+//   [0, 0, 0]],
+//  [[0, 0, 0],
+//   [0, 0, 0]],
+//  [[0, 0, 0],
+//   [0, 0, 0]]])
+Tensor<int, 3> zeros_alt = Flint::constant_array(0, std::array<size_t, 3>{3, 2, 3}); 
+// same as zeros, for cases were variadic templates isn't what you want
+Tensor<double, 3> randoms = Flint::random(3, 2, 2); // in [0, 1)
+// Tensor<FLOAT64, shape: [3, 2, 2]>(
+// [[[0.695820, 0.287424],
+//   [0.395240, 0.838207]],
+//  [[0.089141, 0.703297],
+//   [0.589048, 0.043032]],
+//  [[0.565522, 0.398417],
+//   [0.365827, 0.633404]]])
+Tensor<double, 3> randoms_alt = Flint::random_array(std::array<size_t, 3>{3, 2, 2});
+// same as randoms
+        }
+        <br/>
+        You can store and load a Tensor into a binary file:
+        <br/>
+        @code{
+// store to file
+std::ofstream my_store("zeros.flint");
+my_store << zeros;
+my_store.close();
+// load from file
+std::ifstream my_load("zeros.flint");
+Tensor<double, 3> loaded = Tensor<double, 3>::read_from(my_load);
+my_load.close();
+        }
+        <br/>
+        and load and store images to and from Tensors:
+        <br/>
+        @code{
+Tensor<float, 3> img = Flint::load_image("icon.png"); // height, width, channels
+// values are between 0 and 1, channels are 4 for rgba, 3 for rgb, 1 for greyscale, ...
+Flint::store_image(img, "icon2.png", F_PNG); 
+// has to have the data format as third argument
+        }
       </div>
     </div>
   </center>
