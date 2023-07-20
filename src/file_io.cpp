@@ -37,10 +37,10 @@ char *fserialize(FGraphNode *node, size_t *bytes_written) {
   // header
   size_t data_size = 4;
   // pure data
-  data_size += total_size_node * typeSize(node->operation->data_type);
+  data_size += total_size_node * typeSize(node->operation.data_type);
   // data type + dimensions + shape
   data_size += sizeof(FType) + sizeof(int) +
-               node->operation->dimensions * sizeof(size_t);
+               node->operation.dimensions * sizeof(size_t);
   char *data = safe_mal<char>(data_size);
   // // conversion // //
   // magic number
@@ -51,22 +51,22 @@ char *fserialize(FGraphNode *node, size_t *bytes_written) {
   size_t index = 4;
   // type
   for (int i = sizeof(FType) - 1; i >= 0; i--)
-    data[index++] = ((node->operation->data_type >> (i * 8)) & 0xff);
+    data[index++] = ((node->operation.data_type >> (i * 8)) & 0xff);
   // dimensions
   for (int i = sizeof(int) - 1; i >= 0; i--)
-    data[index++] = ((node->operation->dimensions >> (i * 8)) & 0xff);
+    data[index++] = ((node->operation.dimensions >> (i * 8)) & 0xff);
   // shape
-  for (int i = 0; i < node->operation->dimensions; i++) {
+  for (int i = 0; i < node->operation.dimensions; i++) {
     for (int j = sizeof(size_t) - 1; j >= 0; j--) {
-      data[index++] = ((node->operation->shape[i] >> (j * 8)) & 0xff);
+      data[index++] = ((node->operation.shape[i] >> (j * 8)) & 0xff);
     }
   }
   // data
   memcpy(&data[index], node->result_data->data,
-         total_size_node * typeSize(node->operation->data_type));
+         total_size_node * typeSize(node->operation.data_type));
   if (bytes_written)
     *bytes_written =
-        index + total_size_node * typeSize(node->operation->data_type);
+        index + total_size_node * typeSize(node->operation.data_type);
   return data;
 }
 
@@ -116,13 +116,13 @@ FGraphNode *fload_image(const char *path) {
 }
 void fstore_image(FGraphNode *node, const char *path, FImageFormat format) {
   FGraphNode *orig = node;
-  if (node->operation->data_type != F_FLOAT32 ||
-      node->operation->dimensions != 3)
+  if (node->operation.data_type != F_FLOAT32 ||
+      node->operation.dimensions != 3)
     flogging(F_ERROR,
              "Invalid image data for fstore_image: image nodes are expected to "
              "have 3 dimensions and to be of the float data type!");
-  int h = node->operation->shape[0], w = node->operation->shape[1],
-      c = node->operation->shape[2];
+  int h = node->operation.shape[0], w = node->operation.shape[1],
+      c = node->operation.shape[2];
   node = fmin_ci(fmax_ci(fconvert(fmul(node, 255.0f), F_INT32), 0), 255);
   node = fCalculateResult(node);
   char *data = nullptr;

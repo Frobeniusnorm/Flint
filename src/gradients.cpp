@@ -63,23 +63,23 @@ static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
   }
 }
 static FGraphNode *unbroadcast(FGraphNode *adjoint, const FGraphNode *node) {
-  if (adjoint->operation->dimensions > node->operation->dimensions) {
-    size_t diff = adjoint->operation->dimensions - node->operation->dimensions;
+  if (adjoint->operation.dimensions > node->operation.dimensions) {
+    size_t diff = adjoint->operation.dimensions - node->operation.dimensions;
     FGraphNode *res = adjoint;
     for (int i = 0; i < diff; i++) {
       res = freduce_sum(res, 0);
     }
     return res;
-  } else if (adjoint->operation->dimensions < node->operation->dimensions) {
-    size_t diff = node->operation->dimensions - adjoint->operation->dimensions;
-    std::vector<size_t> new_shape(node->operation->dimensions);
-    std::vector<int> repetitions(node->operation->dimensions, 0);
+  } else if (adjoint->operation.dimensions < node->operation.dimensions) {
+    size_t diff = node->operation.dimensions - adjoint->operation.dimensions;
+    std::vector<size_t> new_shape(node->operation.dimensions);
+    std::vector<int> repetitions(node->operation.dimensions, 0);
     for (int i = 0; i < diff; i++) {
       new_shape[i] = 1;
-      repetitions[i] = node->operation->shape[i] - 1;
+      repetitions[i] = node->operation.shape[i] - 1;
     }
     for (int i = diff; i < new_shape.size(); i++)
-      new_shape[i] = adjoint->operation->shape[i - diff];
+      new_shape[i] = adjoint->operation.shape[i - diff];
     FGraphNode *res = freshape(adjoint, new_shape.data(), new_shape.size());
     res = frepeat(res, repetitions.data());
     return res;
@@ -96,15 +96,15 @@ static std::string printNode(FGraphNode *node, int dim, int *b) {
   for (int i = 0; i < dim; i++)
     prev += " ";
   std::string s = "[";
-  if (dim == node->operation->dimensions - 1) {
-    for (int i = 0; i < node->operation->shape[dim]; i++) {
+  if (dim == node->operation.dimensions - 1) {
+    for (int i = 0; i < node->operation.shape[dim]; i++) {
       s += std::to_string(((T *)node->result_data->data)[*b + i]);
-      if (i != node->operation->shape[dim] - 1)
+      if (i != node->operation.shape[dim] - 1)
         s += ", ";
     }
-    (*b) += node->operation->shape[dim];
+    (*b) += node->operation.shape[dim];
   } else {
-    for (int i = 0; i < node->operation->shape[dim]; i++)
+    for (int i = 0; i < node->operation.shape[dim]; i++)
       s += printNode<T>(node, dim + 1, b) + ",\n" + prev;
     s = s.substr(0, s.size() - 2 - prev.size());
   }
@@ -120,7 +120,7 @@ template <typename T> static std::string printNode(FGraphNode *node) {
 static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
                                   FGraphNode *prev_adj) {
   FGraphNode *dx = y->predecessors[dx_i];
-  switch (y->operation->op_type) {
+  switch (y->operation.op_type) {
   case FADD:
     return (dx_i == 0 || dx_i == 1) ? prev_adj : nullptr;
   case FSUB: {
@@ -155,14 +155,14 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];
     if (0 == dx_i) {
-      std::vector<int> perm(b->operation->dimensions);
+      std::vector<int> perm(b->operation.dimensions);
       for (int i = 0; i < perm.size() - 2; i++)
         perm[i] = i;
       perm[perm.size() - 2] = perm.size() - 1;
       perm[perm.size() - 1] = perm.size() - 2;
       return fmatmul(prev_adj, ftranspose(b, perm.data()));
     } else if (1 == dx_i) {
-      std::vector<int> perm(a->operation->dimensions);
+      std::vector<int> perm(a->operation.dimensions);
       for (int i = 0; i < perm.size() - 2; i++)
         perm[i] = i;
       perm[perm.size() - 2] = perm.size() - 1;
@@ -175,22 +175,22 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
   case FCONCAT: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];
-    unsigned int ax = *((unsigned int *)y->operation->additional_data);
+    unsigned int ax = *((unsigned int *)y->operation.additional_data);
     if (0 == dx_i) {
-      std::vector<long> start(a->operation->dimensions);
-      std::vector<long> stop(a->operation->dimensions);
-      for (int i = 0; i < a->operation->dimensions; i++) {
+      std::vector<long> start(a->operation.dimensions);
+      std::vector<long> stop(a->operation.dimensions);
+      for (int i = 0; i < a->operation.dimensions; i++) {
         start[i] = 0;
-        stop[i] = a->operation->shape[i];
+        stop[i] = a->operation.shape[i];
       }
       return fslice(prev_adj, start.data(), stop.data());
     } else if (1 == dx_i) {
-      std::vector<long> start(b->operation->dimensions);
-      std::vector<long> stop(b->operation->dimensions);
-      for (int i = 0; i < b->operation->dimensions; i++) {
-        start[i] = ax == i ? a->operation->shape[i] : 0;
-        stop[i] = ax == i ? a->operation->shape[i] + b->operation->shape[i]
-                          : b->operation->shape[i];
+      std::vector<long> start(b->operation.dimensions);
+      std::vector<long> stop(b->operation.dimensions);
+      for (int i = 0; i < b->operation.dimensions; i++) {
+        start[i] = ax == i ? a->operation.shape[i] : 0;
+        stop[i] = ax == i ? a->operation.shape[i] + b->operation.shape[i]
+                          : b->operation.shape[i];
       }
       return fslice(prev_adj, start.data(), stop.data());
     } else
@@ -201,7 +201,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     FGraphNode *a = y->predecessors[0];
     FGraphNode *kernel = y->predecessors[1];
     if (0 == dx_i) {
-      const unsigned int *steps = (unsigned int *)y->operation->additional_data;
+      const unsigned int *steps = (unsigned int *)y->operation.additional_data;
       // fuck this noise, i am writing a custom function i cant take this
       // anymore
       if (!kernel->result_data)
@@ -217,33 +217,32 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
       prev_adj->reference_counter++;
       gradient->result_data = nullptr;
       gradient->reference_counter = 0;
-      FOperation *op = new FOperation();
-      op->data_type = F_FLOAT64;
-      op->dimensions = a->operation->dimensions;
-      op->shape = safe_mal<size_t>(op->dimensions);
-      memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
-      op->op_type = FGRADIENT_CONVOLVE;
-      op->additional_data =
-          safe_mal<unsigned int>(a->operation->dimensions - 1);
-      memcpy(op->additional_data, steps,
-             (a->operation->dimensions - 1) * sizeof(unsigned int));
+      FOperation op;
+      op.data_type = F_FLOAT64;
+      op.dimensions = a->operation.dimensions;
+      op.shape = safe_mal<size_t>(op.dimensions);
+      memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
+      op.op_type = FGRADIENT_CONVOLVE;
+      op.additional_data = safe_mal<unsigned int>(a->operation.dimensions - 1);
+      memcpy(op.additional_data, steps,
+             (a->operation.dimensions - 1) * sizeof(unsigned int));
       gradient->operation = op;
       configureGradientInformation(gradient, {kernel, prev_adj});
       return gradient;
     } else if (1 == dx_i) {
-      if (y->operation->op_type == FCONVOLVE) {
+      if (y->operation.op_type == FCONVOLVE) {
         // last dimension has been reduced
-        std::vector<size_t> ns(prev_adj->operation->dimensions + 1);
-        for (int i = 0; i < prev_adj->operation->dimensions; i++)
-          ns[i] = prev_adj->operation->shape[i];
+        std::vector<size_t> ns(prev_adj->operation.dimensions + 1);
+        for (int i = 0; i < prev_adj->operation.dimensions; i++)
+          ns[i] = prev_adj->operation.shape[i];
         ns[ns.size() - 1] = 1;
         prev_adj = freshape(prev_adj, ns.data(), ns.size());
         // repeat it for the correct shape
-        std::vector<int> rp(a->operation->dimensions, 0);
-        rp[rp.size() - 1] = (int)a->operation->shape[rp.size() - 1] - 1;
+        std::vector<int> rp(a->operation.dimensions, 0);
+        rp[rp.size() - 1] = (int)a->operation.shape[rp.size() - 1] - 1;
         prev_adj = frepeat(prev_adj, rp.data());
       }
-      return fslide(a, prev_adj, (unsigned int *)y->operation->additional_data);
+      return fslide(a, prev_adj, (unsigned int *)y->operation.additional_data);
     }
     return nullptr;
   }
@@ -252,7 +251,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     FGraphNode *kernel = y->predecessors[0];
     FGraphNode *a = y->predecessors[1];
     if (1 == dx_i) {
-      const unsigned int *steps = (unsigned int *)y->operation->additional_data;
+      const unsigned int *steps = (unsigned int *)y->operation.additional_data;
       // fuck this noise, i am writing a custom function i cant take this
       // anymore
       if (!kernel->result_data)
@@ -266,21 +265,20 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
       prev_adj->reference_counter++;
       gradient->result_data = nullptr;
       gradient->reference_counter = 0;
-      FOperation *op = new FOperation();
-      op->data_type = F_FLOAT64;
-      op->dimensions = a->operation->dimensions;
-      op->shape = safe_mal<size_t>(op->dimensions);
-      memcpy(op->shape, a->operation->shape, op->dimensions * sizeof(size_t));
-      op->op_type = FGRADIENT_CONVOLVE;
-      op->additional_data =
-          safe_mal<unsigned int>(a->operation->dimensions - 1);
-      memcpy(op->additional_data, steps,
-             (a->operation->dimensions - 1) * sizeof(unsigned int));
+      FOperation op;
+      op.data_type = F_FLOAT64;
+      op.dimensions = a->operation.dimensions;
+      op.shape = safe_mal<size_t>(op.dimensions);
+      memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
+      op.op_type = FGRADIENT_CONVOLVE;
+      op.additional_data = safe_mal<unsigned int>(a->operation.dimensions - 1);
+      memcpy(op.additional_data, steps,
+             (a->operation.dimensions - 1) * sizeof(unsigned int));
       gradient->operation = op;
       configureGradientInformation(gradient, {kernel, prev_adj});
       return gradient;
     } else if (0 == dx_i) {
-      return fslide(prev_adj, a, (unsigned int *)y->operation->additional_data);
+      return fslide(prev_adj, a, (unsigned int *)y->operation.additional_data);
     }
     return nullptr;
   } break;
@@ -331,8 +329,8 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     // reproject adjacent into previous shape, should be okay since
     // shape(prev_adj) = shape(y)
     FGraphNode *prev = y->predecessors[0];
-    return freshape(prev_adj, prev->operation->shape,
-                    prev->operation->dimensions);
+    return freshape(prev_adj, prev->operation.shape,
+                    prev->operation.dimensions);
   }
   case FCONVERSION:
     return prev_adj;
@@ -422,23 +420,23 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
   case FREDUCE_MAX:
   case FREDUCE_MIN: {
     FGraphNode *a = y->predecessors[0];
-    unsigned int ax = ((unsigned int *)y->operation->additional_data)[0];
+    unsigned int ax = ((unsigned int *)y->operation.additional_data)[0];
     // work with extend to readjust the node to the same shape as before by
     // repetition, then compare it with equal and multiply the 0-1 tensor with
     // previous adjoint.
-    FGraphNode *n = fequal(a, fexpand(y, ax, a->operation->shape[ax]));
-    return fmul(fexpand(prev_adj, ax, a->operation->shape[ax]), n);
+    FGraphNode *n = fequal(a, fexpand(y, ax, a->operation.shape[ax]));
+    return fmul(fexpand(prev_adj, ax, a->operation.shape[ax]), n);
   }
   case FREDUCE_SUM: {
     FGraphNode *a = y->predecessors[0];
     if (a == dx) {
-      FOperation *op = y->operation;
-      const int dim = ((int *)op->additional_data)[0];
-      std::vector<int> rep(a->operation->dimensions);
-      std::vector<size_t> ns(a->operation->dimensions);
+      const FOperation op = y->operation;
+      const int dim = ((int *)op.additional_data)[0];
+      std::vector<int> rep(a->operation.dimensions);
+      std::vector<size_t> ns(a->operation.dimensions);
       for (int i = 0; i < rep.size(); i++) {
-        rep[i] = i == dim ? a->operation->shape[i] - 1 : 0;
-        ns[i] = i != dim ? a->operation->shape[i] : 1;
+        rep[i] = i == dim ? a->operation.shape[i] - 1 : 0;
+        ns[i] = i != dim ? a->operation.shape[i] : 1;
       }
       return frepeat(freshape(prev_adj, ns.data(), ns.size()), rep.data());
     } else
@@ -447,13 +445,13 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
   case FREDUCE_MUL: {
     FGraphNode *a = y->predecessors[0];
     if (a == dx) {
-      FOperation *op = y->operation;
-      const int dim = ((int *)op->additional_data)[0];
-      std::vector<int> rep(a->operation->dimensions);
-      std::vector<size_t> ns(a->operation->dimensions);
+      const FOperation op = y->operation;
+      const int dim = ((int *)op.additional_data)[0];
+      std::vector<int> rep(a->operation.dimensions);
+      std::vector<size_t> ns(a->operation.dimensions);
       for (int i = 0; i < rep.size(); i++) {
-        rep[i] = i == dim ? a->operation->shape[i] - 1 : 0;
-        ns[i] = i != dim ? a->operation->shape[i] : 1;
+        rep[i] = i == dim ? a->operation.shape[i] - 1 : 0;
+        ns[i] = i != dim ? a->operation.shape[i] : 1;
       }
       FGraphNode *zero_node = fequal(a, 0.0);
       // the normal gradient would be y/a, this does not work for a_i = 0, but
@@ -481,21 +479,21 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
   case FREPEAT: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *grad = prev_adj;
-    std::vector<size_t> orig_shape(prev_adj->operation->shape,
-                                   prev_adj->operation->shape +
-                                       prev_adj->operation->dimensions);
-    for (int i = 0; i < a->operation->dimensions; i++) {
-      if (a->operation->shape[i] != y->operation->shape[i]) {
+    std::vector<size_t> orig_shape(prev_adj->operation.shape,
+                                   prev_adj->operation.shape +
+                                       prev_adj->operation.dimensions);
+    for (int i = 0; i < a->operation.dimensions; i++) {
+      if (a->operation.shape[i] != y->operation.shape[i]) {
         // reduce repeated gradient into correct shape
         std::vector<size_t> new_shape(orig_shape.size() + 1);
         // add extra dimension for reducing
         if (i > 0)
-          std::memcpy(new_shape.data(), grad->operation->shape,
+          std::memcpy(new_shape.data(), grad->operation.shape,
                       sizeof(size_t) * i);
-        new_shape[i] = orig_shape[i] / a->operation->shape[i];
-        new_shape[i + 1] = a->operation->shape[i];
+        new_shape[i] = orig_shape[i] / a->operation.shape[i];
+        new_shape[i + 1] = a->operation.shape[i];
         if (orig_shape.size() - i > 1)
-          std::memcpy(new_shape.data() + i + 2, grad->operation->shape + i + 1,
+          std::memcpy(new_shape.data() + i + 2, grad->operation.shape + i + 1,
                       sizeof(size_t) * (orig_shape.size() - i - 1));
         // reduce along that axis
         grad =
@@ -505,28 +503,28 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     return grad;
   }
   case FTRANSPOSE: {
-    int *transp = ((int *)y->operation->additional_data);
+    int *transp = ((int *)y->operation.additional_data);
     return ftranspose(prev_adj, transp);
   }
   case FSLICE: {
     const FGraphNode *a = y->predecessors[0];
-    const FSlice *slice = (FSlice *)y->operation->additional_data;
-    std::vector<size_t> start(a->operation->dimensions);
-    for (int i = 0; i < a->operation->dimensions; i++) {
+    const FSlice *slice = (FSlice *)y->operation.additional_data;
+    std::vector<size_t> start(a->operation.dimensions);
+    for (int i = 0; i < a->operation.dimensions; i++) {
       start[i] = slice->step[i] >= 0 ? slice->start[i] : slice->end[i] + 1;
     }
-    return fextend_step(prev_adj, a->operation->shape, start.data(),
+    return fextend_step(prev_adj, a->operation.shape, start.data(),
                         slice->step);
   }
   case FEXTEND: {
     const FGraphNode *a = y->predecessors[0];
-    const FExtend *extend = (FExtend *)y->operation->additional_data;
-    std::vector<long> start(a->operation->dimensions);
-    std::vector<long> ends(a->operation->dimensions);
-    std::vector<long> steps(a->operation->dimensions);
-    for (int i = 0; i < a->operation->dimensions; i++) {
+    const FExtend *extend = (FExtend *)y->operation.additional_data;
+    std::vector<long> start(a->operation.dimensions);
+    std::vector<long> ends(a->operation.dimensions);
+    std::vector<long> steps(a->operation.dimensions);
+    for (int i = 0; i < a->operation.dimensions; i++) {
       start[i] = extend->start[i];
-      ends[i] = a->operation->shape[i] * extend->step[i] + extend->start[i];
+      ends[i] = a->operation.shape[i] * extend->step[i] + extend->start[i];
       steps[i] = extend->step[i];
     }
     return fslice_step(prev_adj, start.data(), ends.data(), steps.data());
@@ -536,34 +534,39 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
   case FLESS:
   case FEQUAL:
   case FGREATER:
-    return constant_tensor(0.0, F_FLOAT64, y->operation->shape,
-                           y->operation->dimensions);
+    return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
+                           y->operation.dimensions);
   default:
     flogging(F_WARNING, "No gradient function exists!");
     return nullptr;
   }
 }
-static void collect(FGraphNode* x, std::list<FGraphNode*>& stack, std::unordered_set<FGraphNode*>& visited, const std::unordered_set<const FGraphNode*> dxs) {
-  // TODO could be made more performant with explicit todo stack and a push_back before continuing on the parents
-  if (visited.contains(x)) return;
+static void collect(FGraphNode *x, std::list<FGraphNode *> &stack,
+                    std::unordered_set<FGraphNode *> &visited,
+                    const std::unordered_set<const FGraphNode *> dxs) {
+  // TODO could be made more performant with explicit todo stack and a push_back
+  // before continuing on the parents
+  if (visited.contains(x))
+    return;
   visited.insert(x);
   for (int i = 0; i < x->num_predecessor; i++) {
-    FGraphNode* parent = x->predecessors[i];
+    FGraphNode *parent = x->predecessors[i];
     // check if visited
-    if (visited.contains(parent)) continue;
+    if (visited.contains(parent))
+      continue;
     // check if it contains dx
     if (parent->gradient_data) {
       std::unordered_set<const FGraphNode *> *trace =
-          (std::unordered_set<const FGraphNode *>
-          *)parent->gradient_data;
+          (std::unordered_set<const FGraphNode *> *)parent->gradient_data;
       bool skip = true;
-      for (const FGraphNode* dx : dxs) {
+      for (const FGraphNode *dx : dxs) {
         if (trace->contains(dx)) {
           skip = false;
           continue;
         }
       }
-      if (skip) continue;
+      if (skip)
+        continue;
     } else if (!dxs.contains(parent))
       continue;
     // recurse
@@ -601,8 +604,8 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
   std::unordered_set<FGraphNode *> visited;
   collect(y, todo, visited, vars);
   // initialize
-  adjoints[y] = constant_tensor(1., F_FLOAT64, y->operation->shape,
-                                y->operation->dimensions);
+  adjoints[y] = constant_tensor(1., F_FLOAT64, y->operation.shape,
+                                y->operation.dimensions);
   while (!todo.empty()) {
     FGraphNode *curr = todo.front();
     todo.pop_front();

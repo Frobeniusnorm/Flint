@@ -205,21 +205,21 @@ template <typename T, unsigned int n> struct Tensor {
    */
   static Tensor<T, n> deserialize(char *data) {
     FGraphNode *node = fdeserialize(data);
-    if (n != node->operation->dimensions)
+    if (n != node->operation.dimensions)
       flogging(F_ERROR, "Deserializing data of a " +
-                            std::to_string(node->operation->dimensions) +
+                            std::to_string(node->operation.dimensions) +
                             " dimensional Tensor into a " + std::to_string(n) +
                             " dimensional Tensor is not possible!");
-    if (toFlintType<T>() != node->operation->data_type)
+    if (toFlintType<T>() != node->operation.data_type)
       flogging(F_ERROR,
                "Deserializing data of a " +
-                   FLINT_HPP_HELPER::typeString(node->operation->data_type) +
+                   FLINT_HPP_HELPER::typeString(node->operation.data_type) +
                    " Tensor into a " +
                    FLINT_HPP_HELPER::typeString(toFlintType<T>()) +
                    " Tensor is not possible!");
     std::array<size_t, n> shape;
-    for (int i = 0; i < node->operation->dimensions; i++)
-      shape[i] = node->operation->shape[i];
+    for (int i = 0; i < node->operation.dimensions; i++)
+      shape[i] = node->operation.shape[i];
     return Tensor<T, n>(node, shape);
   }
   /**
@@ -354,14 +354,14 @@ template <typename T, unsigned int n> struct Tensor {
    * will say "<not yet executed>".
    */
   operator std::string() {
-    FOperation *op = node->operation;
+    const FOperation op = node->operation;
     std::string foo = "Tensor<" +
-                      (op->data_type == F_INT32     ? std::string("INT32")
-                       : op->data_type == F_INT64   ? std::string("INT64")
-                       : op->data_type == F_FLOAT32 ? std::string("FLOAT32")
+                      (op.data_type == F_INT32     ? std::string("INT32")
+                       : op.data_type == F_INT64   ? std::string("INT64")
+                       : op.data_type == F_FLOAT32 ? std::string("FLOAT32")
                                                     : std::string("FLOAT64")) +
                       ", shape: " + FLINT_HPP_HELPER::arrayString(shape) + ">(";
-    if (op->op_type != FSTORE && !node->result_data)
+    if (op.op_type != FSTORE && !node->result_data)
       foo += "<not yet executed>";
     else {
       foo += "\n" + FLINT_HPP_HELPER::vectorString(this->operator*(), " ");
@@ -589,7 +589,7 @@ template <typename T, unsigned int n> struct Tensor {
   Tensor<T, n - 1> flattened(const int dimension) const {
     FGraphNode *foo = fflatten_dimension(node, dimension);
     std::array<size_t, n - 1> ns;
-    std::copy_n(foo->operation->shape, (size_t)foo->operation->dimensions,
+    std::copy_n(foo->operation.shape, (size_t)foo->operation.dimensions,
                 ns.begin());
     return Tensor<T, n - 1>(foo, ns);
   }
@@ -801,7 +801,7 @@ template <typename T, unsigned int n> struct Tensor {
   Tensor<T, n + 1> expand(int ax = n, int ax_size = 0) {
     FGraphNode *nn = fexpand(node, ax, ax_size);
     std::array<size_t, n + 1> new_shape;
-    std::memcpy(new_shape.data(), nn->operation->shape,
+    std::memcpy(new_shape.data(), nn->operation.shape,
                 sizeof(size_t) * (n + 1));
     return Tensor<T, n + 1>(nn, new_shape);
   }
@@ -1156,7 +1156,7 @@ template <typename T, unsigned int n> struct Tensor {
     FGraphNode *nn = fslice_step(node, starts, ends, steps);
     std::array<size_t, n> new_shape;
     for (size_t i = 0; i < n; i++)
-      new_shape[i] = nn->operation->shape[i];
+      new_shape[i] = nn->operation.shape[i];
     return Tensor<T, n>(nn, new_shape);
   }
   /**
@@ -1273,7 +1273,7 @@ template <typename T, unsigned int n> struct Tensor {
     FGraphNode *nn = frepeat(node, repetitions.data());
     std::array<size_t, n> new_shape;
     for (size_t i = 0; i < n; i++)
-      new_shape[i] = nn->operation->shape[i];
+      new_shape[i] = nn->operation.shape[i];
     return Tensor<T, n>(nn, new_shape);
   }
   /**
@@ -1314,7 +1314,7 @@ template <typename T, unsigned int n> struct Tensor {
     FGraphNode *nn = frepeat(node, acc_repeat.data());
     std::array<size_t, n> new_shape;
     for (size_t i = 0; i < n; i++)
-      new_shape[i] = nn->operation->shape[i];
+      new_shape[i] = nn->operation.shape[i];
     return Tensor<T, n>(nn, new_shape);
   }
   /**
@@ -1375,7 +1375,7 @@ template <typename T, unsigned int n> struct Tensor {
    * `extend`, `slice` or similar.
    *
    * The resulting Tensor will therefor have a shape with dimensionality `n - 1`
-   * and size of `resulting_shape[i] = 1 + (a->operation->shape[i] - 1) /
+   * and size of `resulting_shape[i] = 1 + (a->operation.shape[i] - 1) /
    * steps[i]`.
    *
    * @code{
@@ -1403,7 +1403,7 @@ template <typename T, unsigned int n> struct Tensor {
       steps_arr[i] = i < num_steps ? steps_arr_par[i] : 1;
     FGraphNode *nc = fconvolve(node, kernel.get_graph_node(), steps_arr.data());
     std::array<size_t, n - 1> new_shape;
-    std::copy_n(nc->operation->shape, (n - 1), new_shape.begin());
+    std::copy_n(nc->operation.shape, (n - 1), new_shape.begin());
     return Tensor<stronger_return<K>, n - 1>(nc, new_shape);
   }
   /**
@@ -1448,7 +1448,7 @@ template <typename T, unsigned int n> struct Tensor {
       steps_arr[i] = i < num_steps ? steps_arr_par[i] : 1;
     FGraphNode *nc = fslide(node, kernel.get_graph_node(), steps_arr.data());
     std::array<size_t, n> new_shape;
-    std::copy_n(nc->operation->shape, n, new_shape.begin());
+    std::copy_n(nc->operation.shape, n, new_shape.begin());
     return Tensor<stronger_return<K>, n>(nc, new_shape);
   }
   /** Returns the underlying `FGraphNode` for use with the C-Frontend. It is

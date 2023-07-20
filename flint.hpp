@@ -31,6 +31,7 @@
 // includes the n dimensional implementation
 #include "flint_n.hpp"
 #include <cmath>
+#include <limits>
 
 struct Flint {
   /** Sets the Logging Level of the Flint Backend */
@@ -43,9 +44,9 @@ struct Flint {
   static Tensor<float, 3> load_image(std::string path) {
     FGraphNode *node = fload_image(path.c_str());
     return Tensor<float, 3>(node,
-                            std::array<size_t, 3>{node->operation->shape[0],
-                                                  node->operation->shape[1],
-                                                  node->operation->shape[2]});
+                            std::array<size_t, 3>{node->operation.shape[0],
+                                                  node->operation.shape[1],
+                                                  node->operation.shape[2]});
   }
   static void store_image(Tensor<float, 3> &t, std::string path,
                           FImageFormat format) {
@@ -58,7 +59,7 @@ struct Flint {
     FGraphNode *c = fconcat(a.get_graph_node(), b.get_graph_node(), ax);
     std::array<size_t, n> ns;
     for (int i = 0; i < n; i++)
-      ns[i] = c->operation->shape[i];
+      ns[i] = c->operation.shape[i];
     return Tensor<K, n>(c, ns);
   }
   /**

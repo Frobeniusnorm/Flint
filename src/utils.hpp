@@ -55,7 +55,7 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
   return res + "]";
 }
 static inline int operationScore(const FGraphNode *g) {
-  switch (g->operation->op_type) {
+  switch (g->operation.op_type) {
   case FPOW:
   case FSQRT:
     return 1;
@@ -71,20 +71,20 @@ static inline int operationScore(const FGraphNode *g) {
     return 3;
   case FREDUCE_SUM:
   case FREDUCE_MUL: {
-    int dim = *((int*)g->operation->additional_data);
-    return 2 * g->predecessors[0]->operation->shape[dim];
+    int dim = *((int*)g->operation.additional_data);
+    return 2 * g->predecessors[0]->operation.shape[dim];
   }
   case FMATMUL: {
     const FGraphNode *a = g->predecessors[0];
-    return 5 * a->operation->shape[a->operation->dimensions - 1];
+    return 5 * a->operation.shape[a->operation.dimensions - 1];
   }
   case FGRADIENT_CONVOLVE:
   case FCONVOLVE: {
     // multiply with complete kernel size
     size_t no_elems = 1;
     const FGraphNode *a = g->predecessors[1];
-    for (int i = 0; i < a->operation->dimensions; i++) {
-      no_elems *= a->operation->shape[i];
+    for (int i = 0; i < a->operation.dimensions; i++) {
+      no_elems *= a->operation.shape[i];
     }
     return no_elems;
   }
@@ -92,18 +92,18 @@ static inline int operationScore(const FGraphNode *g) {
     // no multiplication with complete source, since that would artificially
     // distort parallelization
     size_t no_elems = 1;
-    unsigned int *stepsize = (unsigned int *)g->operation->additional_data;
+    unsigned int *stepsize = (unsigned int *)g->operation.additional_data;
     const FGraphNode *a = g->predecessors[0];
-    for (int i = 0; i < a->operation->dimensions; i++)
-      no_elems *= a->operation->shape[i] /
-                  (i != a->operation->dimensions - 1 ? stepsize[i] : 1);
+    for (int i = 0; i < a->operation.dimensions; i++)
+      no_elems *= a->operation.shape[i] /
+                  (i != a->operation.dimensions - 1 ? stepsize[i] : 1);
     return (int)std::sqrt(no_elems);
   }
   case FSLICE: {
     size_t sliced_away = 1;
     const FGraphNode* p = g->predecessors[0];
-    for (int i = 0; i < g->operation->dimensions; i++)
-      sliced_away *= (p->operation->shape[i] - g->operation->shape[i]);
+    for (int i = 0; i < g->operation.dimensions; i++)
+      sliced_away *= (p->operation.shape[i] - g->operation.shape[i]);
     return sliced_away;
   }
   default:
@@ -114,8 +114,8 @@ static inline int operationScore(const FGraphNode *g) {
 static inline size_t computeScore(const FGraphNode *g, bool with_pred = true) {
   std::queue<const FGraphNode *> todo;
   size_t no_elems = 1;
-  for (int i = 0; i < g->operation->dimensions; i++)
-    no_elems *= g->operation->shape[i];
+  for (int i = 0; i < g->operation.dimensions; i++)
+    no_elems *= g->operation.shape[i];
   size_t score = 0;
   todo.push(g);
   while (!todo.empty()) {
@@ -124,7 +124,7 @@ static inline size_t computeScore(const FGraphNode *g, bool with_pred = true) {
     score += operationScore(c);
     if (with_pred) {
       for (int i = 0; i < c->num_predecessor; i++)
-        if (!c->predecessors[i]->result_data && c->operation->op_type != FSTORE)
+        if (!c->predecessors[i]->result_data && c->operation.op_type != FSTORE)
           todo.push(c->predecessors[i]);
     }
   }
@@ -205,16 +205,16 @@ static std::string epsilonForType(FType type) {
   }
 }
 inline void freeAdditionalData(FGraphNode *gn) {
-  switch (gn->operation->op_type) {
+  switch (gn->operation.op_type) {
   case FSLICE: {
-    FSlice *s = (FSlice *)gn->operation->additional_data;
+    FSlice *s = (FSlice *)gn->operation.additional_data;
     free(s->end);
     free(s->start);
     free(s->step);
     delete s;
   } break;
   case FEXTEND: {
-    FExtend *s = (FExtend *)gn->operation->additional_data;
+    FExtend *s = (FExtend *)gn->operation.additional_data;
     free(s->start);
     free(s->step);
     delete s;
@@ -229,7 +229,7 @@ inline void freeAdditionalData(FGraphNode *gn) {
   case FREDUCE_MAX:
   case FREDUCE_SUM:
   case FREDUCE_MUL:
-    free(gn->operation->additional_data);
+    free(gn->operation.additional_data);
   default:
     break;
   }

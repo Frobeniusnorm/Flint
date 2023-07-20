@@ -37,14 +37,12 @@ TEST_SUITE("Graph implementation") {
       fFreeGraph(gn12);
       //  test
       REQUIRE_EQ(gn1->num_predecessor, 2);
-      REQUIRE(gn1->operation);
-      CHECK_EQ(gn1->operation->data_type, F_FLOAT64);
+      CHECK_EQ(gn1->operation.data_type, F_FLOAT64);
       FGraphNode *right1 = gn1->predecessors[1];
       CHECK_EQ(right1->num_predecessor, 0);
       CHECK(right1->predecessors == nullptr);
-      REQUIRE(right1->operation);
-      FStore *store1 = (FStore *)right1->operation->additional_data;
-      CHECK_EQ(right1->operation->data_type, F_FLOAT32);
+      FStore *store1 = (FStore *)right1->operation.additional_data;
+      CHECK_EQ(right1->operation.data_type, F_FLOAT32);
       CHECK_EQ(store1->num_entries, 100);
       fFreeGraph(gn1);
     }
@@ -61,19 +59,17 @@ TEST_SUITE("Graph implementation") {
       gn2 = fdiv(gn2, gn21);
       // test
       REQUIRE_EQ(gn2->num_predecessor, 2);
-      REQUIRE(gn2->operation);
-      CHECK_EQ(gn2->operation->op_type, FDIV);
-      CHECK_EQ(gn2->operation->data_type, F_INT64);
+      CHECK_EQ(gn2->operation.op_type, FDIV);
+      CHECK_EQ(gn2->operation.data_type, F_INT64);
       FGraphNode *right2 = gn2->predecessors[1];
       CHECK_EQ(right2->num_predecessor, 0);
       CHECK(right2->predecessors == nullptr);
-      REQUIRE(gn2->operation);
-      FStore *store2 = (FStore *)right2->operation->additional_data;
-      CHECK_EQ(right2->operation->data_type, F_INT32);
+      FStore *store2 = (FStore *)right2->operation.additional_data;
+      CHECK_EQ(right2->operation.data_type, F_INT32);
       CHECK_EQ(store2->num_entries, 100);
       FGraphNode *left1 = gn2->predecessors[0];
       FGraphNode *const1 = left1->predecessors[1];
-      CHECK_EQ(const1->operation->op_type, FSTORE);
+      CHECK_EQ(const1->operation.op_type, FSTORE);
       fFreeGraph(gn2);
     }
   }
@@ -152,10 +148,10 @@ TEST_SUITE("Execution") {
     FGraphNode *result = fCalculateResult(gn3);
     FResultData *rd = result->result_data;
     CHECK_EQ(rd->num_entries, 9);
-    REQUIRE_EQ(result->operation->dimensions, 2);
-    CHECK_EQ(result->operation->shape[0], 3);
-    CHECK_EQ(result->operation->shape[1], 3);
-    CHECK_EQ(result->operation->data_type, F_FLOAT64);
+    REQUIRE_EQ(result->operation.dimensions, 2);
+    CHECK_EQ(result->operation.shape[0], 3);
+    CHECK_EQ(result->operation.shape[1], 3);
+    CHECK_EQ(result->operation.data_type, F_FLOAT64);
     for (int i = 0; i < 3; i++)
       for (int j = 0; j < 3; j++)
         CHECK_EQ(((double *)rd->data)[i * 3 + j], v1[i][j] + v2[i][j]);
@@ -208,8 +204,8 @@ TEST_SUITE("Execution") {
     FGraphNode *r1 = fCalculateResult(g2);
     FGraphNode *r3 = fCalculateResult(g4);
     FGraphNode *r2 = fCalculateResult(g3);
-    CHECK_EQ(2, r3->operation->dimensions);
-    CHECK_EQ(3, r3->operation->shape[0]);
+    CHECK_EQ(2, r3->operation.dimensions);
+    CHECK_EQ(3, r3->operation.shape[0]);
     FResultData *res = r1->result_data;
     long *ldata = (long *)res->data;
     for (int i = 0; i < 3; i++)
@@ -350,8 +346,8 @@ TEST_SUITE("Execution") {
     g1 = fCreateGraph(data3.data(), data3.size(), F_INT32, s1.data(), 2);
     g2 = fCreateGraph(data4.data(), data4.size(), F_INT32, s2.data(), 2);
     FGraphNode *mm2 = fmatmul(g1, g2);
-    REQUIRE_EQ(mm2->operation->shape[0], s3[0]);
-    REQUIRE_EQ(mm2->operation->shape[1], s3[1]);
+    REQUIRE_EQ(mm2->operation.shape[0], s3[0]);
+    REQUIRE_EQ(mm2->operation.shape[1], s3[1]);
     FGraphNode *r2 = fCalculateResult(mm2);
     FResultData *rd2 = r2->result_data;
     int *d2 = (int *)rd2->data;
@@ -376,9 +372,9 @@ TEST_SUITE("Execution") {
     g1 = fCreateGraph(f5.data(), f5.size(), F_FLOAT64, s5.data(), s5.size());
     g2 = fCreateGraph(f6.data(), f6.size(), F_FLOAT32, s6.data(), s6.size());
     mm2 = fmatmul(g1, g2);
-    REQUIRE_EQ(mm2->operation->shape[0], 2);
-    REQUIRE_EQ(mm2->operation->shape[1], 2);
-    REQUIRE_EQ(mm2->operation->shape[2], 2);
+    REQUIRE_EQ(mm2->operation.shape[0], 2);
+    REQUIRE_EQ(mm2->operation.shape[1], 2);
+    REQUIRE_EQ(mm2->operation.shape[2], 2);
     r2 = fCalculateResult(mm2);
     FResultData *rd3 = r2->result_data;
     double *d3 = (double *)rd3->data;

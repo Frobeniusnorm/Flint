@@ -213,7 +213,7 @@ struct FResultData {
 struct FGraphNode {
   int num_predecessor;
   FGraphNode **predecessors;
-  FOperation *operation;    // the operation represented by this graph node
+  FOperation operation;    // the operation represented by this graph node
   size_t reference_counter; // for garbage collection in free graph
   FResultData *result_data; // to store computational result
   void *gradient_data;      // to store a list of present variables that are
@@ -230,10 +230,6 @@ struct FStore {
 };
 // TODO dirty bit to may keep store data
 
-// A single-value constant (does not have to be loaded as a tensor)
-struct FConst {
-  void *value; // has to be one of Type
-};
 // range instructions
 struct FSlice {
   long *start;

@@ -145,10 +145,10 @@ void flintInit_gpu() {
 static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
                                 size_t *total_size = nullptr) {
   cl_int err_code;
-  size_t type_size_node = typeSize(node->operation->data_type);
+  size_t type_size_node = typeSize(node->operation.data_type);
   size_t total_size_node = 1;
-  for (int i = 0; i < node->operation->dimensions; i++)
-    total_size_node *= node->operation->shape[i];
+  for (int i = 0; i < node->operation.dimensions; i++)
+    total_size_node *= node->operation.shape[i];
   const cl_mem result_mem =
       clCreateBuffer(context, memory_type, total_size_node * type_size_node,
                      nullptr, &err_code);
@@ -184,29 +184,29 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
   std::string code;
   std::string our_kernel;
   std::vector<std::pair<int, std::string>> all_kernels;
-  switch (node->operation->op_type) {
+  switch (node->operation.op_type) {
   case FEVEN:
   case FCONVERSION: { // depends on operation
     for (int i = 0; i < node->num_predecessor; i++)
-      par_types[i] = node->predecessors[i]->operation->data_type;
-    code = generateEagerCode(node->operation->op_type,
-                             node->operation->data_type, par_types, our_kernel);
+      par_types[i] = node->predecessors[i]->operation.data_type;
+    code = generateEagerCode(node->operation.op_type,
+                             node->operation.data_type, par_types, our_kernel);
     all_kernels.push_back({hash, our_kernel});
   } break;
   case FGEN_RANDOM: {
-    code = generateEagerCode(node->operation->op_type,
-                             node->operation->data_type, {}, our_kernel);
+    code = generateEagerCode(node->operation.op_type,
+                             node->operation.data_type, {}, our_kernel);
     all_kernels.push_back({hash, our_kernel});
   } break;
   case FGEN_CONSTANT: {
     for (FType ret_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
       std::string kernel_name;
-      code += generateEagerCode(node->operation->op_type, ret_type, {},
+      code += generateEagerCode(node->operation.op_type, ret_type, {},
                                 kernel_name);
       all_kernels.push_back({OCLCompilerThread::generateKernelHash(
-                                 node->operation->op_type, ret_type, {}),
+                                 node->operation.op_type, ret_type, {}),
                              kernel_name});
-      if (ret_type == node->operation->data_type)
+      if (ret_type == node->operation.data_type)
         our_kernel = kernel_name;
     }
   } break;
@@ -218,18 +218,18 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
         allTypePermutations(node->num_predecessor);
     for (std::vector<FType> &params : par_poss) {
       std::string kernel_name;
-      code += generateEagerCode(node->operation->op_type, F_INT32, params,
+      code += generateEagerCode(node->operation.op_type, F_INT32, params,
                                 kernel_name);
       bool correct_one = true;
       for (int i = 0; i < node->num_predecessor; i++)
-        if (params[i] != node->predecessors[i]->operation->data_type) {
+        if (params[i] != node->predecessors[i]->operation.data_type) {
           correct_one = false;
           break;
         }
       if (correct_one)
         our_kernel = kernel_name;
       all_kernels.push_back({OCLCompilerThread::generateKernelHash(
-                                 node->operation->op_type, F_INT32, params),
+                                 node->operation.op_type, F_INT32, params),
                              kernel_name});
     }
   } break;
@@ -246,18 +246,18 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
   case FATAN: {
     for (FType param : {F_FLOAT32, F_FLOAT64}) {
       std::string kernel_name;
-      code += generateEagerCode(node->operation->op_type, param, {param},
+      code += generateEagerCode(node->operation.op_type, param, {param},
                                 kernel_name);
       bool correct_one = true;
       for (int i = 0; i < node->num_predecessor; i++)
-        if (param != node->predecessors[i]->operation->data_type) {
+        if (param != node->predecessors[i]->operation.data_type) {
           correct_one = false;
           break;
         }
       if (correct_one)
         our_kernel = kernel_name;
       all_kernels.push_back({OCLCompilerThread::generateKernelHash(
-                                 node->operation->op_type, param, {param}),
+                                 node->operation.op_type, param, {param}),
                              kernel_name});
     }
     break;
@@ -265,12 +265,12 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
   case FGRADIENT_CONVOLVE: {
     std::string kernel_name;
     for (FType param : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
-      code += generateEagerCode(node->operation->op_type, F_FLOAT64,
+      code += generateEagerCode(node->operation.op_type, F_FLOAT64,
                                 {param, F_FLOAT64}, kernel_name);
-      if (param == node->predecessors[0]->operation->data_type)
+      if (param == node->predecessors[0]->operation.data_type)
         our_kernel = kernel_name;
       all_kernels.push_back(
-          {OCLCompilerThread::generateKernelHash(node->operation->op_type,
+          {OCLCompilerThread::generateKernelHash(node->operation.op_type,
                                                  F_FLOAT64, {param, F_FLOAT64}),
            kernel_name});
     }
@@ -278,12 +278,12 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
   case FCONCAT: {
     std::string kernel_name;
     for (FType param : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
-      code += generateEagerCode(node->operation->op_type, param, {param, param},
+      code += generateEagerCode(node->operation.op_type, param, {param, param},
                                 kernel_name);
-      if (param == node->predecessors[0]->operation->data_type)
+      if (param == node->predecessors[0]->operation.data_type)
         our_kernel = kernel_name;
       all_kernels.push_back(
-          {OCLCompilerThread::generateKernelHash(node->operation->op_type,
+          {OCLCompilerThread::generateKernelHash(node->operation.op_type,
                                                  param, {param, param}),
            kernel_name});
     }
@@ -296,22 +296,22 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
       FType highest = F_INT32;
       bool correct_one = true;
       for (int i = 0; i < node->num_predecessor; i++) {
-        if (params[i] != node->predecessors[i]->operation->data_type)
+        if (params[i] != node->predecessors[i]->operation.data_type)
           correct_one = false;
         highest = higherType(params[i], highest);
       }
-      code += generateEagerCode(node->operation->op_type, highest, params,
+      code += generateEagerCode(node->operation.op_type, highest, params,
                                 kernel_name);
       if (correct_one)
         our_kernel = kernel_name;
       all_kernels.push_back({OCLCompilerThread::generateKernelHash(
-                                 node->operation->op_type, highest, params),
+                                 node->operation.op_type, highest, params),
                              kernel_name});
     }
   } break;
   }
   flogging(F_DEBUG, std::string("Eager Kernel Generation for ") +
-                        fop_to_string[node->operation->op_type] + ": " + code);
+                        fop_to_string[node->operation.op_type] + ": " + code);
   // generate kernel
   const char *code_data = code.data();
   const size_t code_length = code.length();
@@ -357,8 +357,8 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
   if (!kernel)
     flogging(F_ERROR,
              "something went horrible wrong for operation: " +
-                 std::string(fop_to_string[node->operation->op_type]) +
-                 " result type: " + std::to_string(node->operation->data_type));
+                 std::string(fop_to_string[node->operation.op_type]) +
+                 " result type: " + std::to_string(node->operation.data_type));
   OCLCompilerThread::eager_programs.push_back(prog);
   const std::chrono::duration<double, std::milli> elapsed =
       std::chrono::high_resolution_clock::now() - start;
@@ -370,16 +370,16 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   if (node->result_data)
     return node;
-  if (node->operation->op_type == FSTORE) {
+  if (node->operation.op_type == FSTORE) {
     node->result_data = new FResultData();
-    FStore *store = (FStore *)node->operation->additional_data;
+    FStore *store = (FStore *)node->operation.additional_data;
     node->result_data->num_entries = store->num_entries;
     node->result_data->mem_id = store->mem_id;
     node->result_data->data = store->data;
     return node;
   }
-  if (node->operation->op_type == FLATTEN ||
-      node->operation->op_type == FRESHAPE) {
+  if (node->operation.op_type == FLATTEN ||
+      node->operation.op_type == FRESHAPE) {
     // just copy previous data
     const FGraphNode *prev = node->predecessors[0];
     void const *data;
@@ -389,8 +389,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       data = prev->result_data->data;
       gpu_data = prev->result_data->mem_id;
       num_elems = prev->result_data->num_entries;
-    } else if (prev->operation->op_type == FSTORE) {
-      const FStore *store = (FStore *)prev->operation->additional_data;
+    } else if (prev->operation.op_type == FSTORE) {
+      const FStore *store = (FStore *)prev->operation.additional_data;
       data = store->data;
       gpu_data = store->mem_id;
       num_elems = store->num_entries;
@@ -401,7 +401,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     rd->data = nullptr;
     rd->num_entries = num_elems;
     rd->mem_id = nullptr;
-    int type_size = typeSize(node->operation->data_type);
+    int type_size = typeSize(node->operation.data_type);
     if (data) {
       rd->data = malloc(type_size * num_elems);
       if (!rd->data)
@@ -416,10 +416,10 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   }
   std::vector<FType> params_types(node->num_predecessor);
   for (int i = 0; i < node->num_predecessor; i++)
-    params_types[i] = node->predecessors[i]->operation->data_type;
+    params_types[i] = node->predecessors[i]->operation.data_type;
   // because the operation type should be at the same position
   int hash = OCLCompilerThread::generateKernelHash(
-      node->operation->op_type, node->operation->data_type, params_types);
+      node->operation.op_type, node->operation.data_type, params_types);
   const auto prog = OCLCompilerThread::eager_cache.find(hash);
   cl_kernel kernel = nullptr;
   cl_int err_code;
@@ -451,26 +451,26 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   // process parameters i.e. predecessors
   for (int i = 0; i < node->num_predecessor; i++) {
     FGraphNode *pred = node->predecessors[i];
-    FOperation *op = pred->operation;
+    const FOperation op = pred->operation;
     cl_mem mem_obj = nullptr;
     bool do_write = false;
-    size_t type_size = typeSize(op->data_type);
+    size_t type_size = typeSize(op.data_type);
     size_t total_size;
     cl_mem mem_id = nullptr;
     if (pred->result_data) {
       total_size = pred->result_data->num_entries;
       mem_id = pred->result_data->mem_id;
     }
-    if (op->op_type == FSTORE && !mem_id) {
-      total_size = ((FStore *)op->additional_data)->num_entries;
-      mem_id = ((FStore *)op->additional_data)->mem_id;
+    if (op.op_type == FSTORE && !mem_id) {
+      total_size = ((FStore *)op.additional_data)->num_entries;
+      mem_id = ((FStore *)op.additional_data)->mem_id;
     }
     if (mem_id) {
       mem_obj = mem_id;
     } else {
       mem_obj = create_gpu_memory(pred, CL_MEM_READ_ONLY, &total_size);
-      if (op->op_type == FSTORE) {
-        ((FStore *)op->additional_data)->mem_id = mem_obj;
+      if (op.op_type == FSTORE) {
+        ((FStore *)op.additional_data)->mem_id = mem_obj;
         if (pred->result_data)
           pred->result_data->mem_id = mem_obj;
       } else {
@@ -479,14 +479,14 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       do_write = true;
     }
     if (do_write) {
-      void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
+      void *data = op.op_type == FSTORE ? ((FStore *)op.additional_data)->data
                                          : pred->result_data->data;
       if (!data) {
         flogging(F_WARNING,
                  "No gpu memory is found, but no cpu either! " +
                      std::to_string((long)pred->result_data->data) + ", " +
                      std::to_string((long)pred->result_data->mem_id) + ", " +
-                     fop_to_string[op->op_type]);
+                     fop_to_string[op.op_type]);
       }
       err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_TRUE, 0,
                                       total_size * type_size, data, 0, nullptr,
@@ -590,8 +590,8 @@ FResultData *fSyncMemory(FGraphNode *node) {
   void **store_data = nullptr;
   if (node->result_data && node->result_data->data)
     return node->result_data;
-  if (node->operation->op_type == FSTORE) {
-    FStore *store = (FStore *)node->operation->additional_data;
+  if (node->operation.op_type == FSTORE) {
+    FStore *store = (FStore *)node->operation.additional_data;
     if (!node->result_data) {
       node->result_data = new FResultData();
       node->result_data->num_entries = store->num_entries;
@@ -605,7 +605,7 @@ FResultData *fSyncMemory(FGraphNode *node) {
   FResultData *res = node->result_data;
   if (res && res->mem_id && !res->data) {
     // read result to cpu
-    int type_size_node = typeSize(node->operation->data_type);
+    int type_size_node = typeSize(node->operation.data_type);
     res->data = malloc(res->num_entries * type_size_node);
     if (store_data)
       *store_data = res->data;
@@ -631,9 +631,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     flintInit_gpu();
   }
   {
-    if (node->operation->op_type == FSTORE) {
+    if (node->operation.op_type == FSTORE) {
       node->result_data = new FResultData();
-      FStore *store = (FStore *)node->operation->additional_data;
+      FStore *store = (FStore *)node->operation.additional_data;
       node->result_data->num_entries = store->num_entries;
       node->result_data->mem_id = store->mem_id;
       node->result_data->data = store->data;
@@ -643,10 +643,10 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   }
   auto start = std::chrono::high_resolution_clock::now();
   FResultData *resultData = new FResultData();
-  FOperation *node_op = node->operation;
+  const FOperation node_op = node->operation;
   size_t total_size_node = 1;
-  for (int i = 0; i < node_op->dimensions; i++)
-    total_size_node *= node_op->shape[i];
+  for (int i = 0; i < node_op.dimensions; i++)
+    total_size_node *= node_op.shape[i];
   // calculate Code and Parameters
   using namespace std;
   list<pair<FGraphNode *, string>> parameters;
@@ -654,11 +654,11 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   string graph_code = generateCode(node, parameters, additional_params);
   string code = "#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void "
                 "execute_graph(__global ";
-  code += typeString(node->operation->data_type);
+  code += typeString(node->operation.data_type);
   code += " *R";
   // insert parameters
   for (auto &[op, name] : parameters)
-    code += ", __global const " + typeString(op->operation->data_type) + " *" +
+    code += ", __global const " + typeString(op->operation.data_type) + " *" +
             name;
   if (additional_params.contains("time"))
     code += ", const double time";
@@ -685,7 +685,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       chrono::high_resolution_clock::now() - start;
   start = std::chrono::high_resolution_clock::now();
   // result buffer
-  size_t type_size_node = typeSize(node_op->data_type);
+  size_t type_size_node = typeSize(node_op.data_type);
   cl_mem result_mem =
       clCreateBuffer(context, CL_MEM_READ_WRITE,
                      total_size_node * type_size_node, nullptr, &err_code);
@@ -696,17 +696,17 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   std::vector<cl_event> writeEvents;
   // upload or link parameters
   for (auto &[gn, name] : parameters) {
-    FOperation *op = gn->operation;
+    const FOperation op = gn->operation;
     cl_mem mem_obj = nullptr;
     bool do_write = false;
-    size_t type_size = typeSize(op->data_type);
+    size_t type_size = typeSize(op.data_type);
     size_t total_size =
-        op->op_type == FSTORE
-            ? ((FStore *)op->additional_data)->num_entries
-            : (op->op_type == FGEN_CONSTANT ? 1 : gn->result_data->num_entries);
+        op.op_type == FSTORE
+            ? ((FStore *)op.additional_data)->num_entries
+            : (op.op_type == FGEN_CONSTANT ? 1 : gn->result_data->num_entries);
     cl_mem mem_id = gn->result_data ? gn->result_data->mem_id : nullptr;
-    if (!mem_id && op->op_type == FSTORE)
-      mem_id = ((FStore *)op->additional_data)->mem_id;
+    if (!mem_id && op.op_type == FSTORE)
+      mem_id = ((FStore *)op.additional_data)->mem_id;
     if (mem_id) {
       mem_obj = mem_id;
     } else {
@@ -714,9 +714,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
                                total_size * type_size, nullptr, &err_code);
       if (err_code == CL_OUT_OF_HOST_MEMORY)
         flogging(F_ERROR, "Not enough memory to create buffer!");
-      if (op->op_type == FSTORE)
-        ((FStore *)op->additional_data)->mem_id = mem_obj;
-      if (op->op_type == FGEN_CONSTANT && !gn->result_data) {
+      if (op.op_type == FSTORE)
+        ((FStore *)op.additional_data)->mem_id = mem_obj;
+      if (op.op_type == FGEN_CONSTANT && !gn->result_data) {
         gn->result_data = new FResultData();
         gn->result_data->data = nullptr;
         gn->result_data->num_entries = 1;
@@ -727,9 +727,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     }
     // actually write the buffer
     if (do_write) {
-      void *data = op->op_type == FSTORE ? ((FStore *)op->additional_data)->data
-                   : gn->operation->op_type == FGEN_CONSTANT
-                       ? gn->operation->additional_data
+      void *data = op.op_type == FSTORE ? ((FStore *)op.additional_data)->data
+                   : gn->operation.op_type == FGEN_CONSTANT
+                       ? gn->operation.additional_data
                        : gn->result_data->data;
       writeEvents.emplace_back();
       err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_FALSE, 0,

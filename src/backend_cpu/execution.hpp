@@ -92,9 +92,9 @@ static void binaryExpression(T *__restrict__ result,
     break;
   case FMATMUL: {
     FGraphNode *gnp1 = curr->predecessors[0], *gnp2 = curr->predecessors[1];
-    size_t l = gnp1->operation->shape[gnp1->operation->dimensions - 2];
-    size_t m = gnp1->operation->shape[gnp1->operation->dimensions - 1];
-    size_t n = gnp2->operation->shape[gnp2->operation->dimensions - 1];
+    size_t l = gnp1->operation.shape[gnp1->operation.dimensions - 2];
+    size_t m = gnp1->operation.shape[gnp1->operation.dimensions - 1];
+    size_t n = gnp2->operation.shape[gnp2->operation.dimensions - 1];
     for (size_t index = from; index < from + size; index++) {
       result[index] = 0;
       // indices in node matrix
@@ -103,12 +103,12 @@ static void binaryExpression(T *__restrict__ result,
 
       // matrix number of predecessors
       size_t base_p1 = 0;
-      if (gnp1->operation->dimensions > 2) {
+      if (gnp1->operation.dimensions > 2) {
         // get matrix number of index and then reproject
         base_p1 = (index / (l * n)) * (l * m);
       }
       size_t base_p2 = 0;
-      if (gnp2->operation->dimensions > 2) {
+      if (gnp2->operation.dimensions > 2) {
         // get matrix number of index and then reproject
         base_p2 = (index / (l * n)) * (m * n);
       }
@@ -121,61 +121,61 @@ static void binaryExpression(T *__restrict__ result,
   case FCONCAT: {
     FGraphNode *a = curr->predecessors[0];
     FGraphNode *b = curr->predecessors[1];
-    unsigned int ax = ((unsigned int *)curr->operation->additional_data)[0];
+    unsigned int ax = ((unsigned int *)curr->operation.additional_data)[0];
     size_t acc_size_last = 1;
-    for (int i = curr->operation->dimensions - 2; i >= (int)ax; i--) {
-      acc_size_last *= curr->operation->shape[i + 1];
+    for (int i = curr->operation.dimensions - 2; i >= (int)ax; i--) {
+      acc_size_last *= curr->operation.shape[i + 1];
     }
     for (size_t index = from; index < from + size; index++) {
       size_t sx = index / acc_size_last;
-      size_t sc = ax > 0 ? sx % curr->operation->shape[ax] : sx;
+      size_t sc = ax > 0 ? sx % curr->operation.shape[ax] : sx;
       // reproject to one of the tensors
-      if (sc < a->operation->shape[ax]) {
-        size_t ai = (sx / curr->operation->shape[ax]) * acc_size_last *
-                        a->operation->shape[ax] +
+      if (sc < a->operation.shape[ax]) {
+        size_t ai = (sx / curr->operation.shape[ax]) * acc_size_last *
+                        a->operation.shape[ax] +
                     sc * acc_size_last + index % acc_size_last;
         result[index] = data1[ai];
       } else {
-        size_t bi = (sx / curr->operation->shape[ax]) * acc_size_last *
-                        b->operation->shape[ax] +
-                    (sc - a->operation->shape[ax]) * acc_size_last +
+        size_t bi = (sx / curr->operation.shape[ax]) * acc_size_last *
+                        b->operation.shape[ax] +
+                    (sc - a->operation.shape[ax]) * acc_size_last +
                     index % acc_size_last;
         result[index] = data2[bi];
       }
     }
   } break;
   case FGRADIENT_CONVOLVE: {
-    const FOperation *op = curr->operation;
+    const FOperation op = curr->operation;
     const FGraphNode *gnp1 = curr->predecessors[0],
                      *gnp2 = curr->predecessors[1];
-    const FOperation *kernel = gnp1->operation, *a = gnp2->operation;
-    const unsigned int *steps = (unsigned int *)op->additional_data;
+    const FOperation kernel = gnp1->operation, a = gnp2->operation;
+    const unsigned int *steps = (unsigned int *)op.additional_data;
     // calculate accumulated sizes for result (pred), kernel and a (adjacent)
-    std::vector<size_t> acc_sizes(op->dimensions - 1);
-    std::vector<size_t> acc_sizes_pred(op->dimensions);
-    std::vector<size_t> acc_sizes_kernel(op->dimensions);
-    acc_sizes_kernel[op->dimensions - 1] = 1;
-    acc_sizes_pred[op->dimensions - 1] = 1;
-    acc_sizes[op->dimensions - 2] = 1;
-    size_t kernel_num_elems = kernel->shape[op->dimensions - 1];
-    for (long d = op->dimensions - 2; d >= 0; d--) {
-      kernel_num_elems *= kernel->shape[d];
-      acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel->shape[d + 1];
-      acc_sizes_pred[d] = acc_sizes_pred[d + 1] * op->shape[d + 1];
+    std::vector<size_t> acc_sizes(op.dimensions - 1);
+    std::vector<size_t> acc_sizes_pred(op.dimensions);
+    std::vector<size_t> acc_sizes_kernel(op.dimensions);
+    acc_sizes_kernel[op.dimensions - 1] = 1;
+    acc_sizes_pred[op.dimensions - 1] = 1;
+    acc_sizes[op.dimensions - 2] = 1;
+    size_t kernel_num_elems = kernel.shape[op.dimensions - 1];
+    for (long d = op.dimensions - 2; d >= 0; d--) {
+      kernel_num_elems *= kernel.shape[d];
+      acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel.shape[d + 1];
+      acc_sizes_pred[d] = acc_sizes_pred[d + 1] * op.shape[d + 1];
     }
-    for (long d = op->dimensions - 3; d >= 0; d--)
-      acc_sizes[d] = acc_sizes[d + 1] * a->shape[d + 1];
+    for (long d = op.dimensions - 3; d >= 0; d--)
+      acc_sizes[d] = acc_sizes[d + 1] * a.shape[d + 1];
 
     for (size_t i = from; i < from + size; i++) {
       T res = 0;
       long k = 0;
       bool in_steps = true;
       // reproject first time kernel hits i
-      for (int d = op->dimensions - 1; d >= 0; d--) {
+      for (int d = op.dimensions - 1; d >= 0; d--) {
         size_t di =
             (d == 0 ? i : i % acc_sizes_pred[d - 1]) / acc_sizes_pred[d];
-        size_t dk = d == op->dimensions - 1 ? di : di % steps[d];
-        if (dk >= kernel->shape[d]) {
+        size_t dk = d == op.dimensions - 1 ? di : di % steps[d];
+        if (dk >= kernel.shape[d]) {
           in_steps = false;
           break;
         }
@@ -184,7 +184,7 @@ static void binaryExpression(T *__restrict__ result,
       if (in_steps)
         while (k < kernel_num_elems) {
           size_t i_conv = 0;
-          for (int d = 0; d < op->dimensions - 2; d++) {
+          for (int d = 0; d < op.dimensions - 2; d++) {
             const size_t dk = (d == 0 ? k : k % acc_sizes_kernel[d - 1]) /
                               acc_sizes_kernel[d];
             const size_t di =
@@ -195,13 +195,13 @@ static void binaryExpression(T *__restrict__ result,
           res += data1[k] * data2[i_conv];
           long step = 0;
           // reproject index to calculate step from steps
-          for (int d = op->dimensions - 2; d >= 0; d--) {
+          for (int d = op.dimensions - 2; d >= 0; d--) {
             const int stepd = steps[d];
             const size_t dk = (d == 0 ? k : k % acc_sizes_kernel[d - 1]) /
                               acc_sizes_kernel[d];
             const size_t di =
                 (d == 0 ? i : i % acc_sizes_pred[d - 1]) / acc_sizes_pred[d];
-            if (dk + stepd < kernel->shape[d] && di >= dk + stepd) {
+            if (dk + stepd < kernel.shape[d] && di >= dk + stepd) {
               step += stepd * acc_sizes_kernel[d];
               break;
             } else {
@@ -218,35 +218,35 @@ static void binaryExpression(T *__restrict__ result,
     }
   } break;
   case FCONVOLVE: {
-    const FOperation *op = curr->operation;
+    const FOperation op = curr->operation;
     const FGraphNode *gnp1 = curr->predecessors[0],
                      *gnp2 = curr->predecessors[1];
-    const FOperation *pred = gnp1->operation, *kernel = gnp2->operation;
-    const unsigned int *steps = (unsigned int *)op->additional_data;
+    const FOperation pred = gnp1->operation, kernel = gnp2->operation;
+    const unsigned int *steps = (unsigned int *)op.additional_data;
     // calculate accumulated sizes for result, kernel and source (pred)
-    std::vector<size_t> acc_sizes(op->dimensions);
+    std::vector<size_t> acc_sizes(op.dimensions);
     std::vector<size_t> acc_sizes_pred(acc_sizes.size() + 1);
     std::vector<size_t> acc_sizes_kernel(acc_sizes.size() + 1);
-    acc_sizes[op->dimensions - 1] = 1;
-    for (long d = op->dimensions - 2; d >= 0; d--) {
-      acc_sizes[d] = acc_sizes[d + 1] * op->shape[d + 1];
+    acc_sizes[op.dimensions - 1] = 1;
+    for (long d = op.dimensions - 2; d >= 0; d--) {
+      acc_sizes[d] = acc_sizes[d + 1] * op.shape[d + 1];
     }
     acc_sizes_kernel[acc_sizes.size()] = 1;
     acc_sizes_pred[acc_sizes.size()] = 1;
-    size_t kernel_num_elems = kernel->shape[acc_sizes.size()];
-    size_t pred_num_elems = pred->shape[acc_sizes.size()];
+    size_t kernel_num_elems = kernel.shape[acc_sizes.size()];
+    size_t pred_num_elems = pred.shape[acc_sizes.size()];
     for (long d = acc_sizes.size() - 1; d >= 0; d--) {
-      pred_num_elems *= pred->shape[d];
-      kernel_num_elems *= kernel->shape[d];
-      acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel->shape[d + 1];
-      acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred->shape[d + 1];
+      pred_num_elems *= pred.shape[d];
+      kernel_num_elems *= kernel.shape[d];
+      acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel.shape[d + 1];
+      acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
     }
     for (size_t i = from; i < from + size; i++) {
       size_t j = 0;
       // we can ignore last index of source and kernel for result since we
       // iterate over it (i.e. for the destination it is 0 since it does not
       // have that dimension)
-      for (unsigned int d = 0; d < op->dimensions; d++) {
+      for (unsigned int d = 0; d < op.dimensions; d++) {
         // get dimension index
         size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
         // reproject
@@ -264,7 +264,7 @@ static void binaryExpression(T *__restrict__ result,
                           : (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
           size_t dk =
               (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / acc_sizes_kernel[d];
-          if (d < op->dimensions)
+          if (d < op.dimensions)
             if (((di * steps[d]) + dk) * acc_sizes_pred[d] >= pred_num_elems ||
                 (d > 0 && ((di * steps[d]) + dk) * acc_sizes_pred[d] >=
                               acc_sizes_pred[d - 1])) {
@@ -282,25 +282,25 @@ static void binaryExpression(T *__restrict__ result,
 
   } break;
   case FSLIDE: {
-    const FOperation *op = curr->operation;
+    const FOperation op = curr->operation;
     const FGraphNode *gnp1 = curr->predecessors[0],
                      *gnp2 = curr->predecessors[1];
-    const FOperation *pred = gnp1->operation, *kernel = gnp2->operation;
-    std::vector<size_t> acc_sizes_pred(pred->dimensions);
-    std::vector<size_t> acc_sizes_kernel(kernel->dimensions);
-    acc_sizes_pred[pred->dimensions - 1] = 1;
-    acc_sizes_kernel[kernel->dimensions - 1] = 1;
-    size_t pred_num_elems = pred->shape[pred->dimensions - 1];
-    for (long d = pred->dimensions - 2; d >= 0; d--) {
-      pred_num_elems *= pred->shape[d];
-      acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred->shape[d + 1];
-      acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel->shape[d + 1];
+    const FOperation pred = gnp1->operation, kernel = gnp2->operation;
+    std::vector<size_t> acc_sizes_pred(pred.dimensions);
+    std::vector<size_t> acc_sizes_kernel(kernel.dimensions);
+    acc_sizes_pred[pred.dimensions - 1] = 1;
+    acc_sizes_kernel[kernel.dimensions - 1] = 1;
+    size_t pred_num_elems = pred.shape[pred.dimensions - 1];
+    for (long d = pred.dimensions - 2; d >= 0; d--) {
+      pred_num_elems *= pred.shape[d];
+      acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
+      acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel.shape[d + 1];
     }
-    const unsigned int *steps = (unsigned int *)op->additional_data;
+    const unsigned int *steps = (unsigned int *)op.additional_data;
     for (size_t i = from; i < from + size; i++) {
       size_t a = 0;
       // reproject start
-      for (int d = kernel->dimensions - 1; d >= 0; d--) {
+      for (int d = kernel.dimensions - 1; d >= 0; d--) {
         size_t di =
             (d == 0 ? i : i % acc_sizes_kernel[d - 1]) / acc_sizes_kernel[d];
         a += di * acc_sizes_pred[d];
@@ -311,10 +311,10 @@ static void binaryExpression(T *__restrict__ result,
         long step = 0;
         res += data1[a] * data2[i];
         // reproject index to calculate step from steps
-        for (int d = pred->dimensions - 2; d >= 0; d--) {
+        for (int d = pred.dimensions - 2; d >= 0; d--) {
           size_t da =
               (d == 0 ? a : a % acc_sizes_pred[d - 1]) / acc_sizes_pred[d];
-          if (da + steps[d] < pred->shape[d]) {
+          if (da + steps[d] < pred.shape[d]) {
             step += steps[d] * acc_sizes_pred[d];
             break;
           } else {
@@ -362,28 +362,28 @@ static void executeNode(const FGraphNode *node,
                         std::vector<CPUResultData> predecessor_data,
                         T *__restrict__ result, size_t from, size_t size) {
   // handle operations that are zero-ary or unary and dont need type parameters
-  switch (node->operation->op_type) {
+  switch (node->operation.op_type) {
   case FGEN_RANDOM: {
     for (size_t i = from; i < from + size; i++)
       result[i] = (double)rand() / (double)RAND_MAX;
   } break;
   case FGEN_CONSTANT: {
-    T value = ((T *)node->operation->additional_data)[0];
+    T value = ((T *)node->operation.additional_data)[0];
     for (size_t i = from; i < from + size; i++)
       result[i] = value;
   } break;
   case FREPEAT: {
-    const FOperation *op = node->operation;
+    const FOperation op = node->operation;
     const CPUResultData pred = predecessor_data[0];
     const void *__restrict__ data = pred.data;
     // calculate number of elements per dimension entry for destination and
     // source
-    std::vector<size_t> acc_sizes_d(op->dimensions);
-    std::vector<size_t> acc_sizes_s(op->dimensions);
-    acc_sizes_d[op->dimensions - 1] = 1;
-    acc_sizes_s[op->dimensions - 1] = 1;
-    for (int dim = op->dimensions - 2; dim >= 0; dim--) {
-      acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
+    std::vector<size_t> acc_sizes_d(op.dimensions);
+    std::vector<size_t> acc_sizes_s(op.dimensions);
+    acc_sizes_d[op.dimensions - 1] = 1;
+    acc_sizes_s[op.dimensions - 1] = 1;
+    for (int dim = op.dimensions - 2; dim >= 0; dim--) {
+      acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op.shape[dim + 1];
       acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
     }
     for (int i = from; i < from + size; i++) {
@@ -391,7 +391,7 @@ static void executeNode(const FGraphNode *node,
       // reproject
       size_t index = i;
       size_t src_index = 0;
-      for (int dim = 0; dim < op->dimensions; dim++) {
+      for (int dim = 0; dim < op.dimensions; dim++) {
         int curr_idx = index / acc_sizes_d[dim];
         index %= acc_sizes_d[dim];
         src_index += (curr_idx % pred.shape[dim]) * acc_sizes_s[dim];
@@ -400,18 +400,18 @@ static void executeNode(const FGraphNode *node,
     }
   } break;
   case FTRANSPOSE: {
-    const FOperation *op = node->operation;
-    const int *transposition = (int *)op->additional_data;
+    const FOperation op = node->operation;
+    const int *transposition = (int *)op.additional_data;
     CPUResultData pred = predecessor_data[0];
     const void *__restrict__ data = pred.data;
     // calculate number of elements per dimension entry for destination and
     // source
-    std::vector<size_t> acc_sizes_d(op->dimensions);
-    std::vector<size_t> acc_sizes_s(op->dimensions);
-    acc_sizes_d[op->dimensions - 1] = 1;
-    acc_sizes_s[op->dimensions - 1] = 1;
-    for (int dim = op->dimensions - 2; dim >= 0; dim--) {
-      acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op->shape[dim + 1];
+    std::vector<size_t> acc_sizes_d(op.dimensions);
+    std::vector<size_t> acc_sizes_s(op.dimensions);
+    acc_sizes_d[op.dimensions - 1] = 1;
+    acc_sizes_s[op.dimensions - 1] = 1;
+    for (int dim = op.dimensions - 2; dim >= 0; dim--) {
+      acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op.shape[dim + 1];
       acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
     }
     for (int i = from; i < from + size; i++) {
@@ -419,7 +419,7 @@ static void executeNode(const FGraphNode *node,
       // reproject
       int index = i;
       int src_index = 0;
-      for (int dim = 0; dim < op->dimensions; dim++) {
+      for (int dim = 0; dim < op.dimensions; dim++) {
         int curr_idx = index / acc_sizes_d[dim];
         index %= acc_sizes_d[dim];
         src_index += curr_idx * acc_sizes_s[transposition[dim]];
@@ -432,7 +432,7 @@ static void executeNode(const FGraphNode *node,
   case FREDUCE_SUM:
   case FREDUCE_MUL: {
     const CPUResultData pred = predecessor_data[0];
-    const int dim = ((int *)node->operation->additional_data)[0];
+    const int dim = ((int *)node->operation.additional_data)[0];
     const void *__restrict__ data = pred.data;
     size_t it_dim = 1; // iteration size <=> product of all dimensions along dim
     for (size_t d = dim + 1; d < pred.shape.size(); d++)
@@ -440,7 +440,7 @@ static void executeNode(const FGraphNode *node,
 
     for (size_t i = from; i < from + size; i++) {
       // iterate through to-reduce dimension
-      switch (node->operation->op_type) {
+      switch (node->operation.op_type) {
       case FREDUCE_SUM:
         result[i] = 0;
         break;
@@ -464,7 +464,7 @@ static void executeNode(const FGraphNode *node,
         const T curr = ((const T *__restrict__)
                             data)[(i / it_dim) * it_dim * pred.shape[dim] +
                                   i % it_dim + j * it_dim];
-        switch (node->operation->op_type) {
+        switch (node->operation.op_type) {
         case FREDUCE_SUM:
           result[i] += curr;
           break;
@@ -485,29 +485,29 @@ static void executeNode(const FGraphNode *node,
   } break;
   case FSLICE: {
     CPUResultData pred = predecessor_data[0];
-    FSlice *slice = (FSlice *)node->operation->additional_data;
+    FSlice *slice = (FSlice *)node->operation.additional_data;
     const void *__restrict__ data = pred.data;
     // flattened shape data
-    std::vector<size_t> acc_sizes(node->operation->dimensions);
+    std::vector<size_t> acc_sizes(node->operation.dimensions);
     std::vector<size_t> acc_sizes_pred(acc_sizes.size());
-    for (long d = node->operation->dimensions - 1; d >= 0; d--) {
-      if (d == node->operation->dimensions - 1) {
+    for (long d = node->operation.dimensions - 1; d >= 0; d--) {
+      if (d == node->operation.dimensions - 1) {
         acc_sizes[d] = 1;
         acc_sizes_pred[d] = 1;
       } else {
         acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
-        acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
+        acc_sizes[d] = acc_sizes[d + 1] * node->operation.shape[d + 1];
       }
     }
     // calculate start and step size in flattened array
     size_t start = 0;
-    for (unsigned int d = 0; d < node->operation->dimensions; d++) {
+    for (unsigned int d = 0; d < node->operation.dimensions; d++) {
       start += slice->start[d] * acc_sizes_pred[d];
     }
     // calculate for each entry corresponding element
     for (size_t i = from; i < from + size; i++) {
       size_t j = start;
-      for (unsigned int d = 0; d < node->operation->dimensions; d++) {
+      for (unsigned int d = 0; d < node->operation.dimensions; d++) {
         // get dimension index
         size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
         // reproject
@@ -519,17 +519,17 @@ static void executeNode(const FGraphNode *node,
   case FEXTEND: {
     CPUResultData pred = predecessor_data[0];
     const void *__restrict__ data = pred.data;
-    FExtend *extend = (FExtend *)node->operation->additional_data;
+    FExtend *extend = (FExtend *)node->operation.additional_data;
     // flattened shape data
-    std::vector<size_t> acc_sizes(node->operation->dimensions);
+    std::vector<size_t> acc_sizes(node->operation.dimensions);
     std::vector<size_t> acc_sizes_pred(acc_sizes.size());
-    for (long d = node->operation->dimensions - 1; d >= 0; d--) {
-      if (d == node->operation->dimensions - 1) {
+    for (long d = node->operation.dimensions - 1; d >= 0; d--) {
+      if (d == node->operation.dimensions - 1) {
         acc_sizes[d] = 1;
         acc_sizes_pred[d] = 1;
       } else {
         acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
-        acc_sizes[d] = acc_sizes[d + 1] * node->operation->shape[d + 1];
+        acc_sizes[d] = acc_sizes[d + 1] * node->operation.shape[d + 1];
       }
     }
     // calculate for each entry corresponding element
@@ -643,19 +643,19 @@ static void executeNode(const FGraphNode *node,
       const CPUResultData p1 = predecessor_data[0];
       switch (p1.type) {
       case F_INT32:
-        unaryExpression(result, (int *)p1.data, node->operation->op_type, from,
+        unaryExpression(result, (int *)p1.data, node->operation.op_type, from,
                         size, p1.num_entries, node);
         break;
       case F_INT64:
-        unaryExpression(result, (long *)p1.data, node->operation->op_type, from,
+        unaryExpression(result, (long *)p1.data, node->operation.op_type, from,
                         size, p1.num_entries, node);
         break;
       case F_FLOAT32:
-        unaryExpression(result, (float *)p1.data, node->operation->op_type,
+        unaryExpression(result, (float *)p1.data, node->operation.op_type,
                         from, size, p1.num_entries, node);
         break;
       case F_FLOAT64:
-        unaryExpression(result, (double *)p1.data, node->operation->op_type,
+        unaryExpression(result, (double *)p1.data, node->operation.op_type,
                         from, size, p1.num_entries, node);
         break;
       }
@@ -669,22 +669,22 @@ static void executeNode(const FGraphNode *node,
         switch (p2.type) {
         case F_INT32:
           binaryExpression(result, (int *)p1.data, (int *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         case F_FLOAT32:
           binaryExpression(result, (int *)p1.data, (float *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         case F_FLOAT64:
           binaryExpression(result, (int *)p1.data, (double *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         case F_INT64:
           binaryExpression(result, (int *)p1.data, (long *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         }
@@ -693,22 +693,22 @@ static void executeNode(const FGraphNode *node,
         switch (p2.type) {
         case F_INT32:
           binaryExpression(result, (float *)p1.data, (int *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         case F_FLOAT32:
           binaryExpression(result, (float *)p1.data, (float *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         case F_FLOAT64:
           binaryExpression(result, (float *)p1.data, (double *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         case F_INT64:
           binaryExpression(result, (float *)p1.data, (long *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         }
@@ -717,22 +717,22 @@ static void executeNode(const FGraphNode *node,
         switch (p2.type) {
         case F_INT32:
           binaryExpression(result, (double *)p1.data, (int *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         case F_FLOAT32:
           binaryExpression(result, (double *)p1.data, (float *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         case F_FLOAT64:
           binaryExpression(result, (double *)p1.data, (double *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         case F_INT64:
           binaryExpression(result, (double *)p1.data, (long *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         }
@@ -741,22 +741,22 @@ static void executeNode(const FGraphNode *node,
         switch (p2.type) {
         case F_INT32:
           binaryExpression(result, (long *)p1.data, (int *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         case F_FLOAT32:
           binaryExpression(result, (long *)p1.data, (float *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         case F_FLOAT64:
           binaryExpression(result, (long *)p1.data, (double *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         case F_INT64:
           binaryExpression(result, (long *)p1.data, (long *)p2.data,
-                           node->operation->op_type, from, size, im1, im2,
+                           node->operation.op_type, from, size, im1, im2,
                            node);
           break;
         }

@@ -175,19 +175,19 @@ template <typename T> struct Tensor<T, 1> {
    */
   static Tensor<T, 1> deserialize(char *data) {
     FGraphNode *node = fdeserialize(data);
-    if (1 != node->operation->dimensions)
+    if (1 != node->operation.dimensions)
       flogging(F_ERROR, "Deserializing data of a " +
-                            std::to_string(node->operation->dimensions) +
+                            std::to_string(node->operation.dimensions) +
                             " dimensional Tensor into a 1 dimensional"
                             " Tensor is not possible!");
-    if (toFlintType<T>() != node->operation->data_type)
+    if (toFlintType<T>() != node->operation.data_type)
       flogging(F_ERROR,
                "Deserializing data of a " +
-                   FLINT_HPP_HELPER::typeString(node->operation->data_type) +
+                   FLINT_HPP_HELPER::typeString(node->operation.data_type) +
                    " Tensor into a " +
                    FLINT_HPP_HELPER::typeString(toFlintType<T>()) +
                    " Tensor is not possible!");
-    return Tensor<T, 1>(node, node->operation->shape[0]);
+    return Tensor<T, 1>(node, node->operation.shape[0]);
   }
   /**
    * Deserializes the binary representation of Tensor data back to a Tensor
@@ -353,14 +353,14 @@ template <typename T> struct Tensor<T, 1> {
    * will say "<not yet executed>".
    */
   operator std::string() {
-    FOperation *op = node->operation;
+    const FOperation op = node->operation;
     std::string foo = "Tensor<" +
-                      (op->data_type == F_INT32     ? std::string("INT32")
-                       : op->data_type == F_INT64   ? std::string("INT64")
-                       : op->data_type == F_FLOAT32 ? std::string("FLOAT32")
+                      (op.data_type == F_INT32     ? std::string("INT32")
+                       : op.data_type == F_INT64   ? std::string("INT64")
+                       : op.data_type == F_FLOAT32 ? std::string("FLOAT32")
                                                     : std::string("FLOAT64")) +
                       ", shape: " + std::to_string(shape[0]) + ">(";
-    if (op->op_type != FSTORE && !node->result_data)
+    if (op.op_type != FSTORE && !node->result_data)
       foo += "<not yet executed>";
     else {
       if (node->result_data) {
@@ -369,9 +369,9 @@ template <typename T> struct Tensor<T, 1> {
         foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
             (T *)store->data, (T *)store->data + store->num_entries));
       } else {
-        switch (op->op_type) {
+        switch (op.op_type) {
         case FSTORE: {
-          FStore *store = (FStore *)node->operation->additional_data;
+          FStore *store = (FStore *)node->operation.additional_data;
           foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
               (T *)store->data, (T *)store->data + store->num_entries));
           break;
@@ -692,7 +692,7 @@ template <typename T> struct Tensor<T, 1> {
     if (end == TensorRange::MAX_SCOPE)
       end = shape[0];
     FGraphNode *nn = fslice_step(node, &start, &end, &step);
-    return Tensor<T, 1>(nn, nn->operation->shape[0]);
+    return Tensor<T, 1>(nn, nn->operation.shape[0]);
   }
   /** 
    * Compability version of `slice`.
@@ -737,7 +737,7 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<T, 2> expand(int ax = 2, int ax_size = 0) {
     FGraphNode *nn = fexpand(node, ax, ax_size);
     std::array<size_t, 2> new_shape;
-    std::memcpy(new_shape.data(), nn->operation->shape,
+    std::memcpy(new_shape.data(), nn->operation.shape,
                 sizeof(size_t) * 2);
     return Tensor<T, 2>(nn, new_shape);
   }
