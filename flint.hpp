@@ -90,8 +90,7 @@ struct Flint {
    */
   template <size_t n>
   static Tensor<double, (unsigned int)n>
-  random_normal(std::array<size_t, n> shape, double sigma = 1,
-                      double mu = 0) {
+  random_normal(std::array<size_t, n> shape, double sigma = 1, double mu = 0) {
     FGraphNode *node1 = fmax(frandom(shape.data(), (unsigned int)n),
                              std::numeric_limits<double>::epsilon());
     FGraphNode *node2 = fmax(frandom(shape.data(), (unsigned int)n),

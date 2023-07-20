@@ -358,7 +358,7 @@ template <typename T> struct Tensor<T, 1> {
                       (op.data_type == F_INT32     ? std::string("INT32")
                        : op.data_type == F_INT64   ? std::string("INT64")
                        : op.data_type == F_FLOAT32 ? std::string("FLOAT32")
-                                                    : std::string("FLOAT64")) +
+                                                   : std::string("FLOAT64")) +
                       ", shape: " + std::to_string(shape[0]) + ">(";
     if (op.op_type != FSTORE && !node->result_data)
       foo += "<not yet executed>";
@@ -694,9 +694,10 @@ template <typename T> struct Tensor<T, 1> {
     FGraphNode *nn = fslice_step(node, &start, &end, &step);
     return Tensor<T, 1>(nn, nn->operation.shape[0]);
   }
-  /** 
+  /**
    * Compability version of `slice`.
-   * Calls the overloaded one dimensional slice operation with the corresponding attributes of `r1`.
+   * Calls the overloaded one dimensional slice operation with the corresponding
+   * attributes of `r1`.
    *
    * Copied Documentation of that function:
    *
@@ -737,8 +738,7 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<T, 2> expand(int ax = 2, int ax_size = 0) {
     FGraphNode *nn = fexpand(node, ax, ax_size);
     std::array<size_t, 2> new_shape;
-    std::memcpy(new_shape.data(), nn->operation.shape,
-                sizeof(size_t) * 2);
+    std::memcpy(new_shape.data(), nn->operation.shape, sizeof(size_t) * 2);
     return Tensor<T, 2>(nn, new_shape);
   }
   /** Returns the underlying `FGraphNode` for use with the C-Frontend. It is
@@ -786,8 +786,9 @@ template <typename T> struct Tensor<T, 1> {
   /**
    * Calculates the gradient of this Tensor to `dx`. A gradient is always a
    * Tensor of type `double`. `dx` needs to have been marked with `watch` before
-   * construction of this Tensor and this Tensor must be constructed inside a gradient context, either started by
-   * `fStartGradientContext` or a `GradientContext` object.
+   * construction of this Tensor and this Tensor must be constructed inside a
+   * gradient context, either started by `fStartGradientContext` or a
+   * `GradientContext` object.
    */
   template <typename K, unsigned int k>
   Tensor<double, k> gradient(const Tensor<K, k> &dx) const {

@@ -1,6 +1,6 @@
-#include "plf_nanotimer.h"
 #include "../flint.hpp"
 #include "../flint_helper.hpp"
+#include "plf_nanotimer.h"
 #include <iostream>
 #include <unordered_map>
 using namespace plf;
@@ -44,7 +44,14 @@ double reduce_fun() {
   timer.start();
   for (int i = 0; i < 1000; i++) {
     Tensor<double, 1> res =
-        ((t2.sin().reduce_mul(0) * (t2 - t1).tan().reduce_sum(0)).transpose({1, 0}).log2().reduce_sum(0) / 1000.0).reduce_mul().abs().sqrt();
+        ((t2.sin().reduce_mul(0) * (t2 - t1).tan().reduce_sum(0))
+             .transpose({1, 0})
+             .log2()
+             .reduce_sum(0) /
+         1000.0)
+            .reduce_mul()
+            .abs()
+            .sqrt();
     res.execute();
   }
   return timer.get_elapsed_ms();
@@ -68,12 +75,12 @@ double gradient_fun() {
   timer.start();
   for (int i = 0; i < 100; i++) {
     GradientContext _;
-    Tensor<double, 1> t3 =
-        (t1.sqrt().matmul(t2).pow(3.141592) * (t1.log10())).reduce_sum(1)
-            .flattened()
-            .slice(0, 128, 8)
-            .pow(.75)
-            .min(0);
+    Tensor<double, 1> t3 = (t1.sqrt().matmul(t2).pow(3.141592) * (t1.log10()))
+                               .reduce_sum(1)
+                               .flattened()
+                               .slice(0, 128, 8)
+                               .pow(.75)
+                               .min(0);
     Tensor<double, 2> g1 = t3.gradient(t1);
     Tensor<double, 3> g2 = t3.gradient(t2);
     g1.execute();
@@ -130,7 +137,8 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
     }
     flintCleanup();
   }
-  if ((benchmarks & FLINT_BACKEND_BOTH) == FLINT_BACKEND_BOTH || benchmarks == 4) {
+  if ((benchmarks & FLINT_BACKEND_BOTH) == FLINT_BACKEND_BOTH ||
+      benchmarks == 4) {
     // both tests
     flintInit(FLINT_BACKEND_BOTH);
     for (const auto &bench : benches) {
@@ -139,15 +147,15 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
     }
     flintCleanup();
   }
-  std::cout
-      << "+------------------------+------------------+------------------+------------------+"
-      << std::endl;
-  std::cout
-      << "| benchmark name         | cpu time (ms)    | gpu time (ms)    | jit both (ms)    |"
-      << std::endl;
-  std::cout
-      << "+------------------------+------------------+------------------+------------------+"
-      << std::endl;
+  std::cout << "+------------------------+------------------+------------------"
+               "+------------------+"
+            << std::endl;
+  std::cout << "| benchmark name         | cpu time (ms)    | gpu time (ms)    "
+               "| jit both (ms)    |"
+            << std::endl;
+  std::cout << "+------------------------+------------------+------------------"
+               "+------------------+"
+            << std::endl;
   for (auto kv : times) {
     string name = kv.first;
     if (kv.first.size() > 22) {
@@ -168,11 +176,11 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
           *str += " ";
       }
     }
-    cout << "| " << name << " | " << cpu_time << " | " << gpu_time << " | " << jit_time << " |"
-         << endl;
-    std::cout
-        << "+------------------------+------------------+------------------+------------------+"
-        << std::endl;
+    cout << "| " << name << " | " << cpu_time << " | " << gpu_time << " | "
+         << jit_time << " |" << endl;
+    std::cout << "+------------------------+------------------+----------------"
+                 "--+------------------+"
+              << std::endl;
   }
 }
 

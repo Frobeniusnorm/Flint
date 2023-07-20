@@ -53,12 +53,15 @@ generateCode(FGraphNode *node,
     string type = typeString(node->operation.data_type);
     const string opstr = string(fop_to_string[node->operation.op_type]);
     // need to be outside switch to include result_data
-    if (node->operation.op_type == FSTORE || node->result_data || node->operation.op_type == FGEN_CONSTANT) {
-      push_pred = false; 
+    if (node->operation.op_type == FSTORE || node->result_data ||
+        node->operation.op_type == FGEN_CONSTANT) {
+      push_pred = false;
       size_t num_entries =
           node->operation.op_type == FSTORE
               ? ((FStore *)node->operation.additional_data)->num_entries
-              : (node->operation.op_type == FGEN_CONSTANT ? 1 : node->result_data->num_entries);
+              : (node->operation.op_type == FGEN_CONSTANT
+                     ? 1
+                     : node->result_data->num_entries);
       if (assigned_params.find(node) == assigned_params.end()) {
         size_t pid = assigned_params.size();
         assigned_params.insert({node, "P" + to_string(pid)});
@@ -140,9 +143,13 @@ generateCode(FGraphNode *node,
         const FOperation x = node->predecessors[0]->operation;
         const FOperation y = node->predecessors[1]->operation;
         code = type + " " + name + " = v" + to_string(variable_index + 1) +
-               " + " + epsilonForType(x.data_type) + " >= v" + to_string(variable_index + 2) + " && "
-               "v" + to_string(variable_index + 1) + " <= v" + to_string(variable_index + 2) + " + " + epsilonForType(y.data_type) + 
-               "? 1 : 0;\n" + code;
+               " + " + epsilonForType(x.data_type) + " >= v" +
+               to_string(variable_index + 2) +
+               " && "
+               "v" +
+               to_string(variable_index + 1) + " <= v" +
+               to_string(variable_index + 2) + " + " +
+               epsilonForType(y.data_type) + "? 1 : 0;\n" + code;
 
       } break;
       case FGREATER: {
@@ -610,34 +617,55 @@ generateCode(FGraphNode *node,
         size_t total_el_size = 1;
         for (int i = 0; i < prev->operation.dimensions; i++)
           total_el_size *= prev->operation.shape[i];
-        const std::string init_elem = par1 +
-            "[((index / " + std::to_string(it_dim) + ") * " +
+        const std::string init_elem =
+            par1 + "[((index / " + std::to_string(it_dim) + ") * " +
             std::to_string(it_dim) + " * " +
-            std::to_string(prev->operation.shape[red_dim]) + " + (index % " + std::to_string(it_dim) + ")) % " + to_string(total_el_size) + "]";
+            std::to_string(prev->operation.shape[red_dim]) + " + (index % " +
+            std::to_string(it_dim) + ")) % " + to_string(total_el_size) + "]";
         std::string i_init = "0";
         switch (node->operation.op_type) {
-          case FREDUCE_SUM: reduce_code += "0"; break;
-          case FREDUCE_MUL: reduce_code += "1"; break;
-          case FREDUCE_MIN: reduce_code += init_elem; i_init = "1"; break;
-          case FREDUCE_MAX: reduce_code += init_elem; i_init = "1"; break;
-          default: break;
+        case FREDUCE_SUM:
+          reduce_code += "0";
+          break;
+        case FREDUCE_MUL:
+          reduce_code += "1";
+          break;
+        case FREDUCE_MIN:
+          reduce_code += init_elem;
+          i_init = "1";
+          break;
+        case FREDUCE_MAX:
+          reduce_code += init_elem;
+          i_init = "1";
+          break;
+        default:
+          break;
         }
         reduce_code += ";\nfor(long i = " + i_init + "; i < " +
                        std::to_string(prev->operation.shape[red_dim]) +
                        "; i++){\n";
-        const std::string par_val = par1 +
-            "[((index / " + std::to_string(it_dim) + ") * " +
+        const std::string par_val =
+            par1 + "[((index / " + std::to_string(it_dim) + ") * " +
 
             std::to_string(it_dim) + " * " +
-            std::to_string(prev->operation.shape[red_dim]) + " + (index % " + std::to_string(it_dim) + ") + i * " +
-            std::to_string(it_dim) + ") % " + to_string(total_el_size) +
-            "]";
+            std::to_string(prev->operation.shape[red_dim]) + " + (index % " +
+            std::to_string(it_dim) + ") + i * " + std::to_string(it_dim) +
+            ") % " + to_string(total_el_size) + "]";
         switch (node->operation.op_type) {
-          case FREDUCE_SUM: reduce_code += " " + name + " += " + par_val; break;
-          case FREDUCE_MUL: reduce_code += " " + name + " *= " + par_val; break;
-          case FREDUCE_MIN: reduce_code += " " + name + " = min(" + name + ", " + par_val + ")"; break;
-          case FREDUCE_MAX: reduce_code += " " + name + " = max(" + name + ", " + par_val + ")"; break;
-          default: break;
+        case FREDUCE_SUM:
+          reduce_code += " " + name + " += " + par_val;
+          break;
+        case FREDUCE_MUL:
+          reduce_code += " " + name + " *= " + par_val;
+          break;
+        case FREDUCE_MIN:
+          reduce_code += " " + name + " = min(" + name + ", " + par_val + ")";
+          break;
+        case FREDUCE_MAX:
+          reduce_code += " " + name + " = max(" + name + ", " + par_val + ")";
+          break;
+        default:
+          break;
         }
         reduce_code += ";\n}\n";
         code = reduce_code + code;
@@ -732,8 +760,7 @@ generateCode(FGraphNode *node,
               ") / " + to_string(acc_sizes[d]) + " - " +
               to_string(extend->start[d]) + ") % " + to_string(step) + " != 0";
           // if di >= shape
-          set_zero_cond +=
-              " || " + dim_idx + " >= " + to_string(pred.shape[d]);
+          set_zero_cond += " || " + dim_idx + " >= " + to_string(pred.shape[d]);
 
           // finish index
           if (inv)
@@ -838,8 +865,10 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   for (FType t : parameter_types)
     type_info += to_string(t);
   kernel_name = string(fop_to_string[operation]) + type_info;
-  string code = "#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void " + kernel_name + "(__global " +
-                typeString(res_type) + "* R, long num_entriesR";
+  string code =
+      "#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void " +
+      kernel_name + "(__global " + typeString(res_type) +
+      "* R, long num_entriesR";
   // generate parameters
   switch (operation) {
   case FMATMUL:
@@ -860,15 +889,13 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     code += ", int reduce_dim";
     break;
   case FSLICE: {
-    code += ", const __global " +
-            typeString(parameter_types[0]) + "* P0";
+    code += ", const __global " + typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
     code += ", __constant long* steps, const long start";
   } break;
   case FREPEAT: {
-    code += ", const __global " +
-            typeString(parameter_types[0]) + "* P0";
+    code += ", const __global " + typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes_d, __constant long* acc_sizes_s";
     code += ", __constant long* pred_shape";
@@ -879,8 +906,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "long* acc_sizes_d, __constant long* acc_sizes_s";
   } break;
   case FEXTEND: {
-    code += ", const __global " +
-            typeString(parameter_types[0]) + "* P0";
+    code += ", const __global " + typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", __constant long* acc_sizes, __constant long* acc_sizes_pred";
     code += ", __constant long* steps, __constant long* start, __constant "
@@ -888,8 +914,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   } break;
   case FCONVOLVE: {
     // acc_sizes, acc_sizes_pred, acc_sizes_kernel, steps
-    code += ", const __global " +
-            typeString(parameter_types[0]) + "* P0";
+    code += ", const __global " + typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", const __global " + typeString(parameter_types[1]) + "* P1";
     code += ", const long num_entries1, const int dimensions1";
@@ -915,8 +940,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     code += ", const " + typeString(res_type) + " constant_val";
   } break;
   case FCONCAT: {
-    code += ", const __global " +
-            typeString(parameter_types[0]) +
+    code += ", const __global " + typeString(parameter_types[0]) +
             "* P0, const long num_entries0, const __global " +
             typeString(parameter_types[1]) +
             "* P1, const long num_entries1, const long acc_size_last,"
@@ -925,8 +949,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   } break;
   case FSLIDE: {
     // acc_sizes, acc_sizes_pred, acc_sizes_kernel, steps
-    code += ", const __global " +
-            typeString(parameter_types[0]) + "* P0";
+    code += ", const __global " + typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
     code += ", const __global " + typeString(parameter_types[1]) + "* P1";
     code += ", const long num_entries1, const int dimensions1";
@@ -1113,7 +1136,9 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
     code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
     code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
-    code += "R[index] = a + " + epsilonForType(parameter_types[0]) + " >= b && a <= b + " + epsilonForType(parameter_types[1]) + " ? 1 : 0;";
+    code += "R[index] = a + " + epsilonForType(parameter_types[0]) +
+            " >= b && a <= b + " + epsilonForType(parameter_types[1]) +
+            " ? 1 : 0;";
     break;
   case FGREATER:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
@@ -1127,14 +1152,22 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   case FREDUCE_MUL:
     // it_dim, shape_dim
     code += "if(index >= num_entries0) return;\n";
-    code += typeString(res_type) +
-            " res = ";
+    code += typeString(res_type) + " res = ";
     switch (operation) {
-      case FREDUCE_SUM: code += "0"; break;
-      case FREDUCE_MUL: code += "1"; break;
-      case FREDUCE_MIN: code += "P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % it_dim0]"; break;
-      case FREDUCE_MAX: code += "P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % it_dim0]"; break;
-      default: break;
+    case FREDUCE_SUM:
+      code += "0";
+      break;
+    case FREDUCE_MUL:
+      code += "1";
+      break;
+    case FREDUCE_MIN:
+      code += "P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % it_dim0]";
+      break;
+    case FREDUCE_MAX:
+      code += "P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % it_dim0]";
+      break;
+    default:
+      break;
     }
     code += ";\n";
     code +=
@@ -1144,11 +1177,20 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
         " curr = P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % it_dim0 "
         "+ i * it_dim0];\n";
     switch (operation) {
-      case FREDUCE_SUM: code += " res += curr;"; break;
-      case FREDUCE_MUL: code += " res *= curr;"; break;
-      case FREDUCE_MIN: code += " res = res < curr ? res : curr;"; break;
-      case FREDUCE_MAX: code += " res = res >= curr ? res : curr;"; break;
-      default: break;
+    case FREDUCE_SUM:
+      code += " res += curr;";
+      break;
+    case FREDUCE_MUL:
+      code += " res *= curr;";
+      break;
+    case FREDUCE_MIN:
+      code += " res = res < curr ? res : curr;";
+      break;
+    case FREDUCE_MAX:
+      code += " res = res >= curr ? res : curr;";
+      break;
+    default:
+      break;
     }
     code += "\n}R[index] = res;\n";
     break;
@@ -1333,4 +1375,3 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   return code;
 }
 #endif
-

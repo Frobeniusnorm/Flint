@@ -1328,4 +1328,27 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
   node->reference_counter = 0;
   return node;
 }
-FGraphNode *findex(FGraphNode *a, FGraphNode *indices, unsigned int axis) {}
+FGraphNode *findex(FGraphNode *a, FGraphNode *indices, unsigned int axis) {
+  if (indices->operation.dimensions > a->operation.dimensions)
+    flogging(
+        F_ERROR,
+        "Invalid index Tensor dimensionality! Larger than indexed Tensor!");
+  if (indices->operation.data_type != F_INT32 &&
+      indices->operation.data_type != F_INT64)
+    flogging(F_ERROR, "Only integer tensors may be used as indices!");
+  for (int d = 0; d < indices->operation.dimensions - 1; d++)
+    if (a->operation.shape[d] != indices->operation.shape[d])
+      flogging(F_ERROR,
+               "Invalid indices shape! Except for last dimension shape of "
+               "indices Tensor has to be a prefix of the indexed Tensor!");
+
+  FOperation op;
+  op.op_type = FINDEX;
+  op.dimensions = a->operation.dimensions;
+  op.shape = safe_mal<size_t>(op.dimensions);
+  memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
+  op.shape[axis] = indices->operation.shape[indices->operation.dimensions];
+  op.data_type = a->operation.data_type;
+  op.additional_data = nullptr;
+  return addNode(op, {a, indices});
+}
