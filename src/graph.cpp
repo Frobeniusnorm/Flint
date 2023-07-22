@@ -761,6 +761,7 @@ static inline FGraphNode *log_impl(FGraphNode *a,
   op.op_type = logtype;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions * sizeof(size_t));
+  op.additional_data = nullptr;
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
   op.data_type = a->operation.data_type;
   if (op.data_type == F_INT32 || op.data_type == F_INT64) {
@@ -845,11 +846,10 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
     flogging(F_ERROR,
              "Flattening the first dimension of a tensor is not possible!");
 
-  FOperation prev_op = a->operation;
+  const FOperation prev_op = a->operation;
   size_t new_prevdim_size =
       prev_op.shape[dimension - 1] * prev_op.shape[dimension];
   FOperation op;
-  op.additional_data = nullptr;
   op.op_type = FLATTEN;
   op.dimensions = prev_op.dimensions - 1;
   op.shape = safe_mal<size_t>(prev_op.dimensions - 1);
@@ -873,8 +873,8 @@ FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b) {
   if (!y->result_data && y->operation.op_type != FSTORE) {
     y = fExecuteGraph(y);
   }
-  FOperation ao = x->operation;
-  FOperation bo = y->operation;
+  const FOperation ao = x->operation;
+  const FOperation bo = y->operation;
 
   if (ao.dimensions < 2 || bo.dimensions < 2)
     flogging(
@@ -901,6 +901,7 @@ FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b) {
   res.shape[res.dimensions - 1] = n;
   res.data_type = ao.data_type > bo.data_type ? ao.data_type : bo.data_type;
   res.op_type = FMATMUL;
+  res.additional_data = nullptr;
 
   FGraphNode *node = new FGraphNode();
   configureGradientInformation(node, {x, y});
@@ -957,6 +958,7 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   memcpy(foo->operation.shape, a->operation.shape,
          sizeof(size_t) * a->operation.dimensions);
   foo->operation.op_type = FCONVERSION;
+  foo->operation.additional_data = nullptr;
   return eager_execution ? execute_eagerly(foo) : foo;
   ;
 }
@@ -1091,6 +1093,7 @@ FGraphNode *frepeat(FGraphNode *a, int *repetitions) {
     op.shape[dim] = a->operation.shape[dim] * (repetitions[dim] + 1);
   }
   op.data_type = a->operation.data_type;
+  op.additional_data = nullptr;
   return addNode(op, {a});
 }
 FGraphNode *ftranspose(FGraphNode *a, int *transpositions) {
