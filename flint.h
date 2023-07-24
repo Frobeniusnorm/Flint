@@ -873,7 +873,7 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
  * [1, 0], [0, 1]], 2) = [[[0, 0], [2, 2]], [[5, 4], [7, 6]], [[8, 9], [10,
  * 11]]]`
  */
-FGraphNode *findex(FGraphNode *a, FGraphNode *indices, unsigned int axis);
+FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
 /**
  * The indexing works for `a`, `indices` and `axis` just as for `findex`, except
  * that the selected view of `a` wont be returned but replaced by `b`. I.e. this

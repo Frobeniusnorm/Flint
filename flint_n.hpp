@@ -1451,6 +1451,15 @@ template <typename T, unsigned int n> struct Tensor {
     std::copy_n(nc->operation.shape, n, new_shape.begin());
     return Tensor<stronger_return<K>, n>(nc, new_shape);
   }
+  template <typename K, unsigned int k>
+  Tensor<T, n> index(const Tensor<K, k> &indices) const {
+    static_assert(std::is_same<K, int>() || std::is_same<K, long>(), "Indices must be integer!");
+    static_assert(k <= n, "Indices must match the first dimensions of the Tensor!");
+    FGraphNode *nc = findex(node, indices.get_graph_node());
+    std::array<size_t, n> new_shape;
+    std::copy_n(nc->operation.shape, n, new_shape.begin());
+    return Tensor<T, n>(nc, new_shape);
+  }
   /** Returns the underlying `FGraphNode` for use with the C-Frontend. It is
    * still memory managed by this Tensor instance, so be carefull about variable
    * lifetimes. */

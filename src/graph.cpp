@@ -1331,7 +1331,7 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
   node->reference_counter = 0;
   return node;
 }
-FGraphNode *findex(FGraphNode *a, FGraphNode *indices, unsigned int axis) {
+FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
   if (indices->operation.dimensions > a->operation.dimensions)
     flogging(
         F_ERROR,
@@ -1350,7 +1350,7 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices, unsigned int axis) {
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
-  op.shape[axis] = indices->operation.shape[indices->operation.dimensions];
+  op.shape[indices->operation.dimensions - 1] = indices->operation.shape[indices->operation.dimensions - 1];
   op.data_type = a->operation.data_type;
   op.additional_data = nullptr;
   return addNode(op, {a, indices});
