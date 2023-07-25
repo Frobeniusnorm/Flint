@@ -339,7 +339,7 @@ static void binaryExpression(T *__restrict__ result,
     const FOperation op = curr->operation;
     const unsigned int axis = b->operation.dimensions - 1;
     // get index of result, index tensor, reproject index
-    size_t acc_sizes_ax = 1, acc_sizes_ind;
+    size_t acc_sizes_ax = 1;
     for (int i = axis + 1; i < op.dimensions; i++)
       acc_sizes_ax *= op.shape[i];
     
