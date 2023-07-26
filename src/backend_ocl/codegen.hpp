@@ -813,7 +813,7 @@ generateCode(FGraphNode *node,
         const int *transposition = (int *)op.additional_data;
         const FOperation pred = node->predecessors[0]->operation;
         unsigned int old_idx = num_indices++;
-        index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
+        index_defs += "long old_index" + to_string(old_idx) + " = index;\n";
         // add to index_defs a redefinition of index, so that we remap to src
         // data
         // calculate number of elements per dimension entry for destination and
@@ -842,6 +842,43 @@ generateCode(FGraphNode *node,
         code = type + " " + name + " = v" + to_string(variable_index + 1) +
                ";\n" + code;
       } break;
+      case FINDEX: {
+        FGraphNode *a = node->predecessors[0];
+        FGraphNode *b = node->predecessors[1];
+        const FOperation op = node->operation;
+        const unsigned int axis = b->operation.dimensions - 1;
+        string par1, par2;
+        push_pred = false;
+        // we ignore the value assignment of the parameters since we have to
+        // access the array directly
+        if (assigned_params.find(b) != assigned_params.end()) {
+          par2 = assigned_params[b];
+        } else {
+          par2 = "P" + to_string(assigned_params.size());
+          assigned_params.insert({b, par2});
+          parameters.push_back({b, par2});
+        }
+        par1 = "v" + to_string(++variable_index);
+        unsigned int old_idx = num_indices++;
+        std::string local_index_def = "long old_index" + to_string(old_idx) + " = index;\n";
+        size_t acc_sizes_ax = 1;
+        for (int i = axis + 1; i < op.dimensions; i++)
+          acc_sizes_ax *= op.shape[i];
+
+        const std::string base =
+            "index / " + to_string(acc_sizes_ax * op.shape[axis]);
+        const std::string rest = "index % " + to_string(acc_sizes_ax);
+        const std::string ind =
+            "(long) " + par2 + "[index / " + to_string(acc_sizes_ax) + "]";
+        local_index_def += "index = " + base + " * " +
+                      to_string(acc_sizes_ax * a->operation.shape[axis]) +
+                      " + " + "(" + ind + ") * " + to_string(acc_sizes_ax) +
+                      " + (" + rest + ");\n";
+        code = "index = old_index" + to_string(old_idx) + ";\n" + type + " " +
+               name + " = " + par1 + ";\n" + code;
+        todo.push_front({nullptr, local_index_def});
+        todo.push_front({a, par1});
+      }
       default:
         break;
       }
@@ -1221,7 +1258,8 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "const long base = index / (acc_sizes_ax * op_shape_ax);\n"
             "const long rest = index % acc_sizes_ax;\n"
             "const long ind = (long) P1[index / acc_sizes_ax];\n"
-            "R[index] = P0[(base * acc_sizes_ax * a_shape_ax) + (ind * acc_sizes_ax) + rest];\n";
+            "R[index] = P0[(base * acc_sizes_ax * a_shape_ax) + (ind * "
+            "acc_sizes_ax) + rest];\n";
     break;
   case FSLICE:
     code += "if(index >= num_entriesR) return;\n"

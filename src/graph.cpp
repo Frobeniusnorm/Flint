@@ -1333,6 +1333,8 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
   return node;
 }
 FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
+  if (!indices->result_data && indices->operation.op_type != FSTORE)
+    indices = fExecuteGraph(indices);
   if (indices->operation.dimensions > a->operation.dimensions)
     flogging(
         F_ERROR,

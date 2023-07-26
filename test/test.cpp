@@ -21,42 +21,6 @@
 
 #include "../flint.hpp"
 TEST_SUITE("Graph implementation") {
-  TEST_CASE("Index") {
-    Tensor<double, 3> a = {
-        {{0, 1}, {2, 3}}, {{4, 5}, {6, 7}}, {{8, 9}, {10, 11}}};
-    Tensor<int, 1> i1 = {0, 2};
-    Tensor<double, 3> a1 = a.index(i1);
-    for (int i = 0; i < 2; i++)
-      for (int j = 0; j < 2; j++)
-        for (int k = 0; k < 2; k++)
-          CHECK_EQ(a1[i][j][k], i == 0 ? j * 2 + k : 8 + j * 2 + k);
-    Tensor<int, 1> i2 = {0, 1, 1, 2};
-    Tensor<double, 3> a2 = a.index(i2);
-    for (int i = 0; i < 4; i++)
-      for (int j = 0; j < 2; j++)
-        for (int k = 0; k < 2; k++)
-          CHECK_EQ(a2[i][j][k], i == 0
-                                    ? j * 2 + k
-                                    : (i < 3 ? 4 + j * 2 + k : 8 + j * 2 + k));
-    Tensor<int, 2> i3 = {{0}, {1}, {0}};
-    Tensor<double, 3> a3 = a.index(i3);
-    for (int i = 0; i < 3; i++)
-      for (int j = 0; j < 1; j++)
-        for (int k = 0; k < 2; k++)
-          CHECK_EQ(a3[i][j][k], i == 0 ? k : i == 1 ? 6 + k : 8 + k);
-    Tensor<int, 3> i4 = {{{0, 0}, {1, 0}}, {{0, 1}, {1, 1}}, {{1, 1}, {0, 0}}};
-    Tensor<double, 3> a4 = a.index(i4);
-    for (int i = 0; i < 3; i++)
-      for (int j = 0; j < 2; j++)
-        for (int k = 0; k < 2; k++)
-          CHECK_EQ(a4[i][j][k], a[i][j][i4[i][j][k]]);
-    Tensor<int, 2> i5 = {{0, 0, 1, 1}, {1, 0, 1, 0}, {0, 1, 1, 0}};
-    Tensor<double, 3> a5 = a.index(i5);
-    for (int i = 0; i < 3; i++)
-      for (int j = 0; j < 4; j++)
-        for (int k = 0; k < 2; k++)
-          CHECK_EQ(a5[i][j][k], a[i][i5[i][j]][k]);
-  }
   TEST_CASE("createGraph, add, mul, sub, div") {
     using namespace std;
     {
@@ -1069,6 +1033,51 @@ TEST_CASE("Expand") {
         CHECK_EQ(a[j][k], e2[j][i][k]);
         CHECK_EQ(a[j][k], e3[j][k][i]);
       }
+}
+TEST_CASE("Index") {
+  Tensor<double, 3> a = {
+      {{0, 1}, {2, 3}}, {{4, 5}, {6, 7}}, {{8, 9}, {10, 11}}};
+  Tensor<int, 1> i1 = {0, 2};
+  Tensor<double, 3> a1 = a.index(i1);
+  for (int i = 0; i < 2; i++)
+    for (int j = 0; j < 2; j++)
+      for (int k = 0; k < 2; k++)
+        CHECK_EQ(a1[i][j][k], i == 0 ? j * 2 + k : 8 + j * 2 + k);
+  Tensor<int, 1> i2 = {0, 1, 1, 2};
+  Tensor<double, 3> a2 = a.index(i2);
+  for (int i = 0; i < 4; i++)
+    for (int j = 0; j < 2; j++)
+      for (int k = 0; k < 2; k++)
+        CHECK_EQ(a2[i][j][k],
+                 i == 0 ? j * 2 + k : (i < 3 ? 4 + j * 2 + k : 8 + j * 2 + k));
+  Tensor<int, 2> i3 = {{0}, {1}, {0}};
+  Tensor<double, 3> a3 = a.index(i3);
+  for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 1; j++)
+      for (int k = 0; k < 2; k++)
+        CHECK_EQ(a3[i][j][k], i == 0 ? k : i == 1 ? 6 + k : 8 + k);
+  Tensor<int, 3> i4 = {{{0, 0}, {1, 0}}, {{0, 1}, {1, 1}}, {{1, 1}, {0, 0}}};
+  Tensor<double, 3> a4 = a.index(i4);
+  for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 2; j++)
+      for (int k = 0; k < 2; k++)
+        CHECK_EQ(a4[i][j][k], a[i][j][i4[i][j][k]]);
+  Tensor<int, 2> i5 = {{0, 0, 1, 1}, {1, 0, 1, 0}, {0, 1, 1, 0}};
+  Tensor<double, 3> a5 = a.index(i5);
+  for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 4; j++)
+      for (int k = 0; k < 2; k++)
+        CHECK_EQ(a5[i][j][k], a[i][i5[i][j]][k]);
+  Tensor<double, 3> c = {{{1,2,3}}};
+  c = c.repeat(2, 5, 1); // new shape: [3, 6, 6]
+  c = c + 2;
+  c = c.max(4);
+  Tensor<int, 2> i6 = {{4, 5}, {3, 3}, {0, 1}};
+  Tensor<double, 3> c1 = c.index(i6);
+  for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 2; j++)
+      for (int k = 0; k < 6; k++)
+        CHECK_EQ(c1[i][j][k], c[i][i6[i][j]][k]);
 }
 TEST_CASE("Test Example 1") {
   Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
