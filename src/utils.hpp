@@ -141,6 +141,7 @@ inline std::string typeString(FType t) {
   case F_FLOAT64:
     return "double";
   }
+  flogging(F_ERROR, "Unknown Type: " + std::to_string((int)t));
   return "";
 }
 inline size_t typeSize(FType t) {

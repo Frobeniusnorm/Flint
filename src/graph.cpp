@@ -36,7 +36,8 @@ const char *fop_to_string[] = {
     "FREDUCE_SUM", "FREDUCE_MUL", "FREDUCE_MIN", "FREDUCE_MAX",
     "FSLICE",      "FABS",        "FREPEAT",     "FTRANSPOSE",
     "FEXTEND",     "FCONCAT",     "FLESS",       "FEQUAL",
-    "FGREATER",    "FCONVOLVE",   "FSLIDE",      "FGRADIENT_CONVOLVE"};
+    "FGREATER",    "FCONVOLVE",   "FSLIDE",      "FGRADIENT_CONVOLVE",
+    "FINDEX",      "FSET_INDEX",  "FPERMUTATE"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 // converts c++ type to flint type
 
@@ -1350,7 +1351,8 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
-  op.shape[indices->operation.dimensions - 1] = indices->operation.shape[indices->operation.dimensions - 1];
+  op.shape[indices->operation.dimensions - 1] =
+      indices->operation.shape[indices->operation.dimensions - 1];
   op.data_type = a->operation.data_type;
   op.additional_data = nullptr;
   return addNode(op, {a, indices});

@@ -55,6 +55,22 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
   } break;
+  case FINDEX: {
+    const unsigned int axis = node->predecessors[1]->operation.dimensions - 1;
+    const FOperation op = node->operation;
+    size_t acc_sizes_ax = 1;
+    for (int i = axis + 1; i < op.dimensions; i++)
+      acc_sizes_ax *= op.shape[i];
+    if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&acc_sizes_ax) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&op.shape[axis]) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&node->predecessors[0]->operation.shape[axis]) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  } break;
   case FGEN_CONSTANT: {
     switch (node->operation.data_type) {
     case F_INT32: {
@@ -91,44 +107,6 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
     if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&t) !=
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
-  } break;
-  case FTRANSPOSE: {
-    const FOperation op = node->operation;
-    if (clSetKernelArg(kernel, par_index++, sizeof(int),
-                       (void *)&op.dimensions) != CL_SUCCESS)
-      flogging(F_ERROR, "Could not load Argument to kernel!");
-    std::vector<long> acc_sizes_d(op.dimensions);
-    std::vector<long> acc_sizes_s(op.dimensions);
-    acc_sizes_d[op.dimensions - 1] = 1;
-    acc_sizes_s[op.dimensions - 1] = 1;
-    for (int dim = op.dimensions - 2; dim >= 0; dim--) {
-      acc_sizes_d[dim] = acc_sizes_d[dim + 1] * node->operation.shape[dim + 1];
-      acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op.shape[dim + 1];
-    }
-    const int *transpositions = (int *)node->operation.additional_data;
-    std::vector<long> acc_sizes_st(op.dimensions);
-    for (int i = 0; i < op.dimensions; i++) {
-      acc_sizes_st[i] = acc_sizes_s[transpositions[i]];
-    }
-    cl_mem asd_mem = clCreateBuffer(
-        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-        op.dimensions * sizeof(long), acc_sizes_d.data(), &err_code);
-    if (!asd_mem)
-      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
-                            std::to_string(err_code));
-    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&asd_mem) !=
-        CL_SUCCESS)
-      flogging(F_ERROR, "Could not load Argument to kernel!");
-    cl_mem ass_mem = clCreateBuffer(
-        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-        op.dimensions * sizeof(long), acc_sizes_st.data(), &err_code);
-    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&ass_mem) !=
-        CL_SUCCESS)
-      flogging(F_ERROR, "Could not load Argument to kernel!");
-    if (!ass_mem)
-      flogging(F_ERROR, "Could not load Argument to kernel!");
-    to_free.push_back(asd_mem);
-    to_free.push_back(ass_mem);
   } break;
   case FCONCAT: {
     // acc_size_last, shape_ax, a_shape_ax, b_shape_ax, ax
@@ -328,6 +306,7 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
   cl_int err_code;
   FOperation op = pred->operation;
   switch (node->operation.op_type) {
+  case FINDEX:
   case FMATMUL:
   case FGRADIENT_CONVOLVE:
   case FSLIDE:
@@ -355,6 +334,43 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
     if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&shape_dim) !=
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
+  } break;
+  case FTRANSPOSE: {
+    if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                       (void *)&op.dimensions) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    std::vector<long> acc_sizes_d(op.dimensions);
+    std::vector<long> acc_sizes_s(op.dimensions);
+    acc_sizes_d[op.dimensions - 1] = 1;
+    acc_sizes_s[op.dimensions - 1] = 1;
+    for (int dim = op.dimensions - 2; dim >= 0; dim--) {
+      acc_sizes_d[dim] = acc_sizes_d[dim + 1] * node->operation.shape[dim + 1];
+      acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op.shape[dim + 1];
+    }
+    const int *transpositions = (int *)node->operation.additional_data;
+    std::vector<long> acc_sizes_st(op.dimensions);
+    for (int i = 0; i < op.dimensions; i++) {
+      acc_sizes_st[i] = acc_sizes_s[transpositions[i]];
+    }
+    cl_mem asd_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        op.dimensions * sizeof(long), acc_sizes_d.data(), &err_code);
+    if (!asd_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&asd_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    cl_mem ass_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        op.dimensions * sizeof(long), acc_sizes_st.data(), &err_code);
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&ass_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (!ass_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    to_free.push_back(asd_mem);
+    to_free.push_back(ass_mem);
   } break;
   case FSLICE: {
     if (clSetKernelArg(kernel, par_index++, sizeof(int),

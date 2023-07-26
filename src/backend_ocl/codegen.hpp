@@ -912,10 +912,10 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             ", const __global " +
             typeString(parameter_types[1]) +
             "* P1"
-            ", const long num_entries1, const int dimensions1, "
+            ", const long num_entries1, const int dimensions1 "
             ", const long acc_sizes_ax, const long op_shape_ax, const long "
             "a_shape_ax";
-  }
+  } break;
   case FEXTEND: {
     code += ", const __global " + typeString(parameter_types[0]) + "* P0";
     code += ", const long num_entries0, const int dimensions0";
@@ -1216,11 +1216,11 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "R[index] = P0[src_index];\n";
     break;
   case FINDEX:
-    code += "if(index >= num_entries0) return;\n"
+    code += "if(index >= num_entriesR) return;\n"
             "const int axis = dimensions1 - 1;\n"
             "const long base = index / (acc_sizes_ax * op_shape_ax);\n"
             "const long rest = index % acc_sizes_ax;\n"
-            "const long ind = (long) P1[index / acc_sizes_ax]"
+            "const long ind = (long) P1[index / acc_sizes_ax];\n"
             "R[index] = P0[(base * acc_sizes_ax * a_shape_ax) + (ind * acc_sizes_ax) + rest];\n";
     break;
   case FSLICE:
