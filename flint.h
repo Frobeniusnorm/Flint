@@ -163,7 +163,9 @@ enum FOperationType {
   FSLIDE,
   FGRADIENT_CONVOLVE, // only for internal use!
   FINDEX,
+  FMULTI_INDEX,
   FSET_INDEX,
+  FMULTI_SET_INDEX,
   FPERMUTATE,
   FNUM_OPERATION_TYPES
 };
@@ -213,7 +215,7 @@ struct FResultData {
 struct FGraphNode {
   int num_predecessor;
   FGraphNode **predecessors;
-  FOperation operation;    // the operation represented by this graph node
+  FOperation operation;     // the operation represented by this graph node
   size_t reference_counter; // for garbage collection in free graph
   FResultData *result_data; // to store computational result
   void *gradient_data;      // to store a list of present variables that are
@@ -853,36 +855,73 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
 /**
  * Selects single elements with a index-tensor (integer tensor containing
  * indices for the selected dimension).
- * It indexes the selected dimension of the input tensor and the result also has
- * the shape of the input tensor except for the indexed dimension. 
- * If the index tensor is multidimensional it is
- * assumed that except for the last entry its shape is a prefix of the shape of
- * the input tensor and the indexing will occur in the matched subsets. E.g.
+ * It indexes a dimension of the input tensor and the result has
+ * the shape of the input tensor except for the indexed dimension.
+ * It is assumed that except for the last entry its shape is a prefix of the
+ * shape of the input tensor and the indexing will occur in the matched subsets
+ * (the last dimension of the `indices` Tensor is the one indexed in `a`).
+ * If you need to copy single elements by indexing them multiple times you
+ * should use the fmulti_index version, since this will generate the correct
+ * gradient. E.g.
  *
  * `findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [1, 0], 0)
  * = [[[4, 5], [6, 7]], [[0, 1], [2, 3]]]`
  *
- * `findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [0, 0, 1],
- * 1) = [[[0, 1], [0, 1], [1, 2]], [[3, 4], [3, 4], [5, 6]], [[7, 8], [7, 8],
- * [9, 10]]]`
- *
  * `findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [[0], [1],
  * [0]], 2) = [[[0], [2]], [[5], [7]], [[8], [10]]]`
- *
- * `findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [[0, 0],
- * [1, 0], [0, 1]], 2) = [[[0, 0], [2, 2]], [[5, 4], [7, 6]], [[8, 9], [10,
- * 11]]]`
  */
 FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
 /**
- * The indexing works for `a`, `indices` and `axis` just as for `findex`, except
- * that the selected view of `a` wont be returned but replaced by `b`. I.e. this
- * method returns a new Tensor with the same shape and values of `a` except for
- * the selected `indices` which will contain the values of `b`. `b` has to have
- * the same shape as the indexing of `a` with `indices`.
+ * Selects single elements with a index-tensor (integer tensor containing
+ * indices for the selected dimension).
+ * It indexes a dimension of the input tensor and the result has
+ * the shape of the input tensor except for the indexed dimension.
+ * It is assumed that except for the last entry its shape is a prefix of the
+ * shape of the input tensor and the indexing will occur in the matched subsets
+ * (the last dimension of the `indices` Tensor is the one indexed in `a`).
+ * The multi index variant allows for single elements to be indexed multiple
+ * times (usually same implementation as the normal index method, but the
+ * gradient has to be different) E.g.
+ *
+ * `findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [1, 0])
+ * = [[[4, 5], [6, 7]], [[0, 1], [2, 3]]]`
+ *
+ * `findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [0, 0, 1])
+ *  = [[[0, 1], [0, 1], [1, 2]], [[3, 4], [3, 4], [5, 6]], [[7, 8], [7, 8],
+ * [9, 10]]]`
+ *
+ * `findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [[0], [1],
+ * [0]]) = [[[0], [2]], [[5], [7]], [[8], [10]]]`
+ *
+ * `findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [[0, 0],
+ * [1, 0], [0, 1]]) = [[[0, 0], [2, 2]], [[5, 4], [7, 6]], [[8, 9], [10,
+ * 11]]]`
  */
-FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices,
-                       unsigned int ax);
+FGraphNode *fmulti_index(FGraphNode *a, FGraphNode *indices);
+/**
+ * Selects a indexed selection from `a` (like `findex`) and replaces this
+ * selection with `b`. Therefore if `indices` has `n` dimensions, the shape of
+ * the first `n-1` dimensions of `indices` must equal that of `a` and the shape
+ * of `b` must match that of `a` except for the `n`th dimension where it has to
+ * match the corresponding size of `indices`.
+ *
+ * Works so that
+ * `findex_set(a, findex(a, indices), indices) == a` holds.
+ */
+FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
+/**
+ * Selects a indexed selection from `a` (like `fmulti_index`) and replaces this
+ * selection with `b`. Therefore if `indices` has `n` dimensions, the shape of
+ * the first `n-1` dimensions of `indices` must equal that of `a` and the shape
+ * of `b` must match that of `a` except for the `n`th dimension where it has to
+ * match the corresponding size of `indices`.
+ * In contrast to `findex_set` it allows to assign multiple values in `a` which
+ * will be summed up. E.g.
+ *
+ * `findex_set([[0, 1], [2, 3], [4, 5], [6, 7]], [[4, 5], [6, 7], [8, 9]], [0,
+ * 0, 2]) == [[10, 12], [2, 3], [8, 9], [6, 7]]`
+ */
+FGraphNode *fmulti_index_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
 /**
  * Randomly permutates (=swaps multiple elements with each other without
  * creating, copying or deleting new ones) one axis of the input tensor.

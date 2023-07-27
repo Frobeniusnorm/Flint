@@ -1332,7 +1332,7 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
   node->reference_counter = 0;
   return node;
 }
-FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
+static FGraphNode *index_impl(FGraphNode *a, FGraphNode *indices, bool multi_index) {
   if (!indices->result_data && indices->operation.op_type != FSTORE)
     indices = fExecuteGraph(indices);
   if (indices->operation.dimensions > a->operation.dimensions)
@@ -1349,7 +1349,7 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
                "indices Tensor has to be a prefix of the indexed Tensor!");
 
   FOperation op;
-  op.op_type = FINDEX;
+  op.op_type = multi_index ? FMULTI_INDEX : FINDEX;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
@@ -1358,4 +1358,41 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
   op.data_type = a->operation.data_type;
   op.additional_data = nullptr;
   return addNode(op, {a, indices});
+}
+FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
+  return index_impl(a, indices, false);
+}
+FGraphNode *fmulti_index(FGraphNode *a, FGraphNode *indices) {
+  return index_impl(a, indices, true);
+}
+static FGraphNode *index_set_impl(FGraphNode *a, FGraphNode *b, FGraphNode *indices, bool multi_index) {
+  if (!indices->result_data && indices->operation.op_type != FSTORE)
+    indices = fExecuteGraph(indices);
+  if (indices->operation.dimensions > a->operation.dimensions)
+    flogging(
+        F_ERROR,
+        "Invalid index Tensor dimensionality! Larger than indexed Tensor!");
+  if (indices->operation.data_type != F_INT32 &&
+      indices->operation.data_type != F_INT64)
+    flogging(F_ERROR, "Only integer tensors may be used as indices!");
+  for (int d = 0; d < indices->operation.dimensions - 1; d++)
+    if (a->operation.shape[d] != indices->operation.shape[d])
+      flogging(F_ERROR,
+               "Invalid indices shape! Except for last dimension shape of "
+               "indices Tensor has to be a prefix of the indexed Tensor!");
+
+  FOperation op;
+  op.op_type = multi_index ? FMULTI_SET_INDEX : FSET_INDEX;
+  op.dimensions = a->operation.dimensions;
+  op.shape = safe_mal<size_t>(op.dimensions);
+  memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
+  op.data_type = a->operation.data_type;
+  op.additional_data = nullptr;
+  return addNode(op, {a, b, indices});
+}
+FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
+  return index_set_impl(a, b, indices, false);
+}
+FGraphNode *fmulti_index_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
+  return index_set_impl(a, b, indices, true);
 }
