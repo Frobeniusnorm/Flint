@@ -333,21 +333,23 @@ static void binaryExpression(T *__restrict__ result,
       result[i] = res;
     }
   } break;
+  case FMULTI_INDEX:
   case FINDEX: {
-    const FGraphNode* a = curr->predecessors[0];
-    const FGraphNode* b = curr->predecessors[1];
+    const FGraphNode *a = curr->predecessors[0];
+    const FGraphNode *b = curr->predecessors[1];
     const FOperation op = curr->operation;
     const unsigned int axis = b->operation.dimensions - 1;
     // get index of result, index tensor, reproject index
     size_t acc_sizes_ax = 1;
     for (int i = axis + 1; i < op.dimensions; i++)
       acc_sizes_ax *= op.shape[i];
-    
+
     for (size_t i = from; i < from + size; i++) {
       const size_t base = i / (acc_sizes_ax * op.shape[axis]);
       const size_t rest = i % acc_sizes_ax;
-      const size_t ind = (size_t) data2[i / acc_sizes_ax];
-      result[i] = data1[(base * acc_sizes_ax * a->operation.shape[axis]) + (ind * acc_sizes_ax) + rest]; 
+      const size_t ind = (size_t)data2[i / acc_sizes_ax];
+      result[i] = data1[(base * acc_sizes_ax * a->operation.shape[axis]) +
+                        (ind * acc_sizes_ax) + rest];
     }
   } break;
   case FMIN:

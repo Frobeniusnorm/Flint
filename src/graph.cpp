@@ -1332,7 +1332,8 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
   node->reference_counter = 0;
   return node;
 }
-static FGraphNode *index_impl(FGraphNode *a, FGraphNode *indices, bool multi_index) {
+static FGraphNode *index_impl(FGraphNode *a, FGraphNode *indices,
+                              bool multi_index) {
   if (!indices->result_data && indices->operation.op_type != FSTORE)
     indices = fExecuteGraph(indices);
   if (indices->operation.dimensions > a->operation.dimensions)
@@ -1365,7 +1366,8 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
 FGraphNode *fmulti_index(FGraphNode *a, FGraphNode *indices) {
   return index_impl(a, indices, true);
 }
-static FGraphNode *index_set_impl(FGraphNode *a, FGraphNode *b, FGraphNode *indices, bool multi_index) {
+static FGraphNode *index_set_impl(FGraphNode *a, FGraphNode *b,
+                                  FGraphNode *indices, bool multi_index) {
   if (!indices->result_data && indices->operation.op_type != FSTORE)
     indices = fExecuteGraph(indices);
   if (indices->operation.dimensions > a->operation.dimensions)
@@ -1393,6 +1395,7 @@ static FGraphNode *index_set_impl(FGraphNode *a, FGraphNode *b, FGraphNode *indi
 FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
   return index_set_impl(a, b, indices, false);
 }
-FGraphNode *fmulti_index_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
+FGraphNode *fmulti_index_set(FGraphNode *a, FGraphNode *b,
+                             FGraphNode *indices) {
   return index_set_impl(a, b, indices, true);
 }

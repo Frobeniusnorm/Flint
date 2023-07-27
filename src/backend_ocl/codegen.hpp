@@ -842,6 +842,7 @@ generateCode(FGraphNode *node,
         code = type + " " + name + " = v" + to_string(variable_index + 1) +
                ";\n" + code;
       } break;
+      case FMULTI_INDEX:
       case FINDEX: {
         FGraphNode *a = node->predecessors[0];
         FGraphNode *b = node->predecessors[1];
@@ -860,7 +861,8 @@ generateCode(FGraphNode *node,
         }
         par1 = "v" + to_string(++variable_index);
         unsigned int old_idx = num_indices++;
-        std::string local_index_def = "long old_index" + to_string(old_idx) + " = index;\n";
+        std::string local_index_def =
+            "long old_index" + to_string(old_idx) + " = index;\n";
         size_t acc_sizes_ax = 1;
         for (int i = axis + 1; i < op.dimensions; i++)
           acc_sizes_ax *= op.shape[i];
@@ -871,9 +873,9 @@ generateCode(FGraphNode *node,
         const std::string ind =
             "(long) " + par2 + "[index / " + to_string(acc_sizes_ax) + "]";
         local_index_def += "index = " + base + " * " +
-                      to_string(acc_sizes_ax * a->operation.shape[axis]) +
-                      " + " + "(" + ind + ") * " + to_string(acc_sizes_ax) +
-                      " + (" + rest + ");\n";
+                           to_string(acc_sizes_ax * a->operation.shape[axis]) +
+                           " + " + "(" + ind + ") * " +
+                           to_string(acc_sizes_ax) + " + (" + rest + ");\n";
         code = "index = old_index" + to_string(old_idx) + ";\n" + type + " " +
                name + " = " + par1 + ";\n" + code;
         todo.push_front({nullptr, local_index_def});
@@ -942,6 +944,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "* P0, const long num_entries0, const int dimensions0, __constant "
             "long* acc_sizes_d, __constant long* acc_sizes_s";
   } break;
+  case FMULTI_INDEX:
   case FINDEX: {
     code += ", const __global " + typeString(parameter_types[0]) +
             "* P0"
@@ -1252,6 +1255,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             " src_index += curr_idx * acc_sizes_s[dim];\n}\n"
             "R[index] = P0[src_index];\n";
     break;
+  case FMULTI_INDEX:
   case FINDEX:
     code += "if(index >= num_entriesR) return;\n"
             "const int axis = dimensions1 - 1;\n"
