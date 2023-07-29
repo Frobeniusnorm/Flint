@@ -1323,7 +1323,12 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
   op.shape = safe_mal<size_t>(dimensions);
   memcpy(op.shape, shape, dimensions * sizeof(size_t));
   op.data_type = F_FLOAT64;
-  op.additional_data = nullptr;
+  // Store current time in additional data
+  std::chrono::duration<double, std::nano> tm =
+      std::chrono::high_resolution_clock::now().time_since_epoch();
+  double t = ((unsigned long)tm.count() % 1000000) / 100.0;
+  op.additional_data = safe_mal<double>(1);
+  ((double *)op.additional_data)[0] = t;
   node->operation = op;
   node->result_data = nullptr;
   node->predecessors = nullptr;

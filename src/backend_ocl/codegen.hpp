@@ -27,8 +27,7 @@
 #include <unordered_set>
 static std::string
 generateCode(FGraphNode *node,
-             std::list<std::pair<FGraphNode *, std::string>> &parameters,
-             std::unordered_set<std::string> &additional_params) {
+             std::list<std::pair<FGraphNode *, std::string>> &parameters) {
   using namespace std;
   // we use breadth first search to traverse to operation graph
   list<tuple<FGraphNode *, string>> todo;
@@ -190,13 +189,13 @@ generateCode(FGraphNode *node,
                " : v" + to_string(variable_index + 2) + ";\n" + code;
       } break;
       case FGEN_RANDOM: {
+        double seed = ((double*)node->operation.additional_data)[0];
         code = type + " " + name + " = 0;\n{\n " + name +
-               " = sin(index + time) * 43758.5453123;\n " + name + " = min(" +
+               " = sin(index + " + std::to_string(seed) + ") * 43758.5453123;\n " + name + " = min(" +
                name + " - floor(" + name +
                "), 0.99999);\n"
                "}\n" +
                code;
-        additional_params.insert("time");
       } break;
       case FGRADIENT_CONVOLVE: {
         string par1, par2;
@@ -676,11 +675,9 @@ generateCode(FGraphNode *node,
         unsigned int old_idx = num_indices++;
         index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
         // flattened shape data
-        size_t num_entries = 1;
         std::vector<size_t> acc_sizes(node->operation.dimensions);
         std::vector<size_t> acc_sizes_pred(acc_sizes.size());
         for (long d = node->operation.dimensions - 1; d >= 0; d--) {
-          num_entries *= node->operation.shape[d];
           if (d == node->operation.dimensions - 1) {
             acc_sizes[d] = 1;
             acc_sizes_pred[d] = 1;

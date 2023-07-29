@@ -387,8 +387,11 @@ static void executeNode(const FGraphNode *node,
   // handle operations that are zero-ary or unary and dont need type parameters
   switch (node->operation.op_type) {
   case FGEN_RANDOM: {
-    for (size_t i = from; i < from + size; i++)
-      result[i] = (double)rand() / (double)RAND_MAX;
+    double seed = ((double*) node->operation.additional_data)[0];
+    for (size_t i = from; i < from + size; i++) {
+      double v = sin(i + seed) * 43758.5453123;
+      result[i] = std::min(v - floor(v), 0.99999);
+    }
   } break;
   case FGEN_CONSTANT: {
     T value = ((T *)node->operation.additional_data)[0];

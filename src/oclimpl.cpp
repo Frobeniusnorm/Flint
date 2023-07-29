@@ -666,8 +666,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   // calculate Code and Parameters
   using namespace std;
   list<pair<FGraphNode *, string>> parameters;
-  unordered_set<string> additional_params;
-  string graph_code = generateCode(node, parameters, additional_params);
+  string graph_code = generateCode(node, parameters);
   string code = "#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void "
                 "execute_graph(__global ";
   code += typeString(node->operation.data_type);
@@ -676,8 +675,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   for (auto &[op, name] : parameters)
     code +=
         ", __global const " + typeString(op->operation.data_type) + " *" + name;
-  if (additional_params.contains("time"))
-    code += ", const double time";
   code += "){\n";
   // add the execution code
   code += graph_code;
@@ -766,16 +763,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&result_mem) !=
       CL_SUCCESS)
     flogging(F_ERROR, "Could not set Kernel Argument for the result!");
-  // some operations need additional parameters
-  if (additional_params.contains("time")) {
-    std::chrono::duration<double, std::nano> tm =
-        std::chrono::high_resolution_clock::now().time_since_epoch();
-    double t = ((unsigned long)tm.count() % 1000000) / 100.0;
-
-    if (clSetKernelArg(kernel, index++, sizeof(double), (void *)&t) !=
-        CL_SUCCESS)
-      flogging(F_ERROR, "Could not load Argument to kernel!");
-  }
   // execute kernel
   const size_t global_size = total_size_node;
 

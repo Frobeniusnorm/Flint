@@ -103,10 +103,8 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
   } break;
   case FGEN_RANDOM: {
     // push time parameter
-    std::chrono::duration<double, std::nano> tm =
-        std::chrono::high_resolution_clock::now().time_since_epoch();
-    double t = ((unsigned long)tm.count() % 1000000) / 100.0;
-    if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&t) !=
+    double seed = ((double*)node->operation.additional_data)[0];
+    if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&seed) !=
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
   } break;

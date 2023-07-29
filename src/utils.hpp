@@ -220,6 +220,7 @@ inline void freeAdditionalData(FGraphNode *gn) {
     free(s->step);
     delete s;
   } break;
+  case FGEN_RANDOM:
   case FGEN_CONSTANT:
   case FCONCAT:
   case FCONVOLVE:
