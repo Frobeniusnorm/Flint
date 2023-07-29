@@ -17,7 +17,9 @@
 #ifndef CPU_BACKEND_EXECUTION
 #define CPU_BACKEND_EXECUTION
 #include "../../flint.h"
+#include "../utils.hpp"
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <ostream>
 #include <vector>
@@ -657,6 +659,29 @@ static void executeNode(const FGraphNode *node,
     const CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)
       result[i] = atan(((const T *__restrict__)pred.data)[i]);
+  } break;
+  case FSET_INDEX: {
+    const CPUResultData a = predecessor_data[0];
+    const CPUResultData b = predecessor_data[1];
+    const CPUResultData c = predecessor_data[2];
+    const unsigned int axis = c.shape.size() - 1;
+    const FOperation op = node->operation;
+    // get index of result, index tensor, reproject index
+    size_t acc_sizes_ax = 1;
+    for (int i = axis + 1; i < op.dimensions; i++)
+      acc_sizes_ax *= op.shape[i];
+
+    for (size_t i = from; i < from + size; i++) {
+      const size_t base = i / (acc_sizes_ax * op.shape[axis]);
+      const size_t rest = i % acc_sizes_ax;
+      const long ind = (long)(c.type == F_INT32 ? ((int*)c.data)[i / acc_sizes_ax] : ((long*)c.data)[i / acc_sizes_ax]);
+      if (ind < 0)
+        std::memcpy(&result[i], &((char*)a.data)[((base * acc_sizes_ax * a.shape[axis]) + 
+              (ind * acc_sizes_ax) + rest) * sizeof(typeSize(a.type))], sizeof(typeSize(a.type)));
+      else
+        std::memcpy(&result[i], &((char*)b.data)[((base * acc_sizes_ax * b.shape[axis]) + 
+              (ind * acc_sizes_ax) + rest) * sizeof(typeSize(b.type))], sizeof(typeSize(b.type)));
+    }
   } break;
   default: {
     if (node->num_predecessor == 1) {

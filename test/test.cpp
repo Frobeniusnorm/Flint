@@ -1044,7 +1044,7 @@ TEST_CASE("Index") {
       for (int k = 0; k < 2; k++)
         CHECK_EQ(a1[i][j][k], i == 0 ? j * 2 + k : 8 + j * 2 + k);
   Tensor<int, 1> i2 = {0, 1, 1, 2};
-  Tensor<double, 3> a2 = a.index(i2);
+  Tensor<double, 3> a2 = a.multi_index(i2);
   for (int i = 0; i < 4; i++)
     for (int j = 0; j < 2; j++)
       for (int k = 0; k < 2; k++)
@@ -1057,13 +1057,13 @@ TEST_CASE("Index") {
       for (int k = 0; k < 2; k++)
         CHECK_EQ(a3[i][j][k], i == 0 ? k : i == 1 ? 6 + k : 8 + k);
   Tensor<int, 3> i4 = {{{0, 0}, {1, 0}}, {{0, 1}, {1, 1}}, {{1, 1}, {0, 0}}};
-  Tensor<double, 3> a4 = a.index(i4);
+  Tensor<double, 3> a4 = a.multi_index(i4);
   for (int i = 0; i < 3; i++)
     for (int j = 0; j < 2; j++)
       for (int k = 0; k < 2; k++)
         CHECK_EQ(a4[i][j][k], a[i][j][i4[i][j][k]]);
   Tensor<int, 2> i5 = {{0, 0, 1, 1}, {1, 0, 1, 0}, {0, 1, 1, 0}};
-  Tensor<double, 3> a5 = a.index(i5);
+  Tensor<double, 3> a5 = a.multi_index(i5);
   for (int i = 0; i < 3; i++)
     for (int j = 0; j < 4; j++)
       for (int k = 0; k < 2; k++)
@@ -1073,7 +1073,7 @@ TEST_CASE("Index") {
   c = c + 2;
   c = c.max(4);
   Tensor<int, 2> i6 = {{4, 5}, {3, 3}, {0, 1}};
-  Tensor<double, 3> c1 = c.index(i6);
+  Tensor<double, 3> c1 = c.multi_index(i6);
   for (int i = 0; i < 3; i++)
     for (int j = 0; j < 2; j++)
       for (int k = 0; k < 6; k++)

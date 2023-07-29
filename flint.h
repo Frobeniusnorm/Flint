@@ -898,17 +898,28 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
  * 11]]]`
  */
 FGraphNode *fmulti_index(FGraphNode *a, FGraphNode *indices);
+// TODO: implement this by generating a corresponding index tensor from indices and using fset_by_index
+// /**
+//  * Selects a indexed selection from `a` (like `findex`) and replaces this
+//  * selection with `b`. Therefore if `indices` has `n` dimensions, the shape of
+//  * the first `n-1` dimensions of `indices` must equal that of `a` and the shape
+//  * of `b` must match that of `a` except for the `n`th dimension where it has to
+//  * match the corresponding size of `indices`.
+//  *
+//  * Works so that
+//  * `findex_set(a, findex(a, indices), indices) == a` holds.
+//  */
+// FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
 /**
- * Selects a indexed selection from `a` (like `findex`) and replaces this
- * selection with `b`. Therefore if `indices` has `n` dimensions, the shape of
- * the first `n-1` dimensions of `indices` must equal that of `a` and the shape
- * of `b` must match that of `a` except for the `n`th dimension where it has to
- * match the corresponding size of `indices`.
- *
- * Works so that
- * `findex_set(a, findex(a, indices), indices) == a` holds.
+ * Assigns to a new tensor with the same shape of `a` either a element of `b` or
+ * copies the corresponding element in `a`. The shape of `indices` has to be a
+ * full prefix of the shape of `a`, indexing will occur in the last dimension of
+ * `indices`. For each element in `a` the index of the indexed dimension may be
+ * either `-1`, in which case the original element of `a` is copied, or a index
+ * >= 0 in which case `b` will be indexed in the indexed dimension and its
+ * element copied. 
  */
-FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
+FGraphNode *fset_by_index(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
 /**
  * Selects a indexed selection from `a` (like `fmulti_index`) and replaces this
  * selection with `b`. Therefore if `indices` has `n` dimensions, the shape of

@@ -783,6 +783,20 @@ template <typename T> struct Tensor<T, 1> {
   template <int k> Tensor<T, k> reshape_array(std::array<size_t, k> new_shape) {
     return Tensor<T, k>(freshape(node, new_shape.data(), k), new_shape);
   }
+  template <typename K>
+  Tensor<T, 1> index(const Tensor<K, 1> &indices) const {
+    static_assert(std::is_same<K, int>() || std::is_same<K, long>(), "Indices must be integer!");
+    FGraphNode *nc = findex(node, indices.get_graph_node());
+    std::array<size_t, 1> new_shape {nc->operation.shape[0]};
+    return Tensor<T, 1>(nc, new_shape);
+  }
+  template <typename K>
+  Tensor<T, 1> multi_index(const Tensor<K, 1> &indices) const {
+    static_assert(std::is_same<K, int>() || std::is_same<K, long>(), "Indices must be integer!");
+    FGraphNode *nc = fmulti_index(node, indices.get_graph_node());
+    std::array<size_t, 1> new_shape {nc->operation.shape[0]};
+    return Tensor<T, 1>(nc, new_shape);
+  }
   /**
    * Calculates the gradient of this Tensor to `dx`. A gradient is always a
    * Tensor of type `double`. `dx` needs to have been marked with `watch` before
