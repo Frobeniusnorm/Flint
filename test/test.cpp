@@ -1079,6 +1079,18 @@ TEST_CASE("Index") {
       for (int k = 0; k < 6; k++)
         CHECK_EQ(c1[i][j][k], c[i][i6[i][j]][k]);
 }
+TEST_CASE("Set index") {
+  Tensor<double, 3> a1 = Flint::random(2, 2, 2);
+  Tensor<double, 3> b1 = Flint::random(5, 2, 2);
+  Tensor<int, 1> i1 = {-1, 1};
+  Tensor<double, 3> c = a1.set_by_index(b1, i1);
+  std::cout << b1() << "\n" << c() << std::endl;
+  for (int i = 0; i < 2; i++)
+    for (int j = 0; j < 2; j++) {
+      CHECK_EQ(doctest::Approx(c[0][i][j]), a1[0][i][j]);
+      CHECK_EQ(doctest::Approx(c[1][i][j]), b1[1][i][j]);
+    }
+}
 TEST_CASE("Test Example 1") {
   Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
   Tensor<float, 1> c1{4.0f, 4.0f};

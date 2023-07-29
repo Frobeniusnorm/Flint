@@ -1376,11 +1376,21 @@ FGraphNode *fset_by_index(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
   if (indices->operation.data_type != F_INT32 &&
       indices->operation.data_type != F_INT64)
     flogging(F_ERROR, "Only integer tensors may be used as indices!");
+  if (a->operation.data_type != b->operation.data_type)
+    flogging(F_ERROR, "Only integer tensors may be used as indices!");
   for (int d = 0; d < indices->operation.dimensions; d++)
-    if (a->operation.shape[d] != indices->operation.shape[d])
+    if (a->operation.shape[d] != indices->operation.shape[d] ||
+        (d != indices->operation.dimensions - 1 &&
+         b->operation.shape[d] != indices->operation.shape[d]))
       flogging(F_ERROR,
                "Invalid indices shape! Except for last dimension shape of "
                "indices Tensor has to be a prefix of the indexed Tensor!");
+  for (int d = 0; d < a->operation.dimensions; d++)
+    if (a->operation.shape[d] != b->operation.shape[d] &&
+        d != indices->operation.dimensions - 1)
+      flogging(F_ERROR, "Invalid shape of a and b! Except for the shape of the "
+                        "last dimension of the "
+                        "indices Tensor the shape of a and b must be equal!");
   FOperation op;
   op.op_type = FSET_INDEX;
   op.dimensions = a->operation.dimensions;

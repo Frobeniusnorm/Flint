@@ -151,6 +151,7 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
         pred_data[i].data = store->data;
         pred_data[i].num_entries = store->num_entries;
       } else {
+        flogging(F_ERROR, "unexecuted node!");
       }
       pred_data[i].type = pred->operation.data_type;
       pred_data[i].shape = std::vector<size_t>(pred->operation.shape,

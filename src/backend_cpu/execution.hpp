@@ -676,11 +676,10 @@ static void executeNode(const FGraphNode *node,
       const size_t rest = i % acc_sizes_ax;
       const long ind = (long)(c.type == F_INT32 ? ((int*)c.data)[i / acc_sizes_ax] : ((long*)c.data)[i / acc_sizes_ax]);
       if (ind < 0)
-        std::memcpy(&result[i], &((char*)a.data)[((base * acc_sizes_ax * a.shape[axis]) + 
-              (ind * acc_sizes_ax) + rest) * sizeof(typeSize(a.type))], sizeof(typeSize(a.type)));
+        std::memcpy(&result[i], &((char*)a.data)[i * typeSize(a.type)], typeSize(a.type));
       else
         std::memcpy(&result[i], &((char*)b.data)[((base * acc_sizes_ax * b.shape[axis]) + 
-              (ind * acc_sizes_ax) + rest) * sizeof(typeSize(b.type))], sizeof(typeSize(b.type)));
+              (ind * acc_sizes_ax) + rest) * typeSize(b.type)], typeSize(b.type));
     }
   } break;
   default: {

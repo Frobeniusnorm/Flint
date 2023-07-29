@@ -797,6 +797,11 @@ template <typename T> struct Tensor<T, 1> {
     std::array<size_t, 1> new_shape {nc->operation.shape[0]};
     return Tensor<T, 1>(nc, new_shape);
   }
+  template <typename K>
+  Tensor<T, 1> set_by_index(const Tensor<T, 1> &b, const Tensor<K, 1> &indices) const {
+    static_assert(std::is_same<K, int>() || std::is_same<K, long>(), "Indices must be integer!");
+    return Tensor<T, 1>(fset_by_index(node, b.get_graph_node(), indices.get_graph_node()), shape);    
+  }
   /**
    * Calculates the gradient of this Tensor to `dx`. A gradient is always a
    * Tensor of type `double`. `dx` needs to have been marked with `watch` before
