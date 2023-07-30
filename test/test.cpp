@@ -31,15 +31,20 @@ TEST_SUITE("Graph implementation") {
         CHECK_EQ(doctest::Approx(c1[0][i][j]), a1[0][i][j]);
         CHECK_EQ(doctest::Approx(c1[1][i][j]), b1[1][i][j]);
       }
-    Tensor<double, 3> a2 = Flint::random(2, 5, 2);
-    Tensor<double, 3> b2 = Flint::random(2, 3, 2);
+    Tensor<double, 3> a2 = Flint::random(2, 5, 2)();
+    Tensor<double, 3> b2 = Flint::random(2, 3, 2)();
     Tensor<int, 2> i2 = {{-1, 1, 0, -1, 2}, {-1, -1, 2, 1, 0}};
-    Tensor<double, 3> c2 = a2.set_by_index(b2, i2);
+    Tensor<double, 3> c2 = a2.set_by_index(b2, i2)();
+    std::cout << a2() << std::endl;
+    std::cout << b2() << std::endl;
+    std::cout << c2() << std::endl;
     for (int i = 0; i < 2; i++)
       for (int j = 0; j < 2; j++)
-        for (int k = 0; k < 2; k++)
+        for (int k = 0; k < 2; k++) {
+          std::cout << i << ", " << j << ", " << k << std::endl;
           CHECK_EQ(doctest::Approx(c2[i][j][k]),
                    i2[i][j] < 0 ? a2[i][j][k] : b2[i][i2[i][j]][k]);
+        }
   }
   TEST_CASE("createGraph, add, mul, sub, div") {
     using namespace std;
