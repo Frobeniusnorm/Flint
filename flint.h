@@ -898,12 +898,16 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
  * 11]]]`
  */
 FGraphNode *fmulti_index(FGraphNode *a, FGraphNode *indices);
-// TODO: implement this by generating a corresponding index tensor from indices and using fset_by_index
+// TODO: implement this by generating a corresponding index tensor from indices
+// and using fset_by_index
 // /**
 //  * Selects a indexed selection from `a` (like `findex`) and replaces this
-//  * selection with `b`. Therefore if `indices` has `n` dimensions, the shape of
-//  * the first `n-1` dimensions of `indices` must equal that of `a` and the shape
-//  * of `b` must match that of `a` except for the `n`th dimension where it has to
+//  * selection with `b`. Therefore if `indices` has `n` dimensions, the shape
+//  of
+//  * the first `n-1` dimensions of `indices` must equal that of `a` and the
+//  shape
+//  * of `b` must match that of `a` except for the `n`th dimension where it has
+//  to
 //  * match the corresponding size of `indices`.
 //  *
 //  * Works so that
@@ -917,7 +921,7 @@ FGraphNode *fmulti_index(FGraphNode *a, FGraphNode *indices);
  * `indices`. For each element in `a` the index of the indexed dimension may be
  * either `-1`, in which case the original element of `a` is copied, or a index
  * >= 0 in which case `b` will be indexed in the indexed dimension and its
- * element copied. 
+ * element copied.
  */
 FGraphNode *fset_by_index(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
 /**
@@ -925,8 +929,10 @@ FGraphNode *fset_by_index(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
  * selection with `b`. Therefore if `indices` has `n` dimensions, the shape of
  * the first `n-1` dimensions of `indices` must equal that of `a` and the shape
  * of `b` must match that of `a` except for the `n`th dimension where it has to
- * match the corresponding size of `indices`.
- * In contrast to `findex_set` it allows to assign multiple values in `a` which
+ * match the corresponding size of `indices` (i.e. the shape of `indices` must
+ * be a full prefix of the shape of `b`). If a value in `indices` is negative,
+ * the corresponding value in `b` will not be assigned to an element in `a`. In
+ * contrast to `findex_set` it allows to assign multiple values in `a` which
  * will be summed up. E.g.
  *
  * `findex_set([[0, 1], [2, 3], [4, 5], [6, 7]], [[4, 5], [6, 7], [8, 9]], [0,
