@@ -56,22 +56,36 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
       flogging(F_ERROR, "Could not load Argument to kernel!");
   } break;
   case FMULTI_INDEX:
+  case FSET_INDEX:
   case FINDEX: {
-    const unsigned int axis = node->predecessors[1]->operation.dimensions - 1;
     const FOperation op = node->operation;
+    const unsigned int axis =
+        node->predecessors[op.op_type == FSET_INDEX ? 2 : 1]
+            ->operation.dimensions -
+        1;
     size_t acc_sizes_ax = 1;
     for (int i = axis + 1; i < op.dimensions; i++)
       acc_sizes_ax *= op.shape[i];
+    // push acc_sizes_ax
     if (clSetKernelArg(kernel, par_index++, sizeof(long),
                        (void *)&acc_sizes_ax) != CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
+    // push op shape
     if (clSetKernelArg(kernel, par_index++, sizeof(long),
                        (void *)&op.shape[axis]) != CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
+    // push a shape
     if (clSetKernelArg(kernel, par_index++, sizeof(long),
                        (void *)&node->predecessors[0]->operation.shape[axis]) !=
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
+    // push b shape
+    if (op.op_type == FSET_INDEX)
+      if (clSetKernelArg(
+              kernel, par_index++, sizeof(long),
+              (void *)&node->predecessors[1]->operation.shape[axis]) !=
+          CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel!");
   } break;
   case FGEN_CONSTANT: {
     switch (node->operation.data_type) {
@@ -103,7 +117,7 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
   } break;
   case FGEN_RANDOM: {
     // push time parameter
-    double seed = ((double*)node->operation.additional_data)[0];
+    double seed = ((double *)node->operation.additional_data)[0];
     if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&seed) !=
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
@@ -307,6 +321,7 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
   FOperation op = pred->operation;
   switch (node->operation.op_type) {
   case FMULTI_INDEX:
+  case FSET_INDEX:
   case FINDEX:
   case FMATMUL:
   case FGRADIENT_CONVOLVE:

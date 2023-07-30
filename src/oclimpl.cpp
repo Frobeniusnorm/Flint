@@ -210,6 +210,21 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
         our_kernel = kernel_name;
     }
   } break;
+  case FSET_INDEX: {
+    for (FType a_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
+      for (FType i_type : {F_INT32, F_INT64}) {
+        std::string kernel_name;
+        code += generateEagerCode(node->operation.op_type, a_type,
+                                  {a_type, a_type, i_type}, kernel_name);
+        all_kernels.push_back(
+            {OCLCompilerThread::generateKernelHash(node->operation.op_type,
+                                                   a_type, {a_type, a_type, i_type}),
+             kernel_name});
+        if (a_type == node->operation.data_type)
+          our_kernel = kernel_name;
+      }
+    }
+  } break;
   case FMULTI_INDEX:
   case FINDEX: {
     for (FType a_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {

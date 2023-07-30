@@ -941,6 +941,21 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "* P0, const long num_entries0, const int dimensions0, __constant "
             "long* acc_sizes_d, __constant long* acc_sizes_s";
   } break;
+  case FSET_INDEX: {
+    code += ", const __global " + typeString(parameter_types[0]) +
+            "* P0"
+            ", const long num_entries0, const int dimensions0"
+            ", const __global " +
+            typeString(parameter_types[1]) +
+            "* P1"
+            ", const long num_entries1, const int dimensions1 "
+            ", const __global " +
+            typeString(parameter_types[2]) +
+            "* P2"
+            ", const long num_entries2, const int dimensions2 "
+            ", const long acc_sizes_ax, const long op_shape_ax, const long "
+            "a_shape_ax, const long b_shape_ax";
+  } break;
   case FMULTI_INDEX:
   case FINDEX: {
     code += ", const __global " + typeString(parameter_types[0]) +
@@ -1251,6 +1266,18 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             " i %= acc_sizes_d[dim];\n"
             " src_index += curr_idx * acc_sizes_s[dim];\n}\n"
             "R[index] = P0[src_index];\n";
+    break;
+  case FSET_INDEX:
+    code += "if(index >= num_entriesR) return;\n"
+            "const int axis = dimensions2 - 1;\n"
+            "const long base = index / (acc_sizes_ax * op_shape_ax);\n"
+            "const long rest = index % acc_sizes_ax;\n"
+            "const long ind = (long) P2[index / acc_sizes_ax];\n"
+            "if(ind < 0)\n"
+            " R[index] = P0[index];\n"
+            "else\n"
+            " R[index] = P1[(base * acc_sizes_ax * b_shape_ax) + (ind * "
+            "acc_sizes_ax) + rest];\n";
     break;
   case FMULTI_INDEX:
   case FINDEX:
