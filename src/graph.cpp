@@ -1340,8 +1340,6 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
 }
 static FGraphNode *index_impl(FGraphNode *a, FGraphNode *indices,
                               bool multi_index) {
-  if (!indices->result_data && indices->operation.op_type != FSTORE)
-    indices = fExecuteGraph(indices);
   if (indices->operation.dimensions > a->operation.dimensions)
     flogging(
         F_ERROR,
@@ -1373,8 +1371,6 @@ FGraphNode *fmulti_index(FGraphNode *a, FGraphNode *indices) {
   return index_impl(a, indices, true);
 }
 FGraphNode *fset_by_index(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
-  if (!indices->result_data && indices->operation.op_type != FSTORE)
-    indices = fExecuteGraph(indices);
   if (indices->operation.dimensions > a->operation.dimensions)
     flogging(
         F_ERROR,

@@ -847,37 +847,32 @@ generateCode(FGraphNode *node,
         const unsigned int axis = c->operation.dimensions - 1;
         string par1, par2, par3;
         push_pred = false;
-        // we ignore the value assignment of the parameters since we have to
-        // access the array directly
-        if (assigned_params.find(c) != assigned_params.end()) {
-          par3 = assigned_params[c];
-        } else {
-          par3 = "P" + to_string(assigned_params.size());
-          assigned_params.insert({c, par3});
-          parameters.push_back({c, par3});
-        }
         par1 = "v" + to_string(++variable_index);
         par2 = "v" + to_string(++variable_index);
+        par3 = "v" + to_string(++variable_index);
         size_t acc_sizes_ax = 1;
         for (int i = axis + 1; i < op.dimensions; i++)
           acc_sizes_ax *= op.shape[i];
         const std::string base =
             "index / " + to_string(acc_sizes_ax * op.shape[axis]);
         const std::string rest = "index % " + to_string(acc_sizes_ax);
-        const std::string ind =
-            "(long) " + par3 + "[index / " + to_string(acc_sizes_ax) + "]";
         const std::string my_index =
             base + " * " + to_string(acc_sizes_ax * b->operation.shape[axis]) +
-            " + " + "(" + ind + ") * " + to_string(acc_sizes_ax) + " + (" +
+            " + " + par3 + " * " + to_string(acc_sizes_ax) + " + (" +
             rest + ")";
-        const unsigned int old_idx = num_indices++;
+        const unsigned int old_idx1 = num_indices++;
+        const unsigned int old_idx2 = num_indices++;
         std::string local_index_def =
-            "long old_index" + to_string(old_idx) + " = index;\n";
+            "index = old_index" + to_string(old_idx2) + ";\nlong old_index" + to_string(old_idx1) + " = index;\n";
         local_index_def += "index = max(" + my_index + ", 0L);\n";
-        code = "index = old_index" + to_string(old_idx) + ";\n" + type + " " +
-               name + " = (" + ind + ") < 0 ? " + par1 + " : " + par2 + ";\n" +
+        code = "index = old_index" + to_string(old_idx1) + ";\n" + type + " " +
+               name + " = (" + par3 + ") < 0 ? " + par1 + " : " + par2 + ";\n" +
                code;
+        std::string local_index_def2 = "long old_index" + to_string(old_idx2) + " = index;\n"
+          "index /= " + to_string(acc_sizes_ax) + ";\n";
         todo.push_front({a, par1});
+        todo.push_front({nullptr, local_index_def2});
+        todo.push_front({c, par3});
         todo.push_front({nullptr, local_index_def});
         todo.push_front({b, par2});
       } break;
@@ -937,19 +932,8 @@ generateCode(FGraphNode *node,
         const unsigned int axis = b->operation.dimensions - 1;
         string par1, par2;
         push_pred = false;
-        // we ignore the value assignment of the parameters since we have to
-        // access the array directly
-        if (assigned_params.find(b) != assigned_params.end()) {
-          par2 = assigned_params[b];
-        } else {
-          par2 = "P" + to_string(assigned_params.size());
-          assigned_params.insert({b, par2});
-          parameters.push_back({b, par2});
-        }
         par1 = "v" + to_string(++variable_index);
-        unsigned int old_idx = num_indices++;
-        std::string local_index_def =
-            "long old_index" + to_string(old_idx) + " = index;\n";
+        par2 = "v" + to_string(++variable_index);
         size_t acc_sizes_ax = 1;
         for (int i = axis + 1; i < op.dimensions; i++)
           acc_sizes_ax *= op.shape[i];
@@ -957,15 +941,21 @@ generateCode(FGraphNode *node,
         const std::string base =
             "index / " + to_string(acc_sizes_ax * op.shape[axis]);
         const std::string rest = "index % " + to_string(acc_sizes_ax);
-        const std::string ind =
-            "(long) " + par2 + "[index / " + to_string(acc_sizes_ax) + "]";
-        local_index_def += "index = " + base + " * " +
+        unsigned int old_idx1 = num_indices++;
+        unsigned int old_idx2 = num_indices++;
+        std::string local_index_def1 =
+            "index = old_index" + to_string(old_idx2) + ";\nlong old_index" + to_string(old_idx1) + " = index;\n";
+        local_index_def1 += "index = " + base + " * " +
                            to_string(acc_sizes_ax * a->operation.shape[axis]) +
-                           " + " + "(" + ind + ") * " +
+                           " + " + par2 + " * " +
                            to_string(acc_sizes_ax) + " + (" + rest + ");\n";
-        code = "index = old_index" + to_string(old_idx) + ";\n" + type + " " +
+        code = "index = old_index" + to_string(old_idx1) + ";\n" + type + " " +
                name + " = " + par1 + ";\n" + code;
-        todo.push_front({nullptr, local_index_def});
+        std::string local_index_def2 = "long old_index" + to_string(old_idx2) + " = index;\n"
+          "index /= " + to_string(acc_sizes_ax) + ";\n";
+        todo.push_front({nullptr, local_index_def2});
+        todo.push_front({b, par2});
+        todo.push_front({nullptr, local_index_def1});
         todo.push_front({a, par1});
       }
       default:
