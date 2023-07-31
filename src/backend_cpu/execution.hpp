@@ -664,6 +664,7 @@ static void executeNode(const FGraphNode *node,
       result[i] = atan(((const T *__restrict__)pred.data)[i]);
   } break;
   case FMULTI_SET_INDEX: {
+    // TODO Improve (somehow)
     const CPUResultData a = predecessor_data[0];
     const CPUResultData b = predecessor_data[1];
     const CPUResultData c = predecessor_data[2];
@@ -683,8 +684,9 @@ static void executeNode(const FGraphNode *node,
       // iterate over last dimension and find all correct indices
       for (size_t j = base_ind; j < base_ind + c.shape[axis]; j++) {
         const long ind = (long)(c.type == F_INT32 ? ((int*)c.data)[j] : ((long*)c.data)[j]);
-        if (ind == axi)
-          result[i] += ((T*) b.data)[j * acc_sizes_ax]; 
+        if (ind == axi) {
+          result[i] += ((T*) b.data)[j * acc_sizes_ax + rest]; 
+        }
       }
       // if at least one index was found -> only sum of elements of b
       if (result[i] != ((T*) a.data)[i])

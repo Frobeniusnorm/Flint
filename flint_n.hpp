@@ -1476,6 +1476,13 @@ template <typename T, unsigned int n> struct Tensor {
     static_assert(k <= n, "Indices must match the first dimensions of the Tensor!");
     return Tensor<T, n>(fset_by_index(node, b.get_graph_node(), indices.get_graph_node()), shape);    
   }
+  template <typename K, unsigned int k>
+  Tensor<T, n> multi_index_set(const Tensor<T, n> &b, const Tensor<K, k> &indices) const {
+    static_assert(std::is_same<K, int>() || std::is_same<K, long>(), "Indices must be integer!");
+    static_assert(k <= n, "Indices must match the first dimensions of the Tensor!");
+    return Tensor<T, n>(fmulti_index_set(node, b.get_graph_node(), indices.get_graph_node()), shape);    
+  }
+
   /** Returns the underlying `FGraphNode` for use with the C-Frontend. It is
    * still memory managed by this Tensor instance, so be carefull about variable
    * lifetimes. */

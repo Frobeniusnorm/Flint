@@ -45,6 +45,23 @@ TEST_SUITE("Graph implementation") {
           CHECK_EQ(doctest::Approx(c2[i][j][k]),
                    i2[i][j] < 0 ? a2[i][j][k] : b2[i][i2[i][j]][k]);
         }
+    // multi index set
+    Tensor<int, 2> a3 = {{0, 1}, {2, 3}, {4, 5}, {6, 7}}; 
+    Tensor<int, 2> b3 = {{4, 5}, {6, 7}, {8, 9}}; 
+    Tensor<int, 1> i3 = {0, 0, 2};
+    Tensor<int, 2> e3 = {{10, 12}, {2, 3}, {8, 9}, {6, 7}};
+    Tensor<int, 2> c3 = a3.multi_index_set(b3, i3);
+    for (int i = 0; i < 4; i++)
+      for (int j = 0; j < 2; j++)
+        CHECK_EQ(c3[i][j], e3[i][j]);
+    Tensor<int, 2> i4 = {{-1, 0}, {1, 1}, {1, 0}, {1, -1}};
+    Tensor<int, 2> b4 = {{4, 5}, {6, 7}, {8, 9}, {10, 11}}; 
+    Tensor<int, 2> e4 = {{5, 1}, {2, 13}, {9, 8}, {6, 10}};
+    Tensor<int, 2> c4 = a3.multi_index_set(b4, i4);
+    for (int i = 0; i < 4; i++)
+      for (int j = 0; j < 2; j++)
+        CHECK_EQ(c4[i][j], e4[i][j]);
+    
   }
   TEST_CASE("createGraph, add, mul, sub, div") {
     using namespace std;

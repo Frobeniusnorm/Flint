@@ -802,6 +802,11 @@ template <typename T> struct Tensor<T, 1> {
     static_assert(std::is_same<K, int>() || std::is_same<K, long>(), "Indices must be integer!");
     return Tensor<T, 1>(fset_by_index(node, b.get_graph_node(), indices.get_graph_node()), shape);    
   }
+  template <typename K>
+  Tensor<T, 1> multi_index_set(const Tensor<T, 1> &b, const Tensor<K, 1> &indices) const {
+    static_assert(std::is_same<K, int>() || std::is_same<K, long>(), "Indices must be integer!");
+    return Tensor<T, 1>(fmulti_index_set(node, b.get_graph_node(), indices.get_graph_node()), shape);    
+  }
   /**
    * Calculates the gradient of this Tensor to `dx`. A gradient is always a
    * Tensor of type `double`. `dx` needs to have been marked with `watch` before
