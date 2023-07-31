@@ -1410,6 +1410,8 @@ FGraphNode *fmulti_index_set(FGraphNode *a, FGraphNode *b,
                              FGraphNode *indices) {
   if (!indices->result_data && indices->operation.op_type != FSTORE)
     indices = fExecuteGraph(indices);
+  if (!b->result_data && b->operation.op_type != FSTORE)
+    b = fExecuteGraph(b);
   if (indices->operation.dimensions > a->operation.dimensions)
     flogging(
         F_ERROR,
