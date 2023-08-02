@@ -1021,6 +1021,21 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "* P0, const long num_entries0, const int dimensions0, __constant "
             "long* acc_sizes_d, __constant long* acc_sizes_s";
   } break;
+  case FMULTI_SET_INDEX: {
+    code += ", const __global " + typeString(parameter_types[0]) +
+            "* P0"
+            ", const long num_entries0, const int dimensions0"
+            ", const __global " +
+            typeString(parameter_types[1]) +
+            "* P1"
+            ", const long num_entries1, const int dimensions1 "
+            ", const __global " +
+            typeString(parameter_types[2]) +
+            "* P2"
+            ", const long num_entries2, const int dimensions2 "
+            ", const long acc_sizes_ax, const long op_shape_ax, const long "
+            "c_shape_ax";
+  } break;
   case FSET_INDEX: {
     code += ", const __global " + typeString(parameter_types[0]) +
             "* P0"
@@ -1347,6 +1362,20 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             " src_index += curr_idx * acc_sizes_s[dim];\n}\n"
             "R[index] = P0[src_index];\n";
     break;
+  case FMULTI_SET_INDEX:
+    code += "if(index >= num_entriesR) return;\n"
+            "const int axis = dimensions2 - 1;\n"
+            "const long base = index / (acc_sizes_ax * op_shape_ax);\n"
+            "const long rest = index % acc_sizes_ax;\n"
+            "const long axi = (index / acc_sizes_ax) % op_shape_ax;\n"
+            "const long base_ind = base * c_shape_ax;\n"
+            "R[index] = P0[index];\n"
+            "for (long j = base_ind; j < base_ind + c_shape_ax; j++) {\n"
+            " const long ind = (long) P2[j];\n"
+            " if(ind == axi) R[index] += P1[j * acc_sizes_ax + rest];\n"
+            "}\n"
+            "if(R[index] != P0[index]) R[index] -= P0[index];\n";
+    break;
   case FSET_INDEX:
     code += "if(index >= num_entriesR) return;\n"
             "const int axis = dimensions2 - 1;\n"
@@ -1539,4 +1568,5 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   code += "\n}\n";
   return code;
 }
+
 #endif
