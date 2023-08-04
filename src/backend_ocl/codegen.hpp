@@ -27,8 +27,7 @@
 #include <unordered_set>
 static std::string
 generateCode(FGraphNode *node,
-             std::list<std::pair<FGraphNode *, std::string>> &parameters,
-             std::unordered_set<std::string> &additional_params) {
+             std::list<std::pair<FGraphNode *, std::string>> &parameters) {
   using namespace std;
   // we use breadth first search to traverse to operation graph
   list<tuple<FGraphNode *, string>> todo;
@@ -190,13 +189,13 @@ generateCode(FGraphNode *node,
                " : v" + to_string(variable_index + 2) + ";\n" + code;
       } break;
       case FGEN_RANDOM: {
-        code = type + " " + name + " = 0;\n{\n " + name +
-               " = sin(index + time) * 43758.5453123;\n " + name + " = min(" +
-               name + " - floor(" + name +
+        double seed = ((double *)node->operation.additional_data)[0];
+        code = type + " " + name + " = 0;\n{\n " + name + " = sin(index + " +
+               std::to_string(seed) + ") * 43758.5453123;\n " + name +
+               " = min(" + name + " - floor(" + name +
                "), 0.99999);\n"
                "}\n" +
                code;
-        additional_params.insert("time");
       } break;
       case FGRADIENT_CONVOLVE: {
         string par1, par2;
@@ -676,11 +675,9 @@ generateCode(FGraphNode *node,
         unsigned int old_idx = num_indices++;
         index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
         // flattened shape data
-        size_t num_entries = 1;
         std::vector<size_t> acc_sizes(node->operation.dimensions);
         std::vector<size_t> acc_sizes_pred(acc_sizes.size());
         for (long d = node->operation.dimensions - 1; d >= 0; d--) {
-          num_entries *= node->operation.shape[d];
           if (d == node->operation.dimensions - 1) {
             acc_sizes[d] = 1;
             acc_sizes_pred[d] = 1;
@@ -813,7 +810,7 @@ generateCode(FGraphNode *node,
         const int *transposition = (int *)op.additional_data;
         const FOperation pred = node->predecessors[0]->operation;
         unsigned int old_idx = num_indices++;
-        index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
+        index_defs += "long old_index" + to_string(old_idx) + " = index;\n";
         // add to index_defs a redefinition of index, so that we remap to src
         // data
         // calculate number of elements per dimension entry for destination and
@@ -842,6 +839,110 @@ generateCode(FGraphNode *node,
         code = type + " " + name + " = v" + to_string(variable_index + 1) +
                ";\n" + code;
       } break;
+      case FSET_INDEX: {
+        FGraphNode *a = node->predecessors[0];
+        FGraphNode *b = node->predecessors[1];
+        FGraphNode *c = node->predecessors[2];
+        const FOperation op = node->operation;
+        const unsigned int axis = c->operation.dimensions - 1;
+        string par1, par2, par3;
+        push_pred = false;
+        // we ignore the value assignment of the parameters since we have to
+        // access the array directly
+        if (assigned_params.find(c) != assigned_params.end()) {
+          par3 = assigned_params[c];
+        } else {
+          par3 = "P" + to_string(assigned_params.size());
+          assigned_params.insert({c, par3});
+          parameters.push_back({c, par3});
+        }
+        if (assigned_params.find(b) != assigned_params.end()) {
+          par2 = assigned_params[b];
+        } else {
+          par2 = "P" + to_string(assigned_params.size());
+          assigned_params.insert({b, par2});
+          parameters.push_back({b, par2});
+        }
+        par1 = "v" + to_string(++variable_index);
+        size_t acc_sizes_ax = 1;
+        for (int i = axis + 1; i < op.dimensions; i++)
+          acc_sizes_ax *= op.shape[i];
+        const std::string base =
+            "index / " + to_string(acc_sizes_ax * op.shape[axis]);
+        const std::string rest = "index % " + to_string(acc_sizes_ax);
+        const std::string axi = "(index / " + to_string(acc_sizes_ax) + ")%" +
+                                to_string(op.shape[axis]);
+        const std::string ind =
+            "(long) " + par3 + "[index / " + to_string(acc_sizes_ax) + "]";
+        const std::string base_ind =
+            base + " * " + to_string(c->operation.shape[axis]);
+        code = type + " " + name +
+               " = 0;\n"
+               "{const long base_ind = " +
+               base_ind +
+               ";\n"
+               " const long axi = " +
+               axi +
+               ";\n"
+               " const long rest = " +
+               rest +
+               ";\n"
+               "int found_something = false;\n"
+               " for(long j = base_ind; j < base_ind + " +
+               to_string(c->operation.shape[axis]) +
+               "; j++){\n"
+               "  const long ind = " +
+               par3 +
+               "[j];\n"
+               "  if(ind == axi) {\n   " +
+               name + " += " + par2 + "[j * " + to_string(acc_sizes_ax) +
+               " + rest];\n"
+               "   found_something = true;\n"
+               "  }\n"
+               " }\n"
+               " if(!found_something) " +
+               name + " = " + par1 +
+               ";\n"
+               "}\n" +
+               code;
+        todo.push_front({a, par1});
+      } break;
+      case FINDEX: {
+        FGraphNode *a = node->predecessors[0];
+        FGraphNode *b = node->predecessors[1];
+        const FOperation op = node->operation;
+        const unsigned int axis = b->operation.dimensions - 1;
+        string par1, par2;
+        push_pred = false;
+        par1 = "v" + to_string(++variable_index);
+        par2 = "v" + to_string(++variable_index);
+        size_t acc_sizes_ax = 1;
+        for (int i = axis + 1; i < op.dimensions; i++)
+          acc_sizes_ax *= op.shape[i];
+
+        const std::string base =
+            "index / " + to_string(acc_sizes_ax * op.shape[axis]);
+        const std::string rest = "index % " + to_string(acc_sizes_ax);
+        unsigned int old_idx1 = num_indices++;
+        unsigned int old_idx2 = num_indices++;
+        std::string local_index_def1 =
+            "index = old_index" + to_string(old_idx2) + ";\nlong old_index" +
+            to_string(old_idx1) + " = index;\n";
+        local_index_def1 += "index = " + base + " * " +
+                            to_string(acc_sizes_ax * a->operation.shape[axis]) +
+                            " + " + par2 + " * " + to_string(acc_sizes_ax) +
+                            " + (" + rest + ");\n";
+        code = "index = old_index" + to_string(old_idx1) + ";\n" + type + " " +
+               name + " = " + par1 + ";\n" + code;
+        std::string local_index_def2 = "long old_index" + to_string(old_idx2) +
+                                       " = index;\n"
+                                       "index /= " +
+                                       to_string(acc_sizes_ax) + ";\n";
+        todo.push_front({nullptr, local_index_def2});
+        todo.push_front({b, par2});
+        todo.push_front({nullptr, local_index_def1});
+        todo.push_front({a, par1});
+      }
       default:
         break;
       }
@@ -854,7 +955,7 @@ generateCode(FGraphNode *node,
         todo.push_front(
             {node->predecessors[i], "v" + to_string(++variable_index)});
   }
-  code = "int index = get_global_id(0);\n" + code;
+  code = "long index = get_global_id(0);\n" + code;
   return code;
 }
 static std::string generateEagerCode(FOperationType operation, FType res_type,
@@ -904,6 +1005,32 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     code += ", const __global " + typeString(parameter_types[0]) +
             "* P0, const long num_entries0, const int dimensions0, __constant "
             "long* acc_sizes_d, __constant long* acc_sizes_s";
+  } break;
+  case FSET_INDEX: {
+    code += ", const __global " + typeString(parameter_types[0]) +
+            "* P0"
+            ", const long num_entries0, const int dimensions0"
+            ", const __global " +
+            typeString(parameter_types[1]) +
+            "* P1"
+            ", const long num_entries1, const int dimensions1 "
+            ", const __global " +
+            typeString(parameter_types[2]) +
+            "* P2"
+            ", const long num_entries2, const int dimensions2 "
+            ", const long acc_sizes_ax, const long op_shape_ax, const long "
+            "c_shape_ax";
+  } break;
+  case FINDEX: {
+    code += ", const __global " + typeString(parameter_types[0]) +
+            "* P0"
+            ", const long num_entries0, const int dimensions0"
+            ", const __global " +
+            typeString(parameter_types[1]) +
+            "* P1"
+            ", const long num_entries1, const int dimensions1 "
+            ", const long acc_sizes_ax, const long op_shape_ax, const long "
+            "a_shape_ax";
   } break;
   case FEXTEND: {
     code += ", const __global " + typeString(parameter_types[0]) + "* P0";
@@ -963,7 +1090,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
               to_string(i) + ", long num_entries" + to_string(i);
     break;
   }
-  code += "){\nconst int index = get_global_id(0);\n";
+  code += "){\nconst long index = get_global_id(0);\n";
   // generate code
   switch (operation) {
   case FADD:
@@ -1204,6 +1331,33 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             " src_index += curr_idx * acc_sizes_s[dim];\n}\n"
             "R[index] = P0[src_index];\n";
     break;
+  case FSET_INDEX:
+    code += "if(index >= num_entriesR) return;\n"
+            "const int axis = dimensions2 - 1;\n"
+            "const long base = index / (acc_sizes_ax * op_shape_ax);\n"
+            "const long rest = index % acc_sizes_ax;\n"
+            "const long axi = (index / acc_sizes_ax) % op_shape_ax;\n"
+            "const long base_ind = base * c_shape_ax;\n"
+            "R[index] = 0;\n"
+            "int found_something = false;\n"
+            "for (long j = base_ind; j < base_ind + c_shape_ax; j++) {\n"
+            " const long ind = (long) P2[j];\n"
+            " if(ind == axi){"
+            "   R[index] += P1[j * acc_sizes_ax + rest];\n"
+            "   found_something = true;\n"
+            " }\n"
+            "}\n"
+            "if(!found_something) R[index] = P0[index];\n";
+    break;
+  case FINDEX:
+    code += "if(index >= num_entriesR) return;\n"
+            "const int axis = dimensions1 - 1;\n"
+            "const long base = index / (acc_sizes_ax * op_shape_ax);\n"
+            "const long rest = index % acc_sizes_ax;\n"
+            "const long ind = (long) P1[index / acc_sizes_ax];\n"
+            "R[index] = P0[(base * acc_sizes_ax * a_shape_ax) + (ind * "
+            "acc_sizes_ax) + rest];\n";
+    break;
   case FSLICE:
     code += "if(index >= num_entriesR) return;\n"
             "long j = start;\n"
@@ -1374,4 +1528,5 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   code += "\n}\n";
   return code;
 }
+
 #endif

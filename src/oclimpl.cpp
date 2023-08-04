@@ -189,25 +189,55 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
   case FCONVERSION: { // depends on operation
     for (int i = 0; i < node->num_predecessor; i++)
       par_types[i] = node->predecessors[i]->operation.data_type;
-    code = generateEagerCode(node->operation.op_type,
-                             node->operation.data_type, par_types, our_kernel);
+    code = generateEagerCode(node->operation.op_type, node->operation.data_type,
+                             par_types, our_kernel);
     all_kernels.push_back({hash, our_kernel});
   } break;
   case FGEN_RANDOM: {
-    code = generateEagerCode(node->operation.op_type,
-                             node->operation.data_type, {}, our_kernel);
+    code = generateEagerCode(node->operation.op_type, node->operation.data_type,
+                             {}, our_kernel);
     all_kernels.push_back({hash, our_kernel});
   } break;
   case FGEN_CONSTANT: {
     for (FType ret_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
       std::string kernel_name;
-      code += generateEagerCode(node->operation.op_type, ret_type, {},
-                                kernel_name);
+      code +=
+          generateEagerCode(node->operation.op_type, ret_type, {}, kernel_name);
       all_kernels.push_back({OCLCompilerThread::generateKernelHash(
                                  node->operation.op_type, ret_type, {}),
                              kernel_name});
       if (ret_type == node->operation.data_type)
         our_kernel = kernel_name;
+    }
+  } break;
+  case FSET_INDEX: {
+    for (FType a_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
+      for (FType i_type : {F_INT32, F_INT64}) {
+        std::string kernel_name;
+        code += generateEagerCode(node->operation.op_type, a_type,
+                                  {a_type, a_type, i_type}, kernel_name);
+        all_kernels.push_back(
+            {OCLCompilerThread::generateKernelHash(
+                 node->operation.op_type, a_type, {a_type, a_type, i_type}),
+             kernel_name});
+        if (a_type == node->operation.data_type)
+          our_kernel = kernel_name;
+      }
+    }
+  } break;
+  case FINDEX: {
+    for (FType a_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
+      for (FType i_type : {F_INT32, F_INT64}) {
+        std::string kernel_name;
+        code += generateEagerCode(node->operation.op_type, a_type,
+                                  {a_type, i_type}, kernel_name);
+        all_kernels.push_back(
+            {OCLCompilerThread::generateKernelHash(node->operation.op_type,
+                                                   a_type, {a_type, i_type}),
+             kernel_name});
+        if (a_type == node->operation.data_type)
+          our_kernel = kernel_name;
+      }
     }
   } break;
   case FSIGN:
@@ -283,8 +313,8 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
       if (param == node->predecessors[0]->operation.data_type)
         our_kernel = kernel_name;
       all_kernels.push_back(
-          {OCLCompilerThread::generateKernelHash(node->operation.op_type,
-                                                 param, {param, param}),
+          {OCLCompilerThread::generateKernelHash(node->operation.op_type, param,
+                                                 {param, param}),
            kernel_name});
     }
   } break;
@@ -480,7 +510,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     }
     if (do_write) {
       void *data = op.op_type == FSTORE ? ((FStore *)op.additional_data)->data
-                                         : pred->result_data->data;
+                                        : pred->result_data->data;
       if (!data) {
         flogging(F_WARNING,
                  "No gpu memory is found, but no cpu either! " +
@@ -650,18 +680,15 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   // calculate Code and Parameters
   using namespace std;
   list<pair<FGraphNode *, string>> parameters;
-  unordered_set<string> additional_params;
-  string graph_code = generateCode(node, parameters, additional_params);
+  string graph_code = generateCode(node, parameters);
   string code = "#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void "
                 "execute_graph(__global ";
   code += typeString(node->operation.data_type);
   code += " *R";
   // insert parameters
   for (auto &[op, name] : parameters)
-    code += ", __global const " + typeString(op->operation.data_type) + " *" +
-            name;
-  if (additional_params.contains("time"))
-    code += ", const double time";
+    code +=
+        ", __global const " + typeString(op->operation.data_type) + " *" + name;
   code += "){\n";
   // add the execution code
   code += graph_code;
@@ -750,16 +777,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   if (clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&result_mem) !=
       CL_SUCCESS)
     flogging(F_ERROR, "Could not set Kernel Argument for the result!");
-  // some operations need additional parameters
-  if (additional_params.contains("time")) {
-    std::chrono::duration<double, std::nano> tm =
-        std::chrono::high_resolution_clock::now().time_since_epoch();
-    double t = ((unsigned long)tm.count() % 1000000) / 100.0;
-
-    if (clSetKernelArg(kernel, index++, sizeof(double), (void *)&t) !=
-        CL_SUCCESS)
-      flogging(F_ERROR, "Could not load Argument to kernel!");
-  }
   // execute kernel
   const size_t global_size = total_size_node;
 

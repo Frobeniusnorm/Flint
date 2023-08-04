@@ -17,7 +17,11 @@
 #ifndef CPU_BACKEND_EXECUTION
 #define CPU_BACKEND_EXECUTION
 #include "../../flint.h"
+#include "../utils.hpp"
 #include <cmath>
+#include <cstring>
+#include <iostream>
+#include <ostream>
 #include <vector>
 #define MIN_VAL(x, y) x < y ? x : y
 #define MAX_VAL(x, y) x < y ? y : x
@@ -331,6 +335,24 @@ static void binaryExpression(T *__restrict__ result,
       result[i] = res;
     }
   } break;
+  case FINDEX: {
+    const FGraphNode *a = curr->predecessors[0];
+    const FGraphNode *b = curr->predecessors[1];
+    const FOperation op = curr->operation;
+    const unsigned int axis = b->operation.dimensions - 1;
+    // get index of result, index tensor, reproject index
+    size_t acc_sizes_ax = 1;
+    for (int i = axis + 1; i < op.dimensions; i++)
+      acc_sizes_ax *= op.shape[i];
+
+    for (size_t i = from; i < from + size; i++) {
+      const size_t base = i / (acc_sizes_ax * op.shape[axis]);
+      const size_t rest = i % acc_sizes_ax;
+      const size_t ind = (size_t)data2[i / acc_sizes_ax];
+      result[i] = data1[(base * acc_sizes_ax * a->operation.shape[axis]) +
+                        (ind * acc_sizes_ax) + rest];
+    }
+  } break;
   case FMIN:
     for (size_t i = from; i < from + size; i++)
       result[i] = MIN_VAL(data1[i % index_man_1], data2[i % index_man_2]);
@@ -364,8 +386,11 @@ static void executeNode(const FGraphNode *node,
   // handle operations that are zero-ary or unary and dont need type parameters
   switch (node->operation.op_type) {
   case FGEN_RANDOM: {
-    for (size_t i = from; i < from + size; i++)
-      result[i] = (double)rand() / (double)RAND_MAX;
+    double seed = ((double *)node->operation.additional_data)[0];
+    for (size_t i = from; i < from + size; i++) {
+      double v = sin(i + seed) * 43758.5453123;
+      result[i] = std::min(v - floor(v), 0.99999);
+    }
   } break;
   case FGEN_CONSTANT: {
     T value = ((T *)node->operation.additional_data)[0];
@@ -636,6 +661,39 @@ static void executeNode(const FGraphNode *node,
     const CPUResultData pred = predecessor_data[0];
     for (size_t i = from; i < from + size; i++)
       result[i] = atan(((const T *__restrict__)pred.data)[i]);
+  } break;
+  case FSET_INDEX: {
+    // TODO Improve (somehow)
+    const CPUResultData a = predecessor_data[0];
+    const CPUResultData b = predecessor_data[1];
+    const CPUResultData c = predecessor_data[2];
+    const unsigned int axis = c.shape.size() - 1;
+    const FOperation op = node->operation;
+    // get index of result, index tensor, reproject index
+    size_t acc_sizes_ax = 1;
+    for (int i = axis + 1; i < op.dimensions; i++)
+      acc_sizes_ax *= op.shape[i];
+
+    for (size_t i = from; i < from + size; i++) {
+      const size_t base = i / (acc_sizes_ax * op.shape[axis]);
+      const size_t rest = i % acc_sizes_ax;
+      const size_t axi = (i / acc_sizes_ax) % op.shape[axis];
+      const size_t base_ind = base * c.shape[axis];
+      bool found_something = false;
+      result[i] = 0;
+      // iterate over last dimension and find all correct indices
+      for (size_t j = base_ind; j < base_ind + c.shape[axis]; j++) {
+        const long ind = (long)(c.type == F_INT32 ? ((int *)c.data)[j]
+                                                  : ((long *)c.data)[j]);
+        if (ind == axi) {
+          found_something = true;
+          result[i] += ((T *)b.data)[j * acc_sizes_ax + rest];
+        }
+      }
+      // if at least one index was found -> only sum of elements of b
+      if (!found_something)
+        result[i] = ((T *)a.data)[i];
+    }
   } break;
   default: {
     if (node->num_predecessor == 1) {

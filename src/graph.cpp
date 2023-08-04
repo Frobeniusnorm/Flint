@@ -36,7 +36,8 @@ const char *fop_to_string[] = {
     "FREDUCE_SUM", "FREDUCE_MUL", "FREDUCE_MIN", "FREDUCE_MAX",
     "FSLICE",      "FABS",        "FREPEAT",     "FTRANSPOSE",
     "FEXTEND",     "FCONCAT",     "FLESS",       "FEQUAL",
-    "FGREATER",    "FCONVOLVE",   "FSLIDE",      "FGRADIENT_CONVOLVE"};
+    "FGREATER",    "FCONVOLVE",   "FSLIDE",      "FGRADIENT_CONVOLVE",
+    "FINDEX",      "FSET_INDEX",  "FPERMUTATE"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 // converts c++ type to flint type
 
@@ -1322,16 +1323,21 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
   op.shape = safe_mal<size_t>(dimensions);
   memcpy(op.shape, shape, dimensions * sizeof(size_t));
   op.data_type = F_FLOAT64;
-  op.additional_data = nullptr;
+  // Store current time in additional data
+  std::chrono::duration<double, std::nano> tm =
+      std::chrono::high_resolution_clock::now().time_since_epoch();
+  double t = ((unsigned long)tm.count() % 1000000) / 100.0;
+  op.additional_data = safe_mal<double>(1);
+  ((double *)op.additional_data)[0] = t;
   node->operation = op;
   node->result_data = nullptr;
   node->predecessors = nullptr;
   node->num_predecessor = 0;
   node->gradient_data = nullptr;
   node->reference_counter = 0;
-  return node;
+  return eager_execution ? execute_eagerly(node) : node;
 }
-FGraphNode *findex(FGraphNode *a, FGraphNode *indices, unsigned int axis) {
+FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
   if (indices->operation.dimensions > a->operation.dimensions)
     flogging(
         F_ERROR,
@@ -1350,8 +1356,36 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices, unsigned int axis) {
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
-  op.shape[axis] = indices->operation.shape[indices->operation.dimensions];
+  op.shape[indices->operation.dimensions - 1] =
+      indices->operation.shape[indices->operation.dimensions - 1];
   op.data_type = a->operation.data_type;
   op.additional_data = nullptr;
   return addNode(op, {a, indices});
+}
+FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
+  if (!indices->result_data && indices->operation.op_type != FSTORE)
+    indices = fExecuteGraph(indices);
+  if (!b->result_data && b->operation.op_type != FSTORE)
+    b = fExecuteGraph(b);
+  if (indices->operation.dimensions > a->operation.dimensions)
+    flogging(
+        F_ERROR,
+        "Invalid index Tensor dimensionality! Larger than indexed Tensor!");
+  if (indices->operation.data_type != F_INT32 &&
+      indices->operation.data_type != F_INT64)
+    flogging(F_ERROR, "Only integer tensors may be used as indices!");
+  for (int d = 0; d < indices->operation.dimensions - 1; d++)
+    if (a->operation.shape[d] != indices->operation.shape[d])
+      flogging(F_ERROR,
+               "Invalid indices shape! Except for last dimension shape of "
+               "indices Tensor has to be a prefix of the indexed Tensor!");
+
+  FOperation op;
+  op.op_type = FSET_INDEX;
+  op.dimensions = a->operation.dimensions;
+  op.shape = safe_mal<size_t>(op.dimensions);
+  memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
+  op.data_type = a->operation.data_type;
+  op.additional_data = nullptr;
+  return addNode(op, {a, b, indices});
 }

@@ -196,6 +196,30 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     } else
       return nullptr;
   }
+  case FINDEX: {
+    FGraphNode *a = y->predecessors[0];
+    FGraphNode *b = y->predecessors[1];
+    if (0 == dx_i) {
+      FGraphNode *g =
+          fconstant_d(0, a->operation.shape, a->operation.dimensions);
+      return findex_set(g, prev_adj, b);
+    } else
+      return fconstant_d(0, b->operation.shape, b->operation.dimensions);
+  } break;
+  case FSET_INDEX: {
+    FGraphNode *b = y->predecessors[1];
+    FGraphNode *i = y->predecessors[2];
+    // a[i] = b
+    if (0 == dx_i) {
+      FGraphNode *g =
+          fconstant_d(0, b->operation.shape, b->operation.dimensions);
+      // remove values that have been overwritten
+      return findex_set(prev_adj, g, i);
+    } else {
+      // filter for b relevant elements
+      return findex(prev_adj, i);
+    }
+  } break;
   case FSLIDE:
   case FCONVOLVE: {
     FGraphNode *a = y->predecessors[0];

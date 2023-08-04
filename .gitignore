@@ -33,5 +33,6 @@ libflint.a
 compile_commands.json
 build/*
 debug/*
+paper/*
 #vscode
 .cache

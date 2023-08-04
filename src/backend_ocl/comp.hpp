@@ -37,7 +37,7 @@ struct OCLCompilerThread {
   //      synchronizing problems with cache.
   //      - To do this we can insert in the queue at the back for "compile for
   //      future" kernels and in the front for "compile for now" kernels
-#define MAX_NUMBER_PARAMS 2
+#define MAX_NUMBER_PARAMS 3
   static int generateKernelHash(FOperationType operation, FType return_type,
                                 std::vector<FType> params) {
     int hash = (operation << 3) |
