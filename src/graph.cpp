@@ -26,19 +26,18 @@
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
 const char *fop_to_string[] = {
-    "FSTORE",      "FGEN_RANDOM",  "FGEN_CONST",  "FADD",
-    "FSUB",        "FMUL",         "FDIV",        "FPOW",
-    "FNEG",        "FLOG",         "FSIGN",       "FEVEN",
-    "FLOG2",       "FLOG10",       "FSIN",        "FCOS",
-    "FTAN",        "FASIN",        "FACOS",       "FATAN",
-    "FSQRT",       "FEXP",         "FLATTEN",     "FMATMUL",
-    "FCONVERSION", "FRESHAPE",     "FMIN",        "FMAX",
-    "FREDUCE_SUM", "FREDUCE_MUL",  "FREDUCE_MIN", "FREDUCE_MAX",
-    "FSLICE",      "FABS",         "FREPEAT",     "FTRANSPOSE",
-    "FEXTEND",     "FCONCAT",      "FLESS",       "FEQUAL",
-    "FGREATER",    "FCONVOLVE",    "FSLIDE",      "FGRADIENT_CONVOLVE",
-    "FINDEX",      "FMULTI_INDEX", "FSET_INDEX",  "FMULTI_SET_INDEX",
-    "FPERMUTATE"};
+    "FSTORE",      "FGEN_RANDOM", "FGEN_CONST",    "FADD",
+    "FSUB",        "FMUL",        "FDIV",          "FPOW",
+    "FNEG",        "FLOG",        "FSIGN",         "FEVEN",
+    "FLOG2",       "FLOG10",      "FSIN",          "FCOS",
+    "FTAN",        "FASIN",       "FACOS",         "FATAN",
+    "FSQRT",       "FEXP",        "FLATTEN",       "FMATMUL",
+    "FCONVERSION", "FRESHAPE",    "FMIN",          "FMAX",
+    "FREDUCE_SUM", "FREDUCE_MUL", "FREDUCE_MIN",   "FREDUCE_MAX",
+    "FSLICE",      "FABS",        "FREPEAT",       "FTRANSPOSE",
+    "FEXTEND",     "FCONCAT",     "FLESS",         "FEQUAL",
+    "FGREATER",    "FCONVOLVE",   "FSLIDE",        "FGRADIENT_CONVOLVE",
+    "FINDEX",      "FSET_INDEX",  "FSET_BY_INDEX", "FPERMUTATE"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 // converts c++ type to flint type
 
@@ -1338,8 +1337,7 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
   node->reference_counter = 0;
   return eager_execution ? execute_eagerly(node) : node;
 }
-static FGraphNode *index_impl(FGraphNode *a, FGraphNode *indices,
-                              bool multi_index) {
+FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
   if (indices->operation.dimensions > a->operation.dimensions)
     flogging(
         F_ERROR,
@@ -1354,7 +1352,7 @@ static FGraphNode *index_impl(FGraphNode *a, FGraphNode *indices,
                "indices Tensor has to be a prefix of the indexed Tensor!");
 
   FOperation op;
-  op.op_type = multi_index ? FMULTI_INDEX : FINDEX;
+  op.op_type = FINDEX;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
@@ -1363,12 +1361,6 @@ static FGraphNode *index_impl(FGraphNode *a, FGraphNode *indices,
   op.data_type = a->operation.data_type;
   op.additional_data = nullptr;
   return addNode(op, {a, indices});
-}
-FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
-  return index_impl(a, indices, false);
-}
-FGraphNode *fmulti_index(FGraphNode *a, FGraphNode *indices) {
-  return index_impl(a, indices, true);
 }
 FGraphNode *fset_by_index(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
   if (indices->operation.dimensions > a->operation.dimensions)
@@ -1394,7 +1386,7 @@ FGraphNode *fset_by_index(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
                         "last dimension of the "
                         "indices Tensor the shape of a and b must be equal!");
   FOperation op;
-  op.op_type = FSET_INDEX;
+  op.op_type = FSET_BY_INDEX;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
@@ -1402,8 +1394,7 @@ FGraphNode *fset_by_index(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
   op.additional_data = nullptr;
   return addNode(op, {a, b, indices});
 }
-FGraphNode *fmulti_index_set(FGraphNode *a, FGraphNode *b,
-                             FGraphNode *indices) {
+FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
   if (!indices->result_data && indices->operation.op_type != FSTORE)
     indices = fExecuteGraph(indices);
   if (!b->result_data && b->operation.op_type != FSTORE)
@@ -1422,7 +1413,7 @@ FGraphNode *fmulti_index_set(FGraphNode *a, FGraphNode *b,
                "indices Tensor has to be a prefix of the indexed Tensor!");
 
   FOperation op;
-  op.op_type = FMULTI_SET_INDEX;
+  op.op_type = FSET_INDEX;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
