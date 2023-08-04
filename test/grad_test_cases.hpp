@@ -40,8 +40,9 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(dz[1][1][1], -10);
     Tensor<double, 3> zy = z.matmul(y);
     w = (x.matmul(y)).matmul(zy);
-    FGraphNode* dxs[3] = {y.get_graph_node(), x.get_graph_node(), z.get_graph_node()};
-    FGraphNode* grd[3];
+    FGraphNode *dxs[3] = {y.get_graph_node(), x.get_graph_node(),
+                          z.get_graph_node()};
+    FGraphNode *grd[3];
     fCalculateGradients(w.get_graph_node(), &(dxs[0]), 3, &(grd[0]));
     dy = Tensor<double, 2>(grd[0], y.get_shape());
     CHECK_EQ(dy[0][0], 67);
@@ -123,8 +124,8 @@ TEST_SUITE("Autodiff") {
     y.watch();
     z.watch();
     Tensor<double, 3> w = x.pow(y).log();
-    FGraphNode* dxs[] = {x.get_graph_node(), y.get_graph_node()};
-    FGraphNode* grds[2];
+    FGraphNode *dxs[] = {x.get_graph_node(), y.get_graph_node()};
+    FGraphNode *grds[2];
     fCalculateGradients(w.get_graph_node(), &dxs[0], 2, &grds[0]);
     Tensor<double, 3> dx = Tensor<double, 3>(grds[0], x.get_shape());
     Tensor<double, 1> dy = Tensor<double, 1>(grds[1], y.get_shape());
@@ -188,8 +189,9 @@ TEST_SUITE("Autodiff") {
     z.watch();
     Tensor<double, 2> m1 = (z.min(y) * 0.3).abs();
     Tensor<double, 3> m2 = (y.min(z) * 0.3).max(x).abs() * y.abs();
-    FGraphNode* m2dx[] = {x.get_graph_node(), y.get_graph_node(), z.get_graph_node()};
-    FGraphNode* m2grds[3];
+    FGraphNode *m2dx[] = {x.get_graph_node(), y.get_graph_node(),
+                          z.get_graph_node()};
+    FGraphNode *m2grds[3];
     fCalculateGradients(m2.get_graph_node(), &m2dx[0], 3, &m2grds[0]);
     Tensor<double, 3> dx2(m2grds[0], x.get_shape());
     for (int i = 0; i < 2; i++) {
@@ -449,8 +451,8 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(1, da[5][5][0]);
 
     Tensor<int, 3> s1 = x.slide(k, 1, 2);
-    FGraphNode* dxs[] = {k.get_graph_node(), x.get_graph_node()};
-    FGraphNode* grads[2];
+    FGraphNode *dxs[] = {k.get_graph_node(), x.get_graph_node()};
+    FGraphNode *grads[2];
     fCalculateGradients(s1.get_graph_node(), &dxs[0], 2, &grads[0]);
     dk = Tensor<double, 3>(grads[0], dk.get_shape());
     CHECK_EQ(s1[0][0][0], dk[0][0][0]);
@@ -498,6 +500,52 @@ TEST_SUITE("Autodiff") {
     Tensor<double, 1> dec = (e * 2).exp();
     for (int i = 0; i < 4; i++)
       CHECK_EQ(dec[i], dec[i]);
+  }
+  TEST_CASE("Index, Set Index") {
+    GradientContext _;
+    Tensor<double, 3> a = {
+        {{0, 1}, {2, 3}}, {{4, 5}, {6, 7}}, {{8, 9}, {10, 11}}};
+    a.watch();
+    Tensor<int, 1> i1 = {0, 2};
+    Tensor<double, 3> a1 =
+        a.index(i1) * Tensor<double, 3>({{{1, 2}, {3, 4}}, {{5, 6}, {7, 8}}});
+    Tensor<double, 3> ga1 = a1.gradient(a);
+    Tensor<double, 3> e1 = {
+        {{1, 2}, {3, 4}}, {{0, 0}, {0, 0}}, {{5, 6}, {7, 8}}};
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 2; j++)
+        for (int k = 0; k < 2; k++)
+          CHECK_EQ(e1[i][j][k], ga1[i][j][k]);
+    Tensor<int, 2> i2 = {{0, 0, 1, 1}, {1, 0, 1, 0}, {0, 1, 1, 0}};
+    Tensor<double, 3> a2 =
+        a.index(i2) * Tensor<double, 3>{{{1, 2}, {3, 4}, {5, 6}, {7, 8}},
+                                        {{9, 1}, {2, 3}, {4, 5}, {6, 7}},
+                                        {{8, 9}, {0, 1}, {2, 3}, {4, 5}}};
+    Tensor<double, 3> e2 = {{{4, 6}, {12, 14}},
+                            {{2 + 6, 3 + 7}, {9 + 4, 1 + 5}},
+                            {{12, 14}, {2, 4}}};
+    Tensor<double, 3> g2 = a2.gradient(a);
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 2; j++)
+        for (int k = 0; k < 2; k++)
+          CHECK_EQ(e2[i][j][k], g2[i][j][k]);
+    
+    Tensor<double, 3> a3 = Flint::random(3, 3, 3);
+    Tensor<double, 3> b3 = Flint::random(3, 3, 3);
+    a3.watch();
+    b3.watch();
+    Tensor<int, 1> i3 = {0, 0, 2};
+    Tensor<double, 3> m3 = Flint::random(3, 3, 3);
+    Tensor<double, 3> c3 = a3.index_set(b3, i3) * m3;
+    Tensor<double, 3> g3 = c3.gradient(a3);
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++)
+        for (int k = 0; k < 3; k++) {
+          if (i == 1)
+            CHECK_EQ(m3[i][j][k], g3[i][j][k]);
+          else
+            CHECK_EQ(0, g3[i][j][k]);
+        }
   }
   TEST_CASE("Reduce_min/max") {
     GradientContext _;
