@@ -935,7 +935,7 @@ FGraphNode *fset_by_index(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
  * contrast to `findex_set` it allows to assign multiple values in `a` which
  * will be summed up. E.g.
  *
- * `findex_set([[0, 1], [2, 3], [4, 5], [6, 7]], [[4, 5], [6, 7], [8, 9]], [0,
+ * `fmulti_index_set([[0, 1], [2, 3], [4, 5], [6, 7]], [[4, 5], [6, 7], [8, 9]], [0,
  * 0, 2]) == [[10, 12], [2, 3], [8, 9], [6, 7]]`
  */
 FGraphNode *fmulti_index_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);

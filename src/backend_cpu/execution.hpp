@@ -387,7 +387,7 @@ static void executeNode(const FGraphNode *node,
   // handle operations that are zero-ary or unary and dont need type parameters
   switch (node->operation.op_type) {
   case FGEN_RANDOM: {
-    double seed = ((double*) node->operation.additional_data)[0];
+    double seed = ((double *)node->operation.additional_data)[0];
     for (size_t i = from; i < from + size; i++) {
       double v = sin(i + seed) * 43758.5453123;
       result[i] = std::min(v - floor(v), 0.99999);
@@ -680,17 +680,18 @@ static void executeNode(const FGraphNode *node,
       const size_t rest = i % acc_sizes_ax;
       const size_t axi = (i / acc_sizes_ax) % op.shape[axis];
       const size_t base_ind = base * c.shape[axis];
-      result[i] = ((T*) a.data)[i];
+      result[i] = ((T *)a.data)[i];
       // iterate over last dimension and find all correct indices
       for (size_t j = base_ind; j < base_ind + c.shape[axis]; j++) {
-        const long ind = (long)(c.type == F_INT32 ? ((int*)c.data)[j] : ((long*)c.data)[j]);
+        const long ind = (long)(c.type == F_INT32 ? ((int *)c.data)[j]
+                                                  : ((long *)c.data)[j]);
         if (ind == axi) {
-          result[i] += ((T*) b.data)[j * acc_sizes_ax + rest]; 
+          result[i] += ((T *)b.data)[j * acc_sizes_ax + rest];
         }
       }
       // if at least one index was found -> only sum of elements of b
-      if (result[i] != ((T*) a.data)[i])
-        result[i] -= ((T*) a.data)[i];
+      if (result[i] != ((T *)a.data)[i])
+        result[i] -= ((T *)a.data)[i];
     }
   } break;
   case FSET_INDEX: {
@@ -707,12 +708,18 @@ static void executeNode(const FGraphNode *node,
     for (size_t i = from; i < from + size; i++) {
       const size_t base = i / (acc_sizes_ax * op.shape[axis]);
       const size_t rest = i % acc_sizes_ax;
-      const long ind = (long)(c.type == F_INT32 ? ((int*)c.data)[i / acc_sizes_ax] : ((long*)c.data)[i / acc_sizes_ax]);
+      const long ind =
+          (long)(c.type == F_INT32 ? ((int *)c.data)[i / acc_sizes_ax]
+                                   : ((long *)c.data)[i / acc_sizes_ax]);
       if (ind < 0)
-        std::memcpy(&result[i], &((char*)a.data)[i * typeSize(a.type)], typeSize(a.type));
+        std::memcpy(&result[i], &((char *)a.data)[i * typeSize(a.type)],
+                    typeSize(a.type));
       else
-        std::memcpy(&result[i], &((char*)b.data)[((base * acc_sizes_ax * b.shape[axis]) + 
-              (ind * acc_sizes_ax) + rest) * typeSize(b.type)], typeSize(b.type));
+        std::memcpy(&result[i],
+                    &((char *)b.data)[((base * acc_sizes_ax * b.shape[axis]) +
+                                       (ind * acc_sizes_ax) + rest) *
+                                      typeSize(b.type)],
+                    typeSize(b.type));
     }
   } break;
   default: {

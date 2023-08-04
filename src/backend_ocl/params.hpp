@@ -61,8 +61,9 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
   case FINDEX: {
     const FOperation op = node->operation;
     const unsigned int axis =
-        node->predecessors[op.op_type == FSET_INDEX || op.op_type == FMULTI_SET_INDEX ? 2 : 1]
-            ->operation.dimensions -
+        node->predecessors
+            [op.op_type == FSET_INDEX || op.op_type == FMULTI_SET_INDEX ? 2 : 1]
+                ->operation.dimensions -
         1;
     size_t acc_sizes_ax = 1;
     for (int i = axis + 1; i < op.dimensions; i++)
