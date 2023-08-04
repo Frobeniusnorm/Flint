@@ -210,7 +210,6 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
         our_kernel = kernel_name;
     }
   } break;
-  case FSET_BY_INDEX:
   case FSET_INDEX: {
     for (FType a_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
       for (FType i_type : {F_INT32, F_INT64}) {

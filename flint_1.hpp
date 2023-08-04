@@ -791,15 +791,6 @@ template <typename T> struct Tensor<T, 1> {
     return Tensor<T, 1>(nc, new_shape);
   }
   template <typename K>
-  Tensor<T, 1> set_by_index(const Tensor<T, 1> &b,
-                            const Tensor<K, 1> &indices) const {
-    static_assert(std::is_same<K, int>() || std::is_same<K, long>(),
-                  "Indices must be integer!");
-    return Tensor<T, 1>(
-        fset_by_index(node, b.get_graph_node(), indices.get_graph_node()),
-        shape);
-  }
-  template <typename K>
   Tensor<T, 1> index_set(const Tensor<T, 1> &b,
                          const Tensor<K, 1> &indices) const {
     static_assert(std::is_same<K, int>() || std::is_same<K, long>(),

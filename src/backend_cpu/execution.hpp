@@ -695,34 +695,6 @@ static void executeNode(const FGraphNode *node,
         result[i] = ((T *)a.data)[i];
     }
   } break;
-  case FSET_BY_INDEX: {
-    const CPUResultData a = predecessor_data[0];
-    const CPUResultData b = predecessor_data[1];
-    const CPUResultData c = predecessor_data[2];
-    const unsigned int axis = c.shape.size() - 1;
-    const FOperation op = node->operation;
-    // get index of result, index tensor, reproject index
-    size_t acc_sizes_ax = 1;
-    for (int i = axis + 1; i < op.dimensions; i++)
-      acc_sizes_ax *= op.shape[i];
-
-    for (size_t i = from; i < from + size; i++) {
-      const size_t base = i / (acc_sizes_ax * op.shape[axis]);
-      const size_t rest = i % acc_sizes_ax;
-      const long ind =
-          (long)(c.type == F_INT32 ? ((int *)c.data)[i / acc_sizes_ax]
-                                   : ((long *)c.data)[i / acc_sizes_ax]);
-      if (ind < 0)
-        std::memcpy(&result[i], &((char *)a.data)[i * typeSize(a.type)],
-                    typeSize(a.type));
-      else
-        std::memcpy(&result[i],
-                    &((char *)b.data)[((base * acc_sizes_ax * b.shape[axis]) +
-                                       (ind * acc_sizes_ax) + rest) *
-                                      typeSize(b.type)],
-                    typeSize(b.type));
-    }
-  } break;
   default: {
     if (node->num_predecessor == 1) {
 

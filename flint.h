@@ -164,7 +164,6 @@ enum FOperationType {
   FGRADIENT_CONVOLVE, // only for internal use!
   FINDEX,
   FSET_INDEX,
-  FSET_BY_INDEX,
   FPERMUTATE,
   FNUM_OPERATION_TYPES
 };
@@ -876,16 +875,6 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
  * 11]]]`
  */
 FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
-/**
- * Assigns to a new tensor with the same shape of `a` either a element of `b` or
- * copies the corresponding element in `a`. The shape of `indices` has to be a
- * full prefix of the shape of `a`, indexing will occur in the last dimension of
- * `indices`. For each element in `a` the index of the indexed dimension may be
- * either `-1`, in which case the original element of `a` is copied, or a index
- * >= 0 in which case `b` will be indexed in the indexed dimension and its
- * element copied.
- */
-FGraphNode *fset_by_index(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
 /**
  * Selects a indexed selection from `a` (like `fmulti_index`) and replaces this
  * selection with `b`. Therefore if `indices` has `n` dimensions, the shape of

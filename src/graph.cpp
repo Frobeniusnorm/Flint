@@ -26,18 +26,18 @@
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
 const char *fop_to_string[] = {
-    "FSTORE",      "FGEN_RANDOM", "FGEN_CONST",    "FADD",
-    "FSUB",        "FMUL",        "FDIV",          "FPOW",
-    "FNEG",        "FLOG",        "FSIGN",         "FEVEN",
-    "FLOG2",       "FLOG10",      "FSIN",          "FCOS",
-    "FTAN",        "FASIN",       "FACOS",         "FATAN",
-    "FSQRT",       "FEXP",        "FLATTEN",       "FMATMUL",
-    "FCONVERSION", "FRESHAPE",    "FMIN",          "FMAX",
-    "FREDUCE_SUM", "FREDUCE_MUL", "FREDUCE_MIN",   "FREDUCE_MAX",
-    "FSLICE",      "FABS",        "FREPEAT",       "FTRANSPOSE",
-    "FEXTEND",     "FCONCAT",     "FLESS",         "FEQUAL",
-    "FGREATER",    "FCONVOLVE",   "FSLIDE",        "FGRADIENT_CONVOLVE",
-    "FINDEX",      "FSET_INDEX",  "FSET_BY_INDEX", "FPERMUTATE"};
+    "FSTORE",      "FGEN_RANDOM", "FGEN_CONST",  "FADD",
+    "FSUB",        "FMUL",        "FDIV",        "FPOW",
+    "FNEG",        "FLOG",        "FSIGN",       "FEVEN",
+    "FLOG2",       "FLOG10",      "FSIN",        "FCOS",
+    "FTAN",        "FASIN",       "FACOS",       "FATAN",
+    "FSQRT",       "FEXP",        "FLATTEN",     "FMATMUL",
+    "FCONVERSION", "FRESHAPE",    "FMIN",        "FMAX",
+    "FREDUCE_SUM", "FREDUCE_MUL", "FREDUCE_MIN", "FREDUCE_MAX",
+    "FSLICE",      "FABS",        "FREPEAT",     "FTRANSPOSE",
+    "FEXTEND",     "FCONCAT",     "FLESS",       "FEQUAL",
+    "FGREATER",    "FCONVOLVE",   "FSLIDE",      "FGRADIENT_CONVOLVE",
+    "FINDEX",      "FSET_INDEX",  "FPERMUTATE"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 // converts c++ type to flint type
 
@@ -1361,38 +1361,6 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
   op.data_type = a->operation.data_type;
   op.additional_data = nullptr;
   return addNode(op, {a, indices});
-}
-FGraphNode *fset_by_index(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
-  if (indices->operation.dimensions > a->operation.dimensions)
-    flogging(
-        F_ERROR,
-        "Invalid index Tensor dimensionality! Larger than indexed Tensor!");
-  if (indices->operation.data_type != F_INT32 &&
-      indices->operation.data_type != F_INT64)
-    flogging(F_ERROR, "Only integer tensors may be used as indices!");
-  if (a->operation.data_type != b->operation.data_type)
-    flogging(F_ERROR, "Only integer tensors may be used as indices!");
-  for (int d = 0; d < indices->operation.dimensions; d++)
-    if (a->operation.shape[d] != indices->operation.shape[d] ||
-        (d != indices->operation.dimensions - 1 &&
-         b->operation.shape[d] != indices->operation.shape[d]))
-      flogging(F_ERROR,
-               "Invalid indices shape! Except for last dimension shape of "
-               "indices Tensor has to be a prefix of the indexed Tensor!");
-  for (int d = 0; d < a->operation.dimensions; d++)
-    if (a->operation.shape[d] != b->operation.shape[d] &&
-        d != indices->operation.dimensions - 1)
-      flogging(F_ERROR, "Invalid shape of a and b! Except for the shape of the "
-                        "last dimension of the "
-                        "indices Tensor the shape of a and b must be equal!");
-  FOperation op;
-  op.op_type = FSET_BY_INDEX;
-  op.dimensions = a->operation.dimensions;
-  op.shape = safe_mal<size_t>(op.dimensions);
-  memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
-  op.data_type = a->operation.data_type;
-  op.additional_data = nullptr;
-  return addNode(op, {a, b, indices});
 }
 FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
   if (!indices->result_data && indices->operation.op_type != FSTORE)

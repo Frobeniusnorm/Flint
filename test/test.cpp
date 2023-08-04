@@ -68,26 +68,6 @@ TEST_SUITE("Graph implementation") {
           CHECK_EQ(c1[i][j][k], c[i][i6[i][j]][k]);
   }
   TEST_CASE("Set by index") {
-    Tensor<double, 3> a1 = Flint::random(2, 2, 2);
-    Tensor<double, 3> b1 = Flint::random(5, 2, 2);
-    Tensor<int, 1> i1 = {-1, 1};
-    Tensor<double, 3> c1 = a1.set_by_index(b1, i1);
-    for (int i = 0; i < 2; i++)
-      for (int j = 0; j < 2; j++) {
-        CHECK_EQ(doctest::Approx(c1[0][i][j]), a1[0][i][j]);
-        CHECK_EQ(doctest::Approx(c1[1][i][j]), b1[1][i][j]);
-      }
-    Tensor<double, 3> a2 = Flint::random(2, 5, 2)();
-    Tensor<double, 3> b2 = Flint::random(2, 3, 2)();
-    Tensor<int, 2> i2 = {{-1, 1, 0, -1, 2}, {-1, -1, 2, 1, 0}};
-    Tensor<double, 3> c2 = a2.set_by_index(b2, i2)();
-    for (int i = 0; i < 2; i++)
-      for (int j = 0; j < 2; j++)
-        for (int k = 0; k < 2; k++) {
-          CHECK_EQ(doctest::Approx(c2[i][j][k]),
-                   i2[i][j] < 0 ? a2[i][j][k] : b2[i][i2[i][j]][k]);
-        }
-    // multi index set
     Tensor<int, 2> a3 = {{0, 1}, {2, 3}, {4, 5}, {6, 7}};
     Tensor<int, 2> b3 = {{4, 5}, {6, 7}, {8, 9}};
     Tensor<int, 1> i3 = {0, 0, 2};

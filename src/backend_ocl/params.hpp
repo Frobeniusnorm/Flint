@@ -56,13 +56,11 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
       flogging(F_ERROR, "Could not load Argument to kernel!");
   } break;
   case FSET_INDEX:
-  case FSET_BY_INDEX:
   case FINDEX: {
     const FOperation op = node->operation;
     const unsigned int axis =
-        node->predecessors
-            [op.op_type == FSET_INDEX || op.op_type == FSET_BY_INDEX ? 2 : 1]
-                ->operation.dimensions -
+        node->predecessors[op.op_type == FSET_INDEX ? 2 : 1]
+            ->operation.dimensions -
         1;
     size_t acc_sizes_ax = 1;
     for (int i = axis + 1; i < op.dimensions; i++)
@@ -90,13 +88,6 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
           CL_SUCCESS)
         flogging(F_ERROR, "Could not load Argument to kernel!");
     }
-    // push b shape
-    if (op.op_type == FSET_BY_INDEX)
-      if (clSetKernelArg(
-              kernel, par_index++, sizeof(long),
-              (void *)&node->predecessors[1]->operation.shape[axis]) !=
-          CL_SUCCESS)
-        flogging(F_ERROR, "Could not load Argument to kernel!");
   } break;
   case FGEN_CONSTANT: {
     switch (node->operation.data_type) {
@@ -332,7 +323,6 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
   FOperation op = pred->operation;
   switch (node->operation.op_type) {
   case FSET_INDEX:
-  case FSET_BY_INDEX:
   case FINDEX:
   case FMATMUL:
   case FGRADIENT_CONVOLVE:
