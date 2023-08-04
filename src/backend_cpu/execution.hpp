@@ -335,7 +335,6 @@ static void binaryExpression(T *__restrict__ result,
       result[i] = res;
     }
   } break;
-  case FMULTI_INDEX:
   case FINDEX: {
     const FGraphNode *a = curr->predecessors[0];
     const FGraphNode *b = curr->predecessors[1];
@@ -663,7 +662,7 @@ static void executeNode(const FGraphNode *node,
     for (size_t i = from; i < from + size; i++)
       result[i] = atan(((const T *__restrict__)pred.data)[i]);
   } break;
-  case FMULTI_SET_INDEX: {
+  case FSET_INDEX: {
     // TODO Improve (somehow)
     const CPUResultData a = predecessor_data[0];
     const CPUResultData b = predecessor_data[1];
@@ -680,46 +679,20 @@ static void executeNode(const FGraphNode *node,
       const size_t rest = i % acc_sizes_ax;
       const size_t axi = (i / acc_sizes_ax) % op.shape[axis];
       const size_t base_ind = base * c.shape[axis];
-      result[i] = ((T *)a.data)[i];
+      bool found_something = false;
+      result[i] = 0;
       // iterate over last dimension and find all correct indices
       for (size_t j = base_ind; j < base_ind + c.shape[axis]; j++) {
         const long ind = (long)(c.type == F_INT32 ? ((int *)c.data)[j]
                                                   : ((long *)c.data)[j]);
         if (ind == axi) {
+          found_something = true;
           result[i] += ((T *)b.data)[j * acc_sizes_ax + rest];
         }
       }
       // if at least one index was found -> only sum of elements of b
-      if (result[i] != ((T *)a.data)[i])
-        result[i] -= ((T *)a.data)[i];
-    }
-  } break;
-  case FSET_INDEX: {
-    const CPUResultData a = predecessor_data[0];
-    const CPUResultData b = predecessor_data[1];
-    const CPUResultData c = predecessor_data[2];
-    const unsigned int axis = c.shape.size() - 1;
-    const FOperation op = node->operation;
-    // get index of result, index tensor, reproject index
-    size_t acc_sizes_ax = 1;
-    for (int i = axis + 1; i < op.dimensions; i++)
-      acc_sizes_ax *= op.shape[i];
-
-    for (size_t i = from; i < from + size; i++) {
-      const size_t base = i / (acc_sizes_ax * op.shape[axis]);
-      const size_t rest = i % acc_sizes_ax;
-      const long ind =
-          (long)(c.type == F_INT32 ? ((int *)c.data)[i / acc_sizes_ax]
-                                   : ((long *)c.data)[i / acc_sizes_ax]);
-      if (ind < 0)
-        std::memcpy(&result[i], &((char *)a.data)[i * typeSize(a.type)],
-                    typeSize(a.type));
-      else
-        std::memcpy(&result[i],
-                    &((char *)b.data)[((base * acc_sizes_ax * b.shape[axis]) +
-                                       (ind * acc_sizes_ax) + rest) *
-                                      typeSize(b.type)],
-                    typeSize(b.type));
+      if (!found_something)
+        result[i] = ((T *)a.data)[i];
     }
   } break;
   default: {

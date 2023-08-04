@@ -1006,7 +1006,7 @@ TEST_CASE("Index") {
       for (int k = 0; k < 2; k++)
         CHECK_EQ(a1[i][j][k], i == 0 ? j * 2 + k : 8 + j * 2 + k);
   Tensor<int, 1> i2 = {0, 1, 1, 2};
-  Tensor<double, 3> a2 = a.multi_index(i2);
+  Tensor<double, 3> a2 = a.index(i2);
   for (int i = 0; i < 4; i++)
     for (int j = 0; j < 2; j++)
       for (int k = 0; k < 2; k++)
@@ -1019,13 +1019,13 @@ TEST_CASE("Index") {
       for (int k = 0; k < 2; k++)
         CHECK_EQ(a3[i][j][k], i == 0 ? k : i == 1 ? 6 + k : 8 + k);
   Tensor<int, 3> i4 = {{{0, 0}, {1, 0}}, {{0, 1}, {1, 1}}, {{1, 1}, {0, 0}}};
-  Tensor<double, 3> a4 = a.multi_index(i4);
+  Tensor<double, 3> a4 = a.index(i4);
   for (int i = 0; i < 3; i++)
     for (int j = 0; j < 2; j++)
       for (int k = 0; k < 2; k++)
         CHECK_EQ(a4[i][j][k], a[i][j][i4[i][j][k]]);
   Tensor<int, 2> i5 = {{0, 0, 1, 1}, {1, 0, 1, 0}, {0, 1, 1, 0}};
-  Tensor<double, 3> a5 = a.multi_index(i5);
+  Tensor<double, 3> a5 = a.index(i5);
   for (int i = 0; i < 3; i++)
     for (int j = 0; j < 4; j++)
       for (int k = 0; k < 2; k++)
@@ -1035,45 +1035,25 @@ TEST_CASE("Index") {
   c = c + 2;
   c = c.max(4);
   Tensor<int, 2> i6 = {{4, 5}, {3, 3}, {0, 1}};
-  Tensor<double, 3> c1 = c.multi_index(i6);
+  Tensor<double, 3> c1 = c.index(i6);
   for (int i = 0; i < 3; i++)
     for (int j = 0; j < 2; j++)
       for (int k = 0; k < 6; k++)
         CHECK_EQ(c1[i][j][k], c[i][i6[i][j]][k]);
 }
 TEST_CASE("Set by index") {
-  Tensor<double, 3> a1 = Flint::random(2, 2, 2);
-  Tensor<double, 3> b1 = Flint::random(5, 2, 2);
-  Tensor<int, 1> i1 = {-1, 1};
-  Tensor<double, 3> c1 = a1.set_by_index(b1, i1);
-  for (int i = 0; i < 2; i++)
-    for (int j = 0; j < 2; j++) {
-      CHECK_EQ(doctest::Approx(c1[0][i][j]), a1[0][i][j]);
-      CHECK_EQ(doctest::Approx(c1[1][i][j]), b1[1][i][j]);
-    }
-  Tensor<double, 3> a2 = Flint::random(2, 5, 2)();
-  Tensor<double, 3> b2 = Flint::random(2, 3, 2)();
-  Tensor<int, 2> i2 = {{-1, 1, 0, -1, 2}, {-1, -1, 2, 1, 0}};
-  Tensor<double, 3> c2 = a2.set_by_index(b2, i2)();
-  for (int i = 0; i < 2; i++)
-    for (int j = 0; j < 2; j++)
-      for (int k = 0; k < 2; k++) {
-        CHECK_EQ(doctest::Approx(c2[i][j][k]),
-                 i2[i][j] < 0 ? a2[i][j][k] : b2[i][i2[i][j]][k]);
-      }
-  // multi index set
   Tensor<int, 2> a3 = {{0, 1}, {2, 3}, {4, 5}, {6, 7}};
   Tensor<int, 2> b3 = {{4, 5}, {6, 7}, {8, 9}};
   Tensor<int, 1> i3 = {0, 0, 2};
   Tensor<int, 2> e3 = {{10, 12}, {2, 3}, {8, 9}, {6, 7}};
-  Tensor<int, 2> c3 = a3.multi_index_set(b3, i3);
+  Tensor<int, 2> c3 = a3.index_set(b3, i3);
   for (int i = 0; i < 4; i++)
     for (int j = 0; j < 2; j++)
       CHECK_EQ(c3[i][j], e3[i][j]);
   Tensor<int, 2> i4 = {{-1, 0}, {1, 1}, {1, 0}, {1, -1}};
   Tensor<int, 2> b4 = {{4, 5}, {6, 7}, {8, 9}, {10, 11}};
   Tensor<int, 2> e4 = {{5, 1}, {2, 13}, {9, 8}, {6, 10}};
-  Tensor<int, 2> c4 = a3.multi_index_set(b4, i4);
+  Tensor<int, 2> c4 = a3.index_set(b4, i4);
   for (int i = 0; i < 4; i++)
     for (int j = 0; j < 2; j++)
       CHECK_EQ(c4[i][j], e4[i][j]);

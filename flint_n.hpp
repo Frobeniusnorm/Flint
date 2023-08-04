@@ -359,7 +359,7 @@ template <typename T, unsigned int n> struct Tensor {
                       (op.data_type == F_INT32     ? std::string("INT32")
                        : op.data_type == F_INT64   ? std::string("INT64")
                        : op.data_type == F_FLOAT32 ? std::string("FLOAT32")
-                                                    : std::string("FLOAT64")) +
+                                                   : std::string("FLOAT64")) +
                       ", shape: " + FLINT_HPP_HELPER::arrayString(shape) + ">(";
     if (op.op_type != FSTORE && !node->result_data)
       foo += "<not yet executed>";
@@ -960,9 +960,7 @@ template <typename T, unsigned int n> struct Tensor {
    *
    * The results of this Tensor must be available, to
    * ensure that the method may execute the Tensor. */
-  Tensor<T, 1> reduce_mul() {
-    return flattened().reduce_mul(); 
-  }
+  Tensor<T, 1> reduce_mul() { return flattened().reduce_mul(); }
   /** Reduces all dimension of the tensor by summation e.g.
    *
    * @code{
@@ -973,9 +971,7 @@ template <typename T, unsigned int n> struct Tensor {
    *
    * The results of this Tensor must be available, to
    * ensure that the method may execute the Tensor. */
-  Tensor<T, 1> reduce_sum() {
-    return flattened().reduce_sum(); 
-  }
+  Tensor<T, 1> reduce_sum() { return flattened().reduce_sum(); }
   /** Reduces one dimension of the tensor by keeping the minimum e.g.
    *
    * @code{
@@ -1016,9 +1012,7 @@ template <typename T, unsigned int n> struct Tensor {
    *
    * The results of this Tensor must be available, to
    * ensure that the method may execute the Tensor. */
-  Tensor<T, 1> reduce_min() {
-    return flattened().reduce_min(); 
-  }
+  Tensor<T, 1> reduce_min() { return flattened().reduce_min(); }
   /** Reduces one dimension of the tensor by keeping the maximum e.g.
    *
    * @code{
@@ -1059,9 +1053,7 @@ template <typename T, unsigned int n> struct Tensor {
    *
    * The results of this Tensor must be available, to
    * ensure that the method may execute the Tensor. */
-  Tensor<T, 1> reduce_max() {
-    return flattened().reduce_max(); 
-  }
+  Tensor<T, 1> reduce_max() { return flattened().reduce_max(); }
   /**
    * Takes the elementwise absolute value of this Tensor (negative signs are
    * removed).
@@ -1453,34 +1445,24 @@ template <typename T, unsigned int n> struct Tensor {
   }
   template <typename K, unsigned int k>
   Tensor<T, n> index(const Tensor<K, k> &indices) const {
-    static_assert(std::is_same<K, int>() || std::is_same<K, long>(), "Indices must be integer!");
-    static_assert(k <= n, "Indices must match the first dimensions of the Tensor!");
+    static_assert(std::is_same<K, int>() || std::is_same<K, long>(),
+                  "Indices must be integer!");
+    static_assert(k <= n,
+                  "Indices must match the first dimensions of the Tensor!");
     FGraphNode *nc = findex(node, indices.get_graph_node());
     std::array<size_t, n> new_shape;
     std::copy_n(nc->operation.shape, n, new_shape.begin());
     return Tensor<T, n>(nc, new_shape);
   }
   template <typename K, unsigned int k>
-  Tensor<T, n> multi_index(const Tensor<K, k> &indices) const {
-    static_assert(std::is_same<K, int>() || std::is_same<K, long>(), "Indices must be integer!");
-    static_assert(k <= n, "Indices must match the first dimensions of the Tensor!");
-    FGraphNode *nc = fmulti_index(node, indices.get_graph_node());
-    std::array<size_t, n> new_shape;
-    std::copy_n(nc->operation.shape, n, new_shape.begin());
-    return Tensor<T, n>(nc, new_shape);
-  }
-
-  template <typename K, unsigned int k>
-  Tensor<T, n> set_by_index(const Tensor<T, n> &b, const Tensor<K, k> &indices) const {
-    static_assert(std::is_same<K, int>() || std::is_same<K, long>(), "Indices must be integer!");
-    static_assert(k <= n, "Indices must match the first dimensions of the Tensor!");
-    return Tensor<T, n>(fset_by_index(node, b.get_graph_node(), indices.get_graph_node()), shape);    
-  }
-  template <typename K, unsigned int k>
-  Tensor<T, n> multi_index_set(const Tensor<T, n> &b, const Tensor<K, k> &indices) const {
-    static_assert(std::is_same<K, int>() || std::is_same<K, long>(), "Indices must be integer!");
-    static_assert(k <= n, "Indices must match the first dimensions of the Tensor!");
-    return Tensor<T, n>(fmulti_index_set(node, b.get_graph_node(), indices.get_graph_node()), shape);    
+  Tensor<T, n> index_set(const Tensor<T, n> &b,
+                         const Tensor<K, k> &indices) const {
+    static_assert(std::is_same<K, int>() || std::is_same<K, long>(),
+                  "Indices must be integer!");
+    static_assert(k <= n,
+                  "Indices must match the first dimensions of the Tensor!");
+    return Tensor<T, n>(
+        findex_set(node, b.get_graph_node(), indices.get_graph_node()), shape);
   }
 
   /** Returns the underlying `FGraphNode` for use with the C-Frontend. It is
@@ -1490,8 +1472,9 @@ template <typename T, unsigned int n> struct Tensor {
   /**
    * Calculates the gradient of this Tensor to `dx`. A gradient is always a
    * Tensor of type `double`. `dx` needs to have been marked with `watch` before
-   * construction of this Tensor and this Tensor must be constructed inside a gradient context, either started by
-   * `fStartGradientContext` or a `GradientContext` object.
+   * construction of this Tensor and this Tensor must be constructed inside a
+   * gradient context, either started by `fStartGradientContext` or a
+   * `GradientContext` object.
    */
   template <typename K, unsigned int k>
   Tensor<double, k> gradient(const Tensor<K, k> &dx) const {
@@ -1555,4 +1538,3 @@ protected:
     }
   }
 };
-
