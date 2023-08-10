@@ -164,7 +164,7 @@ enum FOperationType {
   FGRADIENT_CONVOLVE, // only for internal use!
   FINDEX,
   FSET_INDEX,
-  FPERMUTATE,
+  FSLIDING_WINDOW,
   FNUM_OPERATION_TYPES
 };
 /**
@@ -886,10 +886,38 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
  * contrast to `findex_set` it allows to assign multiple values in `a` which
  * will be summed up. E.g.
  *
- * `fmulti_index_set([[0, 1], [2, 3], [4, 5], [6, 7]], [[4, 5], [6, 7], [8, 9]], [0,
- * 0, 2]) == [[10, 12], [2, 3], [8, 9], [6, 7]]`
+ * `fmulti_index_set([[0, 1], [2, 3], [4, 5], [6, 7]], [[4, 5], [6, 7], [8, 9]],
+ * [0, 0, 2]) == [[10, 12], [2, 3], [8, 9], [6, 7]]`
  */
 FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
+/**
+ * Moves a window view with size `size` along the original Tensor by starting
+ * with aligning the first element of the view with the first element of the
+ * tensor, copying the elements of the view and moving the window by the step
+ * size given for each dimension (the window is first moved in the innermost
+ * dimension and after each is iterated moves it in the outer dimensions).
+ * Each view becomes a new element in a new outer dimension.
+ *
+ * `fsliding_window([[0, 1], [2, 3], [4, 5], [6, 7]],
+ *                 [3, 2], [1, 1]) =
+ * [[[0, 1], [2, 3], [4, 5]], [[2, 3], [4, 5], [6, 7]]]`
+ *
+ * `fsliding_window([[[0,1,2],[1,2,3],[2,3,4]],
+ *                  [[1,2,3],[2,3,4],[3,4,5]],
+ *                  [[2,3,4],[3,4,5],[4,5,6]],
+ *                  [[3,4,5],[4,5,6],[5,6,7]]],
+ *                  [2, 2, 2], [2, 1, 2]) =
+ * [[[[0, 1], [1, 2]],
+ *   [[1, 2], [2, 3]]],
+ *  [[[1, 2], [2, 3]],
+ *   [[2, 3], [3, 4]]],
+ *  [[[2, 3], [3, 4]],
+ *   [[3, 4], [4, 5]]],
+ *  [[[3, 4], [4, 5]],
+ *   [[4, 5], [5, 6]]]]`
+ */
+FGraphNode *fsliding_window(FGraphNode *a, unsigned int *size,
+                            unsigned int *steps);
 /**
  * Randomly permutates (=swaps multiple elements with each other without
  * creating, copying or deleting new ones) one axis of the input tensor.
