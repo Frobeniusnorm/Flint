@@ -116,7 +116,6 @@ int fIsEagerExecution();
  * - `F_FLOAT64` (floating point, 64bit)
  */
 enum FType { F_INT32, F_INT64, F_FLOAT32, F_FLOAT64 };
-// TODO generation functions for constants, indexing, random
 enum FOperationType {
   FSTORE,
   FGEN_RANDOM,
@@ -228,8 +227,6 @@ struct FStore {
   void *data;
   size_t num_entries;
 };
-// TODO dirty bit to may keep store data
-
 // range instructions
 struct FSlice {
   long *start;
@@ -240,6 +237,11 @@ struct FExtend {
   size_t *start;
   long *step;
 };
+struct FSlidingWindow {
+  unsigned int *size;
+  unsigned int *step;
+};
+
 // functions
 
 /**

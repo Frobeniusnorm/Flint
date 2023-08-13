@@ -1389,6 +1389,27 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
   op.additional_data = nullptr;
   return addNode(op, {a, b, indices});
 }
+FGraphNode *fsliding_window(FGraphNode *a, unsigned int *size,
+                            unsigned int *steps) {
+  FOperation op;
+  op.op_type = FSLIDING_WINDOW;
+  op.dimensions = a->operation.dimensions;
+  op.data_type = a->operation.data_type;
+  op.shape = safe_mal<size_t>(op.dimensions);
+  op.shape[0] = 1;
+  for (int i = 0; i < a->operation.dimensions; i++) {
+     op.shape[i + 1] = size[i];
+     // we slide a window of size size[i] with step size steps[i] along that dimension
+     op.shape[0] *= (a->operation.shape[i] - (a->operation.shape[i] % size[i])) / steps[i];
+  }
+  FSlidingWindow slidewin;
+  slidewin.size = safe_mal<unsigned int>(a->operation.dimensions);
+  slidewin.step = safe_mal<unsigned int>(a->operation.dimensions);
+  memcpy(slidewin.size, size, a->operation.dimensions * sizeof(unsigned int));
+  memcpy(slidewin.step, steps, a->operation.dimensions * sizeof(unsigned int));
+  op.additional_data = (void*)(&slidewin);
+  return addNode(op, {a});
+}
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax) {
   // TODO: generate random index array for that dimension on the CPU and then index
   return nullptr;
