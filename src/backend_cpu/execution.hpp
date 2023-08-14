@@ -335,6 +335,39 @@ static void binaryExpression(T *__restrict__ result,
       result[i] = res;
     }
   } break;
+  case FSLIDING_WINDOW: {
+    const FGraphNode *a = curr->predecessors[0];
+    const FSlidingWindow *slidewin = (FSlidingWindow*) curr->operation.additional_data;
+    size_t acc_size = curr->operation.shape[1];
+    std::vector<size_t> acc_sizes_pred(a->operation.dimensions);
+    std::vector<size_t> acc_sizes_win(a->operation.dimensions);
+    acc_sizes_pred[acc_sizes_pred.size() - 1] = 1;
+    acc_sizes_win[acc_sizes_win.size() - 1] = 1;
+    for (int i = acc_sizes_pred.size() - 2; i >= 0; i--) {
+      acc_size *= curr->operation.shape[i + 2];
+      acc_sizes_pred[i] = acc_sizes_pred[i + 1] * a->operation.shape[i + 1];
+      // no of windows in that dimension
+      size_t no_win = (a->operation.shape[i + 1] - (a->operation.shape[i + 1] % slidewin->size[i + 1])) / slidewin->step[i + 1];
+      acc_sizes_win[i] = acc_sizes_win[i + 1] * no_win; 
+    }
+    for (size_t i = from; i < from + size; i++) {
+      // window number
+      size_t wi = i / acc_size;
+      size_t rest = i % acc_size;
+      // calculate window base from wi
+      size_t base = 0;
+      for (int d = 0; d < a->operation.dimensions; d++) {
+        size_t local_wi = wi / acc_sizes_win[d];
+        // top left corner of window in that dimension
+        size_t loc_base = local_wi * slidewin->step[d];
+        base += loc_base * acc_sizes_pred[d];
+        // remove this dimension from wi
+        wi %= acc_sizes_win[d];
+      }
+      // index per dimension inside window from rest
+      // TODO
+    }
+  }
   case FINDEX: {
     const FGraphNode *a = curr->predecessors[0];
     const FGraphNode *b = curr->predecessors[1];
