@@ -1464,6 +1464,13 @@ template <typename T, unsigned int n> struct Tensor {
     return Tensor<T, n>(
         findex_set(node, b.get_graph_node(), indices.get_graph_node()), shape);
   }
+  
+  Tensor<T, n + 1> sliding_window(std::array<size_t, n> window_size, std::array<unsigned int, n> step_size = {1}) {
+    FGraphNode* nn = fsliding_window(node, window_size.data(), step_size.data());
+    std::array<size_t, n + 1> ns;
+    std::memcpy(ns.data(), nn->operation.shape, sizeof(size_t) * (n + 1));
+    return Tensor<T, n + 1>(nn, ns);
+  }
 
   /** Returns the underlying `FGraphNode` for use with the C-Frontend. It is
    * still memory managed by this Tensor instance, so be carefull about variable

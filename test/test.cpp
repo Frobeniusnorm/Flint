@@ -1096,6 +1096,20 @@ TEST_CASE("Expand") {
         CHECK_EQ(a[j][k], e3[j][k][i]);
       }
 }
+TEST_CASE("Sliding Window") {
+  // basic functionality without sharing
+  // TODO optimize those cases
+  Tensor<double, 3> a = Flint::random(9, 9, 9);
+  Tensor<double, 4> b = a.sliding_window(std::array<size_t, 3>{3, 3, 9},
+                                         std::array<unsigned int, 3>{3, 3, 1});
+  CHECK_EQ(9, b.get_shape()[0]);
+  for (int i = 0; i < 9; i++)
+    for (int j = 0; j < 3; j++)
+      for (int k = 0; k < 3; k++)
+        for (int l = 0; l < 9; l++) {
+          CHECK_EQ(a[j + (i / 3)][k + (i % 3)][l], b[i][j][k][l]);
+        }
+}
 TEST_CASE("Test Example 1") {
   Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
   Tensor<float, 1> c1{4.0f, 4.0f};

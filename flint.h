@@ -918,8 +918,8 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
  *  [[[3, 4], [4, 5]],
  *   [[4, 5], [5, 6]]]]`
  */
-FGraphNode *fsliding_window(FGraphNode *a, unsigned int *size,
-                            unsigned int *steps);
+FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
+                            const unsigned int *steps);
 /**
  * Randomly permutates (=swaps multiple elements with each other without
  * creating, copying or deleting new ones) one axis of the input tensor.

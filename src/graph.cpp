@@ -1389,8 +1389,8 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
   op.additional_data = nullptr;
   return addNode(op, {a, b, indices});
 }
-FGraphNode *fsliding_window(FGraphNode *a, unsigned int *size,
-                            unsigned int *steps) {
+FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
+                            const unsigned int *steps) {
   FOperation op;
   op.op_type = FSLIDING_WINDOW;
   op.dimensions = a->operation.dimensions;
@@ -1402,7 +1402,10 @@ FGraphNode *fsliding_window(FGraphNode *a, unsigned int *size,
     // we slide a window of size size[i] with step size steps[i] along that
     // dimension
     op.shape[0] *=
-        (a->operation.shape[i] - (a->operation.shape[i] % size[i])) / steps[i];
+        size[i] == a->operation.shape[i]
+            ? 1
+            : ((a->operation.shape[i] - (a->operation.shape[i] % size[i])) /
+               steps[i]);
   }
   FSlidingWindow slidewin;
   slidewin.size = safe_mal<unsigned int>(a->operation.dimensions);
