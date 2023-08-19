@@ -1393,7 +1393,7 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
                             const unsigned int *steps) {
   FOperation op;
   op.op_type = FSLIDING_WINDOW;
-  op.dimensions = a->operation.dimensions;
+  op.dimensions = a->operation.dimensions + 1;
   op.data_type = a->operation.data_type;
   op.shape = safe_mal<size_t>(op.dimensions);
   op.shape[0] = 1;
@@ -1407,12 +1407,12 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
             : ((a->operation.shape[i] - (a->operation.shape[i] % size[i])) /
                steps[i]);
   }
-  FSlidingWindow slidewin;
-  slidewin.size = safe_mal<unsigned int>(a->operation.dimensions);
-  slidewin.step = safe_mal<unsigned int>(a->operation.dimensions);
-  memcpy(slidewin.size, size, a->operation.dimensions * sizeof(unsigned int));
-  memcpy(slidewin.step, steps, a->operation.dimensions * sizeof(unsigned int));
-  op.additional_data = (void *)(&slidewin);
+  FSlidingWindow *slidewin = new FSlidingWindow();
+  slidewin->size = safe_mal<size_t>(a->operation.dimensions);
+  slidewin->step = safe_mal<unsigned int>(a->operation.dimensions);
+  memcpy(slidewin->size, size, a->operation.dimensions * sizeof(size_t));
+  memcpy(slidewin->step, steps, a->operation.dimensions * sizeof(unsigned int));
+  op.additional_data = (void *)(slidewin);
   return addNode(op, {a});
 }
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax) {

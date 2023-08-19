@@ -21,6 +21,7 @@
 #include <list>
 #include <mutex>
 #include <queue>
+#include <stdexcept>
 #include <vector>
 
 template <typename T> inline T *safe_mal(unsigned int count) {
@@ -253,6 +254,7 @@ public:
   T pop_front() {
     std::unique_lock<std::mutex> lock(mutex);
     condition.wait(lock, [this] { return !queue.empty(); });
+    if (queue.empty()) throw std::runtime_error("Queue Synchronity Error!"); 
     T foo = queue.front();
     queue.pop_front();
     return foo;

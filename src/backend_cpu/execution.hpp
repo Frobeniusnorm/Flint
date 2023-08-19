@@ -454,19 +454,24 @@ static void executeNode(const FGraphNode *node,
   } break;
   case FSLIDING_WINDOW: {
     CPUResultData pred = predecessor_data[0];
-    const FSlidingWindow *slidewin = (FSlidingWindow*) node->operation.additional_data;
+    const FSlidingWindow *slidewin =
+        (FSlidingWindow *)node->operation.additional_data;
     const void *__restrict__ data = pred.data;
     size_t acc_size = node->operation.shape[1];
     std::vector<size_t> acc_sizes_pred(pred.shape.size());
     std::vector<size_t> acc_sizes_win(pred.shape.size());
     acc_sizes_pred[acc_sizes_pred.size() - 1] = 1;
     acc_sizes_win[acc_sizes_win.size() - 1] = 1;
+    std::cout << pred.shape.size() << ", " << node->operation.dimensions << std::endl;
     for (int i = acc_sizes_pred.size() - 2; i >= 0; i--) {
+      std::cout << i << std::endl;
       acc_size *= node->operation.shape[i + 2];
       acc_sizes_pred[i] = acc_sizes_pred[i + 1] * pred.shape[i + 1];
       // no of windows in that dimension
-      size_t no_win = (pred.shape[i + 1] - (pred.shape[i + 1] % slidewin->size[i + 1])) / slidewin->step[i + 1];
-      acc_sizes_win[i] = acc_sizes_win[i + 1] * no_win; 
+      size_t no_win =
+          (pred.shape[i + 1] - (pred.shape[i + 1] % slidewin->size[i + 1])) /
+          slidewin->step[i + 1];
+      acc_sizes_win[i] = acc_sizes_win[i + 1] * no_win;
     }
     for (size_t i = from; i < from + size; i++) {
       // window number
@@ -486,9 +491,10 @@ static void executeNode(const FGraphNode *node,
         size_t local_ri = rest / acc_sizes_win[d];
         offset += local_ri * acc_sizes_pred[d];
       }
-      result[i] = ((const T *__restrict__)data)[i];
+      std::cout << i << " -> " << base << ", " << offset << std::endl;
+      result[i] = ((const T *__restrict__)data)[base + offset];
     }
-  }
+  } break;
   case FREDUCE_MIN:
   case FREDUCE_MAX:
   case FREDUCE_SUM:

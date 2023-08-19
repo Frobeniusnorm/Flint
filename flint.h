@@ -238,7 +238,7 @@ struct FExtend {
   long *step;
 };
 struct FSlidingWindow {
-  unsigned int *size;
+  size_t *size;
   unsigned int *step;
 };
 
