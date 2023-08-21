@@ -460,17 +460,25 @@ static void executeNode(const FGraphNode *node,
     size_t acc_size = node->operation.shape[1];
     std::vector<size_t> acc_sizes_pred(pred.shape.size());
     std::vector<size_t> acc_sizes_win(pred.shape.size());
+    std::vector<size_t> acc_sizes_rest(pred.shape.size());
     acc_sizes_pred[acc_sizes_pred.size() - 1] = 1;
     acc_sizes_win[acc_sizes_win.size() - 1] = 1;
-    std::cout << pred.shape.size() << ", " << node->operation.dimensions << std::endl;
+    acc_sizes_rest[acc_sizes_win.size() - 1] = 1;
     for (int i = acc_sizes_pred.size() - 2; i >= 0; i--) {
       std::cout << i << std::endl;
       acc_size *= node->operation.shape[i + 2];
       acc_sizes_pred[i] = acc_sizes_pred[i + 1] * pred.shape[i + 1];
+      acc_sizes_rest[i] = acc_sizes_rest[i + 1] * slidewin->size[i + 1];
       // no of windows in that dimension
-      size_t no_win =
-          (pred.shape[i + 1] - (pred.shape[i + 1] % slidewin->size[i + 1])) /
-          slidewin->step[i + 1];
+      //      size_t no_win =
+      //        (pred.shape[i + 1] - (pred.shape[i + 1] % slidewin->size[i +
+      //        1])) /
+      //      slidewin->step[i + 1];
+      size_t no_win = slidewin->size[i + 1] == pred.shape[i + 1]
+                          ? 1
+                          : ((pred.shape[i + 1] -
+                              (pred.shape[i + 1] % slidewin->size[i + 1])) /
+                             slidewin->step[i + 1]);
       acc_sizes_win[i] = acc_sizes_win[i + 1] * no_win;
     }
     for (size_t i = from; i < from + size; i++) {
@@ -488,10 +496,12 @@ static void executeNode(const FGraphNode *node,
         base += loc_base * acc_sizes_pred[d];
         // remove this dimension from wi
         wi %= acc_sizes_win[d];
-        size_t local_ri = rest / acc_sizes_win[d];
+        size_t local_ri = rest / acc_sizes_rest[d];
         offset += local_ri * acc_sizes_pred[d];
+        rest %= acc_sizes_rest[d];
       }
-      std::cout << i << " -> " << base << ", " << offset << std::endl;
+      std::cout << "i: " << i << " base: " << base << " offset: " << offset
+                << std::endl;
       result[i] = ((const T *__restrict__)data)[base + offset];
     }
   } break;
