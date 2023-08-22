@@ -1401,11 +1401,10 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
     op.shape[i + 1] = size[i];
     // we slide a window of size size[i] with step size steps[i] along that
     // dimension
-    op.shape[0] *=
-        size[i] == a->operation.shape[i]
-            ? 1
-            : ((a->operation.shape[i] - (a->operation.shape[i] % size[i])) /
-               steps[i]);
+    size_t window_size = a->operation.shape[i] - size[i] + 1;
+    window_size = window_size % steps[i] == 0 ? window_size / steps[i] : window_size / steps[i] + 1;
+    op.shape[0] *= window_size;
+    std::cout << window_size << std::endl;
   }
   FSlidingWindow *slidewin = new FSlidingWindow();
   slidewin->size = safe_mal<size_t>(a->operation.dimensions);

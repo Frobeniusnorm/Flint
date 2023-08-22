@@ -465,7 +465,6 @@ static void executeNode(const FGraphNode *node,
     acc_sizes_win[acc_sizes_win.size() - 1] = 1;
     acc_sizes_rest[acc_sizes_win.size() - 1] = 1;
     for (int i = acc_sizes_pred.size() - 2; i >= 0; i--) {
-      std::cout << i << std::endl;
       acc_size *= node->operation.shape[i + 2];
       acc_sizes_pred[i] = acc_sizes_pred[i + 1] * pred.shape[i + 1];
       acc_sizes_rest[i] = acc_sizes_rest[i + 1] * slidewin->size[i + 1];
@@ -474,12 +473,11 @@ static void executeNode(const FGraphNode *node,
       //        (pred.shape[i + 1] - (pred.shape[i + 1] % slidewin->size[i +
       //        1])) /
       //      slidewin->step[i + 1];
-      size_t no_win = slidewin->size[i + 1] == pred.shape[i + 1]
-                          ? 1
-                          : ((pred.shape[i + 1] -
-                              (pred.shape[i + 1] % slidewin->size[i + 1])) /
-                             slidewin->step[i + 1]);
-      acc_sizes_win[i] = acc_sizes_win[i + 1] * no_win;
+      size_t window_size = pred.shape[i+1] - slidewin->size[i+1] + 1;
+      window_size = window_size % slidewin->step[i+1] == 0
+                        ? window_size / slidewin->step[i+1]
+                        : window_size / slidewin->step[i+1] + 1;
+      acc_sizes_win[i] = acc_sizes_win[i + 1] * window_size;
     }
     for (size_t i = from; i < from + size; i++) {
       // window number
@@ -500,8 +498,6 @@ static void executeNode(const FGraphNode *node,
         offset += local_ri * acc_sizes_pred[d];
         rest %= acc_sizes_rest[d];
       }
-      std::cout << "i: " << i << " base: " << base << " offset: " << offset
-                << std::endl;
       result[i] = ((const T *__restrict__)data)[base + offset];
     }
   } break;
