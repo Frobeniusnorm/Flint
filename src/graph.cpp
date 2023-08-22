@@ -40,7 +40,7 @@ const char *fop_to_string[] = {
     "FINDEX",      "FSET_INDEX",  "FSLIDING_WINDOW"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 // converts c++ type to flint type
-
+// TODO do execution of parents where necessary in parallel
 // EAGER EXECUTION WITH HELPER
 void fEnableEagerExecution() { eager_execution = true; }
 void fDisableEagerExecution() { eager_execution = false; }

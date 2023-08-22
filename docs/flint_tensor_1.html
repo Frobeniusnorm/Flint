@@ -544,9 +544,10 @@
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-1__slice_TensorRange_r1__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, 1&gt; <b>slice</b>(TensorRange r1) </pre></div>
 <br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> 
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
  Compability version of <pre class="inline_code">slice</pre>.
- Calls the overloaded one dimensional slice operation with the corresponding attributes of <pre class="inline_code">r1</pre>.<div style="display:block; height: 0.5em"></div>
+ Calls the overloaded one dimensional slice operation with the corresponding
+ attributes of <pre class="inline_code">r1</pre>.<div style="display:block; height: 0.5em"></div>
  Copied Documentation of that function:<div style="display:block; height: 0.5em"></div>
  Slices a selection of the Tensor beginning by <pre class="inline_code">start</pre> (inclusive), ending
  with <pre class="inline_code">end</pre> (exclusive) by a step size <pre class="inline_code">step</pre>. The step size may be negative
@@ -615,8 +616,9 @@
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
  Calculates the gradient of this Tensor to <pre class="inline_code">dx</pre>. A gradient is always a
  Tensor of type <pre class="inline_code">double</pre>. <pre class="inline_code">dx</pre> needs to have been marked with <pre class="inline_code">watch</pre> before
- construction of this Tensor and this Tensor must be constructed inside a gradient context, either started by
- <pre class="inline_code">fStartGradientContext</pre> or a <pre class="inline_code">GradientContext</pre> object.
+ construction of this Tensor and this Tensor must be constructed inside a
+ gradient context, either started by <pre class="inline_code">fStartGradientContext</pre> or a
+ <pre class="inline_code">GradientContext</pre> object.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-watch___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>watch</b>() </pre></div>
 <br />

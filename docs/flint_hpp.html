@@ -54,10 +54,9 @@
         <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-void_setLoggingLevel_FLogType_level__">static void <b>setLoggingLevel</b>(FLogType level) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_float__3__load_image_std::string_path__">static Tensor&lt;float, 3&gt; <b>load_image</b>(std::string path) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_size_t_n___static_Tensor_double___unsigned_int_n___random_array_std::array_size_t__n__shape__">template &lt;size_t n&gt;
   static Tensor&lt;double, (unsigned int)n&gt;
   <b>random_array</b>(std::array<size_t, n> shape) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___static_Tensor_double__sizeof____args___random_args____sizes__">template &lt;typename... args&gt;
-  static Tensor&lt;double, sizeof...(args)&gt; <b>random</b>(args... sizes) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_size_t_n___static_Tensor_double___unsigned_int_n___random_normal_std::array_size_t__n__shape__double_sigma_=_1_______________________double_mu_=_0__">template &lt;size_t n&gt;
+  static Tensor&lt;double, sizeof...(args)&gt; <b>random</b>(args... sizes) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_size_t_n___static_Tensor_double___unsigned_int_n___random_normal_std::array_size_t__n__shape__double_sigma_=_1__double_mu_=_0__">template &lt;size_t n&gt;
   static Tensor&lt;double, (unsigned int)n&gt;
-  <b>random_normal</b>(std::array<size_t, n> shape, double sigma = 1,
-                      double mu = 0) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__size_t_n___static_Tensor_T___unsigned_int_n___constant_array_T_value__std::array_size_t__n__shape__">template &lt;typename T, size_t n&gt;
+  <b>random_normal</b>(std::array<size_t, n> shape, double sigma = 1, double mu = 0) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__size_t_n___static_Tensor_T___unsigned_int_n___constant_array_T_value__std::array_size_t__n__shape__">template &lt;typename T, size_t n&gt;
   static Tensor&lt;T, (unsigned int)n&gt;
   <b>constant_array</b>(T value, std::array<size_t, n> shape) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__typename____args___static_Tensor_T__sizeof____args___constant_T_value__args____sizes__">template &lt;typename T, typename... args&gt;
   static Tensor&lt;T, sizeof...(args)&gt; <b>constant</b>(T value, args... sizes) </a><br/><br/></div>
@@ -87,10 +86,9 @@
  Creates a Tensor filled with random values in [0, 1) with the requested
  shape in sizes.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_size_t_n___static_Tensor_double___unsigned_int_n___random_normal_std::array_size_t__n__shape__double_sigma_=_1_______________________double_mu_=_0__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;size_t n&gt;
+<div id="s-_size_t_n___static_Tensor_double___unsigned_int_n___random_normal_std::array_size_t__n__shape__double_sigma_=_1__double_mu_=_0__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;size_t n&gt;
   static Tensor&lt;double, (unsigned int)n&gt;
-  <b>random_normal</b>(std::array<size_t, n> shape, double sigma = 1,
-                      double mu = 0) </pre></div>
+  <b>random_normal</b>(std::array<size_t, n> shape, double sigma = 1, double mu = 0) </pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Creates a Tensor filled with random, normally distributed (

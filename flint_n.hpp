@@ -1464,9 +1464,47 @@ template <typename T, unsigned int n> struct Tensor {
     return Tensor<T, n>(
         findex_set(node, b.get_graph_node(), indices.get_graph_node()), shape);
   }
-  
-  Tensor<T, n + 1> sliding_window(std::array<size_t, n> window_size, std::array<unsigned int, n> step_size = {1}) {
-    FGraphNode* nn = fsliding_window(node, window_size.data(), step_size.data());
+  /**
+   * Creates "views" in an additional dimension of a fixed size windows. The
+   * window of size `window_size` is slid in each dimension along the Tensor
+   * starting from the beginning and moving `step_size` entries in each
+   * dimension (the last dimension is moved first until it is fully traversed,
+   * then the next dimension is moved - i.e. the tensor is traversed for the
+   * windows like a nested for loop for each dimension). The windows are concatenated in a extra dimension, which becomes the first dimension of the result Tensor.
+   *
+   * E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a = {{{1, 2}, {3, 4}, {5, 6}, {7, 8}},
+   *                      {{9, 10}, {11, 12}, {13, 14}, {15, 16}},
+   *                      {{17, 18}, {19, 20}, {21, 22}, {23, 24}}};
+   * Tensor<int, 4> b = a.sliding_window(std::array<size_t, 3>{2, 2, 2},
+   *                                     std::array<unsigned int, 3>{1, 2, 1});
+   * std::cout << b << std::endl;
+   * // Tensor<INT32, shape: [4, 2, 2, 2]>(
+   * // [[[[1, 2],
+   * //    [3, 4]],
+   * //   [[9, 10],
+   * //    [11, 12]]],
+   * //  [[[5, 6],
+   * //    [7, 8]],
+   * //   [[13, 14],
+   * //    [15, 16]]],
+   * //  [[[9, 10],
+   * //    [11, 12]],
+   * //   [[17, 18],
+   * //    [19, 20]]],
+   * //  [[[13, 14],
+   * //    [15, 16]],
+   * //   [[21, 22],
+   * //    [23, 24]]]])
+   * }
+   *
+   */
+  Tensor<T, n + 1> sliding_window(std::array<size_t, n> window_size,
+                                  std::array<unsigned int, n> step_size = {1}) {
+    FGraphNode *nn =
+        fsliding_window(node, window_size.data(), step_size.data());
     std::array<size_t, n + 1> ns;
     std::memcpy(ns.data(), nn->operation.shape, sizeof(size_t) * (n + 1));
     return Tensor<T, n + 1>(nn, ns);
