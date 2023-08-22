@@ -469,10 +469,6 @@ static void executeNode(const FGraphNode *node,
       acc_sizes_pred[i] = acc_sizes_pred[i + 1] * pred.shape[i + 1];
       acc_sizes_rest[i] = acc_sizes_rest[i + 1] * slidewin->size[i + 1];
       // no of windows in that dimension
-      //      size_t no_win =
-      //        (pred.shape[i + 1] - (pred.shape[i + 1] % slidewin->size[i +
-      //        1])) /
-      //      slidewin->step[i + 1];
       size_t window_size = pred.shape[i+1] - slidewin->size[i+1] + 1;
       window_size = window_size % slidewin->step[i+1] == 0
                         ? window_size / slidewin->step[i+1]

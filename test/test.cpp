@@ -1099,26 +1099,17 @@ TEST_CASE("Expand") {
 TEST_CASE("Sliding Window") {
   // basic functionality without sharing
   // TODO optimize those cases
-  Tensor<double, 3> a = Flint::random(9, 9, 9);
-  Tensor<double, 4> b = a.sliding_window(std::array<size_t, 3>{3, 3, 9},
+
+  Tensor<double, 3> a = Flint::random(9, 9, 2);
+  Tensor<double, 4> b = a.sliding_window(std::array<size_t, 3>{3, 3, 2},
                                          std::array<unsigned int, 3>{3, 3, 1});
   CHECK_EQ(9, b.get_shape()[0]);
   for (int i = 0; i < 9; i++)
     for (int j = 0; j < 3; j++)
       for (int k = 0; k < 3; k++)
-        for (int l = 0; l < 9; l++) {
-          CHECK_EQ(a[j + (i / 3)][k + (i % 3)][l], b[i][j][k][l]);
+        for (int l = 0; l < 2; l++) {
+          CHECK_EQ(a[j + (i / 3) * 3][k + (i % 3) * 3][l], b[i][j][k][l]);
         }
-  std::cout << a << std::endl;
-  std::cout << b << std::endl;
-}
-TEST_CASE("Debug 1") {
-  Tensor<double, 3> a = {{{1, 2}, {3, 4}, {5, 6}, {7, 8}}, 
-                         {{9, 10}, {11, 12}, {13, 14}, {15, 16}},
-                         {{17, 18}, {19, 20}, {21, 22}, {23, 24}}};
-  Tensor<double, 4> b = a.sliding_window(std::array<size_t, 3>{2, 2, 2},
-                                         std::array<unsigned int, 3>{1, 1, 1});
-  std::cout << a() << '\n' << b() << std::endl;
 }
 TEST_CASE("Test Example 1") {
   Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
