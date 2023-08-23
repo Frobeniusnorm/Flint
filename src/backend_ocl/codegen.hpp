@@ -468,6 +468,47 @@ generateCode(FGraphNode *node,
             " if(step <= 0) break;\n a += step;\n}\n" + name + " = res;\n}\n";
         code = slide_code + code;
       } break;
+      case FSLIDING_WINDOW: {
+        const FOperation pred = node->predecessors[0]->operation;    
+        const FSlidingWindow *slidewin =
+            (FSlidingWindow *)node->operation.additional_data;
+        size_t acc_size = node->operation.shape[1];
+        std::vector<size_t> acc_sizes_pred(pred.dimensions);
+        std::vector<size_t> acc_sizes_win(pred.dimensions);
+        std::vector<size_t> acc_sizes_rest(pred.dimensions);
+        acc_sizes_pred[acc_sizes_pred.size() - 1] = 1;
+        acc_sizes_win[acc_sizes_win.size() - 1] = 1;
+        acc_sizes_rest[acc_sizes_win.size() - 1] = 1;
+        for (int i = acc_sizes_pred.size() - 2; i >= 0; i--) {
+          acc_size *= node->operation.shape[i + 2];
+          acc_sizes_pred[i] = acc_sizes_pred[i + 1] * pred.shape[i + 1];
+          acc_sizes_rest[i] = acc_sizes_rest[i + 1] * slidewin->size[i + 1];
+          // no of windows in that dimension
+          size_t window_size = pred.shape[i+1] - slidewin->size[i+1] + 1;
+          window_size = window_size % slidewin->step[i+1] == 0
+                            ? window_size / slidewin->step[i+1]
+                            : window_size / slidewin->step[i+1] + 1;
+          acc_sizes_win[i] = acc_sizes_win[i + 1] * window_size;
+        }
+        unsigned int old_idx = num_indices++;
+        std::string i = "old_index" + to_string(old_idx);
+        index_defs += "long " + i + " = index;\n"
+                      "index = 0;\n{\n"
+                      "long wi = " + i + "/" + to_string(acc_size) + ";\n"
+                      "long rest = " + i + "%" + to_string(acc_size) + ";\n";
+        for (int d = 0; d < pred.dimensions; d++) {
+          std::string local_wi = "wi/" + to_string(acc_sizes_win[d]);
+          std::string loc_base = local_wi + "*" + to_string(acc_sizes_pred[d]) + "*" + to_string(slidewin->step[d]);
+          std::string local_ri = "rest/" + to_string(acc_sizes_rest[d]) + "*" + to_string(acc_sizes_pred[d]);
+          index_defs += "index += " + loc_base + " + " + local_ri + ";\n"
+                        "wi %= " + to_string(acc_sizes_win[d]) + ";\n"
+                        "rest %= " + to_string(acc_sizes_rest[d]) + ";\n";
+          
+        }
+        index_defs += "}\n";
+        code = type + " " + name + " = v" + to_string(variable_index + 1) + ";\n"
+               "index = old_index" + to_string(old_idx) + ";\n" + code;
+      } break;
       case FMATMUL: {
         string par1, par2;
         push_pred = false;
