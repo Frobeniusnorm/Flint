@@ -179,14 +179,18 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
   cl_int err_code;
   cl_kernel kernel = nullptr;
   auto start = std::chrono::high_resolution_clock::now();
-  // generate code for this operation for all datatypes
-  std::vector<FType> par_types(node->num_predecessor);
+  // generate code for this operation for all datatypes (one kernel for each parameter / return type combination)
+  // will be used to store all kernels for this operation
   std::string code;
+  // the kernel for `node`
   std::string our_kernel;
+  // all generated kernels (for caching)
   std::vector<std::pair<int, std::string>> all_kernels;
+  // match operation and generate code for all combinations
   switch (node->operation.op_type) {
   case FEVEN:
   case FCONVERSION: { // depends on operation
+    std::vector<FType> par_types(node->num_predecessor);
     for (int i = 0; i < node->num_predecessor; i++)
       par_types[i] = node->predecessors[i]->operation.data_type;
     code = generateEagerCode(node->operation.op_type, node->operation.data_type,

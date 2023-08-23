@@ -443,6 +443,75 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
     to_free.push_back(acc_pred_mem);
     to_free.push_back(steps);
   } break;
+  case FSLIDING_WINDOW: {
+    const FOperation pred = node->predecessors[0]->operation;
+    const FSlidingWindow *slidewin =
+        (FSlidingWindow *)node->operation.additional_data;
+    size_t acc_size = node->operation.shape[1];
+    std::vector<size_t> acc_sizes_pred(pred.dimensions);
+    std::vector<size_t> acc_sizes_win(pred.dimensions);
+    std::vector<size_t> acc_sizes_rest(pred.dimensions);
+    acc_sizes_pred[acc_sizes_pred.size() - 1] = 1;
+    acc_sizes_win[acc_sizes_win.size() - 1] = 1;
+    acc_sizes_rest[acc_sizes_win.size() - 1] = 1;
+    for (int i = acc_sizes_pred.size() - 2; i >= 0; i--) {
+      acc_size *= node->operation.shape[i + 2];
+      acc_sizes_pred[i] = acc_sizes_pred[i + 1] * pred.shape[i + 1];
+      acc_sizes_rest[i] = acc_sizes_rest[i + 1] * slidewin->size[i + 1];
+      // no of windows in that dimension
+      size_t window_size = pred.shape[i + 1] - slidewin->size[i + 1] + 1;
+      window_size = window_size % slidewin->step[i + 1] == 0
+                        ? window_size / slidewin->step[i + 1]
+                        : window_size / slidewin->step[i + 1] + 1;
+      acc_sizes_win[i] = acc_sizes_win[i + 1] * window_size;
+    }
+    if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                       (void *)&op.dimensions) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    cl_mem acc_pred_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        pred.dimensions * sizeof(long), acc_sizes_pred.data(), &err_code);
+    if (!acc_pred_mem) 
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    cl_mem acc_win_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        pred.dimensions * sizeof(long), acc_sizes_win.data(), &err_code);
+    if (!acc_win_mem) 
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    cl_mem acc_rest_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        pred.dimensions * sizeof(long), acc_sizes_rest.data(), &err_code);
+    if (!acc_rest_mem) 
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    cl_mem steps = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        pred.dimensions * sizeof(unsigned int), slidewin->step, &err_code);
+    if (!steps) 
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), &acc_pred_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), &acc_win_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), &acc_rest_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (clSetKernelArg(kernel, par_index++, sizeof(long), &acc_size) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), &steps) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Arguments to kernel!");
+    to_free.push_back(acc_pred_mem);
+    to_free.push_back(acc_win_mem);
+    to_free.push_back(acc_rest_mem);
+    to_free.push_back(steps);
+  } break;
   case FREPEAT: {
     if (clSetKernelArg(kernel, par_index++, sizeof(int),
                        (void *)&op.dimensions) != CL_SUCCESS)

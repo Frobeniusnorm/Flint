@@ -1084,6 +1084,14 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "__constant long* acc_sizes_kernel";
     code += ", __constant int* steps, __constant long* shape0";
   } break;
+  case FSLIDING_WINDOW: {
+    code += ", const __global " + typeString(parameter_types[0]) +
+            "* P0"
+            ", const long num_entries0, const int dimensions0"
+            ", __constant long* acc_sizes_pred, __constant long* "
+            "acc_sizes_win, __constant long* acc_sizes_rest, const long "
+            "acc_sizes, __constant int* steps";
+  } break;
   default:
     for (int i = 0; i < parameter_types.size(); i++)
       code += ", const __global " + typeString(parameter_types[i]) + "* P" +
@@ -1524,9 +1532,24 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             " a += step;\n"
             "}\nR[index] = res;";
     break;
+  case FSLIDING_WINDOW:
+    code += "if(index >= num_entriesR) return;\n"
+            "long wi = index / acc_sizes;\n"
+            "long rest = index % acc_sizes;\n"
+            "long offset = 0, base = 0;\n"
+            "for(int d = 0; d < dimensions0; d++){\n"
+            " long local_wi = wi / acc_sizes_win[d];\n"
+            " long local_base = local_wi * steps[d];\n"
+            " base += local_base * acc_sizes_pred[d];\n"
+            " wi %= acc_sizes_win[d];\n"
+            " long local_ri = rest / acc_sizes_rest[d];\n"
+            " offset += local_ri * acc_sizes_pred[d];\n"
+            " rest %= acc_sizes_rest[d];\n"
+            "}\n"
+            "R[index] = P0[base + offset];\n";
+    break;
   }
   code += "\n}\n";
   return code;
 }
-
 #endif
