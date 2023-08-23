@@ -72,7 +72,7 @@ static inline int operationScore(const FGraphNode *g) {
     return 3;
   case FREDUCE_SUM:
   case FREDUCE_MUL: {
-    int dim = *((int*)g->operation.additional_data);
+    int dim = *((int *)g->operation.additional_data);
     return 2 * g->predecessors[0]->operation.shape[dim];
   }
   case FMATMUL: {
@@ -102,7 +102,7 @@ static inline int operationScore(const FGraphNode *g) {
   }
   case FSLICE: {
     size_t sliced_away = 1;
-    const FGraphNode* p = g->predecessors[0];
+    const FGraphNode *p = g->predecessors[0];
     for (int i = 0; i < g->operation.dimensions; i++)
       sliced_away *= (p->operation.shape[i] - g->operation.shape[i]);
     return sliced_away;
@@ -168,6 +168,17 @@ inline FType higherType(const FType a, const FType b) {
     highest = F_INT64;
   return highest;
 }
+inline std::vector<size_t> calcAccSizes(const int dimensions, const size_t* shape) {
+  std::vector<size_t> acc_sizes(dimensions);
+  acc_sizes[dimensions - 1] = 1;
+  for (int dim = dimensions - 2; dim >= 0; dim--) {
+    acc_sizes[dim] = acc_sizes[dim + 1] * shape[dim + 1];
+  }
+  return acc_sizes;
+}
+inline std::vector<size_t> calcAccSizes(const FOperation op) {
+  return calcAccSizes(op.dimensions, op.shape);
+}
 inline std::vector<std::vector<FType>> allTypePermutations(int num) {
   using namespace std;
   if (num == 0)
@@ -200,10 +211,12 @@ template <typename T> static constexpr FType toFlintType() {
 }
 static std::string epsilonForType(FType type) {
   switch (type) {
-    case F_FLOAT32: return "1.192093e-07";
-    case F_FLOAT64: return "2.220446e-16";
-    default:
-        return "0";
+  case F_FLOAT32:
+    return "1.192093e-07";
+  case F_FLOAT64:
+    return "2.220446e-16";
+  default:
+    return "0";
   }
 }
 inline void freeAdditionalData(FGraphNode *gn) {
@@ -254,7 +267,8 @@ public:
   T pop_front() {
     std::unique_lock<std::mutex> lock(mutex);
     condition.wait(lock, [this] { return !queue.empty(); });
-    if (queue.empty()) throw std::runtime_error("Queue Synchronity Error!"); 
+    if (queue.empty())
+      throw std::runtime_error("Queue Synchronity Error!");
     T foo = queue.front();
     queue.pop_front();
     return foo;
