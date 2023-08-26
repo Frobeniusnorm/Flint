@@ -168,7 +168,8 @@ inline FType higherType(const FType a, const FType b) {
     highest = F_INT64;
   return highest;
 }
-inline std::vector<size_t> calcAccSizes(const int dimensions, const size_t* shape) {
+inline std::vector<size_t> calcAccSizes(const int dimensions,
+                                        const size_t *shape) {
   std::vector<size_t> acc_sizes(dimensions);
   acc_sizes[dimensions - 1] = 1;
   for (int dim = dimensions - 2; dim >= 0; dim--) {
@@ -274,4 +275,17 @@ public:
     return foo;
   }
 };
+
+std::vector<size_t> generatePermutation(size_t no_elems) {
+  std::vector<size_t> ind(no_elems);
+  for (int i = 0; i < no_elems; i++)
+    ind[i] = i;
+  for (int i = 0; i < no_elems; i++) {
+    const size_t j = rand() % no_elems;
+    const size_t vi = ind[i], vj = ind[j];
+    ind[i] = vj;
+    ind[j] = vi;
+  }
+  return ind;
+}
 #endif
