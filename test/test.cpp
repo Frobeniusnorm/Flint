@@ -20,39 +20,6 @@
 #include <vector>
 
 #include "../flint.hpp"
-TEST_CASE("Sliding Window") {
-  // basic functionality without sharing
-  // TODO optimize those cases
-
-  Tensor<double, 3> a = Flint::random(9, 9, 2);
-  Tensor<double, 4> b = a.sliding_window(std::array<size_t, 3>{3, 3, 2},
-                                         std::array<unsigned int, 3>{3, 3, 1});
-  CHECK_EQ(9, b.get_shape()[0]);
-  for (int i = 0; i < 9; i++)
-    for (int j = 0; j < 3; j++)
-      for (int k = 0; k < 3; k++)
-        for (int l = 0; l < 2; l++) {
-          CHECK_EQ(a[j + (i / 3) * 3][k + (i % 3) * 3][l], b[i][j][k][l]);
-        }
-  // overlapping windows
-  Tensor<int, 3> a2 = {{{1, 2}, {3, 4}, {5, 6}, {7, 8}},
-                       {{9, 10}, {11, 12}, {13, 14}, {15, 16}},
-                       {{17, 18}, {19, 20}, {21, 22}, {23, 24}}};
-  Tensor<int, 4> b2 = a2.sliding_window(std::array<size_t, 3>{2, 2, 1},
-                                        std::array<unsigned int, 3>{1, 1, 1});
-  Tensor<int, 4> exp = {
-      {{{1}, {3}}, {{9}, {11}}},    {{{2}, {4}}, {{10}, {12}}},
-      {{{3}, {5}}, {{11}, {13}}},   {{{4}, {6}}, {{12}, {14}}},
-      {{{5}, {7}}, {{13}, {15}}},   {{{6}, {8}}, {{14}, {16}}},
-      {{{9}, {11}}, {{17}, {19}}},  {{{10}, {12}}, {{18}, {20}}},
-      {{{11}, {13}}, {{19}, {21}}}, {{{12}, {14}}, {{20}, {22}}},
-      {{{13}, {15}}, {{21}, {23}}}, {{{14}, {16}}, {{22}, {24}}}};
-  for (int i = 0; i < exp.get_shape()[0]; i++)
-    for (int j = 0; j < exp.get_shape()[1]; j++)
-      for (int k = 0; k < exp.get_shape()[2]; k++)
-        for (int l = 0; l < exp.get_shape()[3]; l++)
-          CHECK_EQ(b2[i][j][k][l], exp[i][j][k][l]);
-}
 TEST_SUITE("Graph implementation") {
   TEST_CASE("createGraph, add, mul, sub, div") {
     using namespace std;
@@ -1097,7 +1064,48 @@ TEST_CASE("Random") {
     for (int j = 0; j < 4; j++)
       for (int k = 0; k < 4; k++)
         for (int l = 0; l < 4; l++)
-          CHECK_LE(1.0, r1[i][j][k][l]);
+          CHECK_LT(1.0, r1[i][j][k][l]);
+}
+TEST_CASE("Sliding Window") {
+  // basic functionality without sharing
+  // TODO optimize those cases
+
+  Tensor<double, 3> a = Flint::random(9, 9, 2);
+  Tensor<double, 4> b = a.sliding_window(std::array<size_t, 3>{3, 3, 2},
+                                         std::array<unsigned int, 3>{3, 3, 1});
+  CHECK_EQ(9, b.get_shape()[0]);
+  for (int i = 0; i < 9; i++)
+    for (int j = 0; j < 3; j++)
+      for (int k = 0; k < 3; k++)
+        for (int l = 0; l < 2; l++) {
+          CHECK_EQ(a[j + (i / 3) * 3][k + (i % 3) * 3][l], b[i][j][k][l]);
+        }
+  // overlapping windows
+  Tensor<int, 3> a2 = {{{1, 2}, {3, 4}, {5, 6}, {7, 8}},
+                       {{9, 10}, {11, 12}, {13, 14}, {15, 16}},
+                       {{17, 18}, {19, 20}, {21, 22}, {23, 24}}};
+  Tensor<int, 4> b2 = a2.sliding_window(std::array<size_t, 3>{2, 2, 1},
+                                        std::array<unsigned int, 3>{1, 1, 1});
+  Tensor<int, 4> exp = {
+      {{{1}, {3}}, {{9}, {11}}},    {{{2}, {4}}, {{10}, {12}}},
+      {{{3}, {5}}, {{11}, {13}}},   {{{4}, {6}}, {{12}, {14}}},
+      {{{5}, {7}}, {{13}, {15}}},   {{{6}, {8}}, {{14}, {16}}},
+      {{{9}, {11}}, {{17}, {19}}},  {{{10}, {12}}, {{18}, {20}}},
+      {{{11}, {13}}, {{19}, {21}}}, {{{12}, {14}}, {{20}, {22}}},
+      {{{13}, {15}}, {{21}, {23}}}, {{{14}, {16}}, {{22}, {24}}}};
+  for (int i = 0; i < exp.get_shape()[0]; i++)
+    for (int j = 0; j < exp.get_shape()[1]; j++)
+      for (int k = 0; k < exp.get_shape()[2]; k++)
+        for (int l = 0; l < exp.get_shape()[3]; l++)
+          CHECK_EQ(b2[i][j][k][l], exp[i][j][k][l]);
+}
+TEST_CASE("Arange") {
+  Tensor<long, 3> a1 = Flint::arange(1, 4, 4, 4);
+  for (int i = 0; i < 4; i++)
+    for (int j = 0; j < 4; j++)
+      for (int k = 0; k < 4; k++)
+        CHECK_EQ(a1[i][j][k], j);
+  std::cout << a1 << std::endl;
 }
 TEST_CASE("Saving and Loading to files") {
   Tensor<double, 3> a = Flint::constant(3.0, 9, 4, 1);

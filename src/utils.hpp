@@ -235,6 +235,13 @@ inline void freeAdditionalData(FGraphNode *gn) {
     free(s->step);
     delete s;
   } break;
+  case FSLIDING_WINDOW: {
+    FSlidingWindow *s = (FSlidingWindow *)gn->operation.additional_data;
+    free(s->step);
+    free(s->size);
+    delete s;
+  } break;
+  case FGEN_ARANGE:
   case FGEN_RANDOM:
   case FGEN_CONSTANT:
   case FCONCAT:

@@ -120,6 +120,7 @@ enum FOperationType {
   FSTORE,
   FGEN_RANDOM,
   FGEN_CONSTANT,
+  FGEN_ARANGE,
   FADD,
   FSUB,
   FMUL,
@@ -306,6 +307,12 @@ FGraphNode *fconstant_d(const double value, const size_t *shape,
  * - `dimensions`: the number of dimensions
  */
 FGraphNode *frandom(const size_t *shape, const int dimensions);
+/** Creates a int64 tensor that contains the indices relative to a given dimension
+ * `ax` for each element, i.e. each entry is its index in that corresponding
+ * dimension. If you need to index more than one dimension, create multiple such
+ * tensors with `arange`.
+ */
+FGraphNode *farange(const size_t *shape, const int dimensions, const int ax);
 /** Decrements `FGraphNode.reference_counter` of `graph` (for reference
  * counting) and deallocates the node and its corresponding data, if the counter
  * becomes 0. If the node is deallocated, the same process is repeated with its

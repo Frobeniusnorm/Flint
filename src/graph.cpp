@@ -635,6 +635,17 @@ FGraphNode *fconstant_d(const double value, const size_t *shape,
   return constant(value, shape, dimensions);
 }
 
+FGraphNode *farange(const size_t *shape, const int dimensions, const int ax) {
+  FOperation op;
+  op.dimensions = dimensions;
+  op.shape = safe_mal<size_t>(dimensions);
+  memcpy(op.shape, shape, op.dimensions * sizeof(size_t));
+  op.op_type = FGEN_ARANGE;
+  op.data_type = F_INT64;
+  op.additional_data = safe_mal<long>(1);
+  ((long *)op.additional_data)[0] = ax;
+  return addNode(op, {});
+}
 // adds the constant value to each entry in a
 template <typename T> static inline FGraphNode *add(FGraphNode *a, const T b) {
   FOperation op;

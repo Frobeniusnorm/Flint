@@ -276,7 +276,7 @@ static void binaryExpression(T *__restrict__ result,
     std::vector<size_t> acc_sizes_pred = calcAccSizes(pred);
     std::vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
     size_t pred_num_elems = pred.shape[pred.dimensions - 1];
-    for (long d = pred.dimensions - 2; d >= 0; d--) 
+    for (long d = pred.dimensions - 2; d >= 0; d--)
       pred_num_elems *= pred.shape[d];
     const unsigned int *steps = (unsigned int *)op.additional_data;
     for (size_t i = from; i < from + size; i++) {
@@ -375,6 +375,14 @@ static void executeNode(const FGraphNode *node,
     for (size_t i = from; i < from + size; i++)
       result[i] = value;
   } break;
+  case FGEN_ARANGE: {
+    unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
+    size_t acc_sizes_ax = 1;
+    for (unsigned int i = ax + 1; i < node->operation.dimensions; i++)
+      acc_sizes_ax *= node->operation.shape[i];
+    for (size_t i = from; i < from + size; i++)
+      result[i] = (i / acc_sizes_ax) % node->operation.shape[ax];
+  } break;
   case FREPEAT: {
     const FOperation op = node->operation;
     const CPUResultData pred = predecessor_data[0];
@@ -382,7 +390,8 @@ static void executeNode(const FGraphNode *node,
     // calculate number of elements per dimension entry for destination and
     // source
     std::vector<size_t> acc_sizes_d = calcAccSizes(op);
-    std::vector<size_t> acc_sizes_s = calcAccSizes(pred.shape.size(), pred.shape.data());
+    std::vector<size_t> acc_sizes_s =
+        calcAccSizes(pred.shape.size(), pred.shape.data());
     for (int i = from; i < from + size; i++) {
       // to get the index in the source array we first calculate the indices and
       // reproject
@@ -404,7 +413,8 @@ static void executeNode(const FGraphNode *node,
     // calculate number of elements per dimension entry for destination and
     // source
     std::vector<size_t> acc_sizes_d = calcAccSizes(op);
-    std::vector<size_t> acc_sizes_s = calcAccSizes(pred.shape.size(), pred.shape.data());
+    std::vector<size_t> acc_sizes_s =
+        calcAccSizes(pred.shape.size(), pred.shape.data());
     for (int i = from; i < from + size; i++) {
       // to get the index in the source array we first calculate the indices and
       // reproject
@@ -424,7 +434,8 @@ static void executeNode(const FGraphNode *node,
         (FSlidingWindow *)node->operation.additional_data;
     const void *__restrict__ data = pred.data;
     size_t acc_size = node->operation.shape[1];
-    std::vector<size_t> acc_sizes_pred = calcAccSizes(pred.shape.size(), pred.shape.data());
+    std::vector<size_t> acc_sizes_pred =
+        calcAccSizes(pred.shape.size(), pred.shape.data());
     std::vector<size_t> acc_sizes_win(pred.shape.size());
     std::vector<size_t> acc_sizes_rest(pred.shape.size());
     acc_sizes_win[acc_sizes_win.size() - 1] = 1;
@@ -433,10 +444,10 @@ static void executeNode(const FGraphNode *node,
       acc_size *= node->operation.shape[i + 2];
       acc_sizes_rest[i] = acc_sizes_rest[i + 1] * slidewin->size[i + 1];
       // no of windows in that dimension
-      size_t window_size = pred.shape[i+1] - slidewin->size[i+1] + 1;
-      window_size = window_size % slidewin->step[i+1] == 0
-                        ? window_size / slidewin->step[i+1]
-                        : window_size / slidewin->step[i+1] + 1;
+      size_t window_size = pred.shape[i + 1] - slidewin->size[i + 1] + 1;
+      window_size = window_size % slidewin->step[i + 1] == 0
+                        ? window_size / slidewin->step[i + 1]
+                        : window_size / slidewin->step[i + 1] + 1;
       acc_sizes_win[i] = acc_sizes_win[i + 1] * window_size;
     }
     for (size_t i = from; i < from + size; i++) {
@@ -522,7 +533,8 @@ static void executeNode(const FGraphNode *node,
     FSlice *slice = (FSlice *)node->operation.additional_data;
     const void *__restrict__ data = pred.data;
     std::vector<size_t> acc_sizes = calcAccSizes(node->operation);
-    std::vector<size_t> acc_sizes_pred = calcAccSizes(pred.shape.size(), pred.shape.data());
+    std::vector<size_t> acc_sizes_pred =
+        calcAccSizes(pred.shape.size(), pred.shape.data());
     // calculate start and step size in flattened array
     size_t start = 0;
     for (unsigned int d = 0; d < node->operation.dimensions; d++) {
@@ -545,7 +557,8 @@ static void executeNode(const FGraphNode *node,
     const void *__restrict__ data = pred.data;
     FExtend *extend = (FExtend *)node->operation.additional_data;
     std::vector<size_t> acc_sizes = calcAccSizes(node->operation);
-    std::vector<size_t> acc_sizes_pred = calcAccSizes(pred.shape.size(), pred.shape.data());
+    std::vector<size_t> acc_sizes_pred =
+        calcAccSizes(pred.shape.size(), pred.shape.data());
     // calculate for each entry corresponding element
     for (size_t i = from; i < from + size; i++) {
       size_t j = 0;

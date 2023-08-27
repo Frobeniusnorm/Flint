@@ -220,6 +220,10 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
       return findex(prev_adj, i);
     }
   } break;
+  case FSLIDING_WINDOW: {
+    // TODO sliding window on index tensor (-> arange) and then index set on
+    // adjoint
+  } break;
   case FSLIDE:
   case FCONVOLVE: {
     FGraphNode *a = y->predecessors[0];

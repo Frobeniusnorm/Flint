@@ -140,5 +140,18 @@ struct Flint {
     std::array<size_t, sizeof...(args)> shape{static_cast<size_t>(sizes)...};
     return constant_array<T, sizeof...(args)>(value, shape);
   }
+  template <unsigned int n>
+  static Tensor<long, n>
+  arange_array(unsigned int ax, std::array<size_t, n> shape) {
+    FGraphNode *node = farange(shape.data(), (unsigned int)n, ax);
+    return Tensor<long, n>(node, shape);
+  }
+  /**
+   */
+  template <typename... args>
+  static Tensor<long, sizeof...(args)> arange(unsigned int axis, args... sizes) {
+    std::array<size_t, sizeof...(args)> shape{static_cast<size_t>(sizes)...};
+    return arange_array<(unsigned int)(sizeof...(args))>(axis, shape);
+  }
 }; // namespace Flint
 #endif
