@@ -145,6 +145,20 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
         CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel!");
   } break;
+  case FGEN_ARANGE: {
+    unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
+    size_t acc_sizes_ax = 1;
+    for (unsigned int i = ax + 1; i < node->operation.dimensions; i++)
+      acc_sizes_ax *= node->operation.shape[i];
+    // push acc_sizes_ax
+    if (clSetKernelArg(kernel, par_index++, sizeof(size_t), (void *)&acc_sizes_ax) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    // push shape_ax
+    if (clSetKernelArg(kernel, par_index++, sizeof(size_t), (void *)&node->operation.shape[ax]) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+  } break;
   case FCONCAT: {
     // acc_size_last, shape_ax, a_shape_ax, b_shape_ax, ax
     FGraphNode *a = node->predecessors[0];

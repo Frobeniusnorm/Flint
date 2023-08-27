@@ -197,6 +197,8 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
                              par_types, our_kernel);
     all_kernels.push_back({hash, our_kernel});
   } break;
+
+  case FGEN_ARANGE:
   case FGEN_RANDOM: {
     code = generateEagerCode(node->operation.op_type, node->operation.data_type,
                              {}, our_kernel);

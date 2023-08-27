@@ -20,6 +20,14 @@
 #include <vector>
 
 #include "../flint.hpp"
+TEST_CASE("Arange") {
+  Tensor<long, 3> a1 = Flint::arange(1, 4, 4, 4);
+  for (int i = 0; i < 4; i++)
+    for (int j = 0; j < 4; j++)
+      for (int k = 0; k < 4; k++)
+        CHECK_EQ(a1[i][j][k], j);
+  std::cout << a1 << std::endl;
+}
 TEST_SUITE("Graph implementation") {
   TEST_CASE("createGraph, add, mul, sub, div") {
     using namespace std;
@@ -1098,14 +1106,6 @@ TEST_CASE("Sliding Window") {
       for (int k = 0; k < exp.get_shape()[2]; k++)
         for (int l = 0; l < exp.get_shape()[3]; l++)
           CHECK_EQ(b2[i][j][k][l], exp[i][j][k][l]);
-}
-TEST_CASE("Arange") {
-  Tensor<long, 3> a1 = Flint::arange(1, 4, 4, 4);
-  for (int i = 0; i < 4; i++)
-    for (int j = 0; j < 4; j++)
-      for (int k = 0; k < 4; k++)
-        CHECK_EQ(a1[i][j][k], j);
-  std::cout << a1 << std::endl;
 }
 TEST_CASE("Saving and Loading to files") {
   Tensor<double, 3> a = Flint::constant(3.0, 9, 4, 1);
