@@ -1414,7 +1414,8 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
   return addNode(op, {a});
 }
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax) {
-  // TODO: generate random index array for that dimension on the CPU and then
-  // index
-  return nullptr;
+  size_t total_size;
+  const long* perms = generatePermutation(a->operation.shape, ax, &total_size);
+  FGraphNode *ind = fCreateGraph(perms, total_size, F_INT64, a->operation.shape, ax + 1);
+  return findex(a, ind);
 }

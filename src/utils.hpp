@@ -275,17 +275,34 @@ public:
     return foo;
   }
 };
-
-std::vector<size_t> generatePermutation(size_t no_elems) {
-  std::vector<size_t> ind(no_elems);
-  for (int i = 0; i < no_elems; i++)
-    ind[i] = i;
-  for (int i = 0; i < no_elems; i++) {
-    const size_t j = rand() % no_elems;
-    const size_t vi = ind[i], vj = ind[j];
-    ind[i] = vj;
-    ind[j] = vi;
+/**
+ * Generates a permutation index array for a axis of a multidimensional tensor
+ * by generating for each entry in this dimension an index in the same dimension
+ * with which it will be swapped.
+ * The resulting permutation array is flat, has as many elements as the product
+ * of shape[0] * ... * shape[ax - 1] * shape[ax] and the indices are in the
+ * range between 0 and shape[ax] (so that they are only swapped inside of their
+ * local dimension). Every index is referenced exactly once in its local
+ * dimension.
+ */
+inline long *generatePermutation(size_t *shape, unsigned int ax, size_t *size) {
+  size_t total_size = 1;
+  for (unsigned int i = 0; i <= ax; i++)
+    total_size *= shape[i];
+  long *ind = safe_mal<long>(total_size);
+  for (size_t k = 0; k < total_size / shape[ax]; k++) {
+    const size_t base = k * shape[ax];
+    for (size_t i = 0; i < shape[ax]; i++) 
+      ind[base + i] = i;
+    for (size_t i = 0; i < shape[ax]; i++) {
+      const size_t a = base + i;
+      const size_t b = base + rand() % shape[ax];
+      const long v = ind[a];
+      ind[a] = ind[b];
+      ind[b] = v;
+    }
   }
+  *size = total_size;
   return ind;
 }
 #endif

@@ -1470,7 +1470,9 @@ template <typename T, unsigned int n> struct Tensor {
    * starting from the beginning and moving `step_size` entries in each
    * dimension (the last dimension is moved first until it is fully traversed,
    * then the next dimension is moved - i.e. the tensor is traversed for the
-   * windows like a nested for loop for each dimension). The windows are concatenated in a extra dimension, which becomes the first dimension of the result Tensor.
+   * windows like a nested for loop for each dimension). The windows are
+   * concatenated in a extra dimension, which becomes the first dimension of the
+   * result Tensor.
    *
    * E.g.
    *
@@ -1502,14 +1504,21 @@ template <typename T, unsigned int n> struct Tensor {
    *
    */
   Tensor<T, n + 1> sliding_window(std::array<size_t, n> window_size,
-                                  std::array<unsigned int, n> step_size = {1}) {
+                                  std::array<unsigned int, n> step_size = {
+                                      1}) const {
     FGraphNode *nn =
         fsliding_window(node, window_size.data(), step_size.data());
     std::array<size_t, n + 1> ns;
     std::memcpy(ns.data(), nn->operation.shape, sizeof(size_t) * (n + 1));
     return Tensor<T, n + 1>(nn, ns);
   }
-
+  /**
+   * Randomly permutates (=swaps multiple elements with each other without
+   * creating, copying or deleting new ones) one axis of the input tensor.
+   */
+  Tensor<T, n> permutate(unsigned int ax) const {
+    return Tensor<T, n>(fpermutate(node, ax), shape);
+  }
   /** Returns the underlying `FGraphNode` for use with the C-Frontend. It is
    * still memory managed by this Tensor instance, so be carefull about variable
    * lifetimes. */

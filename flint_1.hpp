@@ -809,6 +809,13 @@ template <typename T> struct Tensor<T, 1> {
   Tensor<double, k> gradient(const Tensor<K, k> &dx) const {
     return Tensor<double, k>(fCalculateGradient(this->node, dx.node), dx.shape);
   }
+  /**
+   * Randomly permutates (=swaps multiple elements with each other without
+   * creating, copying or deleting new ones) one axis of the input tensor.
+   */
+  Tensor<T, 1> permutate(unsigned int ax) const {
+    return Tensor<T, 1>(fpermutate(node, ax), shape);
+  }
   /** Watches this node, i.e. collects information needed to calculate the
    * gradient with this node as a derivative */
   void watch() { fMarkGradientVariable(node); }
