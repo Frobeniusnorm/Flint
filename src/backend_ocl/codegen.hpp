@@ -197,6 +197,13 @@ generateCode(FGraphNode *node,
                "}\n" +
                code;
       } break;
+      case FGEN_ARANGE: {
+        unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
+        size_t acc_sizes_ax = 1;
+        for (unsigned int i = ax + 1; i < node->operation.dimensions; i++)
+          acc_sizes_ax *= node->operation.shape[i];
+        code = type + " " + name + " = (index/" + to_string(acc_sizes_ax) + ")%" + to_string(node->operation.shape[ax]) + ";\n";   
+      } break;
       case FGRADIENT_CONVOLVE: {
         string par1, par2;
         push_pred = false;
