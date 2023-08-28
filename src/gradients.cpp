@@ -223,6 +223,22 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
   case FSLIDING_WINDOW: {
     // TODO sliding window on index tensor (-> arange) and then index set on
     // adjoint
+    FGraphNode *a = y->predecessors[0];
+    if (a == dx) {
+      FSlidingWindow *sliding_win =
+          (FSlidingWindow *)a->operation.additional_data;
+      FGraphNode *res =
+          fconstant_d(0.0, a->operation.shape, a->operation.dimensions);
+      for (int i = 0; i < a->operation.dimensions; i++) {
+        FGraphNode *ind =
+            farange(a->operation.shape, a->operation.dimensions, i);
+        FGraphNode *win_ind =
+            fsliding_window(ind, sliding_win->size, sliding_win->step);
+        // TODO project to shape of res and add
+      }
+      return res;
+    } else
+      return nullptr;
   } break;
   case FSLIDE:
   case FCONVOLVE: {

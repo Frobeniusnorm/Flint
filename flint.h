@@ -885,6 +885,7 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
  */
 FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
 /**
+ * TODO fix documentation
  * Selects a indexed selection from `a` (like `fmulti_index`) and replaces this
  * selection with `b`. Therefore if `indices` has `n` dimensions, the shape of
  * the first `n-1` dimensions of `indices` must equal that of `a` and the shape
