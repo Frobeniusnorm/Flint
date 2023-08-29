@@ -81,7 +81,7 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // download and extract to the desired folder from
 // http://yann.lecun.com/exdb/mnist/
 int main() {
-  FlintContext _(FLINT_BACKEND_BOTH);
+  FlintContext _(FLINT_BACKEND_ONLY_GPU);
   fSetLoggingLevel(F_INFO);
   Tensor<float, 3> ims = load_mnist_images("train-images.idx3-ubyte");
   Tensor<double, 2> lbs = load_mnist_labels("train-labels.idx1-ubyte").convert<double>();
@@ -97,5 +97,5 @@ int main() {
   };
   AdamFactory opt (0.003);
   m.generate_optimizer(opt);
-  m.train(ims, lbs, CrossEntropyLoss(), 50, 4000);
+  m.train(ims, lbs, CrossEntropyLoss(), 50, 6000);
 }

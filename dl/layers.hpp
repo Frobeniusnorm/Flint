@@ -345,6 +345,7 @@ public:
       }
     }
     Tensor<double, n> r = Flint::random_array(in.get_shape());
+    //Tensor<double, n> r = Flint::constant_array(1.0, in.get_shape());
     Tensor<double, n> o = (in * (r > p)) / (1.0 - p);
     return o;
   }

@@ -229,12 +229,15 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
           (FSlidingWindow *)a->operation.additional_data;
       FGraphNode *res =
           fconstant_d(0.0, a->operation.shape, a->operation.dimensions);
+      FGraphNode *working_adj = prev_adj;
       for (int i = 0; i < a->operation.dimensions; i++) {
+        // 1 dimensional index tensor since we only want that singular dimension
         FGraphNode *ind =
-            farange(a->operation.shape, a->operation.dimensions, i);
+            farange(&a->operation.shape[i], 1, 0);
         FGraphNode *win_ind =
-            fsliding_window(ind, sliding_win->size, sliding_win->step);
-        // TODO project to shape of res and add
+            fsliding_window(ind, &sliding_win->size[i], &sliding_win->step[i]);
+        // TODO use win_ind to project indices in that dimension to res
+        // fit each window to each window (dimension 0 of win_ind stays the same) and index in dimension i
       }
       return res;
     } else
