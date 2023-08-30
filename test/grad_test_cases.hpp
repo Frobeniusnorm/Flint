@@ -596,10 +596,15 @@ TEST_SUITE("Autodiff") {
     GradientContext _;
     Tensor<double, 2> a1 = {{0, 1, 2, 3}, {10, 11, 12, 13}, {20, 21, 22, 23}};
     Tensor<double, 1> b1 = {1, -1, 2, -2, 3, -3};
+    Tensor<double, 2> e1 = {{1, 0, 1, 2}, {-1, 1, 1, -1}, {-2, 1, 0, -3}};
     a1.watch();
-    Tensor<double, 3> y1 = a1.sliding_window(std::array<size_t, 2>{2, 2}, std::array<unsigned int, 2>{1, 1}) * b1;
+    Tensor<double, 3> y1 = a1.sliding_window(std::array<size_t, 2>{2, 2}, std::array<unsigned int, 2>{1, 1}) * b1.reshape(6, 1, 1).repeat(0, 1, 1);
     Tensor<double, 2> g1 = y1.gradient(a1);
-    std::cout << g1 << std::endl;
+    for (int j = 0; j < 4; j++) {
+      for (int i = 0; i < 4; i++) {
+        CHECK_EQ(doctest::Approx(g1[i][j]), e1[i][j]);
+      } 
+    }
   }
   TEST_CASE("Reduce and calculate with itself") {
     GradientContext _;

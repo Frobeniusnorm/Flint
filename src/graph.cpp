@@ -454,7 +454,7 @@ static inline void initShape_keep(FOperation &op, const FOperation *a,
             "incompatible shapes of operands: " +
                 vectorString(std::vector<size_t>(src, src + op.dimensions)) +
                 " and " +
-                vectorString(std::vector<size_t>(lower, lower + lower_dim)));
+                vectorString(std::vector<size_t>(lower, lower + lower_dim)) + " in " + fop_to_string[op.op_type]);
     }
   }
   op.shape = (size_t *)malloc(sizeof(size_t) * op.dimensions);

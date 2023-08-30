@@ -225,7 +225,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     if (0 == dx_i) {
       // TODO i dont know, is this fast? is this slow?
       FSlidingWindow *sliding_win =
-          (FSlidingWindow *)a->operation.additional_data;
+          (FSlidingWindow *)y->operation.additional_data;
       std::vector<size_t> no_windows(a->operation.dimensions);
       for (int i = 0; i < a->operation.dimensions; i++) {
         size_t window_size = a->operation.shape[i] - sliding_win->size[i] + 1;
@@ -257,6 +257,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         win_ind =
             freshape(win_ind, reshape_working.data(), reshape_working.size());
         reshape_working[i] = 1; // undo for future dimensions
+        reshape_working[reshape_working.size() - 1] = 1;
         for (int j = 0; j < a->operation.dimensions; j++)
           repeat_working[j] = i == j ? 0 : no_windows[j] - 1;
         repeat_working[a->operation.dimensions + 1] = 0;
@@ -266,17 +267,21 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         // -> flatten to match windows and current dimensions window size
         // then repeat for all previous dimensions
         win_ind = fflatten(win_ind);
-        reshape_working[i] = prev_adj->operation.shape[0];
+        reshape_working[0] = prev_adj->operation.shape[0];
         reshape_working[i + 1] = sliding_win->size[i];
         win_ind = freshape(win_ind, reshape_working.data(), i + 2);
-        reshape_working[i] = 1;     // undo for future dimensions
+        reshape_working[0] = 1;     // undo for future dimensions
         reshape_working[i + 1] = 1; // undo for future dimensions
+        repeat_working[0] = 0;
         for (int j = 0; j <= i + 1; j++)
-          repeat_working[j] = j < i ? working_adj->operation.shape[j] - 1 : 0;
+          repeat_working[j + 1] = j < i ? working_adj->operation.shape[j + 1] - 1 : 0;
+        win_ind = frepeat(win_ind, repeat_working.data());
         // now we can FINALLY project the index wtf is this
         shape_adj_working[i + 1] = a->operation.shape[i];
         FGraphNode *res =
             fconstant_d(0.0, shape_adj_working.data(), shape_adj_working.size());
+        std::cout << printShape(working_adj->operation.shape, working_adj->operation.dimensions) << std::endl;
+        std::cout << printShape(win_ind->operation.shape, win_ind->operation.dimensions) << std::endl;
         // still bad performance v   (maybe nevertheless a index method that works in O(n) is necessary with an exception in the normal execution model...)
         working_adj = findex_set(res, working_adj, win_ind);
       }
