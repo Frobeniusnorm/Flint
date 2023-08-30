@@ -667,7 +667,7 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype);
   each dimension of the new shape must be the same as the product of the
   dimensions of the previous shape (i.e. it must describe the same number of
   entries of the tensor).*/
-FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions);
+FGraphNode *freshape(FGraphNode *a, const size_t *newshape, const int dimensions);
 /** Takes the minimum of two tensors element wise along the last dimension of
  * each, i.e. `a[i]` if `a[i] < b[i]` else `b[i]` */
 FGraphNode *fmin_g(FGraphNode *a, FGraphNode *b);

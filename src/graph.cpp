@@ -932,7 +932,7 @@ FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b) {
   node->reference_counter = 0;
   return eager_execution ? execute_eagerly(node) : node;
 }
-FGraphNode *freshape(FGraphNode *a, size_t *newshape, int dimensions) {
+FGraphNode *freshape(FGraphNode *a, const size_t *newshape, const int dimensions) {
   size_t total_size_node = 1;
   for (int i = 0; i < a->operation.dimensions; i++)
     total_size_node *= a->operation.shape[i];
@@ -1382,7 +1382,7 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
     indices = fExecuteGraph(indices);
   if (!b->result_data && b->operation.op_type != FSTORE)
     b = fExecuteGraph(b);
-  if (indices->operation.dimensions > a->operation.dimensions)
+  if (indices->operation.dimensions > b->operation.dimensions)
     flogging(
         F_ERROR,
         "Invalid index Tensor dimensionality! Larger than indexed Tensor!");
@@ -1390,7 +1390,7 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
       indices->operation.data_type != F_INT64)
     flogging(F_ERROR, "Only integer tensors may be used as indices!");
   for (int d = 0; d < indices->operation.dimensions - 1; d++)
-    if (a->operation.shape[d] != indices->operation.shape[d])
+    if (b->operation.shape[d] != indices->operation.shape[d])
       flogging(F_ERROR,
                "Invalid indices shape! Except for last dimension shape of "
                "indices Tensor has to be a prefix of the indexed Tensor!");
