@@ -222,7 +222,8 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
   } break;
   case FSLIDING_WINDOW: {
     FGraphNode *a = y->predecessors[0];
-    if (a == dx) {
+    if (0 == dx_i) {
+      // TODO i dont know, is this fast? is this slow?
       FSlidingWindow *sliding_win =
           (FSlidingWindow *)a->operation.additional_data;
       std::vector<size_t> no_windows(a->operation.dimensions);
@@ -276,6 +277,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         shape_adj_working[i + 1] = a->operation.shape[i];
         FGraphNode *res =
             fconstant_d(0.0, shape_adj_working.data(), shape_adj_working.size());
+        // still bad performance v   (maybe nevertheless a index method that works in O(n) is necessary with an exception in the normal execution model...)
         working_adj = findex_set(res, working_adj, win_ind);
       }
       return freduce_sum(working_adj, 0);

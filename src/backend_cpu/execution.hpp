@@ -155,12 +155,15 @@ static void binaryExpression(T *__restrict__ result,
     const FOperation kernel = gnp1->operation, a = gnp2->operation;
     const unsigned int *steps = (unsigned int *)op.additional_data;
     // calculate accumulated sizes for result (pred), kernel and a (adjacent)
-    std::vector<size_t> acc_sizes = calcAccSizes(a);
+    std::vector<size_t> acc_sizes(op.dimensions - 1);
     std::vector<size_t> acc_sizes_pred = calcAccSizes(op);
     std::vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
+    acc_sizes[op.dimensions - 2] = 1;
     size_t kernel_num_elems = kernel.shape[op.dimensions - 1];
     for (long d = op.dimensions - 2; d >= 0; d--)
       kernel_num_elems *= kernel.shape[d];
+    for (long d = op.dimensions - 3; d >= 0; d--)
+      acc_sizes[d] = acc_sizes[d + 1] * a.shape[d + 1];
     for (size_t i = from; i < from + size; i++) {
       T res = 0;
       long k = 0;

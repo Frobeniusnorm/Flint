@@ -529,7 +529,7 @@ TEST_SUITE("Autodiff") {
       for (int j = 0; j < 2; j++)
         for (int k = 0; k < 2; k++)
           CHECK_EQ(e2[i][j][k], g2[i][j][k]);
-    
+
     Tensor<double, 3> a3 = Flint::random(3, 3, 3);
     Tensor<double, 3> b3 = Flint::random(3, 3, 3);
     a3.watch();
@@ -591,6 +591,15 @@ TEST_SUITE("Autodiff") {
         else
           CHECK_EQ(doctest::Approx(0.0), db4[0][i][j]);
       }
+  }
+  TEST_CASE("Sliding Window") {
+    GradientContext _;
+    Tensor<double, 2> a1 = {{0, 1, 2, 3}, {10, 11, 12, 13}, {20, 21, 22, 23}};
+    Tensor<double, 1> b1 = {1, -1, 2, -2, 3, -3};
+    a1.watch();
+    Tensor<double, 3> y1 = a1.sliding_window(std::array<size_t, 2>{2, 2}, std::array<unsigned int, 2>{1, 1}) * b1;
+    Tensor<double, 2> g1 = y1.gradient(a1);
+    std::cout << g1 << std::endl;
   }
   TEST_CASE("Reduce and calculate with itself") {
     GradientContext _;
