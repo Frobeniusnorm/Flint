@@ -307,10 +307,10 @@ FGraphNode *fconstant_d(const double value, const size_t *shape,
  * - `dimensions`: the number of dimensions
  */
 FGraphNode *frandom(const size_t *shape, const int dimensions);
-/** Creates a int64 tensor that contains the indices relative to a given dimension
- * `ax` for each element, i.e. each entry is its index in that corresponding
- * dimension. If you need to index more than one dimension, create multiple such
- * tensors with `arange`.
+/** Creates a int64 tensor that contains the indices relative to a given
+ * dimension `ax` for each element, i.e. each entry is its index in that
+ * corresponding dimension. If you need to index more than one dimension, create
+ * multiple such tensors with `arange`.
  */
 FGraphNode *farange(const size_t *shape, const int dimensions, const int ax);
 /** Decrements `FGraphNode.reference_counter` of `graph` (for reference
@@ -885,19 +885,23 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
  */
 FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
 /**
- * TODO fix documentation
- * Selects a indexed selection from `a` (like `fmulti_index`) and replaces this
- * selection with `b`. Therefore if `indices` has `n` dimensions, the shape of
- * the first `n-1` dimensions of `indices` must equal that of `a` and the shape
- * of `b` must match that of `a` except for the `n`th dimension where it has to
- * match the corresponding size of `indices` (i.e. the shape of `indices` must
- * be a full prefix of the shape of `b`). If a value in `indices` is negative,
- * the corresponding value in `b` will not be assigned to an element in `a`. In
- * contrast to `findex_set` it allows to assign multiple values in `a` which
- * will be summed up. E.g.
+ * Assigns to each element in `b` one element in `a` where that element will be
+ * "send" to, i.e. the place in `a` the index points to will be set to the
+ * corresponding element from `b`. If multiple elements from `b` are sent to the
+ * same place in `a` they will be summed up. The shape of `indices` must be a
+ * prefix of the shape of `b`, meaning it can have as many dimensions as `b` or
+ * less, but the sizes of the dimensions must be the same as the first of the
+ * shape of `b`.
+ * E.g.
  *
- * `fmulti_index_set([[0, 1], [2, 3], [4, 5], [6, 7]], [[4, 5], [6, 7], [8, 9]],
- * [0, 0, 2]) == [[10, 12], [2, 3], [8, 9], [6, 7]]`
+ * `findex_set([[0, 1], [2, 3], [4, 5], [6, 7]], 
+ *             [[4, 5], [6, 7], [8, 9]], [0, 0, 2]) = 
+ *  [[10, 12], [2, 3], [8, 9], [6, 7]]`
+ *
+ * `findex_set([[0, 1], [2, 3], [4, 5], [6, 7]], 
+ *             [[4, 5], [6, 7], [8, 9], [10, 11]], 
+ *             [[-1, 0], [1, 1], [1, 0], [1, -1]]) = 
+ *  [[5, 1], [2, 13], [9, 8], [6, 10]]`
  */
 FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
 /**
