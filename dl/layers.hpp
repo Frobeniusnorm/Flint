@@ -148,24 +148,24 @@ concept GenericLayer =
              std::vector<FGraphNode *> grads) {
       {
         a.forward(t1)
-        } -> std::convertible_to<
-            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
-                   T::transform_dimensionality(2)>>;
+      } -> std::convertible_to<
+          Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
+                 T::transform_dimensionality(2)>>;
       {
         a.forward(t2)
-        } -> std::convertible_to<
-            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT32)>,
-                   T::transform_dimensionality(2)>>;
+      } -> std::convertible_to<
+          Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT32)>,
+                 T::transform_dimensionality(2)>>;
       {
         a.forward(t3)
-        } -> std::convertible_to<
-            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT64)>,
-                   T::transform_dimensionality(2)>>;
+      } -> std::convertible_to<
+          Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT64)>,
+                 T::transform_dimensionality(2)>>;
       {
         a.forward(t4)
-        } -> std::convertible_to<
-            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT64)>,
-                   T::transform_dimensionality(2)>>;
+      } -> std::convertible_to<
+          Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT64)>,
+                 T::transform_dimensionality(2)>>;
       a.optimize_weights(t1);
       a.optimize_weights(t2);
       a.optimize_weights(t3);
@@ -246,7 +246,7 @@ public:
     weight_refs.collect_weights(nodes);
     return nodes;
   }
-  void optimize_weights(std::vector<FGraphNode*> grads) {
+  void optimize_weights(std::vector<FGraphNode *> grads) {
     weight_refs.update_weights(grads);
   }
 };
@@ -285,47 +285,52 @@ template <int n> class Convolution : public Layer<n> {
       res[i] = kernel_size;
     }
     res[n - 1] = units_in;
+    return res;
   }
-  std::array<unsigned int, n> stride;
+  std::array<unsigned int, n - 2> stride;
 
 public:
+  // weights have shape: filter, kernel size, units
   template <Initializer InitWeights>
   Convolution(size_t units_in, unsigned int filters, unsigned int kernel_size,
-              InitWeights init, std::array<unsigned int, n - 2> stride = {})
+              InitWeights init, std::array<unsigned int, n - 2> stride)
       : Layer<n>(init.template initialize<double>(
             weight_shape(filters, kernel_size, units_in))),
         stride(stride) {}
 
+  Convolution(size_t units_in, unsigned int filters, unsigned int kernel_size,
+              std::array<unsigned int, n - 2> stride)
+      : Layer<n>(GlorotUniform().template initialize<double>(
+            weight_shape(filters, kernel_size, units_in))),
+        stride(stride) {}
   template <typename T, unsigned int k>
   Tensor<double, k> forward(Tensor<T, k> &in) {
     const unsigned int filters =
         Layer<n>::template get_weight<0>().get_shape()[0];
-    std::array<size_t, n> shape;
-    shape[0] = in.get_shape()[0]; // batch size
-    for (int i = 1; i < k - 1; i++)
-      shape[i] = in.get_shape()[i] / stride[i - 1];
-    shape[k] = 1;
-    std::array<unsigned int, n - 1> acc_stride;
-    acc_stride[0] = 1;
+    std::array<unsigned int, n - 1> act_stride;
+    act_stride[0] = 1;
     for (int i = 0; i < n - 2; i++)
-      acc_stride[i + 1] = stride[i];
-    Tensor<double, k> res = Flint::constant_array(0.0, shape);
+      act_stride[i + 1] = stride[i];
+    Tensor<double, k> res;
     for (unsigned int i = 0; i < filters; i++) {
       // in has shape [batch, dim1, ..., units_in]
       // has shape [1, kernel_size, ..., units_in]
       Tensor<double, n> filter =
           Layer<n>::template get_weight<0>().slice(TensorRange(i, i + 1));
-      Tensor<double, n - 1> filter_res = in.convolve(filter, acc_stride);
+      Tensor<double, n - 1> filter_res = in.convolve_array(filter, act_stride);
       std::array<size_t, n> new_shape;
       for (int i = 0; i < n - 1; i++)
-        new_shape[i] = filter_res[i];
+        new_shape[i] = filter_res.get_shape()[i];
       new_shape[n - 1] = 1;
       filter_res.execute();
-      res = Flint::concat(res, filter_res.reshape_array(new_shape), n - 1);
+      Tensor<double, k> local_res = filter_res.reshape_array(new_shape);
+      res = i == 0 ? local_res : Flint::concat(res, local_res, n - 1);
     }
     return res;
   }
 };
+typedef Convolution<4> Conv2D; // batch-size dim1 dim2 channels -> batch-size new_dim1 new_dim2 filters
+
 /** Randomly sets some values in the input to 0 with a probability of `p`.
  * Reduces over fitting. Degenerates to an identity function when `training` is
  * false. */
@@ -345,7 +350,7 @@ public:
       }
     }
     Tensor<double, n> r = Flint::random_array(in.get_shape());
-    //Tensor<double, n> r = Flint::constant_array(1.0, in.get_shape());
+    // Tensor<double, n> r = Flint::constant_array(1.0, in.get_shape());
     Tensor<double, n> o = (in * (r > p)) / (1.0 - p);
     return o;
   }

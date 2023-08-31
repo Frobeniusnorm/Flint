@@ -13,6 +13,7 @@
    limitations under the License. */
 #ifndef FLINT_MODELS
 #define FLINT_MODELS
+#include "../dl/trainer.hpp"
 #include "layers.hpp"
 #include "losses.hpp"
 #include "optimizers.hpp"
@@ -71,19 +72,24 @@ template <GenericLayer... T> struct SequentialModel {
   // TODO train with Datagenerators
   template <typename T1, unsigned int n1, typename T2, unsigned int n2,
             GenericLoss L>
-  void train(Tensor<T1, n1> &X, Tensor<T2, n2> &Y, L loss, int epochs = 1,
+  void train(TrainingData<T1, n1, T2, n2>& data, L loss, int epochs = 1,
              int batch_size = 32) {
     set_training<0>(true);
-    const size_t batches = X.get_shape()[0];
-    if (Y.get_shape()[0] != batches)
+    const size_t batches = data.X.get_shape()[0];
+    if (data.Y.get_shape()[0] != batches)
       flogging(F_ERROR,
                "Input and Target Datas batch size does not correspond!");
     std::cout << "\r\e[Kbatch error: ... \e[1;30m";
     for (int k = 0; k < 15; k++)
       std::cout << "―";
     std::cout << "\033[0m" << std::flush;
+    Tensor<long, 1> indices = Flint::arange(0, data.X.get_shape()[0]);
     for (int i = 0; i < epochs; i++) {
-      // TODO shuffle each iteration
+      // shuffle each epoch
+      Tensor<T1, n1> sx = data.X.index(indices);
+      Tensor<T2, n2> sy = data.Y.index(indices);
+      indices = indices.permutate(0)();
+      // iterate through batches
       size_t number_batches = batches / batch_size + 1;
       double total_error = 0;
       for (size_t b = 0; b < number_batches; b++) {
@@ -93,8 +99,8 @@ template <GenericLayer... T> struct SequentialModel {
         if (b * batch_size == slice_to)
           break;
         // run batch and calculate error
-        auto input = X.slice(TensorRange(b * batch_size, slice_to));
-        auto expected = Y.slice(TensorRange(b * batch_size, slice_to));
+        auto input = sx.slice(TensorRange(b * batch_size, slice_to));
+        auto expected = sy.slice(TensorRange(b * batch_size, slice_to));
         input.execute();
         expected.execute();
         fStartGradientContext();
@@ -139,9 +145,16 @@ template <GenericLayer... T> struct SequentialModel {
         }
         std::cout << "\033[0m" << std::flush;
       }
+      // validate
+      std::string validation_msg = "";
+      if (data.vX.has_value() && data.vY.has_value()) {
+        auto output = forward(data.X);
+        auto error = loss.calculate_error(output, data.Y);
+        validation_msg = " validation error: " + std::to_string(error.reduce_sum()[0]);
+      }
       std::cout << "\r\e";
-      flogging(F_INFO, "Mean loss for epoch #" + std::to_string(i + 1) + ": " +
-                           std::to_string(total_error));
+      flogging(F_INFO, "Mean loss #" + std::to_string(i + 1) + ": " +
+                           std::to_string(total_error) + validation_msg);
     }
     set_training<0>(false);
   }

@@ -780,7 +780,7 @@ template <typename T> struct Tensor<T, 1> {
    * shape is the same as the product of the old shape (the new shape represents
    * as many elements as the old).
    */
-  template <int k> Tensor<T, k> reshape_array(std::array<size_t, k> new_shape) {
+  template <size_t k> Tensor<T, k> reshape_array(std::array<size_t, k> new_shape) {
     return Tensor<T, k>(freshape(node, new_shape.data(), k), new_shape);
   }
   template <typename K> Tensor<T, 1> index(const Tensor<K, 1> &indices) const {

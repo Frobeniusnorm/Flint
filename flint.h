@@ -841,7 +841,7 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
  * and size of `resulting_shape[i] = 1 + (a->operation->shape[i] - 1) /
  * steps[i]`
  */
-FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
+FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, const unsigned int *steps);
 /**
  * Slides `kernel` along `a`, multiplying it with the elements of `a` it is slid
  * over. For each element all multiplied values are summed up, so that the
@@ -858,7 +858,7 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
  * step in that dimension since the complete kernel is multiplied in that
  * dimension.
  */
-FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps);
+FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, const unsigned int *steps);
 /**
  * Selects single elements with a index-tensor (integer tensor containing
  * indices for the selected dimension).

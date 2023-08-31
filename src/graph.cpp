@@ -1273,7 +1273,7 @@ FGraphNode *fexpand(FGraphNode *a, const unsigned int ax,
   repet[ax] = ax_size - 1;
   return frepeat(freshape(a, new_shape.data(), n + 1), repet.data());
 }
-FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
+FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, const unsigned int *steps) {
   const FOperation ao = a->operation;
   const FOperation bo = kernel->operation;
   if (!a->result_data && ao.op_type != FSTORE) {
@@ -1304,7 +1304,7 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
   memcpy(op.additional_data, steps, op.dimensions * sizeof(unsigned int));
   return addNode(op, {a, kernel});
 }
-FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, unsigned int *steps) {
+FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, const unsigned int *steps) {
   const FOperation ao = a->operation;
   const FOperation bo = kernel->operation;
   if (!a->result_data && ao.op_type != FSTORE) {

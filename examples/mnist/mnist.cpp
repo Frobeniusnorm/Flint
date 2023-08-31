@@ -1,6 +1,7 @@
 #include "../../dl/activations.hpp"
 #include "../../dl/layers.hpp"
 #include "../../dl/models.hpp"
+#include "../../dl/trainer.hpp"
 #include <cstring>
 #include <flint/flint.h>
 #include <flint/flint.hpp>
@@ -69,10 +70,9 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
         data[i * 10 + j] = value == j ? 1 : 0;
       }
     }
-    std::array<size_t, 2> shape {(size_t)no, 10};
-    return Tensor<int, 2>(fCreateGraph(data.data(), no * 10, F_INT32,
-                                         shape.data(), 2),
-                            shape);
+    std::array<size_t, 2> shape{(size_t)no, 10};
+    return Tensor<int, 2>(
+        fCreateGraph(data.data(), no * 10, F_INT32, shape.data(), 2), shape);
   } else
     throw std::runtime_error("Could not load file! Please download it from "
                              "http://yann.lecun.com/exdb/mnist/");
@@ -83,19 +83,23 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 int main() {
   FlintContext _(FLINT_BACKEND_ONLY_GPU);
   fSetLoggingLevel(F_INFO);
-  Tensor<float, 3> ims = load_mnist_images("train-images.idx3-ubyte");
-  Tensor<double, 2> lbs = load_mnist_labels("train-labels.idx1-ubyte").convert<double>();
-  std::cout << ims.get_shape()[0] << " images à " << ims.get_shape()[1] << "x" << ims.get_shape()[1] << " (and " << lbs.get_shape()[0] << " labels)" << std::endl;
+  Tensor<float, 3> X = load_mnist_images("train-images.idx3-ubyte");
+  Tensor<double, 2> Y =
+      load_mnist_labels("train-labels.idx1-ubyte").convert<double>();
+  Tensor<float, 3> vX = load_mnist_images("t10k-images.idx3-ubyte");
+  Tensor<double, 2> vY =
+      load_mnist_labels("t10k-labels.idx1-ubyte").convert<double>();
+  auto data = TrainingData(
+      X.reshape(X.get_shape()[0], X.get_shape()[1], X.get_shape()[2], 1), Y,
+      vX.reshape(vX.get_shape()[0], vX.get_shape()[1], vX.get_shape()[2], 1),
+      vY);
+  std::cout << data.X.get_shape()[0] << " images à " << data.X.get_shape()[1]
+            << "x" << data.X.get_shape()[1] << " (and " << data.Y.get_shape()[0]
+            << " labels)" << std::endl;
   std::cout << "loaded data. Starting training." << std::endl;
-  auto m = SequentialModel{
-    Flatten(),
-    Connected(784, 32),
-    Relu(),
-    Dropout(0.1),
-    Connected(32, 10),
-    SoftMax()
-  };
-  AdamFactory opt (0.003);
+  auto m = SequentialModel{Conv2D(1, 10, 7, std::array<unsigned int, 2>{4, 4}),
+                           Relu(), Connected(10, 10), Flatten(), Connected(490, 10), SoftMax()};
+  AdamFactory opt(0.003);
   m.generate_optimizer(opt);
-  m.train(ims, lbs, CrossEntropyLoss(), 50, 6000);
+  m.train(data, CrossEntropyLoss(), 50, 6000);
 }

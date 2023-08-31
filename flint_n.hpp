@@ -759,7 +759,7 @@ template <typename T, unsigned int n> struct Tensor {
    * shape is the same as the product of the old shape (the new shape represents
    * as many elements as the old).
    */
-  template <int k> Tensor<T, k> reshape_array(std::array<size_t, k> new_shape) {
+  template <size_t k> Tensor<T, k> reshape_array(std::array<size_t, k> new_shape) {
     return Tensor<T, k>(freshape(node, new_shape.data(), k), new_shape);
   }
   /**
@@ -1261,7 +1261,7 @@ template <typename T, unsigned int n> struct Tensor {
    * //   [3, 4, 3, 4, 3, 4]]])
    * }
    */
-  Tensor<T, n> repeat_array(std::array<int, n> repetitions) const {
+  Tensor<T, n> repeat_array(std::array<int, (size_t)n> repetitions) const {
     FGraphNode *nn = frepeat(node, repetitions.data());
     std::array<size_t, n> new_shape;
     for (size_t i = 0; i < n; i++)
@@ -1348,6 +1348,18 @@ template <typename T, unsigned int n> struct Tensor {
     FGraphNode *nn = ftranspose(node, acc_trans.data());
     return Tensor<T, n>(nn, new_shape);
   }
+  /**
+   * Same as convolve, but with steps as an array
+   */
+  template <typename K>
+  Tensor<stronger_return<K>, n - 1> convolve_array(const Tensor<K, n> &kernel,
+                                                   const std::array<unsigned int, n - 1> steps) const {
+
+    FGraphNode *nc = fconvolve(node, kernel.get_graph_node(), steps.data());
+    std::array<size_t, n - 1> new_shape;
+    std::copy_n(nc->operation.shape, (n - 1), new_shape.begin());
+    return Tensor<stronger_return<K>, n - 1>(nc, new_shape);
+  }
   /** Convolves the `n`-dimensional input tensor with a `n`-dimensional
    * filter kernel `kernel` and a per dimensional step size `steps` with size of
    * `n-1`. It is expected that the input and `kernel` have the same size in
@@ -1393,10 +1405,7 @@ template <typename T, unsigned int n> struct Tensor {
     std::array<unsigned int, n - 1> steps_arr;
     for (int i = 0; i < n - 1; i++)
       steps_arr[i] = i < num_steps ? steps_arr_par[i] : 1;
-    FGraphNode *nc = fconvolve(node, kernel.get_graph_node(), steps_arr.data());
-    std::array<size_t, n - 1> new_shape;
-    std::copy_n(nc->operation.shape, (n - 1), new_shape.begin());
-    return Tensor<stronger_return<K>, n - 1>(nc, new_shape);
+    return convolve_array(kernel, steps_arr);
   }
   /**
    * Slides `kernel` along the input tensor, multiplying it with the elements of
