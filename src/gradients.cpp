@@ -280,8 +280,6 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         shape_adj_working[i + 1] = a->operation.shape[i];
         FGraphNode *res =
             fconstant_d(0.0, shape_adj_working.data(), shape_adj_working.size());
-        std::cout << printShape(working_adj->operation.shape, working_adj->operation.dimensions) << std::endl;
-        std::cout << printShape(win_ind->operation.shape, win_ind->operation.dimensions) << std::endl;
         // still bad performance v   (maybe nevertheless a index method that works in O(n) is necessary with an exception in the normal execution model...)
         working_adj = findex_set(res, working_adj, win_ind);
       }

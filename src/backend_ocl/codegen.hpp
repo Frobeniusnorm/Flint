@@ -18,6 +18,7 @@
 
 #ifndef OCL_CODEGEN_HPP
 #define OCL_CODEGEN_HPP
+// #define FLINT_DEBUG
 #include "../../flint.h"
 #include "../utils.hpp"
 #include <list>
@@ -43,6 +44,7 @@ generateCode(FGraphNode *node,
     const auto [node, name] = todo.front();
     todo.pop_front();
     string index_defs = "";
+    // used to insert code at a specific place
     if (!node) {
       code = name + code;
       continue;
@@ -202,7 +204,8 @@ generateCode(FGraphNode *node,
         size_t acc_sizes_ax = 1;
         for (unsigned int i = ax + 1; i < node->operation.dimensions; i++)
           acc_sizes_ax *= node->operation.shape[i];
-        code = type + " " + name + " = (index/" + to_string(acc_sizes_ax) + ")%" + to_string(node->operation.shape[ax]) + ";\n";   
+        code = type + " " + name + " = (index/" + to_string(acc_sizes_ax) +
+               ")%" + to_string(node->operation.shape[ax]) + ";\n" + code;
       } break;
       case FGRADIENT_CONVOLVE: {
         string par1, par2;
@@ -906,8 +909,7 @@ generateCode(FGraphNode *node,
         const unsigned int axis = c->operation.dimensions - 1;
         string par1, par2, par3;
         push_pred = false;
-        // we ignore the value assignment of the parameters since we have to
-        // access the array directly
+        // index has to be a calculated parameter
         if (assigned_params.find(c) != assigned_params.end()) {
           par3 = assigned_params[c];
         } else {
@@ -915,6 +917,7 @@ generateCode(FGraphNode *node,
           assigned_params.insert({c, par3});
           parameters.push_back({c, par3});
         }
+        // b as well
         if (assigned_params.find(b) != assigned_params.end()) {
           par2 = assigned_params[b];
         } else {
@@ -922,6 +925,7 @@ generateCode(FGraphNode *node,
           assigned_params.insert({b, par2});
           parameters.push_back({b, par2});
         }
+        // a may be calculated lazily
         par1 = "v" + to_string(++variable_index);
         size_t acc_sizes_ax = 1;
         for (int i = axis + 1; i < op.dimensions; i++)
@@ -1005,6 +1009,9 @@ generateCode(FGraphNode *node,
       default:
         break;
       }
+#ifdef FLINT_DEBUG
+    code = "// " + opstr + "\n" + code;
+#endif
     // insert our indexing logic into the queue after the children
     if (!index_defs.empty())
       todo.push_front({nullptr, index_defs});

@@ -598,13 +598,24 @@ TEST_SUITE("Autodiff") {
     Tensor<double, 1> b1 = {1, -1, 2, -2, 3, -3};
     Tensor<double, 2> e1 = {{1, 0, 1, 2}, {-1, 1, 1, -1}, {-2, 1, 0, -3}};
     a1.watch();
-    Tensor<double, 3> y1 = a1.sliding_window(std::array<size_t, 2>{2, 2}, std::array<unsigned int, 2>{1, 1}) * b1.reshape(6, 1, 1).repeat(0, 1, 1);
+    Tensor<double, 3> y1 =
+        a1.sliding_window(std::array<size_t, 2>{2, 2},
+                          std::array<unsigned int, 2>{1, 1}) *
+        b1.reshape(6, 1, 1).repeat(0, 1, 1);
     Tensor<double, 2> g1 = y1.gradient(a1);
-    for (int j = 0; j < 4; j++) {
-      for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 4; j++)
         CHECK_EQ(doctest::Approx(g1[i][j]), e1[i][j]);
-      } 
-    }
+    Tensor<double, 3> b2 = {{{-1, 1}}, {{2, 3}}, {{3, 4}}, {{5, 6}}};
+    Tensor<double, 3> y2 =
+        a1.sliding_window(std::array<size_t, 2>{1, 2},
+                          std::array<unsigned int, 2>{2, 2}) *
+        b2;
+    Tensor<double, 2> g2 = y2.gradient(a1);
+    Tensor<double, 2> e2 = {{-1, 1, 2, 3}, {0, 0, 0, 0}, {3, 4, 5, 6}};
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 4; j++)
+        CHECK_EQ(doctest::Approx(g2[i][j]), e2[i][j]);
   }
   TEST_CASE("Reduce and calculate with itself") {
     GradientContext _;
