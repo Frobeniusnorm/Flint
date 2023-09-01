@@ -91,19 +91,34 @@ double gradient_fun() {
 double convolve_fun() {
   nanotimer timer;
   vector<vector<vector<float>>> image(
-      2048, vector<vector<float>>(1024, vector<float>(3, 0.8)));
+      2048, vector<vector<float>>(2048, vector<float>(3, 0.8)));
   vector<vector<vector<float>>> filter(
-      32, vector<vector<float>>(16, vector<float>(3, 0.5)));
+      32, vector<vector<float>>(32, vector<float>(3, 0.5)));
+  Tensor<float, 3> img_t(image);
+  Tensor<float, 3> ker_t(filter);
+  timer.start();
+  for (int i = 0; i < 10; i++) {
+    Tensor<float, 2> foo = img_t.convolve(ker_t, 8, 8);
+    foo.execute();
+  }
+  return timer.get_elapsed_ms();
+}
+double convolve_grad_fun() {
+  nanotimer timer;
+  vector<vector<vector<float>>> image(
+      2048, vector<vector<float>>(2048, vector<float>(3, 0.8)));
+  vector<vector<vector<float>>> filter(
+      32, vector<vector<float>>(32, vector<float>(3, 0.5)));
   Tensor<float, 3> img_t(image);
   Tensor<float, 3> ker_t(filter);
   ker_t.watch();
   timer.start();
   for (int i = 0; i < 10; i++) {
-    GradientContext _;
-    Tensor<float, 2> foo = img_t.convolve(ker_t, 16, 16);
+    fStartGradientContext();
+    Tensor<float, 2> foo = img_t.convolve(ker_t, 8, 8);
     Tensor<float, 2> err = (foo - 0.7f).abs();
+    fStopGradientContext();
     Tensor<double, 3> grad = err.gradient(ker_t);
-    foo.execute();
     grad.execute();
   }
   return timer.get_elapsed_ms();
@@ -111,6 +126,7 @@ double convolve_fun() {
 void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
   unordered_map<string, double (*)()> benches;
   benches.insert({"convolve_fun", convolve_fun});
+  benches.insert({"convolve_grad_fun", convolve_grad_fun});
   benches.insert({"gradient_fun", gradient_fun});
   benches.insert({"matrix_multiplication", matrix_multiplication});
   benches.insert({"reduce_fun", reduce_fun});
