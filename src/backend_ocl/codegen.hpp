@@ -18,7 +18,7 @@
 
 #ifndef OCL_CODEGEN_HPP
 #define OCL_CODEGEN_HPP
-// #define FLINT_DEBUG
+#define FLINT_DEBUG
 #include "../../flint.h"
 #include "../utils.hpp"
 #include <list>
@@ -828,7 +828,7 @@ generateCode(FGraphNode *node,
           index_defs += " + " + dim_idx + " * " + to_string(acc_sizes_pred[d]);
         }
         index_defs += ";\nif(index < 0) index = 0;\n";
-        code = set_zero_cond + ") v" + to_string(variable_index) + " = 0;\n" +
+        code = set_zero_cond + ") " + name + " = 0;\n" +
                code;
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
         code = type + " " + name + " = v" + to_string(variable_index + 1) +
@@ -1010,7 +1010,7 @@ generateCode(FGraphNode *node,
         break;
       }
 #ifdef FLINT_DEBUG
-    code = "// " + opstr + "\n" + code;
+    code = "// " + opstr + " current index: " + to_string(variable_index) + "\n" + code;
 #endif
     // insert our indexing logic into the queue after the children
     if (!index_defs.empty())

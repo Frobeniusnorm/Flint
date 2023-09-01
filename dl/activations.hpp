@@ -38,10 +38,16 @@ public:
       return exp / (sum.expand(axis, in.get_shape()[axis]));
     }
   }
+  std::string name() override{
+    return "Softmax";
+  }
 };
 struct Relu : public UntrainableLayer {
   template <typename T, unsigned int n> Tensor<T, n> forward(Tensor<T, n> &in) {
     return in.max(0);
+  }
+  std::string name() override{
+    return "Relu";
   }
 };
 #endif

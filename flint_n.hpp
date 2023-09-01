@@ -759,7 +759,8 @@ template <typename T, unsigned int n> struct Tensor {
    * shape is the same as the product of the old shape (the new shape represents
    * as many elements as the old).
    */
-  template <size_t k> Tensor<T, k> reshape_array(std::array<size_t, k> new_shape) {
+  template <size_t k>
+  Tensor<T, k> reshape_array(std::array<size_t, k> new_shape) {
     return Tensor<T, k>(freshape(node, new_shape.data(), k), new_shape);
   }
   /**
@@ -1060,6 +1061,42 @@ template <typename T, unsigned int n> struct Tensor {
    */
   Tensor<T, n> abs() const { return Tensor<T, n>(fabs_g(node), shape); }
 
+  /** Like `slice` but with an array of TensorRanges instead of variadic
+   * arguments */
+  template <size_t k>
+  Tensor<T, n> slice_array(std::array<TensorRange, k> ranges) const {
+    constexpr size_t num_ranges = k;
+    long starts[n], ends[n], steps[n];
+    for (unsigned int i = 0; i < n; i++) {
+      if (i < num_ranges) {
+        if (ranges[i].start == TensorRange::MAX_SCOPE) {
+          if (ranges[i].step > 0)
+            starts[i] = 0;
+          else
+            starts[i] = shape[i] - 1;
+        } else
+          starts[i] = ranges[i].start;
+
+        if (ranges[i].end == TensorRange::MAX_SCOPE) {
+          if (ranges[i].step < 0)
+            ends[i] = -shape[i] - 1;
+          else
+            ends[i] = shape[i];
+        } else
+          ends[i] = ranges[i].end;
+        steps[i] = ranges[i].step;
+      } else {
+        starts[i] = 0;
+        ends[i] = shape[i];
+        steps[i] = 1;
+      }
+    }
+    FGraphNode *nn = fslice_step(node, starts, ends, steps);
+    std::array<size_t, n> new_shape;
+    for (size_t i = 0; i < n; i++)
+      new_shape[i] = nn->operation.shape[i];
+    return Tensor<T, n>(nn, new_shape);
+  }
   /** Selects a slice of the tensor with a dimension wise start index, end index
    * and step size. The arguments of this function are objects of the type
    * `TensorRange`, there may be as many arguments as dimensions or less. The
@@ -1120,36 +1157,7 @@ template <typename T, unsigned int n> struct Tensor {
                   "as the tensor has dimensions!");
     std::array<TensorRange, num_ranges> ranges{
         static_cast<TensorRange>(dim_ranges)...};
-    long starts[n], ends[n], steps[n];
-    for (unsigned int i = 0; i < n; i++) {
-      if (i < num_ranges) {
-        if (ranges[i].start == TensorRange::MAX_SCOPE) {
-          if (ranges[i].step > 0)
-            starts[i] = 0;
-          else
-            starts[i] = shape[i] - 1;
-        } else
-          starts[i] = ranges[i].start;
-
-        if (ranges[i].end == TensorRange::MAX_SCOPE) {
-          if (ranges[i].step < 0)
-            ends[i] = -shape[i] - 1;
-          else
-            ends[i] = shape[i];
-        } else
-          ends[i] = ranges[i].end;
-        steps[i] = ranges[i].step;
-      } else {
-        starts[i] = 0;
-        ends[i] = shape[i];
-        steps[i] = 1;
-      }
-    }
-    FGraphNode *nn = fslice_step(node, starts, ends, steps);
-    std::array<size_t, n> new_shape;
-    for (size_t i = 0; i < n; i++)
-      new_shape[i] = nn->operation.shape[i];
-    return Tensor<T, n>(nn, new_shape);
+    return slice_array(ranges);
   }
   /**
    * Creates a new tensor of zeroes with the requested shape. The original
@@ -1352,8 +1360,9 @@ template <typename T, unsigned int n> struct Tensor {
    * Same as convolve, but with steps as an array
    */
   template <typename K>
-  Tensor<stronger_return<K>, n - 1> convolve_array(const Tensor<K, n> &kernel,
-                                                   const std::array<unsigned int, n - 1> steps) const {
+  Tensor<stronger_return<K>, n - 1>
+  convolve_array(const Tensor<K, n> &kernel,
+                 const std::array<unsigned int, n - 1> steps) const {
 
     FGraphNode *nc = fconvolve(node, kernel.get_graph_node(), steps.data());
     std::array<size_t, n - 1> new_shape;

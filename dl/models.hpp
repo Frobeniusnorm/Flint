@@ -14,6 +14,7 @@
 #ifndef FLINT_MODELS
 #define FLINT_MODELS
 #include "../dl/trainer.hpp"
+#include "../src/backend_ocl/comp.hpp"
 #include "layers.hpp"
 #include "losses.hpp"
 #include "optimizers.hpp"
@@ -24,6 +25,7 @@
 #include <memory>
 #include <tuple>
 #include <vector>
+#include <chrono>
 
 template <FType in> constexpr FType get_output_type() { return in; }
 template <FType in, GenericLayer K> constexpr FType get_output_type() {
@@ -116,6 +118,9 @@ template <GenericLayer... T> struct SequentialModel {
           flat_vars.insert(flat_vars.end(), vars[i].begin(), vars[i].end());
         std::vector<FGraphNode *> grads(flat_vars.size());
         // calculate gradients
+#ifdef FLINT_DL_PROFILE
+        auto start = std::chrono::high_resolution_clock::now();
+#endif
         fCalculateGradients(error.get_graph_node(), flat_vars.data(),
                             flat_vars.size(), grads.data());
         // reconstruct for layers
@@ -123,9 +128,16 @@ template <GenericLayer... T> struct SequentialModel {
         int index = 0;
         for (unsigned int i = 0; i < vars.size(); i++) {
           plgrads[i] = std::vector<FGraphNode *>(vars[i].size());
-          for (unsigned int j = 0; j < vars[i].size(); j++)
-            plgrads[i][j] = grads[index++];
+          for (unsigned int j = 0; j < vars[i].size(); j++) {
+            plgrads[i][j] = fExecuteGraph(grads[index++]);
+          }
         }
+#ifdef FLINT_DL_PROFILE
+        OCLCompilerThread::memory_barrier();
+        std::chrono::duration<double, std::milli> elapsed =
+          std::chrono::high_resolution_clock::now() - start;
+        flogging(F_INFO, "Calculating gradients took " + std::to_string(elapsed.count()) + "ms");
+#endif
         backward<0>(plgrads);
         // calculate error value
         double local_error = (double)(error.reduce_sum()[0]);
@@ -158,6 +170,9 @@ template <GenericLayer... T> struct SequentialModel {
     }
     set_training<0>(false);
   }
+  std::string summary() {
+    return summary_helper<0>();
+  }
 
 private:
   template <int n, typename K, unsigned int k>
@@ -170,7 +185,16 @@ private:
   template <int n>
   void backward(const std::vector<std::vector<FGraphNode *>> grads) {
     if constexpr (n < sizeof...(T)) {
+#ifdef FLINT_DL_PROFILE
+      auto start = std::chrono::high_resolution_clock::now();
+#endif
       std::get<n>(layers).optimize_weights(grads[n]);
+#ifdef FLINT_DL_PROFILE
+      OCLCompilerThread::memory_barrier();
+      std::chrono::duration<double, std::milli> elapsed =
+        std::chrono::high_resolution_clock::now() - start;
+      flogging(F_INFO, std::get<n>(layers).name() + " backwards took " + std::to_string(elapsed.count()) + "ms");
+#endif
       backward<n + 1>(grads);
     }
   }
@@ -186,6 +210,11 @@ private:
       set_training<n + 1>(b);
     }
   }
+  template <int n> std::string summary_helper() {
+    if constexpr (n < sizeof...(T)) 
+      return std::to_string(n + 1) + ". " + std::get<n>(layers).summary() + "\n" + summary_helper<n + 1>();
+    return "";
+  }
   template <int n>
   void collect_weights(std::vector<std::vector<FGraphNode *>> &vars) {
     if constexpr (n < sizeof...(T)) {
@@ -196,7 +225,17 @@ private:
   template <int layer, typename T2, unsigned int n2, typename T1,
             unsigned int n1>
   Tensor<T2, n2> forward_helper(Tensor<T1, n1> &in) {
+#ifdef FLINT_DL_PROFILE
+    auto start = std::chrono::high_resolution_clock::now();
+#endif
     auto out = std::get<layer>(layers).forward(in);
+#ifdef FLINT_DL_PROFILE
+    out.execute();
+    OCLCompilerThread::memory_barrier();
+    std::chrono::duration<double, std::milli> elapsed =
+      std::chrono::high_resolution_clock::now() - start;
+    flogging(F_INFO, std::get<layer>(layers).name() + " took " + std::to_string(elapsed.count()) + "ms");
+#endif
     if constexpr (layer == sizeof...(T) - 1)
       return out;
     else

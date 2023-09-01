@@ -66,9 +66,10 @@ void flintInit_gpu() {
   char dev_vend[128];
   size_t dev_vend_size;
   cl_device_type dev_type;
-  cl_device_type highest_type = 0;
   size_t dev_type_size;
   std::string dev_type_string;
+  cl_uint dev_no_units;
+  cl_uint highest_no_units = 0;
   for (int i = 0; i < num_plat; i++) {
     cl_device_id curr_dev;
     if (clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_DEFAULT, 1, &curr_dev,
@@ -88,8 +89,9 @@ void flintInit_gpu() {
                     &dev_vend_size);
     clGetDeviceInfo(curr_dev, CL_DEVICE_TYPE, sizeof(dev_type),
                     (void *)&dev_type, &dev_type_size);
-    if (dev_type > highest_type) {
-      highest_type = dev_type;
+    clGetDeviceInfo(curr_dev, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &dev_no_units, nullptr);
+    if (dev_no_units > highest_no_units) {
+      highest_no_units = dev_no_units;
       device = curr_dev;
       if ((dev_type & CL_DEVICE_TYPE_CPU) == CL_DEVICE_TYPE_CPU) {
         dev_type_string = "CPU";

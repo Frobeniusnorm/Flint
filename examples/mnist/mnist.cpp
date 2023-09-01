@@ -1,3 +1,4 @@
+//#define FLINT_DL_PROFILE
 #include "../../dl/activations.hpp"
 #include "../../dl/layers.hpp"
 #include "../../dl/models.hpp"
@@ -7,7 +8,6 @@
 #include <flint/flint.hpp>
 #include <flint/flint_helper.hpp>
 #include <stdexcept>
-
 int reverseInt(int i) {
   unsigned char c1, c2, c3, c4;
   c1 = i & 255;
@@ -81,24 +81,34 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // download and extract to the desired folder from
 // http://yann.lecun.com/exdb/mnist/
 int main() {
-  FlintContext _(FLINT_BACKEND_ONLY_GPU);
+  FlintContext _(FLINT_BACKEND_BOTH);
   fSetLoggingLevel(F_INFO);
-  Tensor<float, 3> X = load_mnist_images("train-images.idx3-ubyte");
+  Tensor<float, 3> X = load_mnist_images("train-images-idx3-ubyte");
   Tensor<double, 2> Y =
-      load_mnist_labels("train-labels.idx1-ubyte").convert<double>();
-  Tensor<float, 3> vX = load_mnist_images("t10k-images.idx3-ubyte");
+      load_mnist_labels("train-labels-idx1-ubyte").convert<double>();
+  Tensor<float, 3> vX = load_mnist_images("t10k-images-idx3-ubyte");
   Tensor<double, 2> vY =
-      load_mnist_labels("t10k-labels.idx1-ubyte").convert<double>();
+      load_mnist_labels("t10k-labels-idx1-ubyte").convert<double>();
   auto data = TrainingData(
-      X.reshape(X.get_shape()[0], X.get_shape()[1], X.get_shape()[2], 1), Y,
+      X.reshape(X.get_shape()[0], X.get_shape()[1], X.get_shape()[2], 1), 
+      Y,
       vX.reshape(vX.get_shape()[0], vX.get_shape()[1], vX.get_shape()[2], 1),
-      vY);
+      vY
+      );
   std::cout << data.X.get_shape()[0] << " images à " << data.X.get_shape()[1]
             << "x" << data.X.get_shape()[1] << " (and " << data.Y.get_shape()[0]
             << " labels)" << std::endl;
   std::cout << "loaded data. Starting training." << std::endl;
-  auto m = SequentialModel{Conv2D(1, 10, 7, std::array<unsigned int, 2>{4, 4}),
-                           Relu(), Connected(10, 10), Flatten(), Connected(490, 10), SoftMax()};
+  auto m = SequentialModel{
+    Conv2D(1, 10, 14, std::array<unsigned int, 2>{2, 2}, NO_PADDING),
+    Relu(),
+    Flatten(),
+    Connected(640, 100),
+    Relu(),
+    Connected(100, 10),
+    SoftMax()
+  };
+  std::cout << m.summary() << std::endl;
   AdamFactory opt(0.003);
   m.generate_optimizer(opt);
   m.train(data, CrossEntropyLoss(), 50, 6000);

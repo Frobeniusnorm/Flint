@@ -19,6 +19,7 @@
 #include <concepts>
 #include <flint/flint.hpp>
 #include <memory>
+#include <chrono>
 namespace LayerHelper {
 /**
  * FOR INTERNAL USE ONLY
@@ -65,7 +66,15 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
   }
   void update_weights(std::vector<FGraphNode *> &grads) {
     if (optimizer) {
+#ifdef FLINT_DL_PROFILE
+      auto start = std::chrono::high_resolution_clock::now();
+#endif
       Tensor<double, n> gw(grads[index], weight.get_shape());
+#ifdef FLINT_DL_PROFILE
+      std::chrono::duration<double, std::milli> elapsed =
+        std::chrono::high_resolution_clock::now() - start;
+      flogging(F_INFO, "weights update took " + std::to_string(elapsed.count()) + "ms");
+#endif
       Tensor<double, n> nw = optimizer->update(weight, gw);
       nw.execute();
       weight = std::move(nw);
@@ -176,6 +185,8 @@ concept GenericLayer =
       a.training = true;
       { T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
       { T::transform_type(F_INT32) } -> std::convertible_to<FType>;
+      { a.name() } -> std::convertible_to<std::string>;
+      { a.summary() } -> std::convertible_to<std::string>;
     };
 /** Implements blank methods for every method of GenericLayer that is not needed
  * for a Layer that is not trainable */
@@ -191,6 +202,12 @@ struct UntrainableLayer {
   static constexpr FType transform_type(FType t) { return t; }
   static constexpr unsigned int transform_dimensionality(unsigned int n) {
     return n;
+  }
+  virtual std::string name() {
+    return "unnamed";
+  }
+  virtual std::string summary() {
+    return name() + " layer";
   }
 };
 /**
@@ -249,6 +266,13 @@ public:
   void optimize_weights(std::vector<FGraphNode *> grads) {
     weight_refs.update_weights(grads);
   }
+  virtual std::string name() {
+    return "unnamed";
+  }
+  virtual std::string summary() {
+    return name() + " layer with " + std::to_string(sizeof...(wn)) +
+           " weight tensors";
+  }
 };
 
 struct Connected : public Layer<2> {
@@ -274,7 +298,15 @@ struct Connected : public Layer<2> {
     Tensor<T, n> ones = Flint::constant_array<T, n>(1, one_shape);
     return Flint::concat(in, ones, n - 1).matmul(get_weight<0>());
   }
+  std::string name() override{
+    return "Connected";
+  }
+  std::string summary() override {
+    return name() + ": " + std::to_string(get_weight<0>().get_shape()[0]) +
+           " * " + std::to_string(get_weight<0>().get_shape()[1]);
+  }
 };
+enum PaddingMode { PADDING_END, NO_PADDING };
 template <int n> class Convolution : public Layer<n> {
   constexpr std::array<size_t, n> weight_shape(unsigned int filters,
                                                unsigned int kernel_size,
@@ -287,30 +319,72 @@ template <int n> class Convolution : public Layer<n> {
     res[n - 1] = units_in;
     return res;
   }
-  std::array<unsigned int, n - 2> stride;
+  std::array<unsigned int, n - 1> act_stride;
+  std::array<long, n> act_slice_ends;
+  unsigned int kernel_size;
+  void initialize_precalc(std::array<unsigned int, n - 2> stride) {
+    act_stride[0] = 1;
+    for (int i = 0; i < n - 2; i++)
+      act_stride[i + 1] = stride[i];
+  }
 
 public:
+  PaddingMode padding_mode;
   // weights have shape: filter, kernel size, units
   template <Initializer InitWeights>
   Convolution(size_t units_in, unsigned int filters, unsigned int kernel_size,
-              InitWeights init, std::array<unsigned int, n - 2> stride)
+              InitWeights init, std::array<unsigned int, n - 2> stride,
+              PaddingMode padding_mode = NO_PADDING)
       : Layer<n>(init.template initialize<double>(
             weight_shape(filters, kernel_size, units_in))),
-        stride(stride) {}
+        padding_mode(padding_mode), kernel_size(kernel_size) {
+    initialize_precalc(stride);
+  }
 
   Convolution(size_t units_in, unsigned int filters, unsigned int kernel_size,
-              std::array<unsigned int, n - 2> stride)
+              std::array<unsigned int, n - 2> stride,
+              PaddingMode padding_mode = NO_PADDING)
       : Layer<n>(GlorotUniform().template initialize<double>(
             weight_shape(filters, kernel_size, units_in))),
-        stride(stride) {}
+        padding_mode(padding_mode), kernel_size(kernel_size) {
+
+    initialize_precalc(stride);
+  }
+  std::string name() override{
+    return "Convolution";
+  }
+  std::string summary() override {
+    const unsigned int filters =
+        Layer<n>::template get_weight<0>().get_shape()[0];
+    const unsigned int units_in =
+        Layer<n>::template get_weight<0>().get_shape()[n - 1];
+    const unsigned int kernel_size =
+        Layer<n>::template get_weight<0>().get_shape()[1];
+    return name() + ": input channels: " + std::to_string(units_in) +
+           " filters: " + std::to_string(filters) +
+           ", kernel size: " + std::to_string(kernel_size);
+  }
   template <typename T, unsigned int k>
   Tensor<double, k> forward(Tensor<T, k> &in) {
     const unsigned int filters =
         Layer<n>::template get_weight<0>().get_shape()[0];
-    std::array<unsigned int, n - 1> act_stride;
-    act_stride[0] = 1;
-    for (int i = 0; i < n - 2; i++)
-      act_stride[i + 1] = stride[i];
+    // calculate slice for padding
+    switch (padding_mode) {
+    case NO_PADDING: {
+      act_slice_ends[0] = in.get_shape()[0];
+      for (int i = 1; i < n - 1; i++) {
+        size_t window_size = in.get_shape()[i] - kernel_size + 1;
+        window_size = window_size % act_stride[i] == 0
+                          ? window_size / act_stride[i]
+                          : window_size / act_stride[i] + 1;
+        act_slice_ends[i] = window_size;
+      }
+      act_slice_ends[n - 1] = 1;
+    } break;
+    default:
+      break;
+    }
+    // actual convolve
     Tensor<double, k> res;
     for (unsigned int i = 0; i < filters; i++) {
       // in has shape [batch, dim1, ..., units_in]
@@ -322,14 +396,28 @@ public:
       for (int i = 0; i < n - 1; i++)
         new_shape[i] = filter_res.get_shape()[i];
       new_shape[n - 1] = 1;
-      filter_res.execute();
       Tensor<double, k> local_res = filter_res.reshape_array(new_shape);
+      // padding
+      switch (padding_mode) {
+      case NO_PADDING: {
+        std::array<TensorRange, n> padding_slice;
+        for (int j = 0; j < n; j++) {
+          padding_slice[j].start = 0;
+          padding_slice[j].end = act_slice_ends[j];
+        }
+        local_res = local_res.slice_array(padding_slice);
+      } break;
+      default:
+        break;
+      }
+      local_res.execute();
       res = i == 0 ? local_res : Flint::concat(res, local_res, n - 1);
     }
     return res;
   }
 };
-typedef Convolution<4> Conv2D; // batch-size dim1 dim2 channels -> batch-size new_dim1 new_dim2 filters
+typedef Convolution<4> Conv2D; // batch-size dim1 dim2 channels -> batch-size
+                               // new_dim1 new_dim2 filters
 
 /** Randomly sets some values in the input to 0 with a probability of `p`.
  * Reduces over fitting. Degenerates to an identity function when `training` is
@@ -354,6 +442,12 @@ public:
     Tensor<double, n> o = (in * (r > p)) / (1.0 - p);
     return o;
   }
+  std::string name() override{
+    return "Dropout";
+  }
+  std::string summary() override {
+    return name() + " (p = " + std::to_string(p) + ")";
+  }
 };
 struct Flatten : public UntrainableLayer {
   static constexpr unsigned int transform_dimensionality(unsigned int n) {
@@ -367,6 +461,9 @@ struct Flatten : public UntrainableLayer {
       return Tensor<T, 2>(in);
     else
       return forward(in.flattened(n - 1));
+  }
+  std::string name() override {
+    return "Flatten";
   }
 };
 #endif
