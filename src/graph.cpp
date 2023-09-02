@@ -1271,7 +1271,8 @@ FGraphNode *fexpand(FGraphNode *a, const unsigned int ax,
     return freshape(a, new_shape.data(), n + 1);
   std::vector<int> repet(n + 1, 0);
   repet[ax] = ax_size - 1;
-  return frepeat(freshape(a, new_shape.data(), n + 1), repet.data());
+  FGraphNode* res = freshape(a, new_shape.data(), n + 1);
+  return ax_size == 1 ? res : frepeat(res, repet.data());
 }
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, const unsigned int *steps) {
   const FOperation ao = a->operation;
@@ -1292,8 +1293,12 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, const unsigned int *ste
                           " vs. " +
                           std::to_string(bo.shape[bo.dimensions - 1]));
   std::vector<size_t> new_shape(ao.dimensions - 1);
-  for (int i = 0; i < ao.dimensions - 1; i++)
-    new_shape[i] = 1 + (ao.shape[i] - 1) / steps[i];
+  for (int i = 0; i < ao.dimensions - 1; i++) {
+    size_t window_size = ao.shape[i] - kernel->operation.shape[i] + 1;
+    window_size = window_size % steps[i] == 0 ? window_size / steps[i]
+                                              : window_size / steps[i] + 1;
+    new_shape[i] = window_size; // 1 + (ao.shape[i] - 1) / steps[i];
+  }
   FOperation op;
   op.dimensions = ao.dimensions - 1;
   op.shape = safe_mal<size_t>(op.dimensions);

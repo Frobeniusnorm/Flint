@@ -34,6 +34,8 @@ generateCode(FGraphNode *node,
   list<tuple<FGraphNode *, string>> todo;
   // some operations work on the parameters, allow them to keep track
   unordered_map<FGraphNode *, std::string> assigned_params;
+  // so we dont execute nodes multiple times
+  unordered_map<FGraphNode *, std::string> calculated_vars;
   int variable_index = 0;
   string code = "";
   // indexing logic (we save the old index in old_index$i to restore it)
@@ -49,9 +51,10 @@ generateCode(FGraphNode *node,
       code = name + code;
       continue;
     }
+    // cash var
+    string type = typeString(node->operation.data_type);
     bool push_pred = true;
     // write code
-    string type = typeString(node->operation.data_type);
     const string opstr = string(fop_to_string[node->operation.op_type]);
     // need to be outside switch to include result_data
     if (node->operation.op_type == FSTORE || node->result_data ||
@@ -236,6 +239,9 @@ generateCode(FGraphNode *node,
         acc_sizes_pred[acc_sizes_pred.size() - 1] = 1;
         acc_sizes[op.dimensions - 2] = 1;
         size_t kernel_num_elems = kernel.shape[acc_sizes_kernel.size() - 1];
+        size_t a_num_elems = 1;
+        for (long d = a.dimensions - 1; d >= 0; d--)
+          a_num_elems *= a.shape[d];
         for (long d = acc_sizes_pred.size() - 2; d >= 0; d--) {
           kernel_num_elems *= kernel.shape[d];
           acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel.shape[d + 1];
@@ -282,7 +288,8 @@ generateCode(FGraphNode *node,
               "/" + to_string(acc_sizes_kernel[d]) + ")/" +
               to_string(steps[d]) + ") * " + to_string(acc_sizes[d]);
         }
-        conv_code += ";\n  " + name + " += " + par1 + "[k] * " + par2 +
+        conv_code += ";\n  if(i_conv < " + std::to_string(a_num_elems) + ") " +
+                     name + " += " + par1 + "[k] * " + par2 +
                      "[i_conv];\n"
                      "  int continue_loop = 1;\n"
                      "  long step = 0;\n";
@@ -453,9 +460,15 @@ generateCode(FGraphNode *node,
           slide_code +=
               " {\n long da = (" +
               (d == 0 ? string("a") : "a%" + to_string(acc_sizes_pred[d - 1])) +
-              ") / " + to_string(acc_sizes_pred[d]) + ";\n";
-          slide_code +=
-              "  if(da + " + to_string(steps[d]) + " < " +
+              ") / " + to_string(acc_sizes_pred[d]) +
+              ";\n"
+              "  long di = (" +
+              (d == 0 ? string("index")
+                      : "index%" + to_string(acc_sizes_kernel[d - 1])) +
+              ") / " + to_string(acc_sizes_kernel[d]) +
+              ";\n"
+              "  if(da + " +
+              to_string(kernel.shape[d] - 1 + steps[d]) + " - di < " +
               to_string(pred.shape[d]) +
               "){\n"
               "   step += " +
@@ -464,11 +477,6 @@ generateCode(FGraphNode *node,
               "   a += step;\n"
               "   continue;\n   }"
               "else{\n"
-              "   long di = (" +
-              (d == 0 ? string("index")
-                      : "index%" + to_string(acc_sizes_kernel[d - 1])) +
-              ") / " + to_string(acc_sizes_kernel[d]) +
-              ";\n"
               "   step -= (da - di) * " +
               to_string(acc_sizes_pred[d]) +
               ";\n"
@@ -828,8 +836,7 @@ generateCode(FGraphNode *node,
           index_defs += " + " + dim_idx + " * " + to_string(acc_sizes_pred[d]);
         }
         index_defs += ";\nif(index < 0) index = 0;\n";
-        code = set_zero_cond + ") " + name + " = 0;\n" +
-               code;
+        code = set_zero_cond + ") " + name + " = 0;\n" + code;
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
         code = type + " " + name + " = v" + to_string(variable_index + 1) +
                ";\n" + code;
@@ -1001,6 +1008,7 @@ generateCode(FGraphNode *node,
                                        " = index;\n"
                                        "index /= " +
                                        to_string(acc_sizes_ax) + ";\n";
+        // TODO look for cashed vars
         todo.push_front({nullptr, local_index_def2});
         todo.push_front({b, par2});
         todo.push_front({nullptr, local_index_def1});
@@ -1010,16 +1018,31 @@ generateCode(FGraphNode *node,
         break;
       }
 #ifdef FLINT_DEBUG
-    code = "// " + opstr + " current index: " + to_string(variable_index) + "\n" + code;
+    code = "// " + opstr + " current index: " + to_string(variable_index) +
+           "\n" + code;
 #endif
     // insert our indexing logic into the queue after the children
     if (!index_defs.empty())
       todo.push_front({nullptr, index_defs});
     // push predecessors dfs
     if (push_pred)
-      for (int i = 0; i < node->num_predecessor; i++)
-        todo.push_front(
-            {node->predecessors[i], "v" + to_string(++variable_index)});
+      for (int i = 0; i < node->num_predecessor; i++) {
+        // auto cashed_var = calculated_vars.find(node->predecessors[i]);
+        string parname = "v" + to_string(++variable_index);
+        // if (cashed_var != calculated_vars.end()) {
+        //   code = typeString(node->predecessors[i]->operation.data_type) + " "
+        //   +
+        //          parname + " = " + cashed_var->second + ";\n" + code;
+        //   for(auto it = todo.begin(); it != todo.end(); it++)
+        //     if (std::get<0>(*it) == node) {
+        //       todo.erase(it);
+        //       break;
+        //     }
+        // } else {
+        //   calculated_vars.insert({node->predecessors[i], parname});
+        //   }
+        todo.push_front({node->predecessors[i], parname});
+      }
   }
   code = "long index = get_global_id(0);\n" + code;
   return code;
@@ -1117,10 +1140,10 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   } break;
   case FGRADIENT_CONVOLVE: {
     code += ", const __global " + typeString(parameter_types[0]) + "* P1";
-    code +=
-        ", const long num_entries1, const int dimensions1, const __global "
-        "double* P2, const long num_entries2, const int dimensions2, const int "
-        "dimensions0";
+    code += ", const long num_entries1, const int dimensions1, const __global "
+            "double* P2, const long num_entries2, const int dimensions2, const "
+            "int "
+            "dimensions0";
     code += ", __constant long* acc_sizes_pred, "
             "__constant long* acc_sizes_kernel"
             ", __constant long* acc_sizes";
@@ -1151,7 +1174,8 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     code += ", const long num_entries1, const int dimensions1";
     code += ", __constant long* acc_sizes_pred, "
             "__constant long* acc_sizes_kernel";
-    code += ", __constant int* steps, __constant long* shape0";
+    code += ", __constant int* steps, __constant long* shape0, __constant "
+            "long* shape1";
   } break;
   case FSLIDING_WINDOW: {
     code += ", const __global " + typeString(parameter_types[0]) +
@@ -1374,12 +1398,12 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
       break;
     }
     code += ";\n";
-    code +=
-        "for(long i = 0; i < shape_dim0; i++){\n"
-        " const " +
-        typeString(res_type) +
-        " curr = P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % it_dim0 "
-        "+ i * it_dim0];\n";
+    code += "for(long i = 0; i < shape_dim0; i++){\n"
+            " const " +
+            typeString(res_type) +
+            " curr = P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % "
+            "it_dim0 "
+            "+ i * it_dim0];\n";
     switch (operation) {
     case FREDUCE_SUM:
       code += " res += curr;";
@@ -1491,36 +1515,36 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "}";
     break;
   case FCONVOLVE:
-    code +=
-        "if(index >= num_entriesR) return;\n"
-        "long j = 0;\n"
-        "for(int d = 0; d < dimensions0 - 1; d++){\n"
-        " long di = (d == 0 ? index : index % acc_sizes[d - 1]) / "
-        "acc_sizes[d];\n"
-        " j += di * steps[d] * acc_sizes_pred[d];\n"
-        "}\n" +
-        typeString(res_type) +
-        " res = 0;\n"
-        "for(long k = 0; k < num_entries1; k++){\n"
-        " bool set_zero = false;\n"
-        " long o = 0;\n"
-        " for(int d = 0; d < dimensions0; d++){\n"
-        "  long di = d == dimensions0 - 1 ? 0 : (d == 0 ? index : index % "
-        "acc_sizes[d - 1]) / "
-        "acc_sizes[d];\n"
-        "  long dk = (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / "
-        "acc_sizes_kernel[d];\n"
-        "  if(d < dimensions0 - 1)\n"
-        "   if(((di * steps[d]) + dk) * acc_sizes_pred[d] >= num_entries0 ||\n"
-        "        (d > 0 && ((di * steps[d]) + dk) * acc_sizes_pred[d] >= \n"
-        "acc_sizes_pred[d - 1])) {\n"
-        "    set_zero = true; break;\n}\n"
-        "  o += dk * acc_sizes_pred[d];\n"
-        " }\n"
-        " if (set_zero) continue;\n"
-        " res += P1[k] * P0[j + o];\n"
-        "}\n"
-        "R[index] = res;";
+    code += "if(index >= num_entriesR) return;\n"
+            "long j = 0;\n"
+            "for(int d = 0; d < dimensions0 - 1; d++){\n"
+            " long di = (d == 0 ? index : index % acc_sizes[d - 1]) / "
+            "acc_sizes[d];\n"
+            " j += di * steps[d] * acc_sizes_pred[d];\n"
+            "}\n" +
+            typeString(res_type) +
+            " res = 0;\n"
+            "for(long k = 0; k < num_entries1; k++){\n"
+            " bool set_zero = false;\n"
+            " long o = 0;\n"
+            " for(int d = 0; d < dimensions0; d++){\n"
+            "  long di = d == dimensions0 - 1 ? 0 : (d == 0 ? index : index % "
+            "acc_sizes[d - 1]) / "
+            "acc_sizes[d];\n"
+            "  long dk = (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / "
+            "acc_sizes_kernel[d];\n"
+            "  if(d < dimensions0 - 1)\n"
+            "   if(((di * steps[d]) + dk) * acc_sizes_pred[d] >= num_entries0 "
+            "||\n"
+            "        (d > 0 && ((di * steps[d]) + dk) * acc_sizes_pred[d] >= \n"
+            "acc_sizes_pred[d - 1])) {\n"
+            "    set_zero = true; break;\n}\n"
+            "  o += dk * acc_sizes_pred[d];\n"
+            " }\n"
+            " if (set_zero) continue;\n"
+            " res += P1[k] * P0[j + o];\n"
+            "}\n"
+            "R[index] = res;";
     break;
   case FGEN_CONSTANT: {
     code += "if(index >= num_entriesR) return;\n"
@@ -1562,7 +1586,8 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "acc_sizes_pred[d];\n"
             "   i_conv += ((di - dk) / steps[d]) * acc_sizes[d];\n"
             "  }\n"
-            "  res += P1[k] * P2[i_conv];\n"
+            "  if (i_conv < num_entries2)\n"
+            "   res += P1[k] * P2[i_conv];\n"
             "  long step = 0;\n"
             "  for(int d = dimensions0 - 2; d >= 0; d--) {\n"
             "   long dk = (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / "
@@ -1596,7 +1621,9 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             " for(int d = dimensions0 - 2; d >= 0; d--){\n"
             "  long da = (d == 0 ? a : a % acc_sizes_pred[d-1]) / "
             "acc_sizes_pred[d];\n"
-            "  if(da + steps[d] < shape0[d]){\n"
+            "  long di = (d == 0 ? index : index % acc_sizes_kernel[d - 1]) / "
+            "acc_sizes_kernel[d];\n"
+            "  if(da + (shape1[d] - di - 1) + steps[d] < shape0[d]){\n"
             "   step += steps[d] * acc_sizes_pred[d];\n"
             "   break;\n  }else{\n"
             "   long di = (d == 0 ? index : index % acc_sizes_kernel[d - 1]) / "

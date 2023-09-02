@@ -160,6 +160,9 @@ static void binaryExpression(T *__restrict__ result,
     std::vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
     acc_sizes[op.dimensions - 2] = 1;
     size_t kernel_num_elems = kernel.shape[op.dimensions - 1];
+    size_t a_num_elems = 1;
+    for (long d = a.dimensions - 1; d >= 0; d--)
+      a_num_elems *= a.shape[d];
     for (long d = op.dimensions - 2; d >= 0; d--)
       kernel_num_elems *= kernel.shape[d];
     for (long d = op.dimensions - 3; d >= 0; d--)
@@ -190,7 +193,8 @@ static void binaryExpression(T *__restrict__ result,
             const size_t j = (di - dk) / steps[d]; // top left corner
             i_conv += j * acc_sizes[d];
           }
-          res += data1[k] * data2[i_conv];
+          if (i_conv < a_num_elems)
+            res += data1[k] * data2[i_conv];
           long step = 0;
           // reproject index to calculate step from steps
           for (int d = op.dimensions - 2; d >= 0; d--) {
@@ -284,28 +288,28 @@ static void binaryExpression(T *__restrict__ result,
     const unsigned int *steps = (unsigned int *)op.additional_data;
     for (size_t i = from; i < from + size; i++) {
       size_t a = 0;
+      size_t dis[kernel.dimensions];
       // reproject start
       for (int d = kernel.dimensions - 1; d >= 0; d--) {
-        size_t di =
+        dis[d] =
             (d == 0 ? i : i % acc_sizes_kernel[d - 1]) / acc_sizes_kernel[d];
-        a += di * acc_sizes_pred[d];
+        a += dis[d] * acc_sizes_pred[d];
       }
       T res = 0;
-      // we want to iterate over all elements it would be slid agains
+      // we want to iterate over all elements it would be slid against
       while (a < pred_num_elems) {
         long step = 0;
         res += data1[a] * data2[i];
         // reproject index to calculate step from steps
         for (int d = pred.dimensions - 2; d >= 0; d--) {
+          // index in this dimension
           size_t da =
               (d == 0 ? a : a % acc_sizes_pred[d - 1]) / acc_sizes_pred[d];
-          if (da + steps[d] < pred.shape[d]) {
+          if (da + (kernel.shape[d] - dis[d] - 1) + steps[d] < pred.shape[d]) {
             step += steps[d] * acc_sizes_pred[d];
             break;
           } else {
-            size_t di = (d == 0 ? i : i % acc_sizes_kernel[d - 1]) /
-                        acc_sizes_kernel[d];
-            step -= (da - di) *
+            step -= (da - dis[d]) *
                     acc_sizes_pred[d]; // set to kernel start in this dimension
           }
         }

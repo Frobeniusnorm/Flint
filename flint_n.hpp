@@ -1380,16 +1380,15 @@ template <typename T, unsigned int n> struct Tensor {
    * moving the kernel further by the value given in `steps` in that
    * corresponding dimension.
    *
-   * The implementation does an implicit right-padding, meaning that the kernel
-   * will initially be placed so that its first element is aligned to
-   * the first element of the tensor, but it will be slid till no kernel element
-   * overlaps with any element of the tensor, multiplying all "overlapping"
-   * elements with 0. If you want to mdofiy this behaviour you can use
-   * `extend`, `slice` or similar.
+   * The implementation does not include any padding, meaning only convolutions
+   * where the complete kernel still fits into the array will be executed (the
+   * shape will be calculated correspondingly). If you want to modify this
+   * behaviour (i.e. include padding) you can use `extend`, `slice` or similar.
    *
    * The resulting Tensor will therefor have a shape with dimensionality `n - 1`
-   * and size of `resulting_shape[i] = 1 + (a->operation.shape[i] - 1) /
-   * steps[i]`.
+   * and size of `(shape[i] - kernel.get_shape()[i] - 1) / steps[i]` 
+   * if `(shape[i] - kernel.get_shape()[i] - 1)` is divisable by `steps[i]`
+   * else `(shape[i] - kernel.get_shape()[i] - 1) / steps[i] + 1`
    *
    * @code{
    * Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},

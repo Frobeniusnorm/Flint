@@ -320,7 +320,6 @@ template <int n> class Convolution : public Layer<n> {
     return res;
   }
   std::array<unsigned int, n - 1> act_stride;
-  std::array<long, n> act_slice_ends;
   unsigned int kernel_size;
   void initialize_precalc(std::array<unsigned int, n - 2> stride) {
     act_stride[0] = 1;
@@ -368,22 +367,6 @@ public:
   Tensor<double, k> forward(Tensor<T, k> &in) {
     const unsigned int filters =
         Layer<n>::template get_weight<0>().get_shape()[0];
-    // calculate slice for padding
-    switch (padding_mode) {
-    case NO_PADDING: {
-      act_slice_ends[0] = in.get_shape()[0];
-      for (int i = 1; i < n - 1; i++) {
-        size_t window_size = in.get_shape()[i] - kernel_size + 1;
-        window_size = window_size % act_stride[i] == 0
-                          ? window_size / act_stride[i]
-                          : window_size / act_stride[i] + 1;
-        act_slice_ends[i] = window_size;
-      }
-      act_slice_ends[n - 1] = 1;
-    } break;
-    default:
-      break;
-    }
     // actual convolve
     Tensor<double, k> res;
     for (unsigned int i = 0; i < filters; i++) {
@@ -397,19 +380,6 @@ public:
         new_shape[i] = filter_res.get_shape()[i];
       new_shape[n - 1] = 1;
       Tensor<double, k> local_res = filter_res.reshape_array(new_shape);
-      // padding
-      switch (padding_mode) {
-      case NO_PADDING: {
-        std::array<TensorRange, n> padding_slice;
-        for (int j = 0; j < n; j++) {
-          padding_slice[j].start = 0;
-          padding_slice[j].end = act_slice_ends[j];
-        }
-        local_res = local_res.slice_array(padding_slice);
-      } break;
-      default:
-        break;
-      }
       local_res.execute();
       res = i == 0 ? local_res : Flint::concat(res, local_res, n - 1);
     }

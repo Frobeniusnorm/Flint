@@ -62,6 +62,43 @@ static FGraphNode *constant_tensor(double val, FType type, size_t *shape,
     return fconstant_d((double)val, shape, dimensions);
   }
 }
+/**
+ * Slides kernel along the shape of a and accumulates for each element of a the
+ * values of the kernel that are slid against it. Additionally reprojects the
+ * values of the adjoint gradient of the convolution operation to the position
+ * where each value was calculated in a and multiplies it with the corresponding
+ * elements of the kernel before they are accumulated. Finally this yield the
+ * gradient of a.
+ */
+static FGraphNode *gradient_convolve(FGraphNode *a, FGraphNode *kernel,
+                                     FGraphNode *prev_adj,
+                                     const unsigned int *steps) {
+  if (!kernel->result_data)
+    fExecuteGraph(kernel);
+  if (!prev_adj->result_data)
+    fExecuteGraph(prev_adj);
+  FGraphNode *gradient = new FGraphNode();
+  gradient->num_predecessor = 2;
+  gradient->predecessors = safe_mal<FGraphNode *>(2);
+  gradient->predecessors[0] = kernel;
+  gradient->predecessors[1] = prev_adj;
+  kernel->reference_counter++;
+  prev_adj->reference_counter++;
+  gradient->result_data = nullptr;
+  gradient->reference_counter = 0;
+  FOperation op;
+  op.data_type = F_FLOAT64;
+  op.dimensions = a->operation.dimensions;
+  op.shape = safe_mal<size_t>(op.dimensions);
+  memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
+  op.op_type = FGRADIENT_CONVOLVE;
+  op.additional_data = safe_mal<unsigned int>(a->operation.dimensions - 1);
+  memcpy(op.additional_data, steps,
+         (a->operation.dimensions - 1) * sizeof(unsigned int));
+  gradient->operation = op;
+  configureGradientInformation(gradient, {kernel, prev_adj});
+  return gradient;
+}
 static FGraphNode *unbroadcast(FGraphNode *adjoint, const FGraphNode *node) {
   if (adjoint->operation.dimensions > node->operation.dimensions) {
     size_t diff = adjoint->operation.dimensions - node->operation.dimensions;
@@ -274,13 +311,16 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         reshape_working[i + 1] = 1; // undo for future dimensions
         repeat_working[0] = 0;
         for (int j = 0; j <= i + 1; j++)
-          repeat_working[j + 1] = j < i ? working_adj->operation.shape[j + 1] - 1 : 0;
+          repeat_working[j + 1] =
+              j < i ? working_adj->operation.shape[j + 1] - 1 : 0;
         win_ind = frepeat(win_ind, repeat_working.data());
         // now we can FINALLY project the index wtf is this
         shape_adj_working[i + 1] = a->operation.shape[i];
-        FGraphNode *res =
-            fconstant_d(0.0, shape_adj_working.data(), shape_adj_working.size());
-        // still bad performance v   (maybe nevertheless a index method that works in O(n) is necessary with an exception in the normal execution model...)
+        FGraphNode *res = fconstant_d(0.0, shape_adj_working.data(),
+                                      shape_adj_working.size());
+        // still bad performance v   (maybe nevertheless a index method that
+        // works in O(n) is necessary with an exception in the normal execution
+        // model...)
         working_adj = findex_set(res, working_adj, win_ind);
       }
       return freduce_sum(working_adj, 0);
@@ -291,49 +331,29 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
   case FCONVOLVE: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *kernel = y->predecessors[1];
+    const unsigned int *steps = (unsigned int *)y->operation.additional_data;
     if (0 == dx_i) {
-      const unsigned int *steps = (unsigned int *)y->operation.additional_data;
-      // fuck this noise, i am writing a custom function i cant take this
-      // anymore
-      if (!kernel->result_data)
-        fExecuteGraph(kernel);
-      if (!prev_adj->result_data)
-        fExecuteGraph(prev_adj);
-      FGraphNode *gradient = new FGraphNode();
-      gradient->num_predecessor = 2;
-      gradient->predecessors = safe_mal<FGraphNode *>(2);
-      gradient->predecessors[0] = kernel;
-      gradient->predecessors[1] = prev_adj;
-      kernel->reference_counter++;
-      prev_adj->reference_counter++;
-      gradient->result_data = nullptr;
-      gradient->reference_counter = 0;
-      FOperation op;
-      op.data_type = F_FLOAT64;
-      op.dimensions = a->operation.dimensions;
-      op.shape = safe_mal<size_t>(op.dimensions);
-      memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
-      op.op_type = FGRADIENT_CONVOLVE;
-      op.additional_data = safe_mal<unsigned int>(a->operation.dimensions - 1);
-      memcpy(op.additional_data, steps,
-             (a->operation.dimensions - 1) * sizeof(unsigned int));
-      gradient->operation = op;
-      configureGradientInformation(gradient, {kernel, prev_adj});
-      return gradient;
+      return gradient_convolve(a, kernel, prev_adj, steps);
     } else if (1 == dx_i) {
       if (y->operation.op_type == FCONVOLVE) {
-        // last dimension has been reduced
-        std::vector<size_t> ns(prev_adj->operation.dimensions + 1);
-        for (int i = 0; i < prev_adj->operation.dimensions; i++)
-          ns[i] = prev_adj->operation.shape[i];
-        ns[ns.size() - 1] = 1;
-        prev_adj = freshape(prev_adj, ns.data(), ns.size());
-        // repeat it for the correct shape
-        std::vector<int> rp(a->operation.dimensions, 0);
-        rp[rp.size() - 1] = (int)a->operation.shape[rp.size() - 1] - 1;
-        prev_adj = frepeat(prev_adj, rp.data());
-      }
-      return fslide(a, prev_adj, (unsigned int *)y->operation.additional_data);
+        unsigned int *steps = (unsigned int *)y->operation.additional_data;
+        std::vector<unsigned int> new_steps(kernel->operation.dimensions);
+        memcpy(new_steps.data(), steps,
+               (kernel->operation.dimensions - 1) * sizeof(unsigned int));
+        new_steps[kernel->operation.dimensions - 1] =
+            kernel->operation.shape[kernel->operation.dimensions - 1];
+        FGraphNode *na =
+            fsliding_window(a, kernel->operation.shape, new_steps.data());
+        // broadcast along first dimension
+        prev_adj = fflatten(prev_adj);
+        // repeat to fit correct shape
+        for (int i = 1; i < na->operation.dimensions; i++)
+          prev_adj = fexpand(prev_adj, i, na->operation.shape[i]);
+        na = fmul(na, prev_adj);
+        return freduce_sum(na, 0);
+      } else
+        return fslide(a, prev_adj,
+                      (unsigned int *)y->operation.additional_data);
     }
     return nullptr;
   }

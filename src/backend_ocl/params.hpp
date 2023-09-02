@@ -235,6 +235,7 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
       flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
                             std::to_string(err_code));
     const FOperation shape_par = is_slide ? pred : kernel_par;
+    const FOperation shape2_par = is_slide ? kernel_par : pred;
     cl_mem shape_mem = clCreateBuffer(
         context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
         shape_par.dimensions * sizeof(long), shape_par.shape, &err_code);
@@ -245,6 +246,19 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
                        (void *)&shape_mem) != CL_SUCCESS)
       flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
                             std::to_string(err_code));
+    if (is_slide) {
+      cl_mem shape2_mem = clCreateBuffer(
+          context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+          shape2_par.dimensions * sizeof(long), shape2_par.shape, &err_code);
+      if (!shape2_mem)
+        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                              std::to_string(err_code));
+      if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+                         (void *)&shape2_mem) != CL_SUCCESS)
+        flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                              std::to_string(err_code));
+      to_free.push_back(shape2_mem);
+    }
     to_free.push_back(steps_mem);
     to_free.push_back(shape_mem);
   } break;

@@ -117,6 +117,7 @@ double convolve_grad_fun() {
     fStartGradientContext();
     Tensor<float, 2> foo = img_t.convolve(ker_t, 8, 8);
     Tensor<float, 2> err = (foo - 0.7f).abs();
+    err.execute();
     fStopGradientContext();
     Tensor<double, 3> grad = err.gradient(ker_t);
     grad.execute();
