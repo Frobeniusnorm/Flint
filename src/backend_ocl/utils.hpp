@@ -504,3 +504,42 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
     break;
   }
 }
+/** Returns a map mapping to each node in the subgraph of root the number of
+ * incoming edges, i.e. the number of nodes that have that node as parent */
+inline std::unordered_map<FGraphNode *, int>
+calculateNumEdges(FGraphNode *root) {
+  std::list<FGraphNode *> todo;
+  std::unordered_map<FGraphNode *, int> num_edges;
+  todo.push_front(root);
+  num_edges.insert({root, 0});
+  while (!todo.empty()) {
+    FGraphNode *c = todo.front();
+    todo.pop_front();
+    for (int i = 0; i < c->num_predecessor; i++) {
+      if (num_edges.find(c->predecessors[i]) == num_edges.end()) {
+        num_edges.insert({c->predecessors[i], 1});
+        todo.push_front(c->predecessors[i]);
+      } else
+        num_edges[c->predecessors[i]]++;
+    }
+  }
+  return num_edges;
+}
+/** Calculates a topological sort of the operational graph
+ * with Kahns algorithm */
+inline std::list<FGraphNode *> topologicalSort(FGraphNode *root) {
+  std::list<FGraphNode *> result;
+  std::unordered_map<FGraphNode *, int> num_edges = calculateNumEdges(root);
+  std::list<FGraphNode *> no_incoming;
+  no_incoming.push_back(root);
+  while (!no_incoming.empty()) {
+    FGraphNode *n = no_incoming.front();
+    result.push_back(n);
+    no_incoming.pop_front();
+    for (int i = 0; i < n->num_predecessor; i++) {
+      if (--num_edges[n->predecessors[i]] == 0)
+        no_incoming.push_back(n->predecessors[i]);
+    }
+  }
+  return result;
+}

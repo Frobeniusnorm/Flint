@@ -18,7 +18,7 @@
 #include "../flint.h"
 #include "backend_ocl/codegen.hpp"
 #include "backend_ocl/comp.hpp"
-#include "backend_ocl/params.hpp"
+#include "backend_ocl/utils.hpp"
 #include "utils.hpp"
 #include <CL/cl.h>
 #include <iostream>

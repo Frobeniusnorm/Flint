@@ -40,6 +40,13 @@ generateCode(FGraphNode *node,
   string code = "";
   // indexing logic (we save the old index in old_index$i to restore it)
   unsigned int num_indices = 0;
+  // TODO use topologial sort to generate
+  // - ... mapping from graph to var name
+  // - ... todo list
+  // create additional mapping for a node to index operations that have to be
+  // inserted before
+  // Get rid of variable_index, and todo insertions and include stuff from
+  // above.
   todo.push_front({node, "v0"});
   while (!todo.empty()) {
     // take from queue
