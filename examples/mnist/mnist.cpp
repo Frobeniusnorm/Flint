@@ -100,12 +100,10 @@ int main() {
             << " labels)" << std::endl;
   std::cout << "loaded data. Starting training." << std::endl;
   auto m = SequentialModel{
-    Conv2D(1, 10, 14, std::array<unsigned int, 2>{2, 2}, NO_PADDING),
-    Relu(),
     Flatten(),
-    Connected(640, 100),
+    Connected(784, 32),
     Relu(),
-    Connected(100, 10),
+    Connected(32, 10),
     SoftMax()
   };
   std::cout << m.summary() << std::endl;
