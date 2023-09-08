@@ -34,5 +34,9 @@ compile_commands.json
 build/*
 debug/*
 paper/*
-#vscode
 .cache
+
+# IDE
+.vscode/
+.idea/
+.fleet/
