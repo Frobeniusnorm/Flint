@@ -1195,9 +1195,11 @@ inline FGraphNode *fgreater(FGraphNode *a, const double b) {
 inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
   return fflatten_dimension(a, dimension);
 }
+
 #include <string>
 inline void flogging(FLogType type, std::string msg) {
   flogging(type, msg.c_str());
 }
+
 #endif
 #endif

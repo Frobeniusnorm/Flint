@@ -33,14 +33,6 @@ func SetLoggingLevel(level loggingLevel) {}
 
 func Log(level loggingLevel, message string) {}
 
-type imageFormat int
-
-const (
-	PNG imageFormat = iota
-	JPEG
-	BMP
-)
-
 type floatingPointType int
 
 const (
