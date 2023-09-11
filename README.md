@@ -8,7 +8,7 @@ Flint (_Frobeniusnorm's Lightweight Implementation of Neural Tensors_) is a Tens
 ## Motivation ##
 This library was created by the frustration resulting from the inflexibility of other tensor math frameworks and their target languages for large projects. To ensure a high portability Flint generates OpenCL kernels for acceleration devices like GPUs on the fly.
 This allows Flint to execute on a large amount of devices. The main target language is C++, allowing users of Flint to mix development and production code, with no need to rewrite everything for a faster language after e.g. training a machine learning model in python.
-Planed Language Bindings include Haskell, Scala and maybe Java.
+Planed Language Bindings include Go, Java and maybe Haskell (Go are already in construction in `go/`).
 
 ## Concept ##
 Just as other Tensor libraries, Flint collects operations in a graph and executes multiple operations at once in one of its backends when needed.
