@@ -4,7 +4,7 @@
 int main() {
   flintInit(FLINT_BACKEND_ONLY_GPU);
   fSetLoggingLevel(F_INFO);
-  Tensor<float, 3> img = Flint::load_image("../flint.png");
+  Tensor<float, 3> img = Flint::load_image("../../flint.png");
   Tensor<float, 4> kernel{{{{1 / 16.0f}, {1 / 8.0f}, {1 / 16.0f}},
                            {{1 / 8.0f}, {1 / 4.0f}, {1 / 8.0f}},
                            {{1 / 16.0f}, {1 / 8.0f}, {1 / 16.0f}}}};

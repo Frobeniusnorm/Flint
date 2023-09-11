@@ -17,7 +17,7 @@ experiment/
 *.gch
 *.pch
 
-# tool output
+# cmake output
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake

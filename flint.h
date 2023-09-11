@@ -96,7 +96,7 @@ enum FLogType { F_NO_LOGGING, F_ERROR, F_WARNING, F_INFO, F_VERBOSE, F_DEBUG };
 enum FImageFormat { F_PNG, F_JPEG, F_BMP };
 /** Logs a NULL terminated string with the given logging level.
  * See also: `fSetLoggingLevel` */
-void flogging(FLogType type, const char *msg);
+void flogging(enum FLogType type, const char *msg);
 /** All graph nodes that represent actual operations are after this call
  * executed eagerly, i.e. they are executed during graph construction.
  *
@@ -179,9 +179,9 @@ struct FOperation {
   int dimensions;
   size_t *shape;
   // type of operation, to enable switch cases and avoid v-table lookups
-  FOperationType op_type;
+  enum FOperationType op_type;
   // datatype of result
-  FType data_type;
+  enum FType data_type;
   void *additional_data;
 };
 /** Stores the resulting data after an execution of `fExecuteGraph` (or implicit
@@ -260,7 +260,7 @@ struct FSlidingWindow {
  * copied to intern memory, so after return of the function, `data` and `shape`
  * may be deleted. */
 FGraphNode *fCreateGraph(const void *data, const int num_entries,
-                         const FType data_type, const size_t *shape,
+                         const enum FType data_type, const size_t *shape,
                          const int dimensions);
 
 /** Creates a tensor that contains the single given values in all entries
@@ -483,7 +483,7 @@ FGraphNode *fdeserialize(char *data);
  */
 FGraphNode *fload_image(const char *path);
 
-void fstore_image(FGraphNode *node, const char *path, FImageFormat format);
+void fstore_image(FGraphNode *node, const char *path, enum FImageFormat format);
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
 /** Elementwise substraction of `a` and `b`, i.e. `a[i] - b[i]`. */
@@ -662,7 +662,7 @@ along dimension 1 will result in `[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]`.
 FGraphNode *fflatten_dimension(FGraphNode *a, int dimension);
 
 /** Converts the data of `a` to the type given by `newtype`*/
-FGraphNode *fconvert(FGraphNode *a, FType newtype);
+FGraphNode *fconvert(FGraphNode *a, enum FType newtype);
 /** Reshapes the underlying data of the tensor to the new shape. The product of
   each dimension of the new shape must be the same as the product of the
   dimensions of the previous shape (i.e. it must describe the same number of
@@ -1050,9 +1050,14 @@ inline FGraphNode *fgreater(FGraphNode *a, const double b) {
 inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
   return fflatten_dimension(a, dimension);
 }
+
+#ifdef __cplusplus
+// can't use C++ namespaces in legacy C!
 #include <string>
 inline void flogging(FLogType type, std::string msg) {
   flogging(type, msg.c_str());
 }
+#endif
+
 #endif
 #endif

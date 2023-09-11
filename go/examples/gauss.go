@@ -10,6 +10,10 @@ func main() {
 	//data2 := []float64{4,3,2,1}
 	//shape := []int{2,2}
 	//var g1 flint.GraphNode := flint.NewGraphNode(data1, 4, flint.FLOAT32, shape)
+	//var g2 flint.GraphNode := flint.NewGraphNode(data2, 4, flint.FLOAT32, shape)
+	//var mm flint.GraphNode := flint.executeGraph(flint.matmul(g1, g2))
+	//var rd flint.ResultData := mm.resultData
+	//var result float64 := rd.data
 
 	//var img flint.Tensor = 3 //[flint.INT32, 3] = flint.LoadImage("../flint.png")
 	//h, w, c int := img.GetShape()
