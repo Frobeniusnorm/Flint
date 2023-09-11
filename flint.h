@@ -23,7 +23,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 /* \file flint.h
   \brief This is the basic header file and implementation of Flint, written in C
   to be as compatile as possible
@@ -31,11 +30,9 @@ extern "C" {
   Flints Execution structure represents an AST, so that each Graph may be
   compiled to a specific OpenCL program
 */
-
 #define FLINT_BACKEND_ONLY_CPU 1
 #define FLINT_BACKEND_ONLY_GPU 2
 #define FLINT_BACKEND_BOTH 3
-
 /** Initializes the cpu and the gpu backends. These functions are already
  * implicitly called by the execution functions if necessary. The method allows
  * disabling of the gpu backend (by passing `FLINT_BACKEND_ONLY_CPU`), disabling
@@ -47,33 +44,26 @@ extern "C" {
  *      place
  * - ...want to only start one backend */
 void flintInit(int backends);
-
 /** Don't call this function explicitly if you intent to use Flint normally. Use
  * `flintInit` */
 void flintInit_cpu();
-
 /** Don't call this function explicitly if you intent to use Flint normally. Use
  * `flintInit` */
 void flintInit_gpu();
-
 /** Returns an integer containing the Backend information bitwise.
  * See constants `FLINT_BACKEND_ONLY_CPU`, `FLINT_BACKEND_ONLY_GPU` and
  * `FLINT_BACKEND_BOTH`. */
 int flintInitializedBackends();
-
 /** Deallocates any resourced allocated by the corresponding backends.
 This method calls the other two (following) which are only executed if the
 framework was initialized, else they do nothing. */
 void flintCleanup();
-
 /** Deallocates any resourced allocated by the cpu backend, if it was
  * initialized, else it does nothing. */
 void flintCleanup_cpu();
-
 /** Deallocates any resourced allocated by the gpu backend, if it was
  * initialized, else it does nothing. */
 void flintCleanup_gpu();
-
 /** Sets the logging level of the framework. Adjust this for debugging purposes,
  * or if you release software in which Flint is contained.
  * See also: `flogging`, `FLogType`
@@ -102,29 +92,23 @@ void fSetLoggingLevel(int);
  *    by missuse of functions).
  */
 enum FLogType { F_NO_LOGGING, F_ERROR, F_WARNING, F_INFO, F_VERBOSE, F_DEBUG };
-
 /** Supported Image formats for fstore_image */
 enum FImageFormat { F_PNG, F_JPEG, F_BMP };
-
 /** Logs a NULL terminated string with the given logging level.
  * See also: `fSetLoggingLevel` */
 void flogging(FLogType type, const char *msg);
-
 /** All graph nodes that represent actual operations are after this call
  * executed eagerly, i.e. they are executed during graph construction.
  *
  * This may improve performance when only using the CPU backend, in any other
  * case disabling eager execution should be prefered. */
 void fEnableEagerExecution();
-
 /** Disable eager execution, i.e. the graph is constructed without execution of
  * the nodes until a operation makes the execution of a parent graph necessary
  * or the user calls `fExecuteGraph`. */
 void fDisableEagerExecution();
-
 /** Returns 1 if eager execution has been enabled, else 0 */
 int fIsEagerExecution();
-
 /** The 4 allowed data types:
  * - `F_INT32`(integer, 32bit)
  * - `F_INT64`(integer, 64bit)
@@ -132,7 +116,6 @@ int fIsEagerExecution();
  * - `F_FLOAT64` (floating point, 64bit)
  */
 enum FType { F_INT32, F_INT64, F_FLOAT32, F_FLOAT64 };
-
 enum FOperationType {
   FSTORE,
   FGEN_RANDOM,
@@ -184,7 +167,6 @@ enum FOperationType {
   FSLIDING_WINDOW,
   FNUM_OPERATION_TYPES
 };
-
 /**
  * Describes one operation. An operation always has a shape, described by
  * `FOperation.shape` which is an array of size
@@ -202,7 +184,6 @@ struct FOperation {
   FType data_type;
   void *additional_data;
 };
-
 /** Stores the resulting data after an execution of `fExecuteGraph` (or implicit
  * execution). The data can be found in `FResultData.data`, the datatype in
  * `FOperation.data_type` of the corresponding `FGraphNode`.
@@ -220,7 +201,6 @@ struct FResultData {
   void *data;
   size_t num_entries;
 };
-
 /** Describes one node in the Graph. Stores the corresponding operation in
  * `FGraphNode.operation`, an array of predecessors (the arguments of
  * the operation) in `FGraphNode.predecessors`, its size in
@@ -239,7 +219,6 @@ struct FGraphNode {
   void *gradient_data;      // to store a list of present variables that are
                             // currently watched in the graph
 };
-
 /** Result of an call to `fCreateGraph`, see `FResultData`.
  * Data of this Operation may not be changed manually when using a GPU Backend.
  */
@@ -249,19 +228,16 @@ struct FStore {
   void *data;
   size_t num_entries;
 };
-
 // range instructions
 struct FSlice {
   long *start;
   long *end;
   long *step;
 };
-
 struct FExtend {
   size_t *start;
   long *step;
 };
-
 struct FSlidingWindow {
   size_t *size;
   unsigned int *step;
@@ -296,7 +272,6 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
  */
 FGraphNode *fconstant_i(const int value, const size_t *shape,
                         const int dimensions);
-
 /** Creates a tensor that contains the single given values in all entries
  *
  * - `value`: the value this tensor should consist of
@@ -306,7 +281,6 @@ FGraphNode *fconstant_i(const int value, const size_t *shape,
  */
 FGraphNode *fconstant_l(const long value, const size_t *shape,
                         const int dimensions);
-
 /** Creates a tensor that contains the single given values in all entries
  *
  * - `value`: the value this tensor should consist of
@@ -316,7 +290,6 @@ FGraphNode *fconstant_l(const long value, const size_t *shape,
  */
 FGraphNode *fconstant_f(const float value, const size_t *shape,
                         const int dimensions);
-
 /** Creates a tensor that contains the single given values in all entries
  *
  * - `value`: the value this tensor should consist of
@@ -326,7 +299,6 @@ FGraphNode *fconstant_f(const float value, const size_t *shape,
  */
 FGraphNode *fconstant_d(const double value, const size_t *shape,
                         const int dimensions);
-
 /** Creates a tensor that contains randomly distributed values in the range of
  * [0, 1)
  *
@@ -335,14 +307,12 @@ FGraphNode *fconstant_d(const double value, const size_t *shape,
  * - `dimensions`: the number of dimensions
  */
 FGraphNode *frandom(const size_t *shape, const int dimensions);
-
 /** Creates a int64 tensor that contains the indices relative to a given
  * dimension `ax` for each element, i.e. each entry is its index in that
  * corresponding dimension. If you need to index more than one dimension, create
  * multiple such tensors with `arange`.
  */
 FGraphNode *farange(const size_t *shape, const int dimensions, const int ax);
-
 /** Decrements `FGraphNode.reference_counter` of `graph` (for reference
  * counting) and deallocates the node and its corresponding data, if the counter
  * becomes 0. If the node is deallocated, the same process is repeated with its
@@ -350,12 +320,10 @@ FGraphNode *farange(const size_t *shape, const int dimensions, const int ax);
  * free the leaf nodes (i.e. the results), without caring about cross-reference,
  * since those are handled by the reference counting system.*/
 void fFreeGraph(FGraphNode *graph);
-
 /** Copies the graph node, the corresponding operation and additional data and
  * the predecessors (their `FGraphNode.reference_counter` is
  * incremented) */
 FGraphNode *fCopyGraph(FGraphNode *graph);
-
 /** Executes the graph node operations from all yet to be executed predecessors
  * to `node` and returns a node with a `FResultData` operation in
  * which the resulting data is stored.
@@ -383,12 +351,10 @@ FGraphNode *fCopyGraph(FGraphNode *graph);
  *
  * Also see `fEnableEagerExecution`, `fSyncMemory`*/
 FGraphNode *fExecuteGraph(FGraphNode *node);
-
 /** Executes the graph node operations from all yet to be executed predecessors
  * to `node` and returns a node with a `FResultData` operation in
  * which the resulting data is stored. */
 FGraphNode *fExecuteGraph_cpu(FGraphNode *node);
-
 /** Executes the graph node operations from all yet to be executed predecessors
  * to `node` and returns a node with a `FResultData` operation in
  * which the resulting data is stored. For the GPU
@@ -399,14 +365,12 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node);
  * necessary the same nodes, but the same combination of nodes), since then the
  * backend can reuse already compiled kernels. */
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node);
-
 /** Executes the graph node directly and assumes that predecessor data has
  * already been computed. Uses the CPU backend. Mainly used by helper functions
  * of the framework, only use it if you now what you are doing.
  *
  * Also see `fEnableEagerExecution`, `fExecuteGraph_cpu` and `fExecuteGraph`*/
 FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node);
-
 /** Executes the graph node directly and assumes that predecessor data has
  * already been computed. Uses the GPU backend where for each operation and
  * parameter type combination one eager kernel will be computed. Mainly used by
@@ -414,7 +378,6 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node);
  *
  *  Also see `fEnableEagerExecution`, `fExecuteGraph_gpu` and `fExecuteGraph`*/
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
-
 /** `fExecuteGraoh` does not guarantee that memory is present on the cpu (it may
  * be kept on the GPU for performance reasons). This method enforces all GPU
  * data to be flushed to the CPU (but never executes the node!).
@@ -422,7 +385,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
  * Also see `fCalculateResult`
  */
 FResultData *fSyncMemory(FGraphNode *data);
-
 /**
  * Convenience Method that first execute `fExecuteGraph` and then `fSyncMemory`
  * on the node.
@@ -432,7 +394,6 @@ FResultData *fSyncMemory(FGraphNode *data);
  */
 FGraphNode *fCalculateResult(FGraphNode *node);
 //  gradient calculation
-
 /** Calculates the overall gradient of an output node to a variable.
  * The variable must be marked as a gradient variable, see
  * `fMarkGradientVariable` and the output node `outputfct` must be constructed
@@ -446,7 +407,6 @@ FGraphNode *fCalculateResult(FGraphNode *node);
  * - `dx`: the variable for which outputfct is derived for
  */
 FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx);
-
 /** Calculates the overall gradient of an output node to multiple variables.
  * The variables must be marked as a gradient variable, see
  * `fMarkGradientVariable` and the output node `outputfct` must be constructed
@@ -464,7 +424,6 @@ FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx);
 void fCalculateGradients(FGraphNode *outputfct, FGraphNode **dx,
                          const unsigned int num_gradients,
                          FGraphNode **gradients);
-
 /** Starts a gradient context, gradient information will be inherited until the
  * next call to `fStopGradientContext`. A history containing information about
  * all watched nodes in the parent graph is kept up to date within a gradient
@@ -474,15 +433,12 @@ void fCalculateGradients(FGraphNode *outputfct, FGraphNode **dx,
  * a variable may be computed. Since this context introduces overhead and limits
  * `fOptimizeMemory` significantly, it should be closed as soon as possible. */
 void fStartGradientContext();
-
 /** Stops a gradient context, all inherited gradient information and watched
  * nodes will be kept, but no longer inherited to new ones. */
 void fStopGradientContext();
-
 /** Return true if the call to this function is placed within a gradient
  * context. */
 bool fIsGradientContext();
-
 /** Marks this node as a node for which a gradient might be calculated later.
  * It is only possible to calculate the gradient for this node (as a derivative)
  * in operations that occur AFTER a call to this method (all subsequent
@@ -490,13 +446,11 @@ bool fIsGradientContext();
  * variable, to enable less memory usage and faster gradient calculation).
  */
 void fMarkGradientVariable(FGraphNode *node);
-
 /** Removes the gradient mark (ans subsequent memory overhead) for this node.
  * After a call to this method no subsequent gradient calculations with this
  * node as a derivative will be possible.
  */
 void fUnmarkGradientVariable(FGraphNode *node);
-
 /** Optimizes memory by freeing all parental data (operand nodes of the
  * operation of this node) and transforming this node to a storage nodes
  * if no gradient variables are present in this node and result data is
@@ -508,7 +462,6 @@ void fUnmarkGradientVariable(FGraphNode *node);
  */
 FGraphNode *fOptimizeMemory(FGraphNode *node);
 //  operations
-
 /** Serializes the data and shape of the node and returns a array of chars in
  * which the serialized data will be written. The returned array is allocated on
  * the systems heap with `malloc`, so you have to free it after you are done
@@ -517,13 +470,11 @@ FGraphNode *fOptimizeMemory(FGraphNode *node);
  * have result data, it is executed first.
  */
 char *fserialize(FGraphNode *node, size_t *bytes_written);
-
 /** Unserializes data generated by `fserialize`.
  * The size of the data is stored in itself, therefor no extra parameters are
  * needed. Internally calls `fCreateGraph`.
  */
 FGraphNode *fdeserialize(char *data);
-
 /** Loads an image from the given path.
  * The image will be stored in floating point data and the shape will be h, w, c
  * where w is the width, h is the height and c are the chanels.
@@ -533,220 +484,157 @@ FGraphNode *fdeserialize(char *data);
 FGraphNode *fload_image(const char *path);
 
 void fstore_image(FGraphNode *node, const char *path, FImageFormat format);
-
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
-
 /** Elementwise substraction of `a` and `b`, i.e. `a[i] - b[i]`. */
 FGraphNode *fsub_g(FGraphNode *a, FGraphNode *b);
-
 /** Elementwise division of `a` and `b`, i.e. `a[i] / b[i]`. */
 FGraphNode *fdiv_g(FGraphNode *a, FGraphNode *b);
-
 /** Elementwise multiplication of `a` and `b`, i.e. `a[i] * b[i]`. */
 FGraphNode *fmul_g(FGraphNode *a, FGraphNode *b);
-
 /** Elementwise power of `a` and `b`, i.e. `pow(a[i], b[i])`. */
 FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b);
 
-
 /** Elementwise addition of a and b, i.e. `a[i] + b`. */
 FGraphNode *fadd_ci(FGraphNode *a, const int b);
-
 /** Elementwise addition of a and b, i.e. `a[i] + b`. */
 FGraphNode *fadd_cl(FGraphNode *a, const long b);
-
 /** Elementwise addition of a and b, i.e. `a[i] + b`. */
 FGraphNode *fadd_cf(FGraphNode *a, const float b);
-
 /** Elementwise addition of a and b, i.e. `a[i] + b`. */
 FGraphNode *fadd_cd(FGraphNode *a, const double b);
 
-
 /** Elementwise subtraction of a and b, i.e. `a[i] - b`. */
 FGraphNode *fsub_ci(FGraphNode *a, const int b);
-
 /** Elementwise subtraction of a and b, i.e. `a[i] - b`. */
 FGraphNode *fsub_cl(FGraphNode *a, const long b);
-
 /** Elementwise subtraction of a and b, i.e. `a[i] - b`. */
 FGraphNode *fsub_cf(FGraphNode *a, const float b);
-
 /** Elementwise subtraction of a and b, i.e. `a[i] - b`. */
 FGraphNode *fsub_cd(FGraphNode *a, const double b);
 
-
 /** Elementwise subtraction of a and b, i.e. `a - b[i]`. */
 FGraphNode *fsub_ici(const int a, FGraphNode *b);
-
 /** Elementwise subtraction of a and b, i.e. `a - b[i]`. */
 FGraphNode *fsub_icl(const long a, FGraphNode *b);
-
 /** Elementwise subtraction of a and b, i.e. `a - b[i]`. */
 FGraphNode *fsub_icf(const float a, FGraphNode *b);
-
 /** Elementwise subtraction of a and b, i.e. `a - b[i]`. */
 FGraphNode *fsub_icd(const double a, FGraphNode *b);
 
-
 /** Elementwise division of a and b, i.e. `a[i] / b`. */
 FGraphNode *fdiv_ci(FGraphNode *a, const int b);
-
 /** Elementwise division of a and b, i.e. `a[i] / b`. */
 FGraphNode *fdiv_cl(FGraphNode *a, const long b);
-
 /** Elementwise division of a and b, i.e. `a[i] / b`. */
 FGraphNode *fdiv_cf(FGraphNode *a, const float b);
-
 /** Elementwise division of a and b, i.e. `a[i] / b`. */
 FGraphNode *fdiv_cd(FGraphNode *a, const double b);
 
-
 /** Elementwise division of a and b, i.e. `a / b[i]`. */
 FGraphNode *fdiv_ici(const int a, FGraphNode *b);
-
 /** Elementwise division of a and b, i.e. `a / b[i]`. */
 FGraphNode *fdiv_icl(const long a, FGraphNode *b);
-
 /** Elementwise division of a and b, i.e. `a / b[i]`. */
 FGraphNode *fdiv_icf(const float a, FGraphNode *b);
-
 /** Elementwise division of a and b, i.e. `a / b[i]`. */
 FGraphNode *fdiv_icd(const double a, FGraphNode *b);
 
-
 /** Elementwise multiplication of a and b, i.e. `a[i] * b`. */
 FGraphNode *fmul_ci(FGraphNode *a, const int b);
-
 /** Elementwise multiplication of a and b, i.e. `a[i] * b`. */
 FGraphNode *fmul_cl(FGraphNode *a, const long b);
-
 /** Elementwise multiplication of a and b, i.e. `a[i] * b`. */
 FGraphNode *fmul_cf(FGraphNode *a, const float b);
-
 /** Elementwise multiplication of a and b, i.e. `a[i] * b`. */
 FGraphNode *fmul_cd(FGraphNode *a, const double b);
 
-
 /** Takes the elementwise power of a to b, i.e. `pow(a[i], b)`.*/
 FGraphNode *fpow_ci(FGraphNode *a, const int b);
-
 /** Takes the elementwise power of a to b, i.e. `pow(a[i], b)`.*/
 FGraphNode *fpow_cl(FGraphNode *a, const long b);
-
 /** Takes the elementwise power of a to b, i.e. `pow(a[i], b)`.*/
 FGraphNode *fpow_cf(FGraphNode *a, const float b);
-
 /** Takes the elementwise power of a to b, i.e. `pow(a[i], b)`.*/
 FGraphNode *fpow_cd(FGraphNode *a, const double b);
 
-
 /** Takes the elementwise natural logarithm of `a` */
 FGraphNode *flog(FGraphNode *a);
-
 /** Takes the elementwise logarithm of `a` to the basis of 2 */
 FGraphNode *flog2(FGraphNode *a);
-
 /** Takes the elementwise logarithm of `a` to the basis of 10 */
 FGraphNode *flog10(FGraphNode *a);
-
 /** Takes the elementwise sinus of `a` */
 FGraphNode *fsin(FGraphNode *a);
-
 /** Takes the elementwise square root of `a` */
 FGraphNode *fsqrt_g(FGraphNode *a);
-
 /** Takes the elementwise exponential of `a` (power of the constant `e` to `a`)
  */
 FGraphNode *fexp(FGraphNode *a);
-
 /** Takes the elementwise cosinus of `a` */
 FGraphNode *fcos(FGraphNode *a);
-
 /** Takes the elementwise tangents of `a` */
 FGraphNode *ftan(FGraphNode *a);
-
 /** Takes the elementwise inverse sinus of `a` */
 FGraphNode *fasin(FGraphNode *a);
-
 /** Takes the elementwise inverse cosinus of `a` */
 FGraphNode *facos(FGraphNode *a);
-
 /** Takes the elementwise inverse tangents of `a` */
 FGraphNode *fatan(FGraphNode *a);
-
 /** Negates the elements of `a`, i.e. `-a[i]` */
 FGraphNode *fneg(FGraphNode *a);
-
 /** Returns a `F_INT32` tensor x with the shape of a with `x[i] = 1` if `a[i] >=
  * 0` else `x[i] = -1`. `a` needs to have a integer data type.*/
 FGraphNode *fsign(FGraphNode *a);
-
 /** Returns a `F_INT32` tensor `x` with the shape of `a` with `x[i] = 1` if
  * `a[i] % 2 = 0` else `x[i] = 0`.
  */
 FGraphNode *feven(FGraphNode *a);
-
 /** Compares two tensors elementwise by `a < b` and returns a 0,1 `F_INT32`
  * Tensor. `0` denotes that `a >= b`, `1` that `a < b`. */
 FGraphNode *fless_g(FGraphNode *a, FGraphNode *b);
-
 /** Compares two tensors elementwise by `a > b` and returns a 0,1 `F_INT32`
  * Tensor. */
 FGraphNode *fgreater_g(FGraphNode *a, FGraphNode *b);
-
 /** Compares two tensors elementwise by `a = b`` and returns a 0,1 `F_INT32`
  * Tensor. `0` denotes that `a <= b`, `1` that `a > b`.*/
 FGraphNode *fequal_g(FGraphNode *a, FGraphNode *b);
-
 /** Compares a tensor and a constant elementwise by `a < b` and returns a 0,1
  * `INT32` Tensor. See `fless_g`. */
 FGraphNode *fless_ci(FGraphNode *a, const int b);
-
 /** Compares a tensor and a constant elementwise by `a < b` and returns a 0,1
  * `INT32` Tensor. See `fless_g`. */
 FGraphNode *fless_cl(FGraphNode *a, const long b);
-
 /** Compares a tensor and a constant elementwise by `a < b` and returns a 0,1
  * `INT32` Tensor. See `fless_g`. */
 FGraphNode *fless_cf(FGraphNode *a, const float b);
-
 /** Compares a tensor and a constant elementwise by `a < b` and returns a 0,1
  * `INT32` Tensor. See `fless_g`. */
 FGraphNode *fless_cd(FGraphNode *a, const double b);
-
 /** Compares a tensor and a constant elementwise by `a > b` and returns a 0,1
  * `INT32` Tensor. See `fgreater_g`. */
 FGraphNode *fgreater_ci(FGraphNode *a, const int b);
-
 /** Compares a tensor and a constant elementwise by `a > b` and returns a 0,1
  * `INT32` Tensor. See `fgreater_g`. */
 FGraphNode *fgreater_cl(FGraphNode *a, const long b);
-
 /** Compares a tensor and a constant elementwise by `a > b` and returns a 0,1
  * `INT32` Tensor. See `fgreater_g`. */
 FGraphNode *fgreater_cf(FGraphNode *a, const float b);
-
 /** Compares a tensor and a constant elementwise by `a > b` and returns a 0,1
  * `INT32` Tensor. See `fgreater_g`. */
 FGraphNode *fgreater_cd(FGraphNode *a, const double b);
-
 /** Compares a tensor and a constant elementwise by `a = b` and returns a 0,1
  * `INT32` Tensor. See `fequal_g`. */
 FGraphNode *fequal_ci(FGraphNode *a, const int b);
-
 /** Compares a tensor and a constant elementwise by `a = b` and returns a 0,1
  * `INT32` Tensor. See `fequal_g`. */
 FGraphNode *fequal_cl(FGraphNode *a, const long b);
-
 /** Compares a tensor and a constant elementwise by `a = b` and returns a 0,1
  * `INT32` Tensor. See `fequal_g`. */
 FGraphNode *fequal_cf(FGraphNode *a, const float b);
-
 /** Compares a tensor and a constant elementwise by `a = b` and returns a 0,1
  * `INT32` Tensor. See `fequal_g`. */
 FGraphNode *fequal_cd(FGraphNode *a, const double b);
-
 /** Carries out matrix multiplication on the last two dimensions of the tensors.
 
  * E.g. a matrix multiplication of two tensors with shapes `(64, 32, 16)` and
@@ -758,14 +646,12 @@ FGraphNode *fequal_cd(FGraphNode *a, const double b);
  * execute the two parameter nodes `a` and `b` if their data is not allready
  * present. */
 FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b);
-
 /** Flattens the complete tensor to a tensor with one
 dimension.
 E.g.`flattened([[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]) = [3, 1, 4, 2,
 1, 5, 0, 4, 2, 4, 7, 9]`.
 */
 FGraphNode *fflatten(FGraphNode *a);
-
 /** Flattens a tensor `a` with `n` dimensions along
 `dimension`, resulting in a tensor with `n-1` dimensions.
 Flattening a dimension will remove it from the shape of the tensor, therefor its
@@ -775,56 +661,43 @@ along dimension 1 will result in `[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]`.
 */
 FGraphNode *fflatten_dimension(FGraphNode *a, int dimension);
 
-
 /** Converts the data of `a` to the type given by `newtype`*/
 FGraphNode *fconvert(FGraphNode *a, FType newtype);
-
 /** Reshapes the underlying data of the tensor to the new shape. The product of
   each dimension of the new shape must be the same as the product of the
   dimensions of the previous shape (i.e. it must describe the same number of
   entries of the tensor).*/
 FGraphNode *freshape(FGraphNode *a, const size_t *newshape, const int dimensions);
-
 /** Takes the minimum of two tensors element wise along the last dimension of
  * each, i.e. `a[i]` if `a[i] < b[i]` else `b[i]` */
 FGraphNode *fmin_g(FGraphNode *a, FGraphNode *b);
-
 /** Takes the minimum of two tensors element wise along the last dimension of
  * each, i.e. `a[i]` if `a[i] < b` else `b` */
 FGraphNode *fmin_ci(FGraphNode *a, const int b);
-
 /** Takes the minimum of two tensors element wise along the last dimension of
  * each, i.e. `a[i]` if `a[i] < b` else `b` */
 FGraphNode *fmin_cl(FGraphNode *a, const long b);
-
 /** Takes the minimum of two tensors element wise along the last dimension of
  * each, i.e. `a[i]` if `a[i] < b` else `b` */
 FGraphNode *fmin_cf(FGraphNode *a, const float b);
-
 /** Takes the minimum of two tensors element wise along the last dimension of
  * each, i.e. `a[i]` if `a[i] < b` else `b` */
 FGraphNode *fmin_cd(FGraphNode *a, const double b);
-
 /** Takes the maximum of two tensors element wise along the last dimension of
  * each, i.e. `a[i]` if `a[i] > b[i]` else `b[i]` */
 FGraphNode *fmax_g(FGraphNode *a, FGraphNode *b);
-
 /** Takes the maximum of two tensors element wise along the last dimension of
  * each, i.e. `a[i]` if `a[i] > b` else `b` */
 FGraphNode *fmax_ci(FGraphNode *a, const int b);
-
 /** Takes the maximum of two tensors element wise along the last dimension of
  * each, i.e. `a[i]` if `a[i] > b` else `b` */
 FGraphNode *fmax_cl(FGraphNode *a, const long b);
-
 /** Takes the maximum of two tensors element wise along the last dimension of
  * each, i.e. `a[i]` if `a[i] > b` else `b` */
 FGraphNode *fmax_cf(FGraphNode *a, const float b);
-
 /** Takes the maximum of two tensors element wise along the last dimension of
  * each, i.e. `a[i]` if `a[i] > b` else `b` */
 FGraphNode *fmax_cd(FGraphNode *a, const double b);
-
 /** Reduces one dimension of the tensor by additive folding e.g.
  *
  * `freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9]`,
@@ -833,7 +706,6 @@ FGraphNode *fmax_cd(FGraphNode *a, const double b);
  * The results of the predecessor node must be available, to
  * ensure that the method may execute the parameter node. */
 FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
-
 /** Reduces one dimension of the tensor by multiplicative folding e.g.
  *
  * `freduce_mul([[1,2,3], [4,5,6]], 0) = [4,10,18]`,
@@ -842,7 +714,6 @@ FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node.*/
 FGraphNode *freduce_mul(FGraphNode *a, const int dimension);
-
 /** Reduces one dimension of the tensor by keeping the minimum e.g.
  *
  * `freduce_mul([[1,32,3], [4,5,3]], 0) = [1,5,3]`,
@@ -851,7 +722,6 @@ FGraphNode *freduce_mul(FGraphNode *a, const int dimension);
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node.*/
 FGraphNode *freduce_min(FGraphNode *a, const int dimension);
-
 /** Reduces one dimension of the tensor by keeping the maximum e.g.
  *
  * `freduce_mul([[1,32,3], [4,5,3]], 0) = [4,32,3]`,
@@ -860,7 +730,6 @@ FGraphNode *freduce_min(FGraphNode *a, const int dimension);
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node.*/
 FGraphNode *freduce_max(FGraphNode *a, const int dimension);
-
 /** Selects a slice of the tensor with a dimension wise start and end index.
  * `start` and `end` are arrays with as many entries
  * as the tensor has dimensions. They may contain negative values,
@@ -870,7 +739,6 @@ FGraphNode *freduce_max(FGraphNode *a, const int dimension);
  * per dimension and is exclusive.
  */
 FGraphNode *fslice(FGraphNode *a, const long *start, const long *end);
-
 /** Selects a slice of the tensor with a dimension wise start index, end index
  * and step size. `start`, `end` and `step` are arrays with as
  * many entries as the tensor has dimensions. `start` and `end` may
@@ -886,7 +754,6 @@ FGraphNode *fslice(FGraphNode *a, const long *start, const long *end);
  */
 FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
                         const long *step);
-
 /**
  * Creates a new tensor of zeroes with the requested shape. The original tensor
  * is embedded at the given indices.
@@ -898,7 +765,6 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
  */
 FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
                     const size_t *insert_at);
-
 /**
  * Creates a new tensor of zeroes with the requested shape. The original tensor
  * is embedded at the given indices.
@@ -912,7 +778,6 @@ FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
  */
 FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
                          const size_t *insert_at, const long *step_size);
-
 /**
  * Concats two nodes with each other along an axis.
  * The nodes have to have the same type and dimensions.
@@ -923,7 +788,6 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
  * 7]]`
  */
 FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis);
-
 /**
  * Adds a new dimension at an arbitrary position to the tensor and repeats the
  * following dimensions to match a given shape.
@@ -936,10 +800,8 @@ FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis);
  */
 FGraphNode *fexpand(FGraphNode *a, const unsigned int axis,
                     const unsigned int size);
-
 /** Takes the elementwise absolute value of `a`, i.e. `|a[i]|` */
 FGraphNode *fabs_g(FGraphNode *a);
-
 /** Repeats dimensions of a tensor multiple times
  *
  * - `a`: the node in which dimensions are to be repeated
@@ -949,7 +811,6 @@ FGraphNode *fabs_g(FGraphNode *a);
  * [2,3,2,3,2,3], [0,1,0,1,0,1], [2,3,2,3,2,3]]`
  */
 FGraphNode *frepeat(FGraphNode *a, int *repititions);
-
 /** Transposes this tensor along multiple dimensions
  *
  * - `a`: the node which should be transposed
@@ -959,7 +820,6 @@ FGraphNode *frepeat(FGraphNode *a, int *repititions);
  * corresponds to the former size in dimension `transpositions[i]`.
  */
 FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
-
 /** Convolves the `n`-dimensional input tensor `a` with a `n`-dimensional filter
  * kernel `kernel` and a per dimensional step size `steps` with size of `n-1`.
  * It is expected that `a` and `kernel` have the same size in their last
@@ -981,7 +841,6 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
  * else `(shape[i] - kernel.get_shape()[i] - 1) / steps[i] + 1`
  */
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, const unsigned int *steps);
-
 /**
  * Slides `kernel` along `a`, multiplying it with the elements of `a` it is slid
  * over. For each element all multiplied values are summed up, so that the
@@ -999,7 +858,6 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, const unsigned int *ste
  * dimension.
  */
 FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, const unsigned int *steps);
-
 /**
  * Selects single elements with a index-tensor (integer tensor containing
  * indices for the selected dimension).
@@ -1025,7 +883,6 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, const unsigned int *steps)
  * 11]]]`
  */
 FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
-
 /**
  * Assigns to each element in `b` one element in `a` where that element will be
  * "send" to, i.e. the place in `a` the index points to will be set to the
@@ -1046,7 +903,6 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
  *  [[5, 1], [2, 13], [9, 8], [6, 10]]`
  */
 FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
-
 /**
  * Moves a window view with size `size` along the original Tensor by starting
  * with aligning the first element of the view with the first element of the
@@ -1075,7 +931,6 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
  */
 FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
                             const unsigned int *steps);
-
 /**
  * Randomly permutates (=swaps multiple elements with each other without
  * creating, copying or deleting new ones) one axis of the input tensor.
@@ -1195,11 +1050,9 @@ inline FGraphNode *fgreater(FGraphNode *a, const double b) {
 inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
   return fflatten_dimension(a, dimension);
 }
-
 #include <string>
 inline void flogging(FLogType type, std::string msg) {
   flogging(type, msg.c_str());
 }
-
 #endif
 #endif

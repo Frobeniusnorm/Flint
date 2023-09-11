@@ -12,9 +12,18 @@ examples/gauss/gauss
 examples/gauss/flint.jpg
 examples/dl_test_1/dl_test
 experiment/
+
 # Precompiled Headers
 *.gch
 *.pch
+
+# tool output
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+build/**/Makefile
+examples/**/Makefile
+dl/**/Makefile
 
 # Compiled Static libraries
 *.lai
@@ -40,3 +49,4 @@ paper/*
 .vscode/
 .idea/
 .fleet/
+

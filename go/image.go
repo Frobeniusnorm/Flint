@@ -12,7 +12,7 @@ const (
 )
 
 func LoadImage(path string) Tensor {
-	return nil
+	return 0
 }
 
 func StoreImage(Tensor, path string, format imageFormat) {
