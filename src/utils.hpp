@@ -72,8 +72,11 @@ static inline int operationScore(const FGraphNode *g) {
     return 3;
   case FREDUCE_SUM:
   case FREDUCE_MUL: {
-    int dim = *((int *)g->operation.additional_data);
-    return 2 * g->predecessors[0]->operation.shape[dim];
+    // int dim = *((int *)g->operation.additional_data);
+    // size_t total = 1;
+    // for (int i = 0; i < g->operation.dimensions; i++)
+    //   if (i != dim) total *= g->operation.shape[i];
+    return 5; //* g->predecessors[0]->operation.shape[dim];
   }
   case FMATMUL: {
     const FGraphNode *a = g->predecessors[0];
@@ -87,7 +90,7 @@ static inline int operationScore(const FGraphNode *g) {
     for (int i = 0; i < a->operation.dimensions; i++) {
       no_elems *= a->operation.shape[i];
     }
-    return no_elems;
+    return std::max(1, (int) (100 - 0.001 * no_elems * no_elems));
   }
   case FSLIDE: {
     // no multiplication with complete source, since that would artificially
@@ -107,7 +110,10 @@ static inline int operationScore(const FGraphNode *g) {
       sliced_away *= (p->operation.shape[i] - g->operation.shape[i]);
     return sliced_away;
   }
-  default:
+  case FGEN_CONSTANT: {
+    return 10;
+  }
+  default: 
     break;
   }
   return 2;
@@ -129,7 +135,7 @@ static inline size_t computeScore(const FGraphNode *g, bool with_pred = true) {
           todo.push(c->predecessors[i]);
     }
   }
-  return score * (int)sqrt(no_elems);
+  return score * no_elems;
 }
 inline std::string typeString(FType t) {
   switch (t) {
