@@ -46,7 +46,7 @@ Use [go logger](https://pkg.go.dev/log) or FFI/cgo calls to flint logger?
 ## Resources
 
 - <https://stackoverflow.com/questions/38381357/how-to-point-to-c-header-files-in-go>
-
+- <https://gist.github.com/zchee/b9c99695463d8902cd33>
 
 ## Notes
 
@@ -60,3 +60,4 @@ The following "modern" C features do not work with cgo, all code needs to be in 
   - https://stackoverflow.com/questions/44856124/can-i-change-default-compiler-used-by-cgo
 - memory management with cgo
 - https://dave.cheney.net/2016/01/18/cgo-is-not-go
+- TO THE SAVE: https://stackoverflow.com/questions/72332541/how-do-i-make-golang-cgo-to-use-g-linker-for-a-c-static-library-with-extern

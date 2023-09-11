@@ -2,24 +2,33 @@
 package flint
 
 /*
-#cgo LDFLAGS: -lflint -lOpenCL
+#cgo CXXFLAGS: -std=c++23 -I.. -flto
+#cgo LDFLAGS: -lflint -lOpenCL -lstdc++ -L.. -lOpenCL
 #include "../flint.h"
 */
 import "C"
+import "fmt"
 
-type backend int
+type Backend int
 
 const (
-	BACKEND_ONLY_CPU backend = iota
+	BACKEND_ONLY_CPU Backend = iota
 	BACKEND_ONLY_GPU
 	BACKEND_BOTH
 )
 
-func Init(backend backend) {
+func Init(backend Backend) {
 	C.flintInit(C.int(backend))
 }
 
-func Cleanup() {}
+func InitializedBackend() Backend {
+	// FIXME: this might break when a new backend is added
+	return Backend(C.flintInitializedBackends())
+}
+
+func Cleanup() {
+	C.flintCleanup()
+}
 
 type loggingLevel int
 
@@ -33,7 +42,10 @@ const (
 	DEBUG
 )
 
-func SetLoggingLevel(level loggingLevel) {}
+func SetLoggingLevel(level loggingLevel) {
+	fmt.Println(new(C.enum_FLogType))
+	//C.flogging()
+}
 
 func Log(level loggingLevel, message string) {}
 

@@ -1,10 +1,14 @@
 package main
 
-import "flint"
+import (
+	"flint"
+	"fmt"
+)
 
 func main() {
-	flint.Init(flint.BACKEND_ONLY_CPU)
-	flint.SetLoggingLevel(flint.DEBUG)
+	flint.Init(flint.BACKEND_BOTH)
+	flint.SetLoggingLevel(flint.VERBOSE)
+	fmt.Println("initialized backend:", flint.InitializedBackend())
 
 	//data1 := []float32{1,2,3,4}
 	//data2 := []float64{4,3,2,1}
@@ -33,5 +37,6 @@ func main() {
 	//img = img.Transpose()
 	//
 	//flint.StoreImage(img, "flint.jpg", JPEG)
-	//flint.Cleanup()
+
+	flint.Cleanup()
 }
