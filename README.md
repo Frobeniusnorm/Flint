@@ -1,13 +1,13 @@
 <div align="center">
-<img src="https://github.com/Frobeniusnorm/Flint/blob/main/flint.png" width="300">
+    <img src="flint.png" width="300" alt="Flint logo">
 </div>
 
 # Flint
-Flint (_Frobeniusnorms Lightweight Implementation of Neural Tensors_) is a Tensor math framework based on OpenCL, allowing you to use Tensor operations, which are semi-lazily computed by the library. It supports gradient calculations for its operations including a gradient calculation algorithm. Once finished it will contain example implementations of the most popular optimization algorithms, loss functions and Neural Layers for machine learning.
+Flint (_Frobeniusnorm's Lightweight Implementation of Neural Tensors_) is a Tensor math framework based on OpenCL, allowing you to use Tensor operations, which are semi-lazily computed by the library. It supports gradient calculations for its operations including a gradient calculation algorithm. Once finished it will contain example implementations of the most popular optimization algorithms, loss functions and Neural Layers for machine learning.
 
 ## Motivation ##
 This library was created by the frustration resulting from the inflexibility of other tensor math frameworks and their target languages for large projects. To ensure a high portability Flint generates OpenCL kernels for acceleration devices like GPUs on the fly.
-This allows Flint to execute on a large amount of devices. The main target language is C++, allowing users of Flint to mix developement and production code, with no need to rewrite everything for a faster language after e.g. training a machine learning model in python.
+This allows Flint to execute on a large amount of devices. The main target language is C++, allowing users of Flint to mix development and production code, with no need to rewrite everything for a faster language after e.g. training a machine learning model in python.
 Planed Language Bindings include Haskell, Scala and maybe Java.
 
 ## Concept ##
@@ -34,8 +34,8 @@ After that you can include the library in your project with
 ```
 and link it against `-lflint -lOpenCL`.
 
-The systems it was tested on ran Arch Linux, Gentoo, Fedora and Void. It was tested on AMD GPUs (integrated and dedicated), integrated Intel CPUs and on a NVIDIA GPU. 
-There is a html documentation in the `docs/` folder: [https://frobeniusnorm.github.io/Flint/](https://frobeniusnorm.github.io/Flint/). You can also build it yourself with the Makefile in the docs folder, the prerequisit is a working version of ghc. However usually the newest version of the documentation is already built in the repository and deployed to the above mentioned site.
+The systems it was tested on ran Arch Linux, Gentoo, Fedora and Void. It was tested on AMD GPUs (integrated and dedicated), integrated Intel CPUs and on an NVIDIA GPU. 
+There is a html documentation in the `docs/` folder: [https://frobeniusnorm.github.io/Flint/](https://frobeniusnorm.github.io/Flint/). You can also build it yourself with the Makefile in the docs folder, the prerequisite is a working version of ghc. However usually the newest version of the documentation is already built in the repository and deployed to the above mentioned site.
 
 ## Dependencies ##
 - OpenCL

@@ -15,14 +15,20 @@
 #ifndef FLINT_H
 #define FLINT_H
 #define CL_TARGET_OPENCL_VERSION 200
+
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
 #include <CL/cl.h>
-#endif
+#endif // __APPLE__
+
+#include <stdbool.h>
+#include <stdio.h>
+
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
+
 /* \file flint.h
   \brief This is the basic header file and implementation of Flint, written in C
   to be as compatile as possible
@@ -96,7 +102,7 @@ enum FLogType { F_NO_LOGGING, F_ERROR, F_WARNING, F_INFO, F_VERBOSE, F_DEBUG };
 enum FImageFormat { F_PNG, F_JPEG, F_BMP };
 /** Logs a NULL terminated string with the given logging level.
  * See also: `fSetLoggingLevel` */
-void flogging(FLogType type, const char *msg);
+void flogging(enum FLogType type, const char *msg);
 /** All graph nodes that represent actual operations are after this call
  * executed eagerly, i.e. they are executed during graph construction.
  *
@@ -179,11 +185,13 @@ struct FOperation {
   int dimensions;
   size_t *shape;
   // type of operation, to enable switch cases and avoid v-table lookups
-  FOperationType op_type;
+  enum FOperationType op_type;
   // datatype of result
-  FType data_type;
+  enum FType data_type;
   void *additional_data;
 };
+typedef struct FOperation FOperation;
+
 /** Stores the resulting data after an execution of `fExecuteGraph` (or implicit
  * execution). The data can be found in `FResultData.data`, the datatype in
  * `FOperation.data_type` of the corresponding `FGraphNode`.
@@ -197,10 +205,12 @@ struct FOperation {
  */
 struct FResultData {
   // link to gpu data
-  cl_mem mem_id = nullptr;
+  cl_mem mem_id;
   void *data;
   size_t num_entries;
 };
+typedef struct FResultData FResultData;
+
 /** Describes one node in the Graph. Stores the corresponding operation in
  * `FGraphNode.operation`, an array of predecessors (the arguments of
  * the operation) in `FGraphNode.predecessors`, its size in
@@ -212,19 +222,21 @@ struct FResultData {
  * corresponding flint methods. */
 struct FGraphNode {
   int num_predecessor;
-  FGraphNode **predecessors;
+  struct FGraphNode **predecessors;
   FOperation operation;     // the operation represented by this graph node
   size_t reference_counter; // for garbage collection in free graph
   FResultData *result_data; // to store computational result
   void *gradient_data;      // to store a list of present variables that are
                             // currently watched in the graph
 };
+typedef struct FGraphNode FGraphNode;
+
 /** Result of an call to `fCreateGraph`, see `FResultData`.
  * Data of this Operation may not be changed manually when using a GPU Backend.
  */
 struct FStore {
   // link to gpu data
-  cl_mem mem_id = nullptr;
+  cl_mem mem_id;
   void *data;
   size_t num_entries;
 };
@@ -260,7 +272,7 @@ struct FSlidingWindow {
  * copied to intern memory, so after return of the function, `data` and `shape`
  * may be deleted. */
 FGraphNode *fCreateGraph(const void *data, const int num_entries,
-                         const FType data_type, const size_t *shape,
+                         const enum FType data_type, const size_t *shape,
                          const int dimensions);
 
 /** Creates a tensor that contains the single given values in all entries
@@ -483,7 +495,7 @@ FGraphNode *fdeserialize(char *data);
  */
 FGraphNode *fload_image(const char *path);
 
-void fstore_image(FGraphNode *node, const char *path, FImageFormat format);
+void fstore_image(FGraphNode *node, const char *path, enum FImageFormat format);
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
 /** Elementwise substraction of `a` and `b`, i.e. `a[i] - b[i]`. */
@@ -662,7 +674,7 @@ along dimension 1 will result in `[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]`.
 FGraphNode *fflatten_dimension(FGraphNode *a, int dimension);
 
 /** Converts the data of `a` to the type given by `newtype`*/
-FGraphNode *fconvert(FGraphNode *a, FType newtype);
+FGraphNode *fconvert(FGraphNode *a, enum FType newtype);
 /** Reshapes the underlying data of the tensor to the new shape. The product of
   each dimension of the new shape must be the same as the product of the
   dimensions of the previous shape (i.e. it must describe the same number of
@@ -836,7 +848,7 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
  * behaviour (i.e. include padding) you can use `extend`, `slice` or similar.
  *
  * The resulting Tensor will therefor have a shape with dimensionality `n - 1`
- * and size of `(shape[i] - kernel.get_shape()[i] - 1) / steps[i]` 
+ * and size of `(shape[i] - kernel.get_shape()[i] - 1) / steps[i]`
  * if `(shape[i] - kernel.get_shape()[i] - 1)` is divisable by `steps[i]`
  * else `(shape[i] - kernel.get_shape()[i] - 1) / steps[i] + 1`
  */
@@ -893,13 +905,13 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
  * shape of `b`.
  * E.g.
  *
- * `findex_set([[0, 1], [2, 3], [4, 5], [6, 7]], 
- *             [[4, 5], [6, 7], [8, 9]], [0, 0, 2]) = 
+ * `findex_set([[0, 1], [2, 3], [4, 5], [6, 7]],
+ *             [[4, 5], [6, 7], [8, 9]], [0, 0, 2]) =
  *  [[10, 12], [2, 3], [8, 9], [6, 7]]`
  *
- * `findex_set([[0, 1], [2, 3], [4, 5], [6, 7]], 
- *             [[4, 5], [6, 7], [8, 9], [10, 11]], 
- *             [[-1, 0], [1, 1], [1, 0], [1, -1]]) = 
+ * `findex_set([[0, 1], [2, 3], [4, 5], [6, 7]],
+ *             [[4, 5], [6, 7], [8, 9], [10, 11]],
+ *             [[-1, 0], [1, 1], [1, 0], [1, -1]]) =
  *  [[5, 1], [2, 13], [9, 8], [6, 10]]`
  */
 FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
@@ -938,6 +950,7 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
 #ifdef __cplusplus
 }
+
 // no c++ bindings, but function overloading for c++ header
 inline FGraphNode *fconstant(const int value, const size_t *shape,
                              const int dimensions) {
@@ -1050,9 +1063,14 @@ inline FGraphNode *fgreater(FGraphNode *a, const double b) {
 inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
   return fflatten_dimension(a, dimension);
 }
+
+#ifdef __cplusplus
+// can't use C++ namespaces in legacy C!
 #include <string>
 inline void flogging(FLogType type, std::string msg) {
   flogging(type, msg.c_str());
 }
-#endif
-#endif
+#endif // __cplusplus
+
+#endif // __cplusplus
+#endif // FLINT_H
