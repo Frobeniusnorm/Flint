@@ -1,10 +1,7 @@
 // Package flint contains all types and function declarations similar to [../flint.h]
 package flint
 
-import "C"
-
 /*
-#cgo CFLAGS: -g -Wall
 #cgo LDFLAGS: -lflint -lOpenCL
 #include "../flint.h"
 */
@@ -42,6 +39,7 @@ func Log(level loggingLevel, message string) {}
 
 type floatingPointType int
 
+// FIXME: use a generic interface instead https://en.wikipedia.org/wiki/Go_(programming_language)#Generic_code_using_parameterized_types
 const (
 	INT32 floatingPointType = iota
 	INT64
