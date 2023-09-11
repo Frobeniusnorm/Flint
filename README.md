@@ -17,7 +17,7 @@ The Graph (i.e. all yet to be calculated indirect parent nodes to one needed lea
 The main library only contains the implementation of the backends, the C++ frontend with the Tensor class and the operations with automatic gradient calculations. There is an example implementation of often used deep learning algorithms and concepts in the `dl/` folder in work.
 
 ## Usage ##
-For prebuilt versions for Linux see the releases page. However, if you want to build it you need (a recent version of) a C++ compiler, CMake and an installed OpenCL library. 
+For prebuilt versions for Linux see the releases page. However if you want to build it you need (a recent version of) a C++ compiler, CMake and an installed OpenCL library (headers and the library itself which is usually dependent on the manufacturer of the accelerator e.g. NVIDIAs Cuda drivers usually also provide an OpenCL implementation, AMDs rocm stack provides their implementation and so on. There are also portable implementations like [https://github.com/pocl/pocl](pocl)). 
 To build the library execute this inside of the project folder:
 ```
 mkdir build;
@@ -40,6 +40,12 @@ There is a html documentation in the `docs/` folder: [https://frobeniusnorm.gith
 ## Dependencies ##
 - OpenCL
 - C++ Compiler with C++20 feature implementations like e.g. semaphores
+- CMake and Make
+
+For Archlinux installing the dependencies for an AMD GPU would look like this:
+```
+pacman -S gcc opencl-headers rocm-opencl-runtime make cmake
+```
 
 ## Attribution to included libraries ##
 - Benchmarking: [plf::nanotimer](https://github.com/mattreecebentley/plf_nanotimer) (zlib Licence)

@@ -18,6 +18,7 @@
 #ifndef GRADIENTS_CPP
 #define GRADIENTS_CPP
 #include "../flint.h"
+#include "backend_ocl/comp.hpp"
 #include "utils.hpp"
 #include <cmath>
 #include <cstring>
@@ -350,7 +351,27 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         for (int i = 1; i < na->operation.dimensions; i++)
           prev_adj = fexpand(prev_adj, i, na->operation.shape[i]);
         na = fmul(na, prev_adj);
-        return freduce_sum(na, 0);
+        FGraphNode *res = nullptr;
+        if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU) {
+          // we check if we can subdivide the reduction task for better parallel distribution
+          int subdivs[] = {128, 100, 50, 10, 7, 5, 4, 3, 2};
+          for (int i = 0; i < sizeof(subdivs) / sizeof(int); i++) {
+            if (na->operation.shape[0] % subdivs[i] == 0 && na->operation.shape[0] / subdivs[i] > 1) {
+              std::vector<size_t> subdiv_shape(na->operation.dimensions + 1);
+              for (int i = 0; i < na->operation.dimensions; i++)
+                subdiv_shape[i + 1] = na->operation.shape[i];
+              subdiv_shape[0] = subdivs[i];
+              subdiv_shape[1] /= subdivs[i];
+              res = freduce_sum(freshape(na, subdiv_shape.data(), subdiv_shape.size()), 1);
+              break;
+            }
+          }
+          if (!res)
+            res = na;
+        } else
+          res = na;
+        res = freduce_sum(res, 0);
+        return res;
       } else
         return fslide(a, prev_adj,
                       (unsigned int *)y->operation.additional_data);
@@ -725,13 +746,12 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
       FGraphNode *parent = curr->predecessors[i];
       if (!visited.contains(parent))
         continue;
-      FGraphNode *local_grad = local_gradient(curr, i, adj);
+      FGraphNode *local_grad =
+          unbroadcast(local_gradient(curr, i, adj), parent);
       if (adjoints.contains(parent)) {
-        adjoints[parent] =
-            fadd(adjoints[parent], unbroadcast(local_grad, parent));
+        adjoints[parent] = fExecuteGraph(fadd(adjoints[parent], local_grad));
       } else {
-        FGraphNode *nadj = unbroadcast(local_grad, parent);
-        adjoints.insert({parent, nadj});
+        adjoints.insert({parent, fExecuteGraph(local_grad)});
       }
     }
   }
