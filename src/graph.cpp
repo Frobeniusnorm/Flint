@@ -128,6 +128,8 @@ FGraphNode *fCalculateResult(FGraphNode *node) {
 void flintCleanup() {
   flintCleanup_cpu();
   flintCleanup_gpu();
+  use_cpu = false;
+  use_gpu = false;
 }
 void flintInit(int backends) {
   flogging(F_VERBOSE, "Initializing Flint");
@@ -192,6 +194,10 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
 }
 // frees all allocated data from the graph and the nodes that are reachable
 void fFreeGraph(FGraphNode *graph) {
+  if (!use_cpu && !use_gpu)
+    flogging(F_WARNING, "freeing data with no active backend may lead to "
+                        "undefined behaviour (maybe you did not initialize any "
+                        "backend or already called flintCleanup())!");
   std::unordered_set<const FGraphNode *>
       all; // all which are in the queue and were visited
   std::list<FGraphNode *> wq;
@@ -454,7 +460,8 @@ static inline void initShape_keep(FOperation &op, const FOperation *a,
             "incompatible shapes of operands: " +
                 vectorString(std::vector<size_t>(src, src + op.dimensions)) +
                 " and " +
-                vectorString(std::vector<size_t>(lower, lower + lower_dim)) + " in " + fop_to_string[op.op_type]);
+                vectorString(std::vector<size_t>(lower, lower + lower_dim)) +
+                " in " + fop_to_string[op.op_type]);
     }
   }
   op.shape = (size_t *)malloc(sizeof(size_t) * op.dimensions);
@@ -932,7 +939,8 @@ FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b) {
   node->reference_counter = 0;
   return eager_execution ? execute_eagerly(node) : node;
 }
-FGraphNode *freshape(FGraphNode *a, const size_t *newshape, const int dimensions) {
+FGraphNode *freshape(FGraphNode *a, const size_t *newshape,
+                     const int dimensions) {
   size_t total_size_node = 1;
   for (int i = 0; i < a->operation.dimensions; i++)
     total_size_node *= a->operation.shape[i];
@@ -1271,10 +1279,11 @@ FGraphNode *fexpand(FGraphNode *a, const unsigned int ax,
     return freshape(a, new_shape.data(), n + 1);
   std::vector<int> repet(n + 1, 0);
   repet[ax] = ax_size - 1;
-  FGraphNode* res = freshape(a, new_shape.data(), n + 1);
+  FGraphNode *res = freshape(a, new_shape.data(), n + 1);
   return ax_size == 1 ? res : frepeat(res, repet.data());
 }
-FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, const unsigned int *steps) {
+FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
+                      const unsigned int *steps) {
   const FOperation ao = a->operation;
   const FOperation bo = kernel->operation;
   if (!a->result_data && ao.op_type != FSTORE) {
@@ -1309,7 +1318,8 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel, const unsigned int *ste
   memcpy(op.additional_data, steps, op.dimensions * sizeof(unsigned int));
   return addNode(op, {a, kernel});
 }
-FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel, const unsigned int *steps) {
+FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel,
+                   const unsigned int *steps) {
   const FOperation ao = a->operation;
   const FOperation bo = kernel->operation;
   if (!a->result_data && ao.op_type != FSTORE) {
