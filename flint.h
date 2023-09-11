@@ -15,14 +15,20 @@
 #ifndef FLINT_H
 #define FLINT_H
 #define CL_TARGET_OPENCL_VERSION 200
+
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
 #include <CL/cl.h>
-#endif
+#endif // __APPLE__
+
+#include <stdbool.h>
+#include <stdio.h>
+
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
+
 /* \file flint.h
   \brief This is the basic header file and implementation of Flint, written in C
   to be as compatile as possible
@@ -184,6 +190,8 @@ struct FOperation {
   enum FType data_type;
   void *additional_data;
 };
+typedef struct FOperation FOperation;
+
 /** Stores the resulting data after an execution of `fExecuteGraph` (or implicit
  * execution). The data can be found in `FResultData.data`, the datatype in
  * `FOperation.data_type` of the corresponding `FGraphNode`.
@@ -197,10 +205,12 @@ struct FOperation {
  */
 struct FResultData {
   // link to gpu data
-  cl_mem mem_id = nullptr;
+  cl_mem mem_id;
   void *data;
   size_t num_entries;
 };
+typedef struct FResultData FResultData;
+
 /** Describes one node in the Graph. Stores the corresponding operation in
  * `FGraphNode.operation`, an array of predecessors (the arguments of
  * the operation) in `FGraphNode.predecessors`, its size in
@@ -212,19 +222,21 @@ struct FResultData {
  * corresponding flint methods. */
 struct FGraphNode {
   int num_predecessor;
-  FGraphNode **predecessors;
+  struct FGraphNode **predecessors;
   FOperation operation;     // the operation represented by this graph node
   size_t reference_counter; // for garbage collection in free graph
   FResultData *result_data; // to store computational result
   void *gradient_data;      // to store a list of present variables that are
                             // currently watched in the graph
 };
+typedef struct FGraphNode FGraphNode;
+
 /** Result of an call to `fCreateGraph`, see `FResultData`.
  * Data of this Operation may not be changed manually when using a GPU Backend.
  */
 struct FStore {
   // link to gpu data
-  cl_mem mem_id = nullptr;
+  cl_mem mem_id;
   void *data;
   size_t num_entries;
 };
@@ -938,6 +950,7 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
 #ifdef __cplusplus
 }
+
 // no c++ bindings, but function overloading for c++ header
 inline FGraphNode *fconstant(const int value, const size_t *shape,
                              const int dimensions) {
@@ -1057,7 +1070,7 @@ inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
 inline void flogging(FLogType type, std::string msg) {
   flogging(type, msg.c_str());
 }
-#endif
+#endif // __cplusplus
 
-#endif
-#endif
+#endif // __cplusplus
+#endif // FLINT_H

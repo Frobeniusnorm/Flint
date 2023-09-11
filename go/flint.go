@@ -1,9 +1,11 @@
 // Package flint contains all types and function declarations similar to [../flint.h]
 package flint
 
+import "C"
+
 /*
 #cgo CFLAGS: -g -Wall
-#cgo LDFLAGS: -L.. -L../.. -L../build
+#cgo LDFLAGS: -lflint -lOpenCL
 #include "../flint.h"
 */
 import "C"
