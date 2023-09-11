@@ -82,7 +82,7 @@ void flintCleanup_gpu();
  * - 4: Logging level `F_VERBOSE` (for library developement)
  * - 5: Logging level `F_DEBUG` (when a bug in the library has been found)
  */
-void fSetLoggingLevel(int);
+void fSetLoggingLevel(int); // FIXME: why not use FLogType as param here?
 
 /**
  * See also: `flogging`, `FLogType`
@@ -122,6 +122,7 @@ int fIsEagerExecution();
  * - `F_FLOAT64` (floating point, 64bit)
  */
 enum FType { F_INT32, F_INT64, F_FLOAT32, F_FLOAT64 };
+
 enum FOperationType {
   FSTORE,
   FGEN_RANDOM,

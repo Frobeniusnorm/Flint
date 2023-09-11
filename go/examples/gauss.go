@@ -8,7 +8,11 @@ import (
 func main() {
 	flint.Init(flint.BACKEND_BOTH)
 	flint.SetLoggingLevel(flint.VERBOSE)
-	fmt.Println("initialized backend:", flint.InitializedBackend())
+	fmt.Println("initialized backend (GO):", flint.InitializedBackend())
+	flint.Log(flint.INFO, "testing logger in go")
+
+	flint.SetEagerExecution(false)
+	fmt.Println(flint.IsEagerExecution())
 
 	//data1 := []float32{1,2,3,4}
 	//data2 := []float64{4,3,2,1}
