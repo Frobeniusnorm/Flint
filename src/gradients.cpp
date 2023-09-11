@@ -22,7 +22,6 @@
 #include "utils.hpp"
 #include <cmath>
 #include <cstring>
-#include <flint/flint.h>
 #include <iostream>
 #include <list>
 #include <math.h>
