@@ -21,13 +21,14 @@ template <typename T>
 concept Initializer = requires(T i) {
   {
     i.template initialize<double>(std::array<size_t, 3>{1, 2, 3})
-    } -> std::convertible_to<Tensor<double, 3>>;
+  } -> std::convertible_to<Tensor<double, 3>>;
   {
     i.template initialize<float>(std::array<size_t, 2>{6, 5})
-    } -> std::convertible_to<Tensor<float, 2>>;
+  } -> std::convertible_to<Tensor<float, 2>>;
 };
-template<long unsigned int n>
-static void compute_fans(std::array<size_t, n> shape, unsigned int& fan_in, unsigned int& fan_out) {
+template <long unsigned int n>
+static void compute_fans(std::array<size_t, n> shape, unsigned int &fan_in,
+                         unsigned int &fan_out) {
   if constexpr (n == 1) {
     fan_in = shape[0];
     fan_out = shape[0];
@@ -38,10 +39,11 @@ static void compute_fans(std::array<size_t, n> shape, unsigned int& fan_in, unsi
     size_t acc = 1;
     for (int i = 0; i < n - 2; i++)
       acc *= shape[i];
-    fan_in = shape[n-2] * acc;
-    fan_out = shape[n-1] * acc;
+    fan_in = shape[n - 2] * acc;
+    fan_out = shape[n - 1] * acc;
   }
 }
+/** Initializes each tensor with a constant (default is 0). */
 struct ConstantInitializer {
   double val;
   ConstantInitializer(double val = 0.0) : val(val) {}
@@ -50,6 +52,8 @@ struct ConstantInitializer {
     return Flint::constant_array((T)val, shape);
   }
 };
+/** Initializes Tensors with a uniform random distribution.
+ * The value range is configurable in the constructor, standard is [-0.15, 0.15). */
 struct UniformRandom {
   double minval = -0.15, maxval = 0.15;
   UniformRandom(double minval = -0.15, double maxval = 0.15)
@@ -60,13 +64,17 @@ struct UniformRandom {
   }
 };
 
-struct GlorotUniform{
+/** Initializes Tensors with a glorot uniform distribution (sometimes called
+ * "Xavier"). The values are drawn from a uniform normal distribution with
+ * variance of `sqrt(6. / (fan_in + fan_out))` (`fan_in` and `fan_out` describe
+ * the input and output units).  */
+struct GlorotUniform {
   template <typename T, long unsigned int n>
   Tensor<T, n> initialize(std::array<size_t, n> shape) {
     unsigned int fan_in, fan_out;
     compute_fans(shape, fan_in, fan_out);
     double limit = std::sqrt(6. / (fan_in + fan_out));
-    return Flint::random_normal(shape, limit); 
+    return Flint::random_normal(shape, limit);
   }
 };
 
