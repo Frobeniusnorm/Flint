@@ -12,14 +12,15 @@ func main() {
 	flint.Log(flint.INFO, "testing logger in go")
 
 	flint.SetEagerExecution(false)
-	fmt.Println(flint.IsEagerExecution())
+	fmt.Println("is eager exec (GO):", flint.IsEagerExecution())
 
-	//data1 := []float32{1,2,3,4}
-	//data2 := []float64{4,3,2,1}
-	//shape := []int{2,2}
-	//var g1 flint.GraphNode := flint.NewGraphNode(data1, 4, flint.FLOAT32, shape)
-	//var g2 flint.GraphNode := flint.NewGraphNode(data2, 4, flint.FLOAT32, shape)
-	//var mm flint.GraphNode := flint.executeGraph(flint.matmul(g1, g2))
+	data1 := []float32{1, 2, 3, 4}
+	//data2 := []float32{4, 3, 2, 1}
+	shape := []uint64{2, 2}
+	var g1 = flint.CreateGraph[float32](data1, shape)
+	fmt.Println(g1)
+	//var g2 flint.GraphNode = flint.NewGraphNode(data2, 4, flint.FLOAT32, shape)
+	//var mm flint.GraphNode = flint.executeGraph(flint.matmul(g1, g2))
 	//var rd flint.ResultData := mm.resultData
 	//var result float64 := rd.data
 

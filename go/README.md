@@ -47,6 +47,7 @@ Use [go logger](https://pkg.go.dev/log) or FFI/cgo calls to flint logger?
 
 - <https://stackoverflow.com/questions/38381357/how-to-point-to-c-header-files-in-go>
 - <https://gist.github.com/zchee/b9c99695463d8902cd33>
+- <https://zchee.github.io/golang-wiki/cgo/>
 
 ## Notes
 

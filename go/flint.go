@@ -71,19 +71,13 @@ func SetEagerExecution(on bool) {
 }
 
 func IsEagerExecution() bool {
-	return bool(C.fIsEagerExecution())
+	res := int(C.fIsEagerExecution())
+	if res == 0 {
+		return false
+	} else {
+		return true
+	}
 }
-
-type floatingPointType int
-
-// FIXME: use a generic interface instead https://en.wikipedia.org/wiki/Go_(programming_language)#Generic_code_using_parameterized_types
-// FIXME: or a map from go type to c type?
-const (
-	INT32 floatingPointType = iota
-	INT64
-	FLOAT32
-	FLOAT64
-)
 
 type operationType int
 
@@ -139,19 +133,33 @@ const (
 	NUM_OPERATION_TYPES
 )
 
-type Shape []int
+type Shape []uint64
 
-type Operation struct {
+type Operation[T tensorDataType] struct {
 	dimension int
 	shape     Shape
 	opType    operationType
-	fpType    floatingPointType
+	fpType    T
 	extraData []byte
 }
 
-type GraphNode struct {
-	predecessors []GraphNode
-	operation    Operation
+type GraphNode[T tensorDataType] struct {
+	//predecessors []GraphNode[T]
+	//operation    Operation[T]
 	// TODO: result data
 	// TODO: gradient data
+}
+
+type tensorDataType interface {
+	~int32 | ~int64 | ~float32 | ~float64
+}
+
+func CreateGraph[T tensorDataType](data []T, shape Shape) GraphNode[T] {
+	dataPointer := unsafe.Pointer(&data)
+	shapePointer := unsafe.Pointer(&shape)
+	shapePointer = (*C.ulong)(shapePointer)
+
+	C.fCreateGraph(dataPointer, C.int(len(data)), C.F_FLOAT32, shapePointer, C.int(len(shape)))
+
+	return GraphNode[T]{}
 }
