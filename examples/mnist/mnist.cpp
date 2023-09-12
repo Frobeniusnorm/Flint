@@ -1,4 +1,4 @@
-//#define FLINT_DL_PROFILE
+// #define FLINT_DL_PROFILE
 #include "../../dl/activations.hpp"
 #include "../../dl/layers.hpp"
 #include "../../dl/models.hpp"
@@ -100,10 +100,10 @@ int main() {
             << " labels)" << std::endl;
   std::cout << "loaded data. Starting training." << std::endl;
   auto m = SequentialModel{
-    Conv2D(1, 10, 7, std::array<unsigned int, 2>{4, 4}, NO_PADDING),
+    Conv2D(1, 10, 7, std::array<unsigned int, 2>{2, 2}, NO_PADDING),
     Relu(),
     Flatten(),
-    Connected(360, 80),
+    Connected(1210, 80),
     Relu(),
     Connected(80, 10),
     SoftMax()
@@ -111,5 +111,5 @@ int main() {
   std::cout << m.summary() << std::endl;
   AdamFactory opt(0.003);
   m.generate_optimizer(opt);
-  m.train(data, CrossEntropyLoss(), 70, 6000);
+  m.train(data, CrossEntropyLoss(), 75, 4000);
 }
