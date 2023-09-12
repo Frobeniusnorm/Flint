@@ -48,8 +48,8 @@
   Tensor&lt;int, 1&gt; <b>operator&gt;</b>(const Tensor<K, k> &other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__Tensor_int__1__operator__const_K_other__const_">template &lt;typename K&gt; Tensor&lt;int, 1&gt; <b>operator&gt;</b>(const K other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_int__k__equal_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;int, k&gt; <b>equal</b>(const Tensor<K, k> &other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__Tensor_int__1__equal_const_K_other__const_">template &lt;typename K&gt; Tensor&lt;int, 1&gt; <b>equal</b>(const K other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__slice_long_start_=_0__long_end_=_TensorRange::MAX_SCOPE______________________long_step_=_1__const_">Tensor&lt;T, 1&gt; <b>slice</b>(long start = 0, long end = TensorRange::MAX_SCOPE,
                      long step = 1) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__slice_TensorRange_r1__">Tensor&lt;T, 1&gt; <b>slice</b>(TensorRange r1) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-2__expand_int_ax_=_2__int_ax_size_=_0__">Tensor&lt;T, 2&gt; <b>expand</b>(int ax = 2, int ax_size = 0) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__repeat_int_repetitions__const_">Tensor&lt;T, 1&gt; <b>repeat</b>(int repetitions) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___Tensor_T__sizeof____args___reshape_args____shape__">template &lt;typename... args&gt;
-  Tensor&lt;T, sizeof...(args)&gt; <b>reshape</b>(args... shape) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_int_k__Tensor_T__k__reshape_array_std::array_size_t__k__new_shape__">template &lt;int k&gt; Tensor&lt;T, k&gt; <b>reshape_array</b>(std::array<size_t, k> new_shape) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_double__k__gradient_const_Tensor_K__k__&dx__const_">template &lt;typename K, unsigned int k&gt;
-  Tensor&lt;double, k&gt; <b>gradient</b>(const Tensor<K, k> &dx) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-watch___">void <b>watch</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-unwatch___">void <b>unwatch</b>() </a><br/><br/></div>
+  Tensor&lt;T, sizeof...(args)&gt; <b>reshape</b>(args... shape) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_size_t_k__Tensor_T__k__reshape_array_std::array_size_t__k__new_shape__">template &lt;size_t k&gt; Tensor&lt;T, k&gt; <b>reshape_array</b>(std::array<size_t, k> new_shape) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_double__k__gradient_const_Tensor_K__k__&dx__const_">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;double, k&gt; <b>gradient</b>(const Tensor<K, k> &dx) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__permutate_unsigned_int_ax__const_">Tensor&lt;T, 1&gt; <b>permutate</b>(unsigned int ax) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-watch___">void <b>watch</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-unwatch___">void <b>unwatch</b>() </a><br/><br/></div>
         <div style="display: block; height: 2em;"></div>
         <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
           The use of Tensors alone isn't enough to correctly use Flint. 
@@ -60,7 +60,7 @@
         <div id="s-_typename_T__struct_Tensor_T__1__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt; struct <b>Tensor</b></pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- The 1 dimensional implementation of <pre class="inline_code">Tensor</pre>.
+ The 1 dimensional implementation of  <a href="#s-_typename_T__struct_Tensor_T__1__"><pre class="inline_code">Tensor</pre></a>.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-data__:_shape"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>Tensor</b>(storage_type data) : shape</pre></div>
 <br />
@@ -601,7 +601,7 @@
  shape is the same as the product of the old shape (the new shape represents
  as many elements as the old).
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_int_k__Tensor_T__k__reshape_array_std::array_size_t__k__new_shape__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;int k&gt; Tensor&lt;T, k&gt; <b>reshape_array</b>(std::array<size_t, k> new_shape) </pre></div>
+<div id="s-_size_t_k__Tensor_T__k__reshape_array_std::array_size_t__k__new_shape__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;size_t k&gt; Tensor&lt;T, k&gt; <b>reshape_array</b>(std::array<size_t, k> new_shape) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
  Reshapes this Tensor to a new shape with arbitrary dimensions.
@@ -619,6 +619,12 @@
  construction of this Tensor and this Tensor must be constructed inside a
  gradient context, either started by <pre class="inline_code">fStartGradientContext</pre> or a
  <pre class="inline_code">GradientContext</pre> object.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-1__permutate_unsigned_int_ax__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, 1&gt; <b>permutate</b>(unsigned int ax) const </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Randomly permutates (=swaps multiple elements with each other without
+ creating, copying or deleting new ones) one axis of the input tensor.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-watch___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>watch</b>() </pre></div>
 <br />

@@ -47,24 +47,29 @@
   Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>operator/</b>(const K other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__flattened___const_">Tensor&lt;T, 1&gt; <b>flattened</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__flattened_const_int_dimension__const_">Tensor&lt;T, n - 1&gt; <b>flattened</b>(const int dimension) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___k__=_n_?_k_:_n__pow_const_Tensor_K__k__&other__">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt; <b>pow</b>(const Tensor<K, k> &other) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__Tensor_stronger_return_K___n__pow_const_K_other__">template &lt;typename K&gt; Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>pow</b>(const K other) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__log___">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>log</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__log2___">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>log2</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__log10___">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>log10</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__sqrt___">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>sqrt</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__exp___">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>exp</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__sin___">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>sin</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__cos___">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>cos</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__tan___">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>tan</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__asin___">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>asin</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__acos___">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>acos</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__atan___">Tensor&lt;to_float&lt;T&gt;, n&gt; <b>atan</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___k__=_n_?_k_:_n__matmul_Tensor_K__k__&other__">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt; <b>matmul</b>(Tensor<K, k> &other) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__Tensor_K__n__convert___const_">template &lt;typename K&gt; Tensor&lt;K, n&gt; <b>convert</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___Tensor_T__sizeof____args___reshape_args____shape__">template &lt;typename... args&gt;
-  Tensor&lt;T, sizeof...(args)&gt; <b>reshape</b>(args... shape) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_int_k__Tensor_T__k__reshape_array_std::array_size_t__k__new_shape__">template &lt;int k&gt; Tensor&lt;T, k&gt; <b>reshape_array</b>(std::array<size_t, k> new_shape) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_+_1__expand_int_ax_=_n__int_ax_size_=_0__">Tensor&lt;T, n + 1&gt; <b>expand</b>(int ax = n, int ax_size = 0) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___k__=_n_?_k_:_n___min_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;T, sizeof...(args)&gt; <b>reshape</b>(args... shape) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_size_t_k___Tensor_T__k__reshape_array_std::array_size_t__k__new_shape__">template &lt;size_t k&gt;
+  Tensor&lt;T, k&gt; <b>reshape_array</b>(std::array<size_t, k> new_shape) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_+_1__expand_int_ax_=_n__int_ax_size_=_0__">Tensor&lt;T, n + 1&gt; <b>expand</b>(int ax = n, int ax_size = 0) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___k__=_n_?_k_:_n___min_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
   <b>min</b>(const Tensor<K, k> &other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__Tensor_stronger_return_K___n__min_const_K_other__const_">template &lt;typename K&gt; Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>min</b>(const K other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___k__=_n_?_k_:_n___max_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
   <b>max</b>(const Tensor<K, k> &other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__Tensor_stronger_return_K___n__max_const_K_other__const_">template &lt;typename K&gt; Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>max</b>(const K other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_int__k__=_n_?_k_:_n__operator__const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;int, k &gt;= n ? k : n&gt; <b>operator&lt;</b>(const Tensor<K, k> &other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__Tensor_int__n__operator__const_K_other__const_">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>operator&lt;</b>(const K other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_int__k__=_n_?_k_:_n__operator__const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;int, k &gt;= n ? k : n&gt; <b>operator&gt;</b>(const Tensor<K, k> &other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__Tensor_int__n__operator__const_K_other__const_">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>operator&gt;</b>(const K other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_int__k__=_n_?_k_:_n__equal_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
-  Tensor&lt;int, k &gt;= n ? k : n&gt; <b>equal</b>(const Tensor<K, k> &other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__Tensor_int__n__equal_const_K_other__const_">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>equal</b>(const K other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__reduce_sum_int_dimension__">Tensor&lt;T, n - 1&gt; <b>reduce_sum</b>(int dimension) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__reduce_mul_int_dimension__">Tensor&lt;T, n - 1&gt; <b>reduce_mul</b>(int dimension) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__reduce_mul___">Tensor&lt;T, 1&gt; <b>reduce_mul</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__reduce_sum___">Tensor&lt;T, 1&gt; <b>reduce_sum</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__reduce_min_int_dimension__">Tensor&lt;T, n - 1&gt; <b>reduce_min</b>(int dimension) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__reduce_min___">Tensor&lt;T, 1&gt; <b>reduce_min</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__reduce_max_int_dimension__">Tensor&lt;T, n - 1&gt; <b>reduce_max</b>(int dimension) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__reduce_max___">Tensor&lt;T, 1&gt; <b>reduce_max</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__abs___const_">Tensor&lt;T, n&gt; <b>abs</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___Tensor_T__n__slice_const_args____dim_ranges__const_">template &lt;typename... args&gt;
+  Tensor&lt;int, k &gt;= n ? k : n&gt; <b>equal</b>(const Tensor<K, k> &other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__Tensor_int__n__equal_const_K_other__const_">template &lt;typename K&gt; Tensor&lt;int, n&gt; <b>equal</b>(const K other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__reduce_sum_int_dimension__">Tensor&lt;T, n - 1&gt; <b>reduce_sum</b>(int dimension) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__reduce_mul_int_dimension__">Tensor&lt;T, n - 1&gt; <b>reduce_mul</b>(int dimension) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__reduce_mul___">Tensor&lt;T, 1&gt; <b>reduce_mul</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__reduce_sum___">Tensor&lt;T, 1&gt; <b>reduce_sum</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__reduce_min_int_dimension__">Tensor&lt;T, n - 1&gt; <b>reduce_min</b>(int dimension) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__reduce_min___">Tensor&lt;T, 1&gt; <b>reduce_min</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__reduce_max_int_dimension__">Tensor&lt;T, n - 1&gt; <b>reduce_max</b>(int dimension) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-1__reduce_max___">Tensor&lt;T, 1&gt; <b>reduce_max</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__abs___const_">Tensor&lt;T, n&gt; <b>abs</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_size_t_k___Tensor_T__n__slice_array_std::array_TensorRange__k__ranges__const_">template &lt;size_t k&gt;
+  Tensor&lt;T, n&gt; <b>slice_array</b>(std::array<TensorRange, k> ranges) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___Tensor_T__n__slice_const_args____dim_ranges__const_">template &lt;typename... args&gt;
   Tensor&lt;T, n&gt; <b>slice</b>(const args... dim_ranges) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__extend_std::array_size_t__n__new_shape_______________________std::array_size_t__n__indices__">Tensor&lt;T, n&gt; <b>extend</b>(std::array<size_t, n> new_shape,
                       std::array<size_t, n> indices) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__extend_std::array_size_t__n__new_shape_______________________std::array_size_t__n__indices_______________________std::array_long__n__steps__">Tensor&lt;T, n&gt; <b>extend</b>(std::array<size_t, n> new_shape,
                       std::array<size_t, n> indices,
-                      std::array<long, n> steps) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__repeat_array_std::array_int__n__repetitions__const_">Tensor&lt;T, n&gt; <b>repeat_array</b>(std::array<int, n> repetitions) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___Tensor_T__n__repeat_const_args____repetitions__const_">template &lt;typename... args&gt;
-  Tensor&lt;T, n&gt; <b>repeat</b>(const args... repetitions) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__transpose_std::initializer_list_int__transposition_=_">Tensor&lt;T, n&gt; <b>transpose</b>(std::initializer_list<int> transposition = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__typename____args___Tensor_stronger_return_K___n_-_1__convolve_const_Tensor_K__n__&kernel______________________________________________const_args____steps__const_">template &lt;typename K, typename... args&gt;
+                      std::array<long, n> steps) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__repeat_array_std::array_int___size_t_n__repetitions__const_">Tensor&lt;T, n&gt; <b>repeat_array</b>(std::array<int, (size_t)n> repetitions) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___Tensor_T__n__repeat_const_args____repetitions__const_">template &lt;typename... args&gt;
+  Tensor&lt;T, n&gt; <b>repeat</b>(const args... repetitions) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__transpose_std::initializer_list_int__transposition_=_">Tensor&lt;T, n&gt; <b>transpose</b>(std::initializer_list<int> transposition = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K___Tensor_stronger_return_K___n_-_1___convolve_array_const_Tensor_K__n__&kernel__________________const_std::array_unsigned_int__n_-_1__steps__const_">template &lt;typename K&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, n - 1&gt;
+  <b>convolve_array</b>(const Tensor<K, n> &kernel,
+                 const std::array<unsigned int, n - 1> steps) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__typename____args___Tensor_stronger_return_K___n_-_1__convolve_const_Tensor_K__n__&kernel______________________________________________const_args____steps__const_">template &lt;typename K, typename... args&gt;
   Tensor&lt;stronger_return&lt;K&gt;, n - 1&gt; <b>convolve</b>(const Tensor<K, n> &kernel,
                                              const args... steps) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__typename____args___Tensor_stronger_return_K___n__slide_const_Tensor_K__n__&kernel_______________________________________const_args____steps__const_">template &lt;typename K, typename... args&gt;
   Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>slide</b>(const Tensor<K, n> &kernel,
                                       const args... steps) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_+_1__sliding_window_std::array_size_t__n__window_size___________________________________std::array_unsigned_int__n__step_size_=_">Tensor&lt;T, n + 1&gt; <b>sliding_window</b>(std::array<size_t, n> window_size,
-                                  std::array<unsigned int, n> step_size = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_double__k__gradient_const_Tensor_K__k__&dx__const_">template &lt;typename K, unsigned int k&gt;
+                                  std::array<unsigned int, n> step_size = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__permutate_unsigned_int_ax__const_">Tensor&lt;T, n&gt; <b>permutate</b>(unsigned int ax) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_double__k__gradient_const_Tensor_K__k__&dx__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;double, k&gt; <b>gradient</b>(const Tensor<K, k> &dx) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-watch___">void <b>watch</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-unwatch___">void <b>unwatch</b>() </a><br/><br/></div>
         <div style="display: block; height: 2em;"></div>
         <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
@@ -76,7 +81,7 @@
         <div id="s-_typename_T__unsigned_int_n__struct_Tensor_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- The multi dimensional implementation of <pre class="inline_code">Tensor</pre>.
+ The multi dimensional implementation of  <a href="#s-_typename_T__unsigned_int_n__struct_Tensor_"><pre class="inline_code">Tensor</pre></a>.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-:_node_nullptr__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>Tensor</b>() : node(nullptr) </pre></div>
 <br />
@@ -557,7 +562,8 @@
  shape is the same as the product of the old shape (the new shape represents
  as many elements as the old).
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_int_k__Tensor_T__k__reshape_array_std::array_size_t__k__new_shape__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;int k&gt; Tensor&lt;T, k&gt; <b>reshape_array</b>(std::array<size_t, k> new_shape) </pre></div>
+<div id="s-_size_t_k___Tensor_T__k__reshape_array_std::array_size_t__k__new_shape__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;size_t k&gt;
+  Tensor&lt;T, k&gt; <b>reshape_array</b>(std::array<size_t, k> new_shape) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
  Reshapes this Tensor to a new shape with arbitrary dimensions.
@@ -779,6 +785,11 @@
  Takes the elementwise absolute value of this Tensor (negative signs are
  removed).
 </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_size_t_k___Tensor_T__n__slice_array_std::array_TensorRange__k__ranges__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;size_t k&gt;
+  Tensor&lt;T, n&gt; <b>slice_array</b>(std::array<TensorRange, k> ranges) const </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Like <pre class="inline_code">slice</pre> but with an array of TensorRanges instead of variadic
+ arguments </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-_typename____args___Tensor_T__n__slice_const_args____dim_ranges__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename... args&gt;
   Tensor&lt;T, n&gt; <b>slice</b>(const args... dim_ranges) const </pre></div>
 <br />
@@ -903,7 +914,7 @@
  <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>],</span>
  <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">1</span>, -<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">9</span>]]])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-n__repeat_array_std::array_int__n__repetitions__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>repeat_array</b>(std::array<int, n> repetitions) const </pre></div>
+<div id="s-n__repeat_array_std::array_int___size_t_n__repetitions__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>repeat_array</b>(std::array<int, (size_t)n> repetitions) const </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
  Repeats dimensions of a tensor multiple times.
@@ -976,6 +987,14 @@
  <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">3</span>],</span>
  <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">4</span>]]])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_K___Tensor_stronger_return_K___n_-_1___convolve_array_const_Tensor_K__n__&kernel__________________const_std::array_unsigned_int__n_-_1__steps__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, n - 1&gt;
+  <b>convolve_array</b>(const Tensor<K, n> &kernel,
+                 const std::array<unsigned int, n - 1> steps) const </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Same as convolve, but with steps as an array
+</div></div><div style="display: block; height: 2em;"></div>
 <div id="s-_typename_K__typename____args___Tensor_stronger_return_K___n_-_1__convolve_const_Tensor_K__n__&kernel______________________________________________const_args____steps__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, typename... args&gt;
   Tensor&lt;stronger_return&lt;K&gt;, n - 1&gt; <b>convolve</b>(const Tensor<K, n> &kernel,
                                              const args... steps) const </pre></div>
@@ -990,15 +1009,14 @@
  corresponding ones in the tensor and summing them up to a single value and
  moving the kernel further by the value given in <pre class="inline_code">steps</pre> in that
  corresponding dimension.<div style="display:block; height: 0.5em"></div>
- The implementation does an implicit right-padding, meaning that the kernel
- will initially be placed so that its first element is aligned to
- the first element of the tensor, but it will be slid till no kernel element
- overlaps with any element of the tensor, multiplying all "overlapping"
- elements with 0. If you want to mdofiy this behaviour you can use
- <pre class="inline_code">extend</pre>, <pre class="inline_code">slice</pre> or similar.<div style="display:block; height: 0.5em"></div>
+ The implementation does not include any padding, meaning only convolutions
+ where the complete kernel still fits into the array will be executed (the
+ shape will be calculated correspondingly). If you want to modify this
+ behaviour (i.e. include padding) you can use <pre class="inline_code">extend</pre>, <pre class="inline_code">slice</pre> or similar.<div style="display:block; height: 0.5em"></div>
  The resulting Tensor will therefor have a shape with dimensionality <pre class="inline_code">n - 1</pre>
- and size of <pre class="inline_code">resulting_shape[i] = 1 + (a-&gt;operation.shape[i] - 1) /
- steps[i]</pre>.<div style="display:block; height: 0.5em"></div>
+ and size of <pre class="inline_code">(shape[i] - kernel.get_shape()[i] - 1) / steps[i]</pre> 
+ if <pre class="inline_code">(shape[i] - kernel.get_shape()[i] - 1)</pre> is divisable by <pre class="inline_code">steps[i]</pre>
+ else <pre class="inline_code">(shape[i] - kernel.get_shape()[i] - 1) / steps[i] + 1</pre><div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">3</span>&gt; t1{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}},
                      {{<span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">6</span>}, {<span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">8</span>}, {<span style="color: #30F0FF">9</span>, <span style="color: #30F0FF">0</span>}},
@@ -1047,7 +1065,9 @@
  starting from the beginning and moving <pre class="inline_code">step_size</pre> entries in each
  dimension (the last dimension is moved first until it is fully traversed,
  then the next dimension is moved - i.e. the tensor is traversed for the
- windows like a nested for loop for each dimension). The windows are concatenated in a extra dimension, which becomes the first dimension of the result Tensor.<div style="display:block; height: 0.5em"></div>
+ windows like a nested for loop for each dimension). The windows are
+ concatenated in a extra dimension, which becomes the first dimension of the
+ result Tensor.<div style="display:block; height: 0.5em"></div>
  E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a = {{{<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}, {<span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">6</span>}, {<span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">8</span>}},
@@ -1073,6 +1093,12 @@
  <span style="color: #D0D0D0">//    [<span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">6</span>]],</span>
  <span style="color: #D0D0D0">//   [[<span style="color: #30F0FF">2</span><span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">2</span>],</span>
  <span style="color: #D0D0D0">//    [<span style="color: #30F0FF">2</span><span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">4</span>]]]])</span></pre><div style="display:block; height: 0.5em"></div>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-n__permutate_unsigned_int_ax__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>permutate</b>(unsigned int ax) const </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Randomly permutates (=swaps multiple elements with each other without
+ creating, copying or deleting new ones) one axis of the input tensor.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-get_graph_node___const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">FGraphNode <b>*get_graph_node</b>() const </pre></div>
 <br />
