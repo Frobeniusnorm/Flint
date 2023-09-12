@@ -14,7 +14,6 @@
 #ifndef FLINT_MODELS
 #define FLINT_MODELS
 #include "../dl/trainer.hpp"
-#include "../src/backend_ocl/comp.hpp"
 #include "layers.hpp"
 #include "losses.hpp"
 #include "optimizers.hpp"

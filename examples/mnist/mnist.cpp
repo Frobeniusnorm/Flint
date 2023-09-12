@@ -1,8 +1,5 @@
 // #define FLINT_DL_PROFILE
-#include "../../dl/activations.hpp"
-#include "../../dl/layers.hpp"
-#include "../../dl/models.hpp"
-#include "../../dl/trainer.hpp"
+#include <flint/dl/flint_dl.hpp>
 #include <cstring>
 #include <flint/flint.h>
 #include <flint/flint.hpp>
