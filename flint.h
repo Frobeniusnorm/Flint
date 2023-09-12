@@ -836,7 +836,7 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
 /** Convolves the `n`-dimensional input tensor `a` with a `n`-dimensional filter
  * kernel `kernel` and a per dimensional step size `steps` with size of `n-1`.
  * It is expected that `a` and `kernel` have the same size in their last
- * dimension (which will be completly reduced by the convolution). In all other
+ * dimension (which will be completely reduced by the convolution). In all other
  * dimensions the size of `a` should be larger or equal to the size of `kernel`.
  * The `kernel` will be 'slid' over `a` in each dimension, multiplying all
  * values of `kernel` with the corresponding ones in `a` and summing them up to
