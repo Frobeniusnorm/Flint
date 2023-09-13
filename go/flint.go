@@ -8,9 +8,12 @@ package flint
 import "C"
 import (
 	"fmt"
-	"go/types"
 	"unsafe"
 )
+
+///////////////
+/// SETUP
+//////////////
 
 type Backend int
 
@@ -34,6 +37,10 @@ func Cleanup() {
 	C.flintCleanup()
 }
 
+///////////////
+/// Logging
+//////////////
+
 type loggingLevel int
 
 const (
@@ -54,6 +61,10 @@ func Log(level loggingLevel, message string) {
 	defer C.free(unsafe.Pointer(unsafeMessage))
 	C.flogging(C.enum_FLogType(level), unsafeMessage)
 }
+
+///////////////
+/// Images
+//////////////
 
 type imageFormat int
 
@@ -80,170 +91,228 @@ func IsEagerExecution() bool {
 	}
 }
 
-type operationType int
-
-const (
-	STORE operationType = iota
-	GEN_RANDOM
-	GEN_CONSTANT
-	GEN_ARANGE
-	ADD
-	SUB
-	MUL
-	DIV
-	POW
-	NEG
-	LOG
-	SIGN
-	EVEN
-	LOG2
-	LOG10
-	SIN
-	COS
-	TAN
-	ASIN
-	ACOS
-	ATAN
-	SQRT
-	EXP
-	FLATTEN
-	MATMUL
-	CONVERSION
-	RESHAPE
-	MIN
-	MAX
-	REDUCE_SUM
-	REDUCE_MUL
-	REDUCE_MIN
-	REDUCE_MAX
-	SLICE
-	ABS
-	REPEAT
-	TRANSPOSE
-	EXTEND
-	CONCAT
-	LESS
-	EQUAL
-	GREATER
-	CONVOLVE
-	SLIDE
-	GRADIENT_CONVOLVE
-	INDEX
-	SET_INDEX
-	SLIDING_WINDOW
-	NUM_OPERATION_TYPES
-)
+// /////////////
+// / Creating and Executing Tensors
+// ////////////
 
 type Shape []uint64
 
-type Operation[T tensorDataType] struct {
-	dimension int
-	shape     Shape
-	opType    operationType
-	fpType    T
-	extraData []byte
+type tensorDataType interface {
+	int32 | int64 | float32 | float64
 }
+
+type Tensor[T tensorDataType] struct {
+	node GraphNode[T]
+}
+type FloatTensor Tensor[float32]
+type IntTensor Tensor[int32]
+type DoubleTensor Tensor[float64]
+type LongTensor Tensor[int64]
 
 type GraphNode[T tensorDataType] struct {
-	//predecessors []GraphNode[T]
-	//operation    Operation[T]
-	// TODO: result data
-	// TODO: gradient data
-}
-
-// TODO: need to keep a reference to C memory
-type tensorDataType interface {
-	~int32 | ~int64 | ~float32 | ~float64 | ~int
-}
-
-type TensorSlice types.Slice
-
-func CreateGraph[T tensorDataType](data []T, shape Shape) GraphNode[T] {
-	//dataPointer := unsafe.Pointer(&data)
-	//shapePointer := unsafe.Pointer(&shape)
-
-	var newShape = []C.ulong{C.ulong(2), C.ulong(2)}
-	newShapePtr := (*C.ulong)(unsafe.Pointer(&newShape))
-
-	var newData = []C.float{C.float(1.0), C.float(2.0), C.float(3.0), C.float(4.0)}
-	newDataPtr := unsafe.Pointer(&newData)
-
-	C.fCreateGraph(newDataPtr, C.int(len(data)), C.F_FLOAT32, newShapePtr, C.int(len(shape)))
-
-	return GraphNode[T]{}
-}
-
-func TestGraph() {
-	var newShape = []C.ulong{C.ulong(2), C.ulong(2)}
-	newShapePtr := (*C.ulong)(unsafe.Pointer(&newShape[0]))
-
-	var newData = []C.float{C.float(1.0), C.float(2.0), C.float(3.0), C.float(4.0)}
-	newDataPtr := unsafe.Pointer(&newData[0]) // NOTE: remember to take a pointer to the first element
-
-	structPtr := C.fCreateGraph(newDataPtr, C.int(4), C.F_FLOAT32, newShapePtr, C.int(2))
-	fmt.Println("num pre:", structPtr)
-}
-
-func cGraphNodeToGo[T tensorDataType](data *C.FGraphNode) GraphNode[T] {
-	return GraphNode[T]{}
-}
-
-//
-//func goShapeToC(shape Shape) *C.ulong {
-//	return uintptr(5)
-//}
-//
-//func CreateConstant(value any, shape Shape) {
-//	var newShape = []C.ulong{C.ulong(2), C.ulong(2)}
-//	newShapePtr := (*C.ulong)(unsafe.Pointer(&newShape[0]))
-//
-//	var node C.FGraphNode
-//	// FIXME: what about unsigned types?
-//	switch value.(type) {
-//	case int, int32:
-//		node = C.fconstant_i(C.int(value), newShapePtr, 2)
-//	case int64:
-//		node = C.fconstant_l(C.long(value), newShapePtr, 2)
-//	case float32:
-//		node = C.fconstant_f(C.float(value), newShapePtr, 2)
-//	case float64:
-//		node = C.fconstant_d(C.double(value), newShapePtr, 2)
-//	default:
-//		panic("invalid type")
-//	}
-//
-//}
-//
-//func CreateRandom(shape Shape) GraphNode[float64] {
-//	node := C.frandom(goShapeToC(shape), C.int(len(shape)))
-//	return cGraphNodeToGo[float64](node)
-//}
-//
-//func CreateArrange(shape Shape) GraphNode[int64] {
-//	node := C.farange(goShapeToC(shape), C.int(len(shape)), C.int(1))
-//	return cGraphNodeToGo[int64](node)
-//}
-
-// TODO: the free method for memory management
-// - free Graph
-// - sync memory
-
-//func ExecuteGraph[T tensorDataType](node GraphNode[T]) GraphNode[T] {
-//}
-
-type Node struct {
-	ref   *C.FGraphNode // FIXME: or unsafe pointer?
+	ref   *C.FGraphNode
 	shape Shape
 }
 
-func (a *Node) div() {
+type Result struct {
+	shape Shape
+	data  any
+}
 
+func getFlintType(obj any) C.enum_FType {
+	switch obj.(type) {
+	case int32, int:
+		return C.F_INT32
+	case int64:
+		return C.F_INT64
+	case float32:
+		return C.F_FLOAT32
+	case float64:
+		return C.F_FLOAT64
+	default:
+		panic("invalid data type")
+	}
+}
+
+func CreateGraph[T tensorDataType](data []T, shape Shape) GraphNode[T] {
+	//datatype := getFlintType(T(data))
+	//datatype := C.F_FLOAT32
+	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
+	dataPtr := unsafe.Pointer(&data[0])
+	flintNode := C.fCreateGraph(dataPtr, C.int(len(data)), 2, shapePtr, C.int(len(shape)))
+	return GraphNode[T]{
+		ref:   flintNode,
+		shape: shape,
+	}
+}
+
+func CreateGraphConstant[T tensorDataType](value T, shape Shape) GraphNode[T] {
+	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
+	var flintNode *C.FGraphNode
+	dimensions := C.int(len(shape))
+	switch any(value).(type) {
+	case int32:
+		flintNode = C.fconstant_i(C.int(value), shapePtr, dimensions)
+	case int64:
+		flintNode = C.fconstant_l(C.long(value), shapePtr, dimensions)
+	case float32:
+		flintNode = C.fconstant_f(C.float(value), shapePtr, dimensions)
+	case float64:
+		flintNode = C.fconstant_d(C.double(value), shapePtr, dimensions)
+	default:
+		panic("invalid data type")
+	}
+	return GraphNode[T]{
+		ref:   flintNode,
+		shape: shape,
+	}
+}
+
+func (a GraphNode[T]) Result() Result {
+	flintNode := C.fCalculateResult(a.ref)
+	return Result{
+		shape: *((*Shape)(unsafe.Pointer(&flintNode.operation.shape))),
+		data:  flintNode.result_data.data,
+	}
+}
+
+func (a GraphNode[T]) Serialize() string {
+	ptr := C.fserialize(a.ref, nil)
+	defer C.free(unsafe.Pointer(ptr))
+	return C.GoString(ptr)
+}
+
+func Deserialize[T tensorDataType](data string) GraphNode[T] {
+	unsafeData := C.CString(data)
+	defer C.free(unsafe.Pointer(unsafeData))
+	node := C.fdeserialize(unsafeData)
+	return GraphNode[T]{ref: node}
+}
+
+///////////////
+/// Tensor Operations
+//////////////
+
+func (a GraphNode[T]) Add(b GraphNode[T]) GraphNode[T] {
+	flintNode := C.fadd_g(a.ref, b.ref)
+	return GraphNode[T]{
+		ref:   flintNode,
+		shape: a.shape,
+	}
+}
+
+type Node struct {
+	ref          *C.FGraphNode // FIXME: or unsafe pointer?
+	shape        Shape
+	predecessors []Node
 }
 
 type Stride []int
 type Axes []int // needs to have one entry for each dimension of tensor
 
-// TODO: slicing
+func TestConstant() Node {
+	var newShape = []C.ulong{C.ulong(2), C.ulong(2)}
+	newShapePtr := (*C.ulong)(unsafe.Pointer(&newShape[0]))
+
+	var n *C.FGraphNode = C.fconstant_i(C.int(5), newShapePtr, C.int(2))
+	fmt.Println(n)
+
+	return Node{ref: n}
+}
+
+func (a *Node) matmul(b *Node) Node {
+	C.fmatmul(a.ref, b.ref)
+	return Node{ref: nil}
+}
+
+func (a *Node) flatten() Node {
+	C.fflatten(a.ref)
+	return Node{ref: nil}
+}
+
+func (a *Node) flattenDim(dim int) Node {
+	C.fflatten_dimension(a.ref, C.int(dim))
+	return Node{ref: nil}
+}
+
+// FIXME: type param, or generic?
+func (a *Node) convert() Node {
+	C.fconvert(a.ref, C.F_INT32)
+	return Node{ref: nil}
+}
+
+func (a *Node) reshape(shape Shape) Node {
+	C.freshape(a.ref, nil, C.int(len(shape)))
+	return Node{ref: nil}
+}
+
+func (a *Node) min(b any) Node {
+	// FIXME: any has to be float, double, int, long or GraphNode type
+	//switch any(b).(type) {
+	//case *Node:
+	//	C.fmin_g(a.ref, b.ref)
+	//case int32, int:
+	//	C.fmin_ci(a.ref, C.int(b))
+	//case int64:
+	//	C.fmin_cl(a.ref, C.long(b))
+	//case float32:
+	//	C.fmin_cf(a.ref, C.float(b))
+	//case float64:
+	//	C.fmin_cd(a.ref, C.double(b))
+	//default:
+	//	panic("invalid type")
+	//}
+	return Node{ref: nil}
+}
+
+func (a *Node) max(b any) Node {
+	// FIXME: any has to be float, double, int, long or GraphNode type
+	//switch b.(type) {
+	//case *Node:
+	//	C.fmax_g(a.ref, b.ref)
+	//case int32, int:
+	//	C.fmax_ci(a.ref, C.int(b))
+	//case int64:
+	//	C.fmax_cl(a.ref, C.long(b))
+	//case float32:
+	//	C.fmax_cf(a.ref, C.float(b))
+	//case float64:
+	//	C.fmax_cd(a.ref, C.double(b))
+	//default:
+	//	panic("invalid type")
+	//}
+	return Node{ref: nil}
+}
+
+func (a *Node) reduceSum(dim int) Node {
+	C.freduce_sum(a.ref, C.int(dim))
+	return Node{ref: nil}
+}
+
+func (a *Node) reduceMul(dim int) Node {
+	C.freduce_mul(a.ref, C.int(dim))
+	return Node{ref: nil}
+}
+
+func (a *Node) reduceMin(dim int) Node {
+	C.freduce_min(a.ref, C.int(dim))
+	return Node{ref: nil}
+}
+
+func (a *Node) reduceMax(dim int) Node {
+	C.freduce_max(a.ref, C.int(dim))
+	return Node{ref: nil}
+}
+
+func (a *Node) slice(start Axes, end Axes) Node {
+	C.fslice(a.ref, nil, nil)
+	return Node{ref: nil}
+}
+
+func (a *Node) sliceWithStride(start Axes, end Axes, stride Stride) Node {
+	C.fslice_step(a.ref, nil, nil, nil)
+	return Node{ref: nil}
+}
 
 func (a *Node) extend(shape Shape, insertAt Axes) Node {
 	C.fextend(a.ref, nil, nil)
@@ -255,8 +324,8 @@ func (a *Node) extendWithStride(shape Shape, insertAt Axes, stride Stride) Node 
 	return Node{ref: nil}
 }
 
-func (a *Node) concat(b *Node, axis int) Node {
-	C.fconcat(a.ref, b.ref, C.int(axis))
+func (a *Node) concat(b *Node, axis uint) Node {
+	C.fconcat(a.ref, b.ref, C.uint(axis))
 	return Node{ref: nil}
 }
 

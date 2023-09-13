@@ -14,9 +14,21 @@ func main() {
 	flint.SetEagerExecution(false)
 	fmt.Println("is eager exec (GO):", flint.IsEagerExecution())
 
-	//flint.TestGraph()
+	data1 := []float32{1.2, 2.0, 3.1, 4.2}
+	shape1 := flint.Shape{2, 2}
+	x := flint.CreateGraph(data1, shape1)
+	fmt.Println(x)
 
-	//data1 := []float32{1, 2, 3, 4}
+	var cvalue float32 = 5.0
+	y := flint.CreateGraphConstant(cvalue, shape1)
+	fmt.Println(y)
+
+	s := y.Serialize()
+	fmt.Println(s)
+
+	z := x.Add(y)
+	fmt.Println(z)
+
 	////data2 := []float32{4, 3, 2, 1}
 	//shape := []uint64{2, 2}
 	//var g1 = flint.CreateGraph[float32](data1, shape)
