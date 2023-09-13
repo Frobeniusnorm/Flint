@@ -27,7 +27,6 @@ func main() {
 	fmt.Println("z", z)
 
 	res := z.Result()
-	fmt.Println(res)
 	fmt.Println("res", res)
 
 	flint.Cleanup()

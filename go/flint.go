@@ -189,24 +189,29 @@ func CreateGraphConstant[T tensorDataType](value T, shape Shape) GraphNode {
 	}
 }
 
+func cToShape(ptr *C.size_t) Shape {
+	return nil
+}
+
 func (a GraphNode) Result() Result {
 	flintNode := C.fCalculateResult(a.ref)
 	return Result{
-		shape: *((*Shape)(unsafe.Pointer(&flintNode.operation.shape))),
-		data:  flintNode.result_data.data,
+		//shape: cToShape(flintNode.operation.shape),
+		data: flintNode.result_data.data,
 	}
 }
 
-func (a GraphNode) Serialize() string {
-	ptr := C.fserialize(a.ref, nil)
+func (a GraphNode) Serialize() []byte {
+	var size C.size_t
+	ptr := C.fserialize(a.ref, &size)
 	defer C.free(unsafe.Pointer(ptr))
-	return C.GoString(ptr)
+	return C.GoBytes(unsafe.Pointer(ptr), C.int(size))
 }
 
-func Deserialize[T tensorDataType](data string) GraphNode {
-	unsafeData := C.CString(data)
+func Deserialize[T tensorDataType](data []byte) GraphNode {
+	unsafeData := C.CBytes(data)
 	defer C.free(unsafe.Pointer(unsafeData))
-	flintNode := C.fdeserialize(unsafeData)
+	flintNode := C.fdeserialize((*C.char)(unsafeData))
 	return GraphNode{ref: flintNode}
 }
 
