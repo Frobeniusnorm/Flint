@@ -92,12 +92,12 @@ func IsEagerExecution() bool {
 }
 
 // /////////////
-// / Creating and Executing Tensors
+// Types and Structs
 // ////////////
 
 type Shape []uint64
 
-type Tensor[T tensorDataType] struct {
+type Tensor[T Numeric] struct {
 	GraphNode GraphNode
 }
 type FloatTensor Tensor[float32]
@@ -106,8 +106,7 @@ type DoubleTensor Tensor[float64]
 type LongTensor Tensor[int64]
 
 type GraphNode struct {
-	ref   *C.FGraphNode // FIXME: or unsafe pointer?
-	shape Shape
+	ref *C.FGraphNode
 }
 
 type Result struct {
@@ -118,27 +117,14 @@ type Result struct {
 type tensorDataType interface {
 	~int32 | ~int64 | ~float32 | ~float64
 }
+type Numeric tensorDataType
 
 type Stride []int
 type Axes []int // needs to have one entry for each dimension of tensor
 
-type ValidType interface {
-	RegisterType()
-}
-
-type (
-	F_INT    int32
-	F_LONG   int64
-	F_FLOAT  float32
-	F_DOUBLE float64
-	F_GRAPH  GraphNode
-)
-
-func (x F_INT) RegisterType()    {}
-func (x F_LONG) RegisterType()   {}
-func (x F_FLOAT) RegisterType()  {}
-func (x F_DOUBLE) RegisterType() {}
-func (a F_GRAPH) RegisterType()  {}
+// /////////////
+// Creating and Executing Tensors
+// ////////////
 
 func getFlintType(obj any) C.enum_FType {
 	switch obj.(type) {
@@ -155,19 +141,18 @@ func getFlintType(obj any) C.enum_FType {
 	}
 }
 
-func CreateGraph[T tensorDataType](data []T, shape Shape) GraphNode {
+func CreateGraph[T Numeric](data []T, shape Shape) GraphNode {
 	//datatype := getFlintType(T(data))
 	//datatype := C.F_FLOAT32
 	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
 	dataPtr := unsafe.Pointer(&data[0])
 	flintNode := C.fCreateGraph(dataPtr, C.int(len(data)), 2, shapePtr, C.int(len(shape)))
 	return GraphNode{
-		ref:   flintNode,
-		shape: shape,
+		ref: flintNode,
 	}
 }
 
-func CreateGraphConstant[T tensorDataType](value T, shape Shape) GraphNode {
+func CreateGraphConstant[T Numeric](value T, shape Shape) GraphNode {
 	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
 	var flintNode *C.FGraphNode
 	dimensions := C.int(len(shape))
@@ -184,8 +169,7 @@ func CreateGraphConstant[T tensorDataType](value T, shape Shape) GraphNode {
 		panic("invalid data type")
 	}
 	return GraphNode{
-		ref:   flintNode,
-		shape: shape,
+		ref: flintNode,
 	}
 }
 
@@ -208,7 +192,7 @@ func (a GraphNode) Serialize() []byte {
 	return C.GoBytes(unsafe.Pointer(ptr), C.int(size))
 }
 
-func Deserialize[T tensorDataType](data []byte) GraphNode {
+func Deserialize(data []byte) GraphNode {
 	unsafeData := C.CBytes(data)
 	defer C.free(unsafe.Pointer(unsafeData))
 	flintNode := C.fdeserialize((*C.char)(unsafeData))
@@ -219,34 +203,11 @@ func Deserialize[T tensorDataType](data []byte) GraphNode {
 /// Tensor Operations
 //////////////
 
-func describe(i ValidType) {
+func describe(i any) {
 	fmt.Printf("describe (value, underlying type): (%v, %T)\n", i, i)
 }
 
-func Add2(a GraphNode, b ValidType) GraphNode {
-	var flintNode *C.FGraphNode
-
-	switch c := b.(type) {
-	case F_INT:
-		flintNode = C.fadd_ci(a.ref, C.int(c))
-	case F_LONG:
-		flintNode = C.fadd_cl(a.ref, C.long(c))
-	case F_FLOAT:
-		flintNode = C.fadd_cf(a.ref, C.float(c))
-	case F_DOUBLE:
-		flintNode = C.fadd_cd(a.ref, C.double(c))
-	case F_GRAPH:
-		flintNode = C.fadd_g(a.ref, c.ref)
-	default:
-		panic("invalid type")
-	}
-
-	return GraphNode{
-		ref: flintNode,
-	}
-}
-
-func Add[T tensorDataType | GraphNode](a GraphNode, b T) GraphNode {
+func Add[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode
 
 	switch c := any(b).(type) {

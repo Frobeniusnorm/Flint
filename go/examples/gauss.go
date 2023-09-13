@@ -23,7 +23,7 @@ func main() {
 	var y = flint.CreateGraphConstant(constantValue, shape)
 	fmt.Println("y", y)
 
-	z := flint.Add2(x, flint.F_INT(5))
+	z := flint.Add(x, 5.0)
 	fmt.Println("z", z)
 
 	res := z.Result()
