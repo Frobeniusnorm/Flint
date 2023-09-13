@@ -18,10 +18,12 @@ int main(void) {
     size_t result_shape[] = {res->operation.shape[0], res->operation.shape[1]};
 
     size_t repr_len;
-    // FIXME: why does it segfault when i use rd here?
     char *repr = fserialize(res, &repr_len);
+
+    // print output
     for (int i = 0; i < 4; i++) printf("res%i: %d\n", i, result[i]);
 
+    // print serialize
     puts(repr);
     printf("repr_len: %d\n", repr_len);
 
