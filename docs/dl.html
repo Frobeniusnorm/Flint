@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>
+    Flint Documentation
+  </title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+</head>
+
+<body>
+
+  <div id="header-bar">
+    <div class="left-spaced">
+      <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
+      <a class="item" href="index.html">About</a>
+      <span class="item selected" href="documentation.html">Documentation</span>
+      <a class="item" href="tutorial.html">Tutorial</a>
+    </div>
+  </div>
+  <div id="showcase_background" style="min-height: 18em; background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(61,215,193,1) 0%, rgba(33,100,228,1) 100%);">
+    <center style="margin-top:2em">
+      <h1>
+        Documentation <u>dl/flint_dl.hpp</u>
+      </h1>
+      <div style="display: block; height: 0.5em;"></div>
+      <h2>
+        Flint's C++ Deep Learning Framework 
+      </h2>
+    </center>
+  </div>
+  <center>
+    <div class="content">
+      <div style="display: block; height: 5em;"></div>
+      <div class="card">
+        <span class="card_header">C++ Deep Learning Framework</span>
+      </div>
+      <br />
+      <div class="card">
+        <div style="padding-bottom: 10px; padding-top: 8px;" >
+          The Deep learning framework is installed with the library and header only. 
+          You can include the general functionality of the framework with the <pre class="inline_code">&lt;flint/dl/flint_dl.hpp&gt;</pre> header 
+          which just includes the other headers. 
+          The library heavily uses new C++ features, preferring templates and concepts over object orientation and inheritance 
+          since it is more flexible, comfortable and performant than complex inheritance structures. 
+          As an user of the library - thanks to the <pre class="inline_code">auto</pre> type deduction of C++ - this should not concern you too much, 
+          but if you want to write your own layer, optimizers, ... you should become familiar with such features - don't worry though, their usage in the library should be fairly intuitive.
+        </div>
+      </div>
+      <div style="display: block; height: 5em;"></div>
+      <div class="card" style="background-color: #BAD5EE">
+        <span class="card_header">Model <u>dl/models.hpp</u></span>
+      </div>
+      <br />
+      <div class="card">
+        <p style="padding-bottom: 10px; padding-top: 2px;">
+          A Model is the abstraction of a complete neural network consisting of multiple layers. 
+          It facilitates functions to pass inputs through the complete network and to train it.<br/>
+          The file <u>dl/models.hpp</u> describes the concept of a model and implements the most common ones.
+        </p>
+      </div>
+      <br/>
+      <div class="card button3">
+        <a href="dl_models.html">Documentation</a>
+      </div>
+      <div style="display: block; height: 2em;"></div>
+      <div class="card" style="background-color: #F0C0D0">
+        <span class="card_header">Layer <u>dl/layers.hpp</u></span>
+      </div>
+      <br />
+      <div class="card">
+        <p style="padding-bottom: 10px; padding-top: 2px;">
+          A layer represents a function application (a forward pass) that receives an input tensor and outputs its result.
+          There are basically two types of layers: trainable ones (with parameters like weights, filters and biases) and untrainable ones (simple permutation of the input, like acitivation functions or dropout).
+          The concept of a layer and derivable classes representing layers with weights (<pre class="inline_code">class Layer</pre>) and untrainable layers (<pre class="inline_code">class UntrainableLayer</pre>) are included in <u>dl/layers.hpp</u>.<br/>
+          Implementations of common deep learning layers are included in the folder <u>dl/layers/</u> and include fully connected layers, convolution layers, dropout layers and so on.
+        </p>
+      </div>
+      <br/>
+      <div class="card button2">
+        <a href="dl_layers.html">Documentation</a>
+      </div>
+      <div style="display: block; height: 2em;"></div>
+      <div class="card" style="background-color: #a0f0ca">
+        <span class="card_header">Optimizer <u>dl/optimizers.hpp</u></span>
+      </div>
+      <br />
+      <div class="card">
+        <p style="padding-bottom: 10px; padding-top: 2px;">
+          Optimizers receive a weight and the gradient of an error tensor to that weight to optimize it.
+          Each weight has its own optimizer and the concept and an implementation of a common one (Adam) is included in <u>dl/optimizers.hpp</u>
+        </p>
+      </div>
+      <br/>
+      <div class="card button1">
+        <a href="dl_optimizers.html">Documentation</a>
+      </div>
+      <div style="display: block; height: 2em;"></div>
+    </div>
+  </center>
+  <div id="footer">
+    <center>
+    <div class="content">
+      <div class="row">
+        <div class="column">
+          © David Schwarzbeck, 2022</br>
+          Licensed under the <a href="https://github.com/Frobeniusnorm/Flint/blob/main/LICENCE">Apache License</a>, Version 2.0
+        </div>
+        <div class="column">&nbsp;</div>
+        <div class="column">&nbsp;</div>
+        <div class="column">
+          <a href="https://github.com/Frobeniusnorm/Flint/">Github</a>
+        </div>
+      </div>
+    </div>
+    <i style="color: #D0D0D0;">This site values your privacy, does not use cookies, javascript or other malware and does not sell anything.</i></center>
+    </center>
+  </div>
+</body>
+</html>
+

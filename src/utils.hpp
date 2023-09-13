@@ -106,8 +106,10 @@ static inline int operationScore(const FGraphNode *g) {
   case FSLICE: {
     size_t sliced_away = 1;
     const FGraphNode *p = g->predecessors[0];
-    for (int i = 0; i < g->operation.dimensions; i++)
-      sliced_away *= (p->operation.shape[i] - g->operation.shape[i]);
+    for (int i = 0; i < g->operation.dimensions; i++) {
+      long diff = (p->operation.shape[i] - g->operation.shape[i]);
+      if (diff > 0) sliced_away *= diff;
+    }
     return sliced_away;
   }
   case FGEN_CONSTANT: {

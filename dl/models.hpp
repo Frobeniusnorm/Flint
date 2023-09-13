@@ -14,10 +14,10 @@
 #ifndef FLINT_MODELS
 #define FLINT_MODELS
 #include "../dl/trainer.hpp"
-#include "../src/backend_ocl/comp.hpp"
 #include "layers.hpp"
 #include "losses.hpp"
 #include "optimizers.hpp"
+#include <chrono>
 #include <flint/flint.h>
 #include <flint/flint_helper.hpp>
 #include <iomanip>
@@ -25,7 +25,6 @@
 #include <memory>
 #include <tuple>
 #include <vector>
-#include <chrono>
 
 template <FType in> constexpr FType get_output_type() { return in; }
 template <FType in, GenericLayer K> constexpr FType get_output_type() {
@@ -50,6 +49,20 @@ constexpr unsigned int get_output_dim() {
   return get_output_dim<out, F...>();
 }
 
+/**
+ * Model where each layer outputs the input of the next layer.
+ * Best used with C++ auto typing:
+ *
+ * @code{
+ * auto model = SequentialModel(
+ *  Connected(10, 20),
+ *  Relu(),
+ *  Dropout(0.1),
+ *  Connected(20, 10),
+ *  SoftMax()
+ * ); // has type SequentialModel<Connected, Relu, Dropout, Connected, SoftMax>
+ * }
+ */
 template <GenericLayer... T> struct SequentialModel {
   std::tuple<T...> layers;
   SequentialModel(T... layers) : layers(std::move(layers)...) {}
@@ -57,7 +70,10 @@ template <GenericLayer... T> struct SequentialModel {
   template <OptimizerFactory Fac> void generate_optimizer(Fac fac) {
     gen_opt<0>(fac);
   }
-
+  /**
+   * Passes a input tensor through all layers and returns the output of the last
+   * layer.
+   */
   template <typename K, unsigned int n>
   Tensor<LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
          get_output_dim<n, T...>()>
@@ -67,14 +83,40 @@ template <GenericLayer... T> struct SequentialModel {
         LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
         get_output_dim<n, T...>()>(in);
   }
+  /**
+   * Optimizes the weights (calculates the gradients + calls the optimizers) of
+   * all layer to an error.
+   */
   template <typename K, unsigned int n>
   void optimize(const Tensor<K, n> &error) {
     backward<0>(error);
   }
-  // TODO train with Datagenerators
+  /**
+   * Trains the model with input data and the desired output.
+   * - `data` contains the input (`X`) and desired data (`Y`) and optionally
+   *    validation data, if it does after each epoch a validation error is
+   *    calculated.
+   * - `loss` The loss function to calculate the error between the actual output
+   *    and the desired one from the training data. Can be an arbitrary class
+   *    that implements the `GenericLoss` concept, some implementations can be
+   *    found in "losses.hpp".
+   * - `epochs` Number of epochs the model has to be trained. The complete
+   *    dataset is passed through the model per epoch (It is split into
+   *    `batch_size` slices in the first dimension of the input data and each
+   *    batch has to be passed through the model once per epoch).
+   * - `batch_size` Size of each batch. A batch is a slice of the first
+   *    dimension of the input data. The input is shuffeled every epoch, which is
+   *    important if your batch size is smaller then your input size. The weights
+   *    of the model are optimized per batch that was passed through the model.
+   *    Meaning small batch sizes lead to faster convergence (since more
+   *    optimizations are executed) but to more noise and variance, since each
+   *    batch is only an approximation of the complete dataset. If training times
+   *    don't matter we suggest full gradient descent (meaning `batch_size =
+   *    input_size`), else finetune this value to your usecase.
+   */
   template <typename T1, unsigned int n1, typename T2, unsigned int n2,
             GenericLoss L>
-  void train(TrainingData<T1, n1, T2, n2>& data, L loss, int epochs = 1,
+  void train(TrainingData<T1, n1, T2, n2> &data, L loss, int epochs = 1,
              int batch_size = 32) {
     set_training<0>(true);
     const size_t batches = data.X.get_shape()[0];
@@ -135,8 +177,9 @@ template <GenericLayer... T> struct SequentialModel {
 #ifdef FLINT_DL_PROFILE
         OCLCompilerThread::memory_barrier();
         std::chrono::duration<double, std::milli> elapsed =
-          std::chrono::high_resolution_clock::now() - start;
-        flogging(F_INFO, "Calculating gradients took " + std::to_string(elapsed.count()) + "ms");
+            std::chrono::high_resolution_clock::now() - start;
+        flogging(F_INFO, "Calculating gradients took " +
+                             std::to_string(elapsed.count()) + "ms");
 #endif
         backward<0>(plgrads);
         // calculate error value
@@ -162,7 +205,8 @@ template <GenericLayer... T> struct SequentialModel {
       if (data.vX.has_value() && data.vY.has_value()) {
         auto output = forward(data.X);
         auto error = loss.calculate_error(output, data.Y);
-        validation_msg = " validation error: " + std::to_string(error.reduce_sum()[0]);
+        validation_msg =
+            " validation error: " + std::to_string(error.reduce_sum()[0]);
       }
       std::cout << "\r\e";
       flogging(F_INFO, "Mean loss #" + std::to_string(i + 1) + ": " +
@@ -170,9 +214,8 @@ template <GenericLayer... T> struct SequentialModel {
     }
     set_training<0>(false);
   }
-  std::string summary() {
-    return summary_helper<0>();
-  }
+  /** Returns a small summary of the model. */
+  std::string summary() { return summary_helper<0>(); }
 
 private:
   template <int n, typename K, unsigned int k>
@@ -192,8 +235,9 @@ private:
 #ifdef FLINT_DL_PROFILE
       OCLCompilerThread::memory_barrier();
       std::chrono::duration<double, std::milli> elapsed =
-        std::chrono::high_resolution_clock::now() - start;
-      flogging(F_INFO, std::get<n>(layers).name() + " backwards took " + std::to_string(elapsed.count()) + "ms");
+          std::chrono::high_resolution_clock::now() - start;
+      flogging(F_INFO, std::get<n>(layers).name() + " backwards took " +
+                           std::to_string(elapsed.count()) + "ms");
 #endif
       backward<n + 1>(grads);
     }
@@ -211,8 +255,9 @@ private:
     }
   }
   template <int n> std::string summary_helper() {
-    if constexpr (n < sizeof...(T)) 
-      return std::to_string(n + 1) + ". " + std::get<n>(layers).summary() + "\n" + summary_helper<n + 1>();
+    if constexpr (n < sizeof...(T))
+      return std::to_string(n + 1) + ". " + std::get<n>(layers).summary() +
+             "\n" + summary_helper<n + 1>();
     return "";
   }
   template <int n>
@@ -233,8 +278,9 @@ private:
     out.execute();
     OCLCompilerThread::memory_barrier();
     std::chrono::duration<double, std::milli> elapsed =
-      std::chrono::high_resolution_clock::now() - start;
-    flogging(F_INFO, std::get<layer>(layers).name() + " took " + std::to_string(elapsed.count()) + "ms");
+        std::chrono::high_resolution_clock::now() - start;
+    flogging(F_INFO, std::get<layer>(layers).name() + " took " +
+                         std::to_string(elapsed.count()) + "ms");
 #endif
     if constexpr (layer == sizeof...(T) - 1)
       return out;

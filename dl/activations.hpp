@@ -42,6 +42,7 @@ public:
     return "Softmax";
   }
 };
+/** Rectified Linear Unit. Does `max(input, 0)`. Simple and it works. */
 struct Relu : public UntrainableLayer {
   template <typename T, unsigned int n> Tensor<T, n> forward(Tensor<T, n> &in) {
     return in.max(0);

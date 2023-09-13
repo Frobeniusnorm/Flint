@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.9)
 project(flint VERSION 0.0.1)
 option(BUILD_TEST "Enable building unit tests" ON)
-option(BUILD_DEEP_LEARNING "Enable building the deep learning interfaces" OFF)
 option(BUILD_GRADIENT_TEST "Enable building gradient tests" ON)
 option(BUILD_BENCHMARK "Enable building benchmark program" ON)
+option(INSTALL_DEEP_LEARNING "Enable installing the header-only c++ deep learning library" ON)
 include(GNUInstallDirs)
 FILE(GLOB_RECURSE SRCFILES src/*.cpp)
 find_package(OpenCL REQUIRED)
@@ -31,6 +31,12 @@ configure_file(flintConfig.cmake @ONLY)
 install(FILES "flintConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/flintConfigVersion.cmake"
         DESTINATION lib/cmake/flint)
+if(${INSTALL_DEEP_LEARNING})
+  install(DIRECTORY dl/
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/flint/dl
+      FILES_MATCHING PATTERN "*.hpp"
+  )
+endif()
 if(${BUILD_TEST})
   project(test)
   add_executable(test test/test.cpp)
