@@ -53,7 +53,7 @@ constexpr unsigned int get_output_dim() {
  * Model where each layer outputs the input of the next layer.
  * Best used with C++ auto typing:
  *
- * @code {
+ * @code{
  * auto model = SequentialModel(
  *  Connected(10, 20),
  *  Relu(),
