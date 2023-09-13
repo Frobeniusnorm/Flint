@@ -49,6 +49,13 @@ Use [go logger](https://pkg.go.dev/log) or FFI/cgo calls to flint logger?
 - <https://gist.github.com/zchee/b9c99695463d8902cd33>
 - <https://zchee.github.io/golang-wiki/cgo/>
 
+Projects similar to this one:
+- [gorgonia](https://github.com/gorgonia/gorgonia)
+- [tfgo](https://github.com/galeone/tfgo)
+- [gobrain](https://github.com/goml/gobrain)
+- [gonet](https://github.com/dathoangnd/gonet)
+- [go-deep](https://github.com/patrikeh/go-deep)
+
 ## Notes
 
 The following "modern" C features do not work with cgo, all code needs to be in "legacy" C
