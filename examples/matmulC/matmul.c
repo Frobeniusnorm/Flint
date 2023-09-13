@@ -17,17 +17,9 @@ int main(void) {
     int32_t *result = res->result_data->data;
     size_t result_shape[] = {res->operation.shape[0], res->operation.shape[1]};
 
-    size_t repr_len;
-    char *repr = fserialize(res, &repr_len);
-
     // print output
     for (int i = 0; i < 4; i++) printf("res%i: %d\n", i, result[i]);
 
-    // print serialize
-    puts(repr);
-    printf("repr_len: %d\n", repr_len);
-
-    free(repr);
     fFreeGraph(add);
     flintCleanup();
     return 0;
