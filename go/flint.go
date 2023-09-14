@@ -3,12 +3,12 @@ package flint
 
 /*
 #cgo LDFLAGS: -lflint -lOpenCL -lstdc++
+#include <stdlib.h>  // needed for C.free!
 #include "../flint.h"
 */
 import "C"
 import (
 	"fmt"
-	"reflect"
 	"unsafe"
 )
 
@@ -17,7 +17,8 @@ import (
 //////////////
 
 type Tensor[T Numeric] struct {
-	GraphNode GraphNode
+	data  []T
+	shape Shape
 }
 type FloatTensor Tensor[float32]
 type IntTensor Tensor[int32]
@@ -26,11 +27,6 @@ type LongTensor Tensor[int64]
 
 type GraphNode struct {
 	ref *C.FGraphNode
-}
-
-type Result struct {
-	shape Shape
-	data  any
 }
 
 type tensorDataType interface {
@@ -42,10 +38,12 @@ type Stride []int32 // needs to have one entry for each dimension of tensor
 type Axes []int64   // needs to have one entry for each dimension of tensor
 type Shape []uint64 // needs to have one entry for each dimension of tensor
 
-func toC(obj any, outputType reflect.Type) any {
-	//reflect.Value
-	//return (outputType)(any)
-	return nil
+func toC(data []byte) unsafe.Pointer {
+	return C.CBytes(data)
+}
+
+func fromC(ptr unsafe.Pointer, size int) []byte {
+	return C.GoBytes(ptr, C.int(size))
 }
 
 const (
@@ -225,11 +223,21 @@ func CreateGraphArrange(shape Shape, axis int) GraphNode {
 	return GraphNode{ref: flintNode}
 }
 
-func (a GraphNode) CalculateResult() Result {
+func CalculateResult[T Numeric](a GraphNode) Tensor[T] {
 	flintNode := C.fCalculateResult(a.ref)
-	return Result{
-		//shape: cToShape(flintNode.operation.shape),
-		data: flintNode.result_data.data,
+	resultSize := int(flintNode.result_data.num_entries)
+	dataPtr := unsafe.Pointer(flintNode.result_data.data)
+
+	var byteData = C.GoBytes(dataPtr, C.int(resultSize*C.sizeof_float))
+	fmt.Println("bye data", byteData)
+	fmt.Println("res size", resultSize)
+
+	var data = []T{1, 2, 3}
+	var shape = Shape{3}
+
+	return Tensor[T]{
+		data:  data,
+		shape: shape,
 	}
 }
 
