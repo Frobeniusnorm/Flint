@@ -5,11 +5,6 @@ package flint
 #cgo LDFLAGS: -lflint -lOpenCL -lstdc++
 #include <stdlib.h>  // needed for C.free!
 #include "../flint.h"
-
-// FIXME: remove after bug fix
-size_t img_shape[] = {30, 30, 3};
-size_t kernel_shape[] = {3,3,3};
-unsigned int steps[] = { 1, 1, 1 };
 */
 import "C"
 import (
@@ -18,25 +13,6 @@ import (
 	"math"
 	"unsafe"
 )
-
-func TestConv() {
-	C.flintInit(C.int(1))
-	C.fEnableEagerExecution()
-
-	img_shape := []C.size_t{30, 30, 3}
-	kernel_shape := []C.size_t{3, 3, 3}
-	steps := []C.uint{1, 1, 1}
-	var img *C.FGraphNode = C.fconstant_i(4, &(img_shape[0]), C.int(3))
-	var kernel *C.FGraphNode = C.fconstant_i(4, &(kernel_shape[0]), C.int(3))
-	var conv *C.FGraphNode = C.fconvolve(img, kernel, &(steps[0]))
-
-	// FIXME: FOUND THE BUG!!! Casting go arrays to C causes the FPE error!!!
-	//var img *C.FGraphNode = C.fconstant_i(4, &C.img_shape[0], C.int(3))
-	//var kernel *C.FGraphNode = C.fconstant_i(4, &C.kernel_shape[0], C.int(3))
-	//var conv *C.FGraphNode = C.fconvolve(img, kernel, &C.steps[0])
-
-	fmt.Println(conv)
-}
 
 ///////////////
 // Types and Structs
@@ -189,6 +165,7 @@ func LoadImage(path string) GraphNode {
 }
 
 func StoreImage(node GraphNode, path string, format imageFormat) {
+	// FIXME: jpeg writing is broken
 	unsafePath := C.CString(path)
 	defer C.free(unsafe.Pointer(unsafePath))
 	C.fstore_image(graphRef(node), unsafePath, C.enum_FImageFormat(format))
