@@ -17,14 +17,14 @@ import (
 //////////////
 
 type Tensor[T Numeric] struct {
-	GraphNode graphNode
+	GraphNode GraphNode
 }
 type FloatTensor Tensor[float32]
 type IntTensor Tensor[int32]
 type DoubleTensor Tensor[float64]
 type LongTensor Tensor[int64]
 
-type graphNode struct {
+type GraphNode struct {
 	ref *C.FGraphNode
 }
 
@@ -166,18 +166,18 @@ func describe(i any) {
 // Creating and Executing Tensors
 // ////////////
 
-func CreateGraph[T Numeric](data []T, shape Shape) graphNode {
+func CreateGraph[T Numeric](data []T, shape Shape) GraphNode {
 	datatype := F_FLOAT32
 	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
 
 	dataPtr := unsafe.Pointer(&data[0])
 	flintNode := C.fCreateGraph(dataPtr, C.int(len(data)), datatype, shapePtr, C.int(len(shape)))
-	return graphNode{
+	return GraphNode{
 		ref: flintNode,
 	}
 }
 
-func CreateGraphConstant[T Numeric](value T, shape Shape) graphNode {
+func CreateGraphConstant[T Numeric](value T, shape Shape) GraphNode {
 	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
 	var flintNode *C.FGraphNode
 	dimensions := C.int(len(shape))
@@ -193,12 +193,12 @@ func CreateGraphConstant[T Numeric](value T, shape Shape) graphNode {
 	default:
 		panic("invalid data type")
 	}
-	return graphNode{
+	return GraphNode{
 		ref: flintNode,
 	}
 }
 
-func (a graphNode) Result() Result {
+func (a GraphNode) Result() Result {
 	flintNode := C.fCalculateResult(a.ref)
 	return Result{
 		//shape: cToShape(flintNode.operation.shape),
@@ -206,25 +206,25 @@ func (a graphNode) Result() Result {
 	}
 }
 
-func (a graphNode) Serialize() []byte {
+func (a GraphNode) Serialize() []byte {
 	var size C.size_t
 	ptr := C.fserialize(a.ref, &size)
 	defer C.free(unsafe.Pointer(ptr))
 	return C.GoBytes(unsafe.Pointer(ptr), C.int(size))
 }
 
-func Deserialize(data []byte) graphNode {
+func Deserialize(data []byte) GraphNode {
 	unsafeData := C.CBytes(data)
 	defer C.free(unsafe.Pointer(unsafeData))
 	flintNode := C.fdeserialize((*C.char)(unsafeData))
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
 ///////////////
 /// Tensor Operations
 //////////////
 
-func Add[T Numeric | graphNode](a graphNode, b T) graphNode {
+func Add[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode
 
 	switch c := any(b).(type) {
@@ -236,13 +236,13 @@ func Add[T Numeric | graphNode](a graphNode, b T) graphNode {
 		flintNode = C.fadd_cf(a.ref, C.float(c))
 	case float64:
 		flintNode = C.fadd_cd(a.ref, C.double(c))
-	case graphNode:
+	case GraphNode:
 		flintNode = C.fadd_g(a.ref, c.ref)
 	default:
 		panic("invalid type")
 	}
 
-	return graphNode{
+	return GraphNode{
 		ref: flintNode,
 	}
 }
@@ -255,49 +255,49 @@ func Add[T Numeric | graphNode](a graphNode, b T) graphNode {
 
 // TODO: even
 
-func Less(a graphNode, compareTo any) graphNode {
-	return graphNode{}
+func Less(a GraphNode, compareTo any) GraphNode {
+	return GraphNode{}
 }
 
-func Greater(a graphNode, compareTo any) graphNode {
-	return graphNode{}
+func Greater(a GraphNode, compareTo any) GraphNode {
+	return GraphNode{}
 }
 
-func Equal(a graphNode, compareTo any) graphNode {
+func Equal(a GraphNode, compareTo any) GraphNode {
 	//switch compareTo.(type) {
 	//case graphNode:
 	//	flintNode := C.fgreater_g(a.ref, compareTo.ref)
 	//}
-	return graphNode{}
+	return GraphNode{}
 }
 
-func Matmul(a graphNode, b graphNode) graphNode {
+func Matmul(a GraphNode, b GraphNode) GraphNode {
 	flintNode := C.fmatmul(a.ref, b.ref)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Flatten(a graphNode) graphNode {
+func Flatten(a GraphNode) GraphNode {
 	flintNode := C.fflatten(a.ref)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func FlattenDim(a graphNode, dim int) graphNode {
+func FlattenDim(a GraphNode, dim int) GraphNode {
 	flintNode := C.fflatten_dimension(a.ref, C.int(dim))
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Convert[T tensorDataType](a graphNode, newType T) graphNode {
+func Convert[T tensorDataType](a GraphNode, newType T) GraphNode {
 	newTypeXXXXX := uint32(C.F_INT32)
 	flintNode := C.fconvert(a.ref, newTypeXXXXX)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Reshape(a graphNode, shape Shape) graphNode {
+func Reshape(a GraphNode, shape Shape) GraphNode {
 	flintNode := C.freshape(a.ref, nil, C.int(len(shape)))
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func min(a graphNode, b any) graphNode {
+func min(a GraphNode, b any) GraphNode {
 	// FIXME: any has to be float, double, int, long or graphNode type
 	//switch any(b).(type) {
 	//case graphNode:
@@ -313,10 +313,10 @@ func min(a graphNode, b any) graphNode {
 	//default:
 	//	panic("invalid type")
 	//}
-	return graphNode{ref: nil}
+	return GraphNode{ref: nil}
 }
 
-func max(a graphNode, b any) graphNode {
+func max(a GraphNode, b any) GraphNode {
 	// FIXME: any has to be float, double, int, long or graphNode type
 	//switch b.(type) {
 	//case graphNode:
@@ -332,100 +332,100 @@ func max(a graphNode, b any) graphNode {
 	//default:
 	//	panic("invalid type")
 	//}
-	return graphNode{ref: nil}
+	return GraphNode{ref: nil}
 }
 
-func ReduceSum(a graphNode, dim int) graphNode {
+func ReduceSum(a GraphNode, dim int) GraphNode {
 	flintNode := C.freduce_sum(a.ref, C.int(dim))
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func ReduceMul(a graphNode, dim int) graphNode {
+func ReduceMul(a GraphNode, dim int) GraphNode {
 	flintNode := C.freduce_mul(a.ref, C.int(dim))
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func ReduceMin(a graphNode, dim int) graphNode {
+func ReduceMin(a GraphNode, dim int) GraphNode {
 	flintNode := C.freduce_min(a.ref, C.int(dim))
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func ReduceMax(a graphNode, dim int) graphNode {
+func ReduceMax(a GraphNode, dim int) GraphNode {
 	flintNode := C.freduce_max(a.ref, C.int(dim))
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Slice(a graphNode, start Axes, end Axes) graphNode {
+func Slice(a GraphNode, start Axes, end Axes) GraphNode {
 	flintNode := C.fslice(a.ref, nil, nil)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func SliceWithStride(a graphNode, start Axes, end Axes, stride Stride) graphNode {
+func SliceWithStride(a GraphNode, start Axes, end Axes, stride Stride) GraphNode {
 	flintNode := C.fslice_step(a.ref, nil, nil, nil)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Extend(a graphNode, shape Shape, insertAt Axes) graphNode {
+func Extend(a GraphNode, shape Shape, insertAt Axes) GraphNode {
 	flintNode := C.fextend(a.ref, nil, nil)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func ExtendWithStride(a graphNode, shape Shape, insertAt Axes, stride Stride) graphNode {
+func ExtendWithStride(a GraphNode, shape Shape, insertAt Axes, stride Stride) GraphNode {
 	flintNode := C.fextend_step(a.ref, nil, nil, nil)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Concat(a graphNode, b graphNode, axis uint) graphNode {
+func Concat(a GraphNode, b GraphNode, axis uint) GraphNode {
 	flintNode := C.fconcat(a.ref, b.ref, C.uint(axis))
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Expand(a graphNode, axis uint, size uint) graphNode {
+func Expand(a GraphNode, axis uint, size uint) GraphNode {
 	flintNode := C.fexpand(a.ref, C.uint(axis), C.uint(size))
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Abs(a graphNode) graphNode {
+func Abs(a GraphNode) GraphNode {
 	flintNode := C.fabs_g(a.ref)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Repeat(a graphNode, repetitions Axes) graphNode {
+func Repeat(a GraphNode, repetitions Axes) GraphNode {
 	flintNode := C.frepeat(a.ref, nil)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Transpose(a graphNode, axes Axes) graphNode {
+func Transpose(a GraphNode, axes Axes) GraphNode {
 	flintNode := C.ftranspose(a.ref, nil)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Convolve(a graphNode, kernel graphNode, stride Stride) graphNode {
+func Convolve(a GraphNode, kernel GraphNode, stride Stride) GraphNode {
 	flintNode := C.fconvolve(a.ref, kernel.ref, nil)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Slide(a graphNode, kernel graphNode, stride Stride) graphNode {
+func Slide(a GraphNode, kernel GraphNode, stride Stride) GraphNode {
 	flintNode := C.fslide(a.ref, kernel.ref, nil)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Index(a graphNode, indices graphNode) graphNode {
+func Index(a GraphNode, indices GraphNode) GraphNode {
 	flintNode := C.findex(a.ref, indices.ref)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func IndexSet(a graphNode, b graphNode, indices graphNode) graphNode {
+func IndexSet(a GraphNode, b GraphNode, indices GraphNode) GraphNode {
 	flintNode := C.findex_set(a.ref, b.ref, indices.ref)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func SlidingWindow(a graphNode, size Shape, stride Stride) graphNode {
+func SlidingWindow(a GraphNode, size Shape, stride Stride) GraphNode {
 	flintNode := C.fsliding_window(a.ref, nil, nil)
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
 
-func Permute(a graphNode, axis uint) graphNode {
+func Permute(a GraphNode, axis uint) GraphNode {
 	flintNode := C.fpermutate(a.ref, C.uint(axis))
-	return graphNode{ref: flintNode}
+	return GraphNode{ref: flintNode}
 }
