@@ -10,17 +10,22 @@ func main() {
 	flint.SetLoggingLevel(flint.INFO)
 	flint.SetEagerExecution(false)
 
-	img := flint.LoadImage("../flint.png")
+	//img := flint.LoadImage("../flint.png")
+	img := flint.CreateGraphRandom(flint.Shape{3, 100, 100})
 
 	shape := flint.GetShape(img)
 	fmt.Println(shape)
 
 	h, w, c := shape[0], shape[1], shape[2]
 
-	var kernelData = []float32{1.0, 2.0}
+	var kernelData = []float32{
+		1.0 / 16.0, 1.0 / 8.0, 1.0 / 16.0,
+		1.0 / 8.0, 1.0 / 4.0, 1.0 / 8.0,
+		1.0 / 16.0, 1.0 / 8.0, 1.0 / 16.0,
+	}
 	kernel := flint.CreateGraph(kernelData, flint.Shape{3, 3})
 
-	img = flint.Transpose(img, flint.Axes{0, 1, 2})
+	//img = flint.Transpose(img, flint.Axes{0, 1, 2})
 
 	for i := 0; i < 500; i++ {
 		img = flint.Extend(
@@ -34,7 +39,7 @@ func main() {
 		// TODO: execute
 	}
 
-	img = flint.Transpose(img, flint.Axes{0, 1, 2})
+	//img = flint.Transpose(img, flint.Axes{0, 1, 2})
 
 	flint.StoreImage(img, "gauss.jpg", flint.JPEG)
 
