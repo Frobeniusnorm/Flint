@@ -26,7 +26,7 @@ func main() {
 	z := flint.Add(x, 5.0)
 	fmt.Println("z", z)
 
-	res := z.Result()
+	res := z.CalculateResult()
 	fmt.Println("res", res)
 
 	flint.Cleanup()

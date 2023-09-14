@@ -81,6 +81,15 @@ func Cleanup() {
 	C.flintCleanup()
 }
 
+func FreeGraph(a GraphNode) {
+	C.fFreeGraph(a.ref)
+}
+
+func CopyGraph(a GraphNode) GraphNode {
+	flintNode := C.fCopyGraph(a.ref)
+	return GraphNode{ref: flintNode}
+}
+
 func SetEagerExecution(turnOn bool) {
 	if turnOn == true {
 		C.fEnableEagerExecution()
@@ -127,13 +136,19 @@ func Logging(level loggingLevel, message string) {
 // Images
 /////////////
 
-type imageFormat int
+//type imageFormat int
+//
+//const (
+//	PNG imageFormat = iota
+//	JPEG
+//	BMP
+//)
 
-const (
-	PNG imageFormat = iota
-	JPEG
-	BMP
-)
+func LoadImage(path string) GraphNode {
+	unsafePath := C.CString(path)
+	flintNode := C.fload_image(unsafePath)
+	return GraphNode{ref: flintNode}
+}
 
 // /////////////
 // Utility functions
@@ -141,7 +156,7 @@ const (
 
 func getFlintType(obj any) C.enum_FType {
 	switch obj.(type) {
-	case int32, int:
+	case int32:
 		return C.F_INT32
 	case int64:
 		return C.F_INT64
@@ -204,18 +219,26 @@ func CreateGraphRandom(shape Shape) GraphNode {
 	return GraphNode{ref: flintNode}
 }
 
-func CreateGraphArrange(shape Shape) GraphNode {
+func CreateGraphArrange(shape Shape, axis int) GraphNode {
 	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
-	flintNode := C.farange(shapePtr, C.int(len(shape)))
+	flintNode := C.farange(shapePtr, C.int(len(shape)), C.int(axis))
 	return GraphNode{ref: flintNode}
 }
 
-func (a GraphNode) Result() Result {
+func (a GraphNode) CalculateResult() Result {
 	flintNode := C.fCalculateResult(a.ref)
 	return Result{
 		//shape: cToShape(flintNode.operation.shape),
 		data: flintNode.result_data.data,
 	}
+}
+
+func MarkGradientVariable(a GraphNode) {
+	C.fMarkGradientVariable(a.ref)
+}
+
+func UnmarkGradientVariable(a GraphNode) {
+	C.fUnmarkGradientVariable(a.ref)
 }
 
 type GradientContext struct{}
@@ -280,7 +303,7 @@ func Pow[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 	switch c := any(b).(type) {
 	case GraphNode:
 		flintNode = C.fpow_g(a.ref, c.ref)
-	case int32, int:
+	case int32:
 		flintNode = C.fpow_ci(a.ref, C.int(c))
 	case int64:
 		flintNode = C.fpow_cl(a.ref, C.long(c))
@@ -299,7 +322,7 @@ func Mul[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 	switch c := any(b).(type) {
 	case GraphNode:
 		flintNode = C.fmul_g(a.ref, c.ref)
-	case int32, int:
+	case int32:
 		flintNode = C.fmul_ci(a.ref, C.int(c))
 	case int64:
 		flintNode = C.fmul_cl(a.ref, C.long(c))
@@ -323,7 +346,7 @@ func Div[T Numeric | GraphNode](a T, b T) GraphNode {
 		switch y := any(b).(type) {
 		case GraphNode:
 			flintNode = C.fdiv_g(x.ref, y.ref)
-		case int32, int:
+		case int32:
 			flintNode = C.fdiv_ci(x.ref, C.int(y))
 		case int64:
 			flintNode = C.fdiv_cl(x.ref, C.long(y))
@@ -334,7 +357,7 @@ func Div[T Numeric | GraphNode](a T, b T) GraphNode {
 		default:
 			panic("invalid type")
 		}
-	case int32, int:
+	case int32:
 		if y, isNode := any(b).(GraphNode); isNode == true {
 			flintNode = C.fdiv_ici(C.int(x), y.ref)
 		} else {
@@ -342,19 +365,19 @@ func Div[T Numeric | GraphNode](a T, b T) GraphNode {
 		}
 	case int64:
 		if y, isNode := any(b).(GraphNode); isNode == true {
-			flintNode = C.fdiv_icl(C.int(x), y.ref)
+			flintNode = C.fdiv_icl(C.long(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
 	case float32:
 		if y, isNode := any(b).(GraphNode); isNode == true {
-			flintNode = C.fdiv_icf(C.int(x), y.ref)
+			flintNode = C.fdiv_icf(C.float(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
 	case float64:
 		if y, isNode := any(b).(GraphNode); isNode == true {
-			flintNode = C.fdiv_icl(C.int(x), y.ref)
+			flintNode = C.fdiv_icd(C.double(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
@@ -374,7 +397,7 @@ func Sub[T Numeric | GraphNode](a T, b T) GraphNode {
 		switch y := any(b).(type) {
 		case GraphNode:
 			flintNode = C.fsub_g(x.ref, y.ref)
-		case int32, int:
+		case int32:
 			flintNode = C.fsub_ci(x.ref, C.int(y))
 		case int64:
 			flintNode = C.fsub_cl(x.ref, C.long(y))
@@ -385,7 +408,7 @@ func Sub[T Numeric | GraphNode](a T, b T) GraphNode {
 		default:
 			panic("invalid type")
 		}
-	case int32, int:
+	case int32:
 		if y, isNode := any(b).(GraphNode); isNode == true {
 			flintNode = C.fsub_ici(C.int(x), y.ref)
 		} else {
@@ -393,19 +416,19 @@ func Sub[T Numeric | GraphNode](a T, b T) GraphNode {
 		}
 	case int64:
 		if y, isNode := any(b).(GraphNode); isNode == true {
-			flintNode = C.fsub_icl(C.int(x), y.ref)
+			flintNode = C.fsub_icl(C.long(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
 	case float32:
 		if y, isNode := any(b).(GraphNode); isNode == true {
-			flintNode = C.fsub_icf(C.int(x), y.ref)
+			flintNode = C.fsub_icf(C.float(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
 	case float64:
 		if y, isNode := any(b).(GraphNode); isNode == true {
-			flintNode = C.fsub_icl(C.int(x), y.ref)
+			flintNode = C.fsub_icd(C.double(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
@@ -490,7 +513,7 @@ func Equal[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 	switch c := any(b).(type) {
 	case GraphNode:
 		flintNode = C.fequal_g(a.ref, c.ref)
-	case int32, int:
+	case int32:
 		flintNode = C.fequal_ci(a.ref, C.int(c))
 	case int64:
 		flintNode = C.fequal_cl(a.ref, C.long(c))
@@ -509,7 +532,7 @@ func Greater[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 	switch c := any(b).(type) {
 	case GraphNode:
 		flintNode = C.fgreater_g(a.ref, c.ref)
-	case int32, int:
+	case int32:
 		flintNode = C.fgreater_ci(a.ref, C.int(c))
 	case int64:
 		flintNode = C.fgreater_cl(a.ref, C.long(c))
@@ -528,7 +551,7 @@ func Less[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 	switch c := any(b).(type) {
 	case GraphNode:
 		flintNode = C.fless_g(a.ref, c.ref)
-	case int32, int:
+	case int32:
 		flintNode = C.fless_ci(a.ref, C.int(c))
 	case int64:
 		flintNode = C.fless_cl(a.ref, C.long(c))
@@ -573,7 +596,7 @@ func Min[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 	switch c := any(b).(type) {
 	case GraphNode:
 		flintNode = C.fmin_g(a.ref, c.ref)
-	case int32, int:
+	case int32:
 		flintNode = C.fmin_ci(a.ref, C.int(c))
 	case int64:
 		flintNode = C.fmin_cl(a.ref, C.long(c))
@@ -592,7 +615,7 @@ func Max[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 	switch c := any(b).(type) {
 	case GraphNode:
 		flintNode = C.fmax_g(a.ref, c.ref)
-	case int32, int:
+	case int32:
 		flintNode = C.fmax_ci(a.ref, C.int(c))
 	case int64:
 		flintNode = C.fmax_cl(a.ref, C.long(c))
