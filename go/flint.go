@@ -42,14 +42,6 @@ type Stride []int32 // needs to have one entry for each dimension of tensor
 type Axes []int64   // needs to have one entry for each dimension of tensor
 type Shape []uint64 // needs to have one entry for each dimension of tensor
 
-func toC(data []byte) unsafe.Pointer {
-	return C.CBytes(data)
-}
-
-func fromC(ptr unsafe.Pointer, size int) []byte {
-	return C.GoBytes(ptr, C.int(size))
-}
-
 type tensorDataType uint32
 
 const (
@@ -136,93 +128,43 @@ func Logging(level loggingLevel, message string) {
 	C.flogging(C.enum_FLogType(level), unsafeMessage)
 }
 
-//////////////
+// ////////////
 // Images
-/////////////
+// ///////////
+type imageFormat int
 
-//type imageFormat int
-//
-//const (
-//	PNG imageFormat = iota
-//	JPEG
-//	BMP
-//)
+const (
+	PNG imageFormat = iota
+	JPEG
+	BMP
+)
 
 func LoadImage(path string) GraphNode {
 	unsafePath := C.CString(path)
+	defer C.free(unsafe.Pointer(unsafePath))
 	flintNode := C.fload_image(unsafePath)
 	return GraphNode(unsafe.Pointer(flintNode))
+}
+
+func StoreImage(node GraphNode, path string, format imageFormat) {
+	unsafePath := C.CString(path)
+	defer C.free(unsafe.Pointer(unsafePath))
+	C.fstore_image(graphRef(node), unsafePath, C.enum_FImageFormat(format))
 }
 
 // /////////////
 // Utility functions
 // ////////////
 
-func getFlintType(obj any) C.enum_FType {
-	switch obj.(type) {
-	case int32:
-		return C.F_INT32
-	case int64:
-		return C.F_INT64
-	case float32:
-		return C.F_FLOAT32
-	case float64:
-		return C.F_FLOAT64
-	default:
-		panic("invalid data type")
-	}
-}
-
-func cToShape(ptr *C.size_t) Shape {
-	return nil
+func GetShape(node GraphNode) Shape {
+	flintNode := graphRef(node)
+	shapePtr := unsafe.Pointer(flintNode.operation.shape)
+	shapeSize := int(flintNode.operation.dimensions)
+	return fromCToArray[uint64](shapePtr, shapeSize, F_INT64)
 }
 
 func describe(i any) {
 	fmt.Printf("describe (value, underlying type): (%v, %T)\n", i, i)
-}
-
-// /////////////
-// Creating and Executing Tensors
-// ////////////
-
-func CreateGraph[T Numeric](data []T, shape Shape) GraphNode {
-	datatype := F_FLOAT32
-	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
-
-	dataPtr := unsafe.Pointer(&data[0])
-	flintNode := C.fCreateGraph(dataPtr, C.int(len(data)), uint32(datatype), shapePtr, C.int(len(shape)))
-	return GraphNode(unsafe.Pointer(flintNode))
-}
-
-func CreateGraphConstant[T Numeric](value T, shape Shape) GraphNode {
-	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
-	var flintNode *C.FGraphNode
-	dimensions := C.int(len(shape))
-	switch v := any(value).(type) {
-	case int32:
-		flintNode = C.fconstant_i(C.int(v), shapePtr, dimensions)
-	case int64:
-		flintNode = C.fconstant_l(C.long(v), shapePtr, dimensions)
-	case float32:
-		flintNode = C.fconstant_f(C.float(v), shapePtr, dimensions)
-	case float64:
-		flintNode = C.fconstant_d(C.double(v), shapePtr, dimensions)
-	default:
-		panic("invalid data type")
-	}
-	return GraphNode(unsafe.Pointer(flintNode))
-}
-
-func CreateGraphRandom(shape Shape) GraphNode {
-	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
-	flintNode := C.frandom(shapePtr, C.int(len(shape)))
-	return GraphNode(unsafe.Pointer(flintNode))
-}
-
-func CreateGraphArrange(shape Shape, axis int) GraphNode {
-	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
-	flintNode := C.farange(shapePtr, C.int(len(shape)), C.int(axis))
-	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 //func arrayFromC[T Numeric | uint64 | uint32 | int | uint](length int, dataPtr unsafe.Pointer, dataType tensorDataType) []T {
@@ -296,6 +238,50 @@ func fromCToArray[T Numeric | uint64 | uint32 | int | uint](dataPtr unsafe.Point
 	}
 
 	return result
+}
+
+// /////////////
+// Creating and Executing Tensors
+// ////////////
+
+func CreateGraph[T Numeric](data []T, shape Shape) GraphNode {
+	datatype := F_FLOAT32
+	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
+
+	dataPtr := unsafe.Pointer(&data[0])
+	flintNode := C.fCreateGraph(dataPtr, C.int(len(data)), uint32(datatype), shapePtr, C.int(len(shape)))
+	return GraphNode(unsafe.Pointer(flintNode))
+}
+
+func CreateGraphConstant[T Numeric](value T, shape Shape) GraphNode {
+	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
+	var flintNode *C.FGraphNode
+	dimensions := C.int(len(shape))
+	switch v := any(value).(type) {
+	case int32:
+		flintNode = C.fconstant_i(C.int(v), shapePtr, dimensions)
+	case int64:
+		flintNode = C.fconstant_l(C.long(v), shapePtr, dimensions)
+	case float32:
+		flintNode = C.fconstant_f(C.float(v), shapePtr, dimensions)
+	case float64:
+		flintNode = C.fconstant_d(C.double(v), shapePtr, dimensions)
+	default:
+		panic("invalid data type")
+	}
+	return GraphNode(unsafe.Pointer(flintNode))
+}
+
+func CreateGraphRandom(shape Shape) GraphNode {
+	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
+	flintNode := C.frandom(shapePtr, C.int(len(shape)))
+	return GraphNode(unsafe.Pointer(flintNode))
+}
+
+func CreateGraphArrange(shape Shape, axis int) GraphNode {
+	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
+	flintNode := C.farange(shapePtr, C.int(len(shape)), C.int(axis))
+	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func CalculateResult[T Numeric](a GraphNode) Tensor[T] {

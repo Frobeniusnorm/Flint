@@ -7,26 +7,34 @@ import (
 
 func main() {
 	flint.Init(flint.BACKEND_BOTH)
-	flint.SetLoggingLevel(flint.VERBOSE)
-	fmt.Println("initialized backend (GO):", flint.InitializedBackend())
-	flint.Logging(flint.INFO, "testing logger in go")
-
+	flint.SetLoggingLevel(flint.INFO)
 	flint.SetEagerExecution(false)
-	fmt.Println("is eager exec (GO):", flint.IsEagerExecution())
 
-	//data1 := []float32{1.2, 2.0, 3.1, 4.2, 6, 2}
-	shape := flint.Shape{2, 3}
-	var x = flint.CreateGraphConstant[int32](1, shape)
-	fmt.Println("x", x)
-
-	var y = flint.CreateGraphConstant[int32](6, shape)
-	fmt.Println("y", y)
-
-	z := flint.Add(x, y)
-	fmt.Println("z", z)
-
-	res := flint.CalculateResult[int64](z)
-	fmt.Println("res", res)
-
-	flint.Cleanup()
+	img := flint.LoadImage("../flint.jpg")
+	fmt.Println(img)
+	//shape := flint.GetShape(img)
+	//h, w, c := shape[0], shape[1], shape[2]
+	//
+	//var kernelData = []float32{1.0, 2.0}
+	//kernel := flint.CreateGraph(kernelData, flint.Shape{3, 3})
+	//
+	//img = flint.Transpose(img, flint.Axes{0, 1, 2})
+	//
+	//for i := 0; i < 500; i++ {
+	//	img = flint.Extend(
+	//		img,
+	//		flint.Shape{c, w + 2, h + 2},
+	//		flint.Axes{0, 1, 1},
+	//	)
+	//
+	//	img = flint.Reshape(img, flint.Shape{c, w + 2, h + 2, 1})
+	//	img = flint.Convolve(img, kernel, flint.Stride{1, 1, 1})
+	//	// TODO: execute
+	//}
+	//
+	//img = flint.Transpose(img, flint.Axes{0, 1, 2})
+	//
+	//flint.StoreImage(img, "gauss.jpg", flint.JPEG)
+	//
+	//flint.Cleanup()
 }
