@@ -273,13 +273,13 @@ func CreateGraphConstant[T Numeric](value T, shape Shape) GraphNode {
 }
 
 func CreateGraphRandom(shape Shape) GraphNode {
-	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
+	shapePtr := shape.toC()
 	flintNode := C.frandom(shapePtr, C.int(len(shape)))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func CreateGraphArrange(shape Shape, axis int) GraphNode {
-	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
+	shapePtr := shape.toC()
 	flintNode := C.farange(shapePtr, C.int(len(shape)), C.int(axis))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
@@ -648,14 +648,13 @@ func FlattenDim(a GraphNode, dim int) GraphNode {
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
-func Convert[T Numeric](a GraphNode, newType T) GraphNode {
-	newTypeXXXXX := uint32(C.F_INT32)
-	flintNode := C.fconvert(graphRef(a), newTypeXXXXX)
+func Convert[T Numeric](a GraphNode, newType tensorDataType) GraphNode {
+	flintNode := C.fconvert(graphRef(a), C.enum_FType(newType))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func Reshape(a GraphNode, shape Shape) GraphNode {
-	flintNode := C.freshape(graphRef(a), nil, C.int(len(shape)))
+	flintNode := C.freshape(graphRef(a), shape.toC(), C.int(len(shape)))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
@@ -679,7 +678,7 @@ func Min[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 }
 
 func Max[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
-	var flintNode *C.FGraphNode = nil
+	var flintNode *C.FGraphNode = nil // FIXME: can i replace this type var?
 	switch c := any(b).(type) {
 	case GraphNode:
 		flintNode = C.fmax_g(graphRef(a), graphRef(c))
@@ -694,7 +693,7 @@ func Max[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 	default:
 		panic("invalid type")
 	}
-	return GraphNode(unsafe.Pointer(flintNode))
+	return GraphNode(flintNode)
 }
 
 func ReduceSum(a GraphNode, dim int) GraphNode {
@@ -718,22 +717,22 @@ func ReduceMax(a GraphNode, dim int) GraphNode {
 }
 
 func Slice(a GraphNode, start Axes, end Axes) GraphNode {
-	flintNode := C.fslice(graphRef(a), nil, nil)
+	flintNode := C.fslice(graphRef(a), start.toC(), end.toC())
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func SliceWithStride(a GraphNode, start Axes, end Axes, stride Stride) GraphNode {
-	flintNode := C.fslice_step(graphRef(a), nil, nil, nil)
+	flintNode := C.fslice_step(graphRef(a), start.toC(), end.toC(), stride.toC())
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func Extend(a GraphNode, shape Shape, insertAt Axes) GraphNode {
-	flintNode := C.fextend(graphRef(a), nil, nil)
+	flintNode := C.fextend(graphRef(a), shape.toC(), insertAt.toC())
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func ExtendWithStride(a GraphNode, shape Shape, insertAt Axes, stride Stride) GraphNode {
-	flintNode := C.fextend_step(graphRef(a), nil, nil, nil)
+	flintNode := C.fextend_step(graphRef(a), shape.toC(), insertAt.toC(), stride.toC())
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
@@ -753,22 +752,22 @@ func Abs(a GraphNode) GraphNode {
 }
 
 func Repeat(a GraphNode, repetitions Axes) GraphNode {
-	flintNode := C.frepeat(graphRef(a), nil)
+	flintNode := C.frepeat(graphRef(a), repetitions.toC())
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func Transpose(a GraphNode, axes Axes) GraphNode {
-	flintNode := C.ftranspose(graphRef(a), nil)
+	flintNode := C.ftranspose(graphRef(a), axes.toC())
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func Convolve(a GraphNode, kernel GraphNode, stride Stride) GraphNode {
-	flintNode := C.fconvolve(graphRef(a), graphRef(kernel), nil)
+	flintNode := C.fconvolve(graphRef(a), graphRef(kernel), stride.toC())
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func Slide(a GraphNode, kernel GraphNode, stride Stride) GraphNode {
-	flintNode := C.fslide(graphRef(a), graphRef(kernel), nil)
+	flintNode := C.fslide(graphRef(a), graphRef(kernel), stride.toC())
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
@@ -783,7 +782,7 @@ func IndexSet(a GraphNode, b GraphNode, indices GraphNode) GraphNode {
 }
 
 func SlidingWindow(a GraphNode, size Shape, stride Stride) GraphNode {
-	flintNode := C.fsliding_window(graphRef(a), nil, nil)
+	flintNode := C.fsliding_window(graphRef(a), size.toC(), stride.toC())
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 

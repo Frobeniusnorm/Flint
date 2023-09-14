@@ -76,6 +76,10 @@ The following "modern" C features do not work with cgo, all code needs to be in 
 - https://dave.cheney.net/2016/01/18/cgo-is-not-go
 - TO THE
   SAVE: https://stackoverflow.com/questions/72332541/how-do-i-make-golang-cgo-to-use-g-linker-for-a-c-static-library-with-extern
+- c++ exception handling:
+    - https://artem.krylysov.com/blog/2017/04/13/handling-cpp-exceptions-in-go/
+    - https://github.com/golang/go/issues/12516
+    - https://stackoverflow.com/questions/63185359/how-to-catch-the-c-c-lib-exceptions-in-go-code
 
 ## Checking for memory safety
 
