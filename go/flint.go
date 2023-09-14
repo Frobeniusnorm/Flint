@@ -198,12 +198,40 @@ func CreateGraphConstant[T Numeric](value T, shape Shape) GraphNode {
 	}
 }
 
+func CreateGraphRandom(shape Shape) GraphNode {
+	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
+	flintNode := C.frandom(shapePtr, C.int(len(shape)))
+	return GraphNode{ref: flintNode}
+}
+
+func CreateGraphArrange(shape Shape) GraphNode {
+	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
+	flintNode := C.farange(shapePtr, C.int(len(shape)))
+	return GraphNode{ref: flintNode}
+}
+
 func (a GraphNode) Result() Result {
 	flintNode := C.fCalculateResult(a.ref)
 	return Result{
 		//shape: cToShape(flintNode.operation.shape),
 		data: flintNode.result_data.data,
 	}
+}
+
+type GradientContext struct{}
+
+func (_ GradientContext) Start() {
+	C.fStartGradientContext()
+}
+
+func (_ GradientContext) Stop() {
+	C.fStopGradientContext()
+}
+
+func (_ GradientContext) Active() bool {
+	res := C.fIsGradientContext()
+	fmt.Println("is grad ctx:", res)
+	return false
 }
 
 func (a GraphNode) Serialize() []byte {
