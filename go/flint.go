@@ -261,7 +261,7 @@ func fromCToArray[T Numeric | uint64 | uint32 | int | uint](dataPtr unsafe.Point
 		for i := 0; i < length; i++ {
 			relevantData := data[i*elementSize : i*elementSize+elementSize]
 			x := binary.LittleEndian.Uint32(relevantData)
-			result[i] = any(x).(T)
+			result[i] = T(x)
 		}
 	case F_INT64:
 		var data []byte = C.GoBytes(dataPtr, C.int(length*C.sizeof_long))
@@ -269,7 +269,7 @@ func fromCToArray[T Numeric | uint64 | uint32 | int | uint](dataPtr unsafe.Point
 		for i := 0; i < length; i++ {
 			relevantData := data[i*elementSize : i*elementSize+elementSize]
 			x := binary.LittleEndian.Uint64(relevantData)
-			result[i] = any(x).(T)
+			result[i] = T(x)
 		}
 
 	case F_FLOAT32:
@@ -279,7 +279,7 @@ func fromCToArray[T Numeric | uint64 | uint32 | int | uint](dataPtr unsafe.Point
 			relevantData := data[i*elementSize : i*elementSize+elementSize]
 			bits := binary.LittleEndian.Uint32(relevantData)
 			x := math.Float32frombits(bits)
-			result[i] = any(x).(T)
+			result[i] = T(x)
 		}
 
 	case F_FLOAT64:
@@ -289,7 +289,7 @@ func fromCToArray[T Numeric | uint64 | uint32 | int | uint](dataPtr unsafe.Point
 			relevantData := data[i*elementSize : i*elementSize+elementSize]
 			bits := binary.LittleEndian.Uint64(relevantData)
 			x := math.Float64frombits(bits)
-			result[i] = any(x).(T)
+			result[i] = T(x)
 		}
 	default:
 		panic("invalid type")
