@@ -14,8 +14,8 @@ func main() {
 	flint.SetEagerExecution(false)
 	fmt.Println("is eager exec (GO):", flint.IsEagerExecution())
 
-	data1 := []float32{1.2, 2.0, 3.1, 4.2}
-	shape := flint.Shape{2, 2}
+	data1 := []float32{1.2, 2.0, 3.1, 4.2, 6, 2}
+	shape := flint.Shape{2, 3}
 	var x = flint.CreateGraph(data1, shape)
 	fmt.Println("x", x)
 

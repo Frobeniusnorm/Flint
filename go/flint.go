@@ -8,7 +8,9 @@ package flint
 */
 import "C"
 import (
+	"encoding/binary"
 	"fmt"
+	"math"
 	"unsafe"
 )
 
@@ -32,10 +34,9 @@ func graphRef(a GraphNode) *C.FGraphNode {
 	return (*C.FGraphNode)(a)
 }
 
-type tensorDataType interface {
+type Numeric interface {
 	~int32 | ~int64 | ~float32 | ~float64
 }
-type Numeric tensorDataType
 
 type Stride []int32 // needs to have one entry for each dimension of tensor
 type Axes []int64   // needs to have one entry for each dimension of tensor
@@ -49,8 +50,10 @@ func fromC(ptr unsafe.Pointer, size int) []byte {
 	return C.GoBytes(ptr, C.int(size))
 }
 
+type tensorDataType uint32
+
 const (
-	F_INT32 uint32 = iota
+	F_INT32 tensorDataType = iota
 	F_INT64
 	F_FLOAT32
 	F_FLOAT64
@@ -187,7 +190,7 @@ func CreateGraph[T Numeric](data []T, shape Shape) GraphNode {
 	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
 
 	dataPtr := unsafe.Pointer(&data[0])
-	flintNode := C.fCreateGraph(dataPtr, C.int(len(data)), datatype, shapePtr, C.int(len(shape)))
+	flintNode := C.fCreateGraph(dataPtr, C.int(len(data)), uint32(datatype), shapePtr, C.int(len(shape)))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
@@ -222,20 +225,94 @@ func CreateGraphArrange(shape Shape, axis int) GraphNode {
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
+//func arrayFromC[T Numeric | uint64 | uint32 | int | uint](length int, dataPtr unsafe.Pointer, dataType tensorDataType) []T {
+//	var sizeOf int
+//	switch dataType {
+//	case F_INT32:
+//		sizeOf = int(C.sizeof_int)
+//	case F_INT64:
+//		sizeOf = int(C.sizeof_long)
+//	case F_FLOAT32:
+//		sizeOf = int(C.sizeof_float)
+//	case F_FLOAT64:
+//		sizeOf = int(C.sizeof_double)
+//	default:
+//		panic("invalid type")
+//	}
+//
+//	var result = make([]T, length)
+//	//voidPtr := (*C.void)(dataPtr)
+//	for i := 0; i < length; i++ {
+//		//x := *(voidPtr + C.int(i)) // add sizeof?
+//		//x := unsafe.Pointer(dataPtr + C.int(i))
+//		x := dataPtr + i*sizeOf
+//		result[i] = T(x)
+//	}
+//	return result
+//}
+
+func fromCToArray[T Numeric | uint64 | uint32 | int | uint](dataPtr unsafe.Pointer, length int, dataType tensorDataType) []T {
+	var result = make([]T, length)
+
+	switch dataType {
+	case F_INT32:
+		var data []byte = C.GoBytes(dataPtr, C.int(length*C.sizeof_int))
+		elementSize := len(data) / length
+		for i := 0; i < length; i++ {
+			relevantData := data[i*elementSize : i*elementSize+elementSize]
+			x := binary.LittleEndian.Uint32(relevantData)
+			result[i] = any(x).(T)
+		}
+	case F_INT64:
+		var data []byte = C.GoBytes(dataPtr, C.int(length*C.sizeof_long))
+		elementSize := len(data) / length
+		for i := 0; i < length; i++ {
+			relevantData := data[i*elementSize : i*elementSize+elementSize]
+			x := binary.LittleEndian.Uint64(relevantData)
+			result[i] = any(x).(T)
+		}
+
+	case F_FLOAT32:
+		var data []byte = C.GoBytes(dataPtr, C.int(length*C.sizeof_float))
+		elementSize := len(data) / length
+		for i := 0; i < length; i++ {
+			relevantData := data[i*elementSize : i*elementSize+elementSize]
+			bits := binary.LittleEndian.Uint32(relevantData)
+			x := math.Float32frombits(bits)
+			result[i] = any(x).(T)
+		}
+
+	case F_FLOAT64:
+		var data []byte = C.GoBytes(dataPtr, C.int(length*C.sizeof_double))
+		elementSize := len(data) / length
+		for i := 0; i < length; i++ {
+			relevantData := data[i*elementSize : i*elementSize+elementSize]
+			bits := binary.LittleEndian.Uint64(relevantData)
+			x := math.Float64frombits(bits)
+			result[i] = any(x).(T)
+		}
+	default:
+		panic("invalid type")
+	}
+
+	return result
+}
+
 func CalculateResult[T Numeric](a GraphNode) Tensor[T] {
 	flintNode := C.fCalculateResult(graphRef(a))
-	resultSize := int(flintNode.result_data.num_entries)
+
+	dataSize := int(flintNode.result_data.num_entries)
 	dataPtr := unsafe.Pointer(flintNode.result_data.data)
+	shapePtr := unsafe.Pointer(flintNode.operation.shape)
+	shapeSize := int(flintNode.operation.dimensions)
 
-	var byteData = C.GoBytes(dataPtr, C.int(resultSize*C.sizeof_float))
-	fmt.Println("bye data", byteData)
-	fmt.Println("res size", resultSize)
+	dataType := tensorDataType(flintNode.operation.data_type)
 
-	var data = []T{1, 2, 3}
-	var shape = Shape{3}
+	var result = fromCToArray[T](dataPtr, dataSize, dataType)
+	var shape = Shape(fromCToArray[uint64](shapePtr, shapeSize, F_INT64))
 
 	return Tensor[T]{
-		data:  data,
+		data:  result,
 		shape: shape,
 	}
 }
@@ -585,7 +662,7 @@ func FlattenDim(a GraphNode, dim int) GraphNode {
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
-func Convert[T tensorDataType](a GraphNode, newType T) GraphNode {
+func Convert[T Numeric](a GraphNode, newType T) GraphNode {
 	newTypeXXXXX := uint32(C.F_INT32)
 	flintNode := C.fconvert(graphRef(a), newTypeXXXXX)
 	return GraphNode(unsafe.Pointer(flintNode))
