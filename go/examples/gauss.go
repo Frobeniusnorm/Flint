@@ -9,7 +9,7 @@ func main() {
 	flint.Init(flint.BACKEND_BOTH)
 	flint.SetLoggingLevel(flint.VERBOSE)
 	fmt.Println("initialized backend (GO):", flint.InitializedBackend())
-	flint.Log(flint.INFO, "testing logger in go")
+	flint.Logging(flint.INFO, "testing logger in go")
 
 	flint.SetEagerExecution(false)
 	fmt.Println("is eager exec (GO):", flint.IsEagerExecution())
