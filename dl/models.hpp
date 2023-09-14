@@ -105,13 +105,13 @@ template <GenericLayer... T> struct SequentialModel {
    *    `batch_size` slices in the first dimension of the input data and each
    *    batch has to be passed through the model once per epoch).
    * - `batch_size` Size of each batch. A batch is a slice of the first
-   *    dimension of the input data. The input is shuffeled every epoch, which is
-   *    important if your batch size is smaller then your input size. The weights
-   *    of the model are optimized per batch that was passed through the model.
-   *    Meaning small batch sizes lead to faster convergence (since more
+   *    dimension of the input data. The input is shuffeled every epoch, which
+   * is important if your batch size is smaller then your input size. The
+   * weights of the model are optimized per batch that was passed through the
+   * model. Meaning small batch sizes lead to faster convergence (since more
    *    optimizations are executed) but to more noise and variance, since each
-   *    batch is only an approximation of the complete dataset. If training times
-   *    don't matter we suggest full gradient descent (meaning `batch_size =
+   *    batch is only an approximation of the complete dataset. If training
+   * times don't matter we suggest full gradient descent (meaning `batch_size =
    *    input_size`), else finetune this value to your usecase.
    */
   template <typename T1, unsigned int n1, typename T2, unsigned int n2,
@@ -160,9 +160,6 @@ template <GenericLayer... T> struct SequentialModel {
           flat_vars.insert(flat_vars.end(), vars[i].begin(), vars[i].end());
         std::vector<FGraphNode *> grads(flat_vars.size());
         // calculate gradients
-#ifdef FLINT_DL_PROFILE
-        auto start = std::chrono::high_resolution_clock::now();
-#endif
         fCalculateGradients(error.get_graph_node(), flat_vars.data(),
                             flat_vars.size(), grads.data());
         // reconstruct for layers
@@ -174,13 +171,6 @@ template <GenericLayer... T> struct SequentialModel {
             plgrads[i][j] = fExecuteGraph(grads[index++]);
           }
         }
-#ifdef FLINT_DL_PROFILE
-        OCLCompilerThread::memory_barrier();
-        std::chrono::duration<double, std::milli> elapsed =
-            std::chrono::high_resolution_clock::now() - start;
-        flogging(F_INFO, "Calculating gradients took " +
-                             std::to_string(elapsed.count()) + "ms");
-#endif
         backward<0>(plgrads);
         // calculate error value
         double local_error = (double)(error.reduce_sum()[0]);
@@ -228,17 +218,7 @@ private:
   template <int n>
   void backward(const std::vector<std::vector<FGraphNode *>> grads) {
     if constexpr (n < sizeof...(T)) {
-#ifdef FLINT_DL_PROFILE
-      auto start = std::chrono::high_resolution_clock::now();
-#endif
       std::get<n>(layers).optimize_weights(grads[n]);
-#ifdef FLINT_DL_PROFILE
-      OCLCompilerThread::memory_barrier();
-      std::chrono::duration<double, std::milli> elapsed =
-          std::chrono::high_resolution_clock::now() - start;
-      flogging(F_INFO, std::get<n>(layers).name() + " backwards took " +
-                           std::to_string(elapsed.count()) + "ms");
-#endif
       backward<n + 1>(grads);
     }
   }
@@ -270,18 +250,7 @@ private:
   template <int layer, typename T2, unsigned int n2, typename T1,
             unsigned int n1>
   Tensor<T2, n2> forward_helper(Tensor<T1, n1> &in) {
-#ifdef FLINT_DL_PROFILE
-    auto start = std::chrono::high_resolution_clock::now();
-#endif
     auto out = std::get<layer>(layers).forward(in);
-#ifdef FLINT_DL_PROFILE
-    out.execute();
-    OCLCompilerThread::memory_barrier();
-    std::chrono::duration<double, std::milli> elapsed =
-        std::chrono::high_resolution_clock::now() - start;
-    flogging(F_INFO, std::get<layer>(layers).name() + " took " +
-                         std::to_string(elapsed.count()) + "ms");
-#endif
     if constexpr (layer == sizeof...(T) - 1)
       return out;
     else

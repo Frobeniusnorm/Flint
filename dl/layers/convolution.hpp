@@ -12,7 +12,8 @@ enum PaddingMode { NO_PADDING };
  * multiplied with the elements of the input tensor with which it is currently
  * aligned and the result (with shape of the filter) is summed up to a single
  * value in the resulting tensor. After that the filter is moved by its step
- * size in each dimension and the process repeats.
+ * size in each dimension and the process repeats. After the convolution is
+ * calculated a learnable bias is added to the result per filter.
  *
  * TLDR; Each element in the result of this layer is a full multiplication of a
  * filter with a corresponding window in the input array. This is especially
@@ -41,7 +42,7 @@ enum PaddingMode { NO_PADDING };
  *   ceil((input_shape - kernel_size + 1) / steps), filters) =
  *   (100, 49, 49, 10)`.
  */
-template <int n> class Convolution : public Layer<n> {
+template <int n> class Convolution : public Layer<n, 1> {
   constexpr std::array<size_t, n> weight_shape(unsigned int filters,
                                                unsigned int kernel_size,
                                                size_t units_in) {
@@ -68,20 +69,25 @@ public:
    * - `filters` number of used filters (size of last dimension of the result
    *    tensor)
    * - `kernel_size` size of filters
-   * - `init` Initializer for filters, has to implement the `Initializer`
+   * - `weight_init` Initializer for filters, has to implement the `Initializer`
    *    concept, should generate random values close to a normal distribution
+   * - `bias_init` Initializer for the bias, has to implement the `Initializer`
+   *    concept, should generate small values, constant values like `0` are fine
    * - `stride` step size per dimension (2 dimensions less then the input
-   *    tensor, since the convolution is broadcasted along the `batch_size` and the
-   *    channels in the last dimension are fully reduced)
+   *    tensor, since the convolution is broadcasted along the `batch_size` and
+   *    the channels in the last dimension are fully reduced)
    * - `padding_mode` which type of padding to use (see `PaddingMode` for more
    *    information)
    */
-  template <Initializer InitWeights>
+  template <Initializer InitWeights, Initializer InitBias>
   Convolution(size_t units_in, unsigned int filters, unsigned int kernel_size,
-              InitWeights init, std::array<unsigned int, n - 2> stride,
+              InitWeights weight_init, InitBias bias_init,
+              std::array<unsigned int, n - 2> stride,
               PaddingMode padding_mode = NO_PADDING)
-      : Layer<n>(init.template initialize<double>(
-            weight_shape(filters, kernel_size, units_in))),
+      : Layer<n, 1>(weight_init.template initialize<double>(
+                        weight_shape(filters, kernel_size, units_in)),
+                    bias_init.template initialize<double>(
+                        std::array<size_t, 1>{filters})),
         padding_mode(padding_mode), kernel_size(kernel_size) {
     initialize_precalc(stride);
   }
@@ -92,8 +98,8 @@ public:
    *    tensor)
    * - `kernel_size` size of filters
    * - `stride` step size per dimension (2 dimensions less then the input
-   *    tensor, since the convolution is broadcasted along the `batch_size` and the
-   *    channels in the last dimension are fully reduced)
+   *    tensor, since the convolution is broadcasted along the `batch_size` and
+   *    the channels in the last dimension are fully reduced)
    * - `padding_mode` which type of padding to use (see `PaddingMode` for more
    *    information)
    *
@@ -102,8 +108,10 @@ public:
   Convolution(size_t units_in, unsigned int filters, unsigned int kernel_size,
               std::array<unsigned int, n - 2> stride,
               PaddingMode padding_mode = NO_PADDING)
-      : Layer<n>(GlorotUniform().template initialize<double>(
-            weight_shape(filters, kernel_size, units_in))),
+      : Layer<n, 1>(GlorotUniform().template initialize<double>(
+                        weight_shape(filters, kernel_size, units_in)),
+                    ConstantInitializer().template initialize<double>(
+                        std::array<size_t, 1>{filters})),
         padding_mode(padding_mode), kernel_size(kernel_size) {
 
     initialize_precalc(stride);
@@ -140,9 +148,19 @@ public:
       local_res.execute();
       res = i == 0 ? local_res : Flint::concat(res, local_res, n - 1);
     }
+    // repeat bias to the shape of res and add
+    std::array<size_t, n> bias_shape;
+    bias_shape[0] = 1;
+    for (int i = 1; i < n; i++)
+      bias_shape[i] = 1;
+    Tensor<double, n> bias = Layer<n>::template get_weight<1>().reshape_array(bias_shape);
+    std::array<int, n> bias_repeat;
+    bias_repeat[0] = 0;
+    for (int i = 1; i < n; i++)
+      bias_repeat[i] = res.get_shape()[i] - 1;
+    res = res + bias.repeat_array(bias_repeat);
     return res;
   }
 };
 /** For inputs of images with shape `(batch_size, width, height, channels)` */
-typedef Convolution<4> Conv2D; 
-                               
+typedef Convolution<4> Conv2D;
