@@ -5,6 +5,11 @@ package flint
 #cgo LDFLAGS: -lflint -lOpenCL -lstdc++
 #include <stdlib.h>  // needed for C.free!
 #include "../flint.h"
+
+// FIXME: remove after bug fix
+size_t img_shape[] = {30, 30, 3};
+size_t kernel_shape[] = {3,3,3};
+unsigned int steps[] = { 1, 1, 1 };
 */
 import "C"
 import (
@@ -13,6 +18,25 @@ import (
 	"math"
 	"unsafe"
 )
+
+func TestConv() {
+	C.flintInit(C.int(1))
+	C.fEnableEagerExecution()
+
+	img_shape := []C.size_t{30, 30, 3}
+	kernel_shape := []C.size_t{3, 3, 3}
+	steps := []C.uint{1, 1, 1}
+	var img *C.FGraphNode = C.fconstant_i(4, &(img_shape[0]), C.int(3))
+	var kernel *C.FGraphNode = C.fconstant_i(4, &(kernel_shape[0]), C.int(3))
+	var conv *C.FGraphNode = C.fconvolve(img, kernel, &(steps[0]))
+
+	// FIXME: FOUND THE BUG!!! Casting go arrays to C causes the FPE error!!!
+	//var img *C.FGraphNode = C.fconstant_i(4, &C.img_shape[0], C.int(3))
+	//var kernel *C.FGraphNode = C.fconstant_i(4, &C.kernel_shape[0], C.int(3))
+	//var conv *C.FGraphNode = C.fconvolve(img, kernel, &C.steps[0])
+
+	fmt.Println(conv)
+}
 
 ///////////////
 // Types and Structs
@@ -61,10 +85,10 @@ type cNumbers interface {
 	C.int | C.size_t | C.long | C.uint | C.float | C.double
 }
 
-func convertArray[In completeNumbers, Out completeNumbers](arr []In) []Out {
+func convertArray[In completeNumbers, Out completeNumbers | cNumbers](arr []In) []Out {
 	result := make([]Out, len(arr))
 	for idx, val := range arr {
-		result[idx] = Out(val)
+		result[idx] = Out(val) // FIXME: this type bug!
 	}
 	return result
 }
@@ -291,16 +315,16 @@ func CreateGraphConstant[T Numeric](value T, shape Shape) GraphNode {
 }
 
 func CreateGraphRandom(shape Shape) GraphNode {
-	newShape := convertArray[uint, uint64](shape)
-	shapePtr := (*C.size_t)(unsafe.Pointer(&newShape[0]))
-	flintNode := C.frandom(shapePtr, C.int(len(shape)))
+	newShape := convertArray[uint, C.size_t](shape)
+
+	flintNode := C.frandom(&(newShape[0]), C.int(len(shape)))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func CreateGraphArrange(shape Shape, axis int) GraphNode {
-	newShape := convertArray[uint, uint64](shape)
-	shapePtr := (*C.size_t)(unsafe.Pointer(&newShape[0]))
-	flintNode := C.farange(shapePtr, C.int(len(shape)), C.int(axis))
+	newShape := convertArray[uint, C.size_t](shape)
+
+	flintNode := C.farange(&(newShape[0]), C.int(len(shape)), C.int(axis))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
@@ -679,9 +703,9 @@ func Convert[T Numeric](a GraphNode, newType tensorDataType) GraphNode {
 }
 
 func Reshape(a GraphNode, shape Shape) GraphNode {
-	newShape := convertArray[uint, uint64](shape)
-	shapePtr := (*C.size_t)(unsafe.Pointer(&newShape[0]))
-	flintNode := C.freshape(graphRef(a), shapePtr, C.int(len(shape)))
+	newShape := convertArray[uint, C.size_t](shape)
+
+	flintNode := C.freshape(graphRef(a), &(newShape[0]), C.int(len(shape)))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
@@ -744,46 +768,36 @@ func ReduceMax(a GraphNode, dim int) GraphNode {
 }
 
 func Slice(a GraphNode, start Axes, end Axes) GraphNode {
-	newStart := convertArray[uint, int64](start)
-	startPtr := (*C.long)(unsafe.Pointer(&newStart[0]))
-	newEnd := convertArray[uint, int64](end)
-	endPtr := (*C.long)(unsafe.Pointer(&newEnd[0]))
+	newStart := convertArray[uint, C.long](start)
+	newEnd := convertArray[uint, C.long](end)
 
-	flintNode := C.fslice(graphRef(a), startPtr, endPtr)
+	flintNode := C.fslice(graphRef(a), &(newStart[0]), &(newEnd[0]))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func SliceWithStride(a GraphNode, start Axes, end Axes, stride Stride) GraphNode {
-	newStart := convertArray[uint, int64](start)
-	startPtr := (*C.long)(unsafe.Pointer(&newStart[0]))
-	newEnd := convertArray[uint, int64](end)
-	endPtr := (*C.long)(unsafe.Pointer(&newEnd[0]))
-	newStride := convertArray[int, int64](stride)
-	stridePtr := (*C.long)(unsafe.Pointer(&newStride[0]))
+	newStart := convertArray[uint, C.long](start)
+	newEnd := convertArray[uint, C.long](end)
+	newStride := convertArray[int, C.long](stride)
 
-	flintNode := C.fslice_step(graphRef(a), startPtr, endPtr, stridePtr)
+	flintNode := C.fslice_step(graphRef(a), &(newStart[0]), &(newEnd[0]), &(newStride[0]))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func Extend(a GraphNode, shape Shape, insertAt Axes) GraphNode {
-	newShape := convertArray[uint, uint64](shape)
-	shapePtr := (*C.size_t)(unsafe.Pointer(&newShape[0]))
-	newInsertAt := convertArray[uint, uint64](insertAt)
-	insertAtPtr := (*C.size_t)(unsafe.Pointer(&newInsertAt[0]))
+	newShape := convertArray[uint, C.size_t](shape)
+	newInsertAt := convertArray[uint, C.size_t](insertAt)
 
-	flintNode := C.fextend(graphRef(a), shapePtr, insertAtPtr)
+	flintNode := C.fextend(graphRef(a), &(newShape[0]), &(newInsertAt[0]))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func ExtendWithStride(a GraphNode, shape Shape, insertAt Axes, stride Stride) GraphNode {
-	newShape := convertArray[uint, uint64](shape)
-	shapePtr := (*C.size_t)(unsafe.Pointer(&newShape[0]))
-	newInsertAt := convertArray[uint, uint64](insertAt)
-	insertAtPtr := (*C.size_t)(unsafe.Pointer(&newInsertAt[0]))
-	newStride := convertArray[int, int64](stride)
-	stridePtr := (*C.long)(unsafe.Pointer(&newStride[0]))
+	newShape := convertArray[uint, C.size_t](shape)
+	newInsertAt := convertArray[uint, C.size_t](insertAt)
+	newStride := convertArray[int, C.long](stride)
 
-	flintNode := C.fextend_step(graphRef(a), shapePtr, insertAtPtr, stridePtr)
+	flintNode := C.fextend_step(graphRef(a), &(newShape[0]), &(newInsertAt[0]), &(newStride[0]))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
@@ -803,34 +817,30 @@ func Abs(a GraphNode) GraphNode {
 }
 
 func Repeat(a GraphNode, repetitions Axes) GraphNode {
-	newRepetitions := convertArray[uint, int](repetitions)
-	repetitionsPtr := (*C.int)(unsafe.Pointer(&newRepetitions[0]))
+	newRepetitions := convertArray[uint, C.int](repetitions)
 
-	flintNode := C.frepeat(graphRef(a), repetitionsPtr)
+	flintNode := C.frepeat(graphRef(a), &(newRepetitions[0]))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func Transpose(a GraphNode, axes Axes) GraphNode {
-	newAxes := convertArray[uint, int](axes)
-	axesPtr := (*C.int)(unsafe.Pointer(&newAxes[0]))
+	newAxes := convertArray[uint, C.int](axes)
 
-	flintNode := C.ftranspose(graphRef(a), axesPtr)
+	flintNode := C.ftranspose(graphRef(a), &(newAxes[0]))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func Convolve(a GraphNode, kernel GraphNode, stride Stride) GraphNode {
-	newStride := convertArray[int, uint](stride)
-	stridePtr := (*C.uint)(unsafe.Pointer(&newStride[0]))
+	newStride := convertArray[int, C.uint](stride)
 
-	flintNode := C.fconvolve(graphRef(a), graphRef(kernel), stridePtr)
+	flintNode := C.fconvolve(graphRef(a), graphRef(kernel), &(newStride[0]))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func Slide(a GraphNode, kernel GraphNode, stride Stride) GraphNode {
-	newStride := convertArray[int, uint](stride)
-	stridePtr := (*C.uint)(unsafe.Pointer(&newStride[0]))
+	newStride := convertArray[int, C.uint](stride)
 
-	flintNode := C.fslide(graphRef(a), graphRef(kernel), stridePtr)
+	flintNode := C.fslide(graphRef(a), graphRef(kernel), &(newStride[0]))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
@@ -845,13 +855,10 @@ func IndexSet(a GraphNode, b GraphNode, indices GraphNode) GraphNode {
 }
 
 func SlidingWindow(a GraphNode, size Shape, stride Stride) GraphNode {
-	newSize := convertArray[uint, uint64](size)
-	sizePtr := (*C.size_t)(unsafe.Pointer(&newSize[0]))
+	newSize := convertArray[uint, C.size_t](size)
+	newStride := convertArray[int, C.uint](stride)
 
-	newStride := convertArray[int, uint](stride)
-	stridePtr := (*C.uint)(unsafe.Pointer(&newStride[0]))
-
-	flintNode := C.fsliding_window(graphRef(a), sizePtr, stridePtr)
+	flintNode := C.fsliding_window(graphRef(a), &(newSize[0]), &(newStride[0]))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 

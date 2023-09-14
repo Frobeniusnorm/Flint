@@ -5,15 +5,18 @@ import (
 	"fmt"
 )
 
+func main2() {
+	flint.TestConv()
+}
+
 func main() {
-	flint.Init(flint.BACKEND_BOTH)
+	flint.Init(flint.BACKEND_ONLY_CPU)
 	flint.SetLoggingLevel(flint.INFO)
 	flint.SetEagerExecution(false)
 
 	//img := flint.LoadImage("../flint.png")
-	img := flint.CreateGraphRandom(flint.Shape{30, 30, 30})
-
-	fmt.Println("img shape (beggingning:", flint.GetShape(img))
+	img := flint.CreateGraphConstant(int32(3), flint.Shape{30, 30, 3})
+	fmt.Println("img shape (beginning):", flint.GetShape(img))
 
 	imgShape := flint.GetShape(img)
 	h, w, c := imgShape[0], imgShape[1], imgShape[2]
@@ -25,7 +28,7 @@ func main() {
 	}
 	kernel := flint.CreateGraph(kernelData, flint.Shape{1, 3, 3, 1})
 
-	// FIXME: transpose kinda broken
+	// FIXME: transpose kinda broken, maybe also related to FPE error
 	//img = flint.Transpose(img, flint.Axes{1, 1, 1})
 
 	for i := 0; i < 500; i++ {
