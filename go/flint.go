@@ -304,6 +304,11 @@ func CreateGraphArrange(shape Shape, axis int) GraphNode {
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
+func Execute(a GraphNode) GraphNode {
+	flintNode := C.fExecuteGraph(graphRef(a))
+	return GraphNode(unsafe.Pointer(flintNode))
+}
+
 func CalculateResult[T Numeric](a GraphNode) Tensor[T] {
 	flintNode := C.fCalculateResult(graphRef(a))
 
