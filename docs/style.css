@@ -145,6 +145,12 @@ pre{
   text-align: left;
   border-radius: 0.5em;
 }
+.standalone-button{
+  display:inline-block;
+  padding: 5px 10px;
+  margin-left: 5px;
+  border-radius: 5px;
+}
 .button1{
   background-color: #66cc7a;
   color: black;

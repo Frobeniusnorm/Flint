@@ -21,9 +21,20 @@
   </div>
   <center>
     <div class="content">
+      Jump to documentation:
+      <div class="standalone-button button1"><a href="#models">models</a></div>
+      <div class="standalone-button button2"><a href="#trainer">trainer</a></div>
+      <div style="display: block; height: 2em;"></div>
+      <h1 id="models"><u>dl/models.hpp</u></h1>
       @gen_toc("../dl/models.hpp")
       <div style="display: block; height: 2em;"></div>
       @from_code("../dl/models.hpp")
+
+      <div style="display: block; height: 2em;"></div>
+      <h1 id="trainer"><u>dl/trainer.hpp</u></h1>
+      @gen_toc("../dl/trainer.hpp")
+      <div style="display: block; height: 2em;"></div>
+      @from_code("../dl/trainer.hpp")
     </div>
   </center>
 @include("footer.html")

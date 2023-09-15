@@ -1,4 +1,5 @@
 #include "../layers.hpp"
+#include <initializer_list>
 /**
  * Padding of convolution operations
  * - `NO_PADDING`: a normal convolution operation. Each filter is slid over the
@@ -153,7 +154,8 @@ public:
     bias_shape[0] = 1;
     for (int i = 1; i < n; i++)
       bias_shape[i] = 1;
-    Tensor<double, n> bias = Layer<n>::template get_weight<1>().reshape_array(bias_shape);
+    Tensor<double, n> bias =
+        Layer<n>::template get_weight<1>().reshape_array(bias_shape);
     std::array<int, n> bias_repeat;
     bias_repeat[0] = 0;
     for (int i = 1; i < n; i++)
@@ -164,3 +166,47 @@ public:
 };
 /** For inputs of images with shape `(batch_size, width, height, channels)` */
 typedef Convolution<4> Conv2D;
+
+enum PoolingMode { MAX_POOLING, MIN_POOLING, AVG_POOLING };
+template <int n> class Pooling : public UntrainableLayer {
+  std::array<size_t, n - 1> window_size;
+  std::array<unsigned int, n - 1> step_size;
+  PoolingMode mode;
+
+  static Pooling<n> pooling_helper(PoolingMode mode, std::initializer_list<size_t> window_size, std::initializer_list<unsigned int> step_size) {
+    std::array<size_t, n - 1> window_size_a;
+    std::array<unsigned int, n - 1> step_size_a;
+    window_size_a.fill(1);
+    step_size_a.fill(1);
+    int index = 0;
+    for(size_t w : window_size) 
+      window_size_a[index++] = w;
+    index = 0;
+    for(unsigned int s : step_size) 
+      step_size_a[index++] = s;
+    return Pooling(mode, window_size_a, step_size_a);
+  }
+public:
+  Pooling(PoolingMode mode, std::array<size_t, n - 1> window_size,
+          std::array<unsigned int, n - 1> step_size)
+      : window_size(window_size), step_size(step_size), mode(mode) {}
+
+  std::string name() override { 
+    std::string method;
+    switch(mode) {
+      case MAX_POOLING: method = "Max"; break;
+      case MIN_POOLING: method = "Min"; break;
+      case AVG_POOLING: method = "Avg"; break;
+    }
+    return method + "Pooling"; 
+  }
+  static Pooling<n> max_pooling(std::initializer_list<size_t> window_size, std::initializer_list<unsigned int> step_size) {
+    return pooling_helper(MAX_POOLING, window_size, step_size);
+  }
+  static Pooling<n> min_pooling(std::initializer_list<size_t> window_size, std::initializer_list<unsigned int> step_size) {
+    return pooling_helper(MIN_POOLING, window_size, step_size);
+  }
+  static Pooling<n> avg_pooling(std::initializer_list<size_t> window_size, std::initializer_list<unsigned int> step_size) {
+    return pooling_helper(AVG_POOLING, window_size, step_size);
+  }
+};

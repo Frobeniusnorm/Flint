@@ -32,6 +32,11 @@
   </div>
   <center>
     <div class="content">
+      Jump to documentation:
+      <div class="standalone-button button1"><a href="#models">models</a></div>
+      <div class="standalone-button button2"><a href="#trainer">trainer</a></div>
+      <div style="display: block; height: 2em;"></div>
+      <h1 id="models"><u>dl/models.hpp</u></h1>
       <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_GenericLayer____T__struct_SequentialModel_">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n___Tensor_LayerHelper::FlintTypeToCpp_get_output_type_toFlintType_K_____T_________________get_output_dim_n__T_________forward_Tensor_K__n__&in__">template &lt;typename K, unsigned int n&gt;
   Tensor&lt;LayerHelper::FlintTypeToCpp&lt;get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
          get_output_dim&lt;n, T...&gt;()&gt;
@@ -89,19 +94,25 @@
     <pre class="inline_code">batch_size</pre> slices in the first dimension of the input data and each
     batch has to be passed through the model once per epoch).
 </li><li><pre class="inline_code">batch_size</pre> Size of each batch. A batch is a slice of the first
-    dimension of the input data. The input is shuffeled every epoch, which is
-    important if your batch size is smaller then your input size. The weights
-    of the model are optimized per batch that was passed through the model.
-    Meaning small batch sizes lead to faster convergence (since more
+    dimension of the input data. The input is shuffeled every epoch, which
+</li></ul> is important if your batch size is smaller then your input size. The
+ weights of the model are optimized per batch that was passed through the
+ model. Meaning small batch sizes lead to faster convergence (since more
     optimizations are executed) but to more noise and variance, since each
-    batch is only an approximation of the complete dataset. If training times
-    don't matter we suggest full gradient descent (meaning <pre class="inline_code">batch_size =
-    input_size</pre>), else finetune this value to your usecase.</li></ul>
+    batch is only an approximation of the complete dataset. If training
+ times don't matter we suggest full gradient descent (meaning <pre class="inline_code">batch_size =
+    input_size</pre>), else finetune this value to your usecase.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-summary___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::string <b>summary</b>() </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Returns a small summary of the model. </div></div><div style="display: block; height: 2em;"></div>
 
+
+      <div style="display: block; height: 2em;"></div>
+      <h1 id="trainer"><u>dl/trainer.hpp</u></h1>
+      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div><br/></div>
+      <div style="display: block; height: 2em;"></div>
+      
     </div>
   </center>
   <div id="footer">
