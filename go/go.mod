@@ -1,4 +1,4 @@
-module flint
+module github.com/Frobeniusnorm/Flint/go
 
 go 1.21.0
 

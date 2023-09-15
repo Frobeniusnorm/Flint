@@ -52,7 +52,7 @@ const (
 )
 
 type completeNumbers interface {
-	Numeric | ~uint | ~int | ~int8 | ~int64 | ~uint64 | ~uint16 | ~uint8 // TODO: expand. ... int 8. ...
+	Numeric | ~uint | ~int | ~int8 | ~int64 | ~uint64 | ~uint16 | ~uint8
 }
 
 // cNumbers represents the usable C types
@@ -64,7 +64,7 @@ type cNumbers interface {
 func convertArray[In completeNumbers, Out completeNumbers | cNumbers](arr []In) []Out {
 	result := make([]Out, len(arr))
 	for idx, val := range arr {
-		result[idx] = Out(any(val))
+		result[idx] = Out(val)
 	}
 	return result
 }
@@ -160,7 +160,8 @@ const (
 func LoadImage(path string) GraphNode {
 	unsafePath := C.CString(path)
 	defer C.free(unsafe.Pointer(unsafePath))
-	flintNode := C.fload_image(unsafePath)
+	flintNode, err := C.fload_image(unsafePath)
+	fmt.Println("load image err : ", err)
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 

@@ -1,15 +1,16 @@
 package main
 
 import (
-	"flint"
 	"fmt"
+	"github.com/Frobeniusnorm/Flint/go"
 )
 
 func main() {
 	flint.Init(flint.BACKEND_ONLY_CPU)
 	flint.SetLoggingLevel(flint.INFO)
 
-	img := flint.LoadImage("../flint.png")
+	img := flint.LoadImage("../../flint.png")
+
 	//img := flint.CreateGraphRandom(flint.Shape{30, 30, 3})
 	fmt.Println("img shape (beginning):", flint.GetShape(img))
 
@@ -44,9 +45,6 @@ func main() {
 
 	img = flint.Transpose(img, flint.Axes{0, 1, 2})
 	flint.StoreImage(img, "./gauss.bmp", flint.BMP)
-
-	res := flint.CalculateResult[float32](img)
-	fmt.Println(res)
 
 	flint.Cleanup()
 }
