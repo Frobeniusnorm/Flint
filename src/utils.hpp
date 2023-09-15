@@ -283,8 +283,14 @@ public:
   T pop_front() {
     std::unique_lock<std::mutex> lock(mutex);
     condition.wait(lock, [this] { return !queue.empty(); });
-    if (queue.empty())
+    if (queue.empty()) {
+#ifdef C_COMPATIBILITY
+      errno = EINVAL;
+      return;
+#else
       throw std::runtime_error("Queue Synchronity Error!");
+#endif
+    }
     T foo = queue.front();
     queue.pop_front();
     return foo;

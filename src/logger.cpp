@@ -46,7 +46,11 @@ void flogging(FLogType type, const char *msg) {
     if (logging_level >= 1)
       cout << "\033[0;33m[\033[1;31mERROR\033[0;33m]\033[0m " << msg
            << std::endl;
+#ifdef C_COMPATIBILITY
+    errno = EINVAL;
+#else
     throw std::runtime_error(msg); 
+#endif
   }
 }
 void fSetLoggingLevel(int level) { logging_level = level; }
