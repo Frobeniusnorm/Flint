@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 int main(void) {
-    flintInit(FLINT_BACKEND_ONLY_CPU);
+    flintInit(FLINT_BACKEND_BOTH);
     fSetLoggingLevel(F_INFO);
 
     FGraphNode *img = fload_image("../../flint.png");
@@ -26,6 +26,10 @@ int main(void) {
     size_t kernelShape[] = {1, 3, 3, 1};
     FGraphNode *kernel = fCreateGraph(kernelData, 9, F_FLOAT32, kernelShape, 4);
 
+    // increase ref counter so optimize mem does not nuke them
+    kernel->reference_counter++;
+    img->reference_counter++;
+
     for (int i = 0; i < 500; i++) {
         size_t shape[] = {c, w + 2, h + 2};
         size_t indices[] = {0, 1, 1};
@@ -37,10 +41,20 @@ int main(void) {
         uint stride[] = {1, 1, 1};
         img = fconvolve(img, kernel, stride);
 
-        img = fExecuteGraph(img);
+        img = fOptimizeMemory(fExecuteGraph(img));
     }
+
+    // decrease ref counter so they can be cleaned up
+    kernel->reference_counter--;
+    fFreeGraph(kernel);
+
+    // put channel back into last dimension
     img = ftranspose(img, transpose);
 
     fstore_image(img, "flint.bmp", F_BMP);
+
+    // clean up
+    img->reference_counter--;
+    fFreeGraph(img);
     flintCleanup();
 }
