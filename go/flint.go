@@ -161,8 +161,9 @@ func LoadImage(path string) GraphNode {
 	unsafePath := C.CString(path)
 	defer C.free(unsafe.Pointer(unsafePath))
 	flintNode, err := C.fload_image(unsafePath)
-	// TODO: handle errno (set when compiled with C_COMPATBILITY)
-	fmt.Println("load image err : ", err)
+	if err != nil {
+		panic(err) // TODO: error handling everywhere
+	}
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
@@ -184,6 +185,7 @@ func GetShape(node GraphNode) Shape {
 	return fromCToArray[uint](shapePtr, shapeSize, F_INT64)
 }
 
+// use for type debugging
 func describe(i any) {
 	fmt.Printf("describe (value, underlying type): (%v, %T)\n", i, i)
 }
@@ -307,11 +309,6 @@ func CreateGraphArrange(shape Shape, axis int) GraphNode {
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
-func Execute(a GraphNode) GraphNode {
-	flintNode := C.fExecuteGraph(graphRef(a))
-	return GraphNode(unsafe.Pointer(flintNode))
-}
-
 // CalculateResult essentially combines ExecuteGraph and SyncMemory
 func CalculateResult[T Numeric](a GraphNode) Tensor[T] {
 	flintNode := C.fCalculateResult(graphRef(a))
@@ -352,8 +349,7 @@ func (_ GradientContext) Stop() {
 
 func (_ GradientContext) Active() bool {
 	res := C.fIsGradientContext()
-	fmt.Println("is grad ctx:", res)
-	return false
+	return bool(res)
 }
 
 func Serialize(a GraphNode) []byte {
