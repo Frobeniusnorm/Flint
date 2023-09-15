@@ -18,21 +18,10 @@
 - [ ] Gauss
 - [ ] Mnist
 
-### Interface
-
-First start with the ones relevant for Gauss example
-
-- [ ] flintInit
-- [ ] Tensor
-    - [ ] reshape
-    - [ ] transpose
-    - [ ] expand
-    - [ ] execute
-
 ### Documentation
 
 There is [`go doc`](https://go.dev/blog/godoc), but maybe the documentation can also be added to work with the stuff
-thats already in `/docs`
+that's already in `/docs`
 
 See:
 
