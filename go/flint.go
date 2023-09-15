@@ -64,7 +64,7 @@ type cNumbers interface {
 func convertArray[In completeNumbers, Out completeNumbers | cNumbers](arr []In) []Out {
 	result := make([]Out, len(arr))
 	for idx, val := range arr {
-		result[idx] = Out(val) // FIXME: this type bug!
+		result[idx] = Out(any(val))
 	}
 	return result
 }
@@ -478,7 +478,7 @@ func Div[T Numeric | GraphNode](a T, b T) GraphNode {
 	default:
 		panic("invalid type")
 	}
-	return GraphNode(unsafe.Pointer(flintNode))
+	return GraphNode(flintNode)
 }
 
 // Sub Subtracts graphRef(a) by b.
@@ -637,7 +637,7 @@ func Greater[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 	default:
 		panic("invalid type")
 	}
-	return GraphNode(unsafe.Pointer(flintNode))
+	return GraphNode(flintNode)
 }
 
 func Less[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
@@ -674,7 +674,7 @@ func FlattenDim(a GraphNode, dim int) GraphNode {
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
-func Convert[T Numeric](a GraphNode, newType tensorDataType) GraphNode {
+func Convert(a GraphNode, newType tensorDataType) GraphNode {
 	flintNode := C.fconvert(graphRef(a), C.enum_FType(newType))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
