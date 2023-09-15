@@ -38,7 +38,7 @@ extern "C" {
 
   To support C++ exceptions as well as keep C-compatibility there is a flag
   C_COMPATIBILITY that - when enabled during compilation - disables exception
-  throwing and sets the errno instead (probably SEGFAULTS with an error message
+  throwing and sets the errno instead (if you use C++ probably SEGFAULTS with an error message
   most of the time instead).
 */
 #define FLINT_BACKEND_ONLY_CPU 1
