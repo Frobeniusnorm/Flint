@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	flint.Init(flint.BACKEND_ONLY_CPU)
+	flint.Init(flint.BACKEND_BOTH)
 	flint.SetLoggingLevel(flint.INFO)
 
 	img := flint.LoadImage("../../flint.png")
@@ -24,7 +24,8 @@ func main() {
 	}
 	kernel := flint.CreateGraph(kernelData, flint.Shape{1, 3, 3, 1})
 
-	img = flint.Transpose(img, flint.Axes{0, 1, 2})
+	// channel in first dim
+	img = flint.Transpose(img, flint.Axes{2, 1, 0})
 
 	for i := 0; i < 500; i++ {
 		// add padding
@@ -35,15 +36,13 @@ func main() {
 		)
 		// gaussian blur
 		img = flint.Reshape(img, flint.Shape{c, w + 2, h + 2, 1})
-
-		fmt.Println("img shape (before conv:", flint.GetShape(img))
-		fmt.Println("kernel shape:", flint.GetShape(kernel))
-
 		img = flint.Convolve(img, kernel, flint.Stride{1, 1, 1})
 		img = flint.Execute(img)
 	}
 
-	img = flint.Transpose(img, flint.Axes{0, 1, 2})
+	// channel back into last dim
+	img = flint.Transpose(img, flint.Axes{2, 1, 0})
+
 	flint.StoreImage(img, "./gauss.bmp", flint.BMP)
 
 	flint.Cleanup()

@@ -161,6 +161,7 @@ func LoadImage(path string) GraphNode {
 	unsafePath := C.CString(path)
 	defer C.free(unsafe.Pointer(unsafePath))
 	flintNode, err := C.fload_image(unsafePath)
+	// TODO: handle errno (set when compiled with C_COMPATBILITY)
 	fmt.Println("load image err : ", err)
 	return GraphNode(unsafe.Pointer(flintNode))
 }
