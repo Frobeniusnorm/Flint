@@ -1,0 +1,54 @@
+@include("header.html")
+  <div id="header-bar">
+    <div class="left-spaced">
+      <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
+      <a class="item" href="index.html">About</a>
+      <span class="item selected" href="documentation.html">Documentation</span>
+      <a class="item" href="tutorial.html">Tutorial</a>
+    </div>
+  </div>
+  <div id="showcase_background" style="min-height: 18em; background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(61,215,193,1) 0%, rgba(33,100,228,1) 100%);">
+    <center style="margin-top:2em">
+      <h1>
+        Documentation <u>dl/layers.hpp</u> <u>dl/layers/*</u> <u>dl/activations.hpp</u>
+      </h1>
+      <div style="display: block; height: 0.5em;"></div>
+      <h2>
+        Flint's C++ Deep Learning Framework 
+      </h2>
+    </center>
+  </div>
+  <center>
+    <div class="content">
+      Jump to documentation:
+      <div class="standalone-button button1"><a href="#layers">Generic Layer</a></div>
+      <div class="standalone-button button2"><a href="#all_layers">All Layers</a></div>
+      <div class="standalone-button button3"><a href="#activations">Activations</a></div>
+      <div style="display: block; height: 2em;"></div>
+      <h1 id="layers"><u>dl/layers.hpp</u></h1>
+      @gen_toc("../dl/layers.hpp")
+      <div style="display: block; height: 2em;"></div>
+      @from_code("../dl/layers.hpp")
+
+      <h1 id="all_layers"><u>dl/layers/*</u></h1>
+      <h2>dl/layers/connected.hpp</h2>
+      @gen_toc("../dl/layers/connected.hpp")
+      <div style="display: block; height: 2em;"></div>
+      @from_code("../dl/layers/connected.hpp")
+      <h2>dl/layers/convolution.hpp</h2>
+      @gen_toc("../dl/layers/convolution.hpp")
+      <div style="display: block; height: 2em;"></div>
+      @from_code("../dl/layers/convolution.hpp")
+      <h2>dl/layers/normalization.hpp</h2>
+      @gen_toc("../dl/layers/normalization.hpp")
+      <div style="display: block; height: 2em;"></div>
+      @from_code("../dl/layers/normalization.hpp")
+
+      <div style="display: block; height: 2em;"></div>
+      <h1 id="activations"><u>dl/activations.hpp</u></h1>
+      @gen_toc("../dl/activations.hpp")
+      <div style="display: block; height: 2em;"></div>
+      @from_code("../dl/activations.hpp")
+    </div>
+  </center>
+@include("footer.html")

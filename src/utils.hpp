@@ -286,7 +286,8 @@ public:
     if (queue.empty()) {
 #ifdef C_COMPATIBILITY
       errno = EINVAL;
-      return;
+      T empty;
+      return empty;
 #else
       throw std::runtime_error("Queue Synchronity Error!");
 #endif

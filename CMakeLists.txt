@@ -3,6 +3,7 @@ project(flint VERSION 0.0.1)
 option(BUILD_TEST "Enable building unit tests" ON)
 option(BUILD_GRADIENT_TEST "Enable building gradient tests" ON)
 option(BUILD_BENCHMARK "Enable building benchmark program" ON)
+option(C_COMPATIBLE "Enable C-compatibility (no exceptions but erno)" OFF)
 option(INSTALL_DEEP_LEARNING "Enable installing the header-only c++ deep learning library" ON)
 include(GNUInstallDirs)
 FILE(GLOB_RECURSE SRCFILES src/*.cpp)
@@ -12,6 +13,9 @@ set_property(TARGET flint PROPERTY CXX_STANDARD 20)
 target_include_directories(flint PRIVATE .)
 target_link_libraries(flint OpenCL::OpenCL)
 set_target_properties(flint PROPERTIES VERSION ${PROJECT_VERSION} PUBLIC_HEADER "flint.h;flint.hpp;flint_helper.hpp;flint_1.hpp;flint_n.hpp")
+if(C_COMPATIBLE)
+  add_compile_definitions("C_COMPATIBILITY")
+endif()
 install(TARGETS flint 
     EXPORT flintTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
