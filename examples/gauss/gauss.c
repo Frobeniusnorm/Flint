@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 int main(void) {
-    flintInit(FLINT_BACKEND_BOTH);
+    flintInit(FLINT_BACKEND_ONLY_CPU);
     fSetLoggingLevel(F_INFO);
 
     FGraphNode *img = fload_image("../../flint.png");
@@ -16,7 +16,7 @@ int main(void) {
 
     // channel in first dim
     int transpose[] = {2, 1, 0};
-    img = ftranspose(img, &transpose[0]);
+    img = ftranspose(img, transpose);
 
     float kernelData[1][3][3][1] = {{
         {{1 / 16.0f}, {1 / 8.0f}, {1 / 16.0f}},
@@ -24,12 +24,12 @@ int main(void) {
         {{1 / 16.0f}, {1 / 8.0f}, {1 / 16.0f}}
     }};
     size_t kernelShape[] = {1, 3, 3, 1};
-    FGraphNode *kernel = fCreateGraph(&kernelData[0], 9, F_FLOAT32, &kernelShape[0], 4);
+    FGraphNode *kernel = fCreateGraph(kernelData, 9, F_FLOAT32, kernelShape, 4);
 
     for (int i = 0; i < 500; i++) {
         size_t shape[] = {c, w + 2, h + 2};
         size_t indices[] = {0, 1, 1};
-        img = fextend(img, &shape[0], &indices[0]);
+        img = fextend(img, shape, indices);
 
         size_t shape2[] = {c, w + 2, h + 2, 1};
         img = freshape(img, shape2,  4);
@@ -39,8 +39,7 @@ int main(void) {
 
         img = fExecuteGraph(img);
     }
-    img = ftranspose(img, &transpose[0]);
-
+    img = ftranspose(img, transpose);
 
     fstore_image(img, "flint.bmp", F_BMP);
     flintCleanup();
