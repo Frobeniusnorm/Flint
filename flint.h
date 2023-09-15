@@ -34,7 +34,12 @@ extern "C" {
   to be as compatile as possible
 
   Flints Execution structure represents an AST, so that each Graph may be
-  compiled to a specific OpenCL program
+  compiled to a specific OpenCL program.
+
+  To support C++ exceptions as well as keep C-compatibility there is a flag
+  C_COMPATIBILITY that - when enabled during compilation - disables exception
+  throwing and sets the errno instead (probably SEGFAULTS with an error message
+  most of the time instead).
 */
 #define FLINT_BACKEND_ONLY_CPU 1
 #define FLINT_BACKEND_ONLY_GPU 2
