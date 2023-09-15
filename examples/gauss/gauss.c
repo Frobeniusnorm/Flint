@@ -28,8 +28,6 @@ int main(void) {
 
     // increase ref counter so optimize mem does not nuke them
     kernel->reference_counter++;
-    img->reference_counter++;
-
     for (int i = 0; i < 500; i++) {
         size_t shape[] = {c, w + 2, h + 2};
         size_t indices[] = {0, 1, 1};
@@ -54,7 +52,6 @@ int main(void) {
     fstore_image(img, "flint.bmp", F_BMP);
 
     // clean up
-    img->reference_counter--;
     fFreeGraph(img);
     flintCleanup();
 }

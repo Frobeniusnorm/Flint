@@ -312,6 +312,7 @@ func Execute(a GraphNode) GraphNode {
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
+// CalculateResult essentially combines ExecuteGraph and SyncMemory
 func CalculateResult[T Numeric](a GraphNode) Tensor[T] {
 	flintNode := C.fCalculateResult(graphRef(a))
 
@@ -366,6 +367,28 @@ func Deserialize(data []byte) GraphNode {
 	unsafeData := C.CBytes(data)
 	defer C.free(unsafe.Pointer(unsafeData))
 	flintNode := C.fdeserialize((*C.char)(unsafeData))
+	return GraphNode(unsafe.Pointer(flintNode))
+}
+
+func IncreaseRefCounter(node GraphNode) {
+	ref := (*graphRef(node)).reference_counter
+	ref += 1
+}
+
+func DecreaseRefCounter(node GraphNode) {
+	ref := (*graphRef(node)).reference_counter
+	ref -= 1
+}
+
+func ExecuteGraph(node GraphNode) GraphNode {
+	flintNode := C.fExecuteGraph(graphRef(node))
+	return GraphNode(unsafe.Pointer(flintNode))
+}
+
+// TODO: fsyncmemory
+
+func OptimizeMemory(node GraphNode) GraphNode {
+	flintNode := C.fOptimizeMemory(graphRef(node))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
