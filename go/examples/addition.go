@@ -1,8 +1,8 @@
 package main
 
 import (
-	"flint"
 	"fmt"
+	"github.com/Frobeniusnorm/Flint/go"
 )
 
 func main() {

@@ -12,7 +12,7 @@ int main(void) {
     size_t w = img->operation.shape[1];
     size_t c = img->operation.shape[2];
 
-    printf("image size: h: %d, w: %d, c: %d\n", h , w, c);
+    printf("image size: h: %lu, w: %lu, c: %lu\n", h , w, c);
 
     // channel in first dim
     int transpose[] = {2, 1, 0};
