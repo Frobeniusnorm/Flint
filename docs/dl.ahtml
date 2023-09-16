@@ -3,7 +3,7 @@
     <div class="left-spaced">
       <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
       <a class="item" href="index.html">About</a>
-      <span class="item selected" href="documentation.html">Documentation</span>
+      <a class="item selected" href="documentation.html">Documentation</a>
       <a class="item" href="tutorial.html">Tutorial</a>
     </div>
   </div>

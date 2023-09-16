@@ -1,0 +1,169 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>
+    Flint Documentation
+  </title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+</head>
+
+<body>
+
+  <div id="header-bar">
+    <div class="left-spaced">
+      <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
+      <a class="item" href="index.html">About</a>
+      <a class="item selected" href="documentation.html">Documentation</a>
+      <a class="item" href="tutorial.html">Tutorial</a>
+    </div>
+  </div>
+  <div id="showcase_background" style="min-height: 18em; background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(61,215,193,1) 0%, rgba(33,100,228,1) 100%);">
+    <center style="margin-top:2em">
+      <h1>
+        Documentation <u>dl/optimizers.hpp</u> <u>dl/losses.hpp</u>
+      </h1>
+      <div style="display: block; height: 0.5em;"></div>
+      <h2>
+        Flint's C++ Deep Learning Framework 
+      </h2>
+    </center>
+  </div>
+  <center>
+    <div class="content">
+      Jump to documentation:
+      <div class="standalone-button button1"><a href="#optimizers">optimizers</a></div>
+      <div class="standalone-button button2"><a href="#losses">losses</a></div>
+      <div style="display: block; height: 2em;"></div>
+      <h1 id="optimizers"><u>dl/optimizers.hpp</u></h1>
+      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_int_n__struct_Optimizer_">template &lt;int n&gt; struct <b>Optimizer </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_double__n__update_Tensor_double__n__&weights____________________________________Tensor_double__n__&gradient__=_0">virtual Tensor&lt;double, n&gt; <b>update</b>(Tensor<double, n> &weights,
+                                   Tensor<double, n> &gradient) = 0</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T_concept_OptimizerFactory_=_requires_T_fac__">template &lt;typename T&gt;
+concept OptimizerFactory = <b>requires</b>(T fac) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_int_n__struct_Adam_:_public_Optimizer_n__">template &lt;int n&gt; struct <b>Adam : public Optimizer</b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-learning_rate_=_0_0015__double_b1_=_0_9__double_b2_=_0_999_______:_learning_rate_learning_rate___b1_b1___b2_b2__"><b>Adam</b>(double learning_rate = 0.0015, double b1 = 0.9, double b2 = 0.999)
+      : learning_rate(learning_rate), b1(b1), b2(b2) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-AdamFactory_">struct <b>AdamFactory </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-learning_rate_=_0_0015__double_b1_=_0_9__double_b2_=_0_999_______:_learning_rate_learning_rate___b1_b1___b2_b2__"><b>AdamFactory</b>(double learning_rate = 0.0015, double b1 = 0.9, double b2 = 0.999)
+      : learning_rate(learning_rate), b1(b1), b2(b2) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_int_n__Optimizer_n__*generate_optimizer___const_">template &lt;int n&gt; Optimizer&lt;n&gt; <b>*generate_optimizer</b>() const </a><br/><br/></div>
+      <div style="display: block; height: 2em;"></div>
+      <div id="s-_int_n__struct_Optimizer_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;int n&gt; struct <b>Optimizer </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Optimizer interface that defines a update method.
+ An optimizer is intended to be instantiated once per weight
+ and optimizes only double weights (since the gradient is also always given as
+ a double Tensor). The type-parameter <pre class="inline_code">n</pre> denotes the dimensionality of the
+ weight this optimizer was generated for.</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Tensor_double__n__update_Tensor_double__n__&weights____________________________________Tensor_double__n__&gradient__=_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual Tensor&lt;double, n&gt; <b>update</b>(Tensor<double, n> &weights,
+                                   Tensor<double, n> &gradient) = 0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Takes the old weight and its gradient to the error tensor and updates it,
+ i.e. returns the updated version of the weight.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T_concept_OptimizerFactory_=_requires_T_fac__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt;
+concept OptimizerFactory = <b>requires</b>(T fac) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ An OptimizerFactory is used to generate optimizers on the heap with
+ predefined parameters. Needed so a new optimizer per weight can be generated.
+ For each derivation of <pre class="inline_code">Optimizer</pre> there should be one factory to generate
+ instances of that optimizers for the weights.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_int_n__struct_Adam_:_public_Optimizer_n__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;int n&gt; struct <b>Adam : public Optimizer</b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Implementation of the Adam algorithm (first-order gradient-based optimizer
+ for stochastic objective functions based on adaptive estimates of lower-order
+ moments).
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-learning_rate_=_0_0015__double_b1_=_0_9__double_b2_=_0_999_______:_learning_rate_learning_rate___b1_b1___b2_b2__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>Adam</b>(double learning_rate = 0.0015, double b1 = 0.9, double b2 = 0.999)
+      : learning_rate(learning_rate), b1(b1), b2(b2) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Initializes the Adam algorithm with some parameters that influence the
+ optimization speed and accuracy.
+  - <pre class="inline_code">learning_rate</pre>: (sometimes called <pre class="inline_code">alpha</pre>) the step size per
+     optimization, i.e. the proportion weights are updated. Higher values
+     (e.g. 0.2) lead to a faster convergence, while lower values yield more
+     accurate convergence.
+  - <pre class="inline_code">b1</pre>: (sometimes called <pre class="inline_code">beta1</pre>) the exponential decay rate for the
+     first moment estimates.
+  - <pre class="inline_code">b2</pre>: (sometimes called <pre class="inline_code">beta2</pre>) the exponential decay rate for the
+     second moment estimates.<div style="display:block; height: 0.5em"></div>
+ You can tune the individual members later on too.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-AdamFactory_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>AdamFactory </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Constructs Adam Optimizer with preset parameters.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-learning_rate_=_0_0015__double_b1_=_0_9__double_b2_=_0_999_______:_learning_rate_learning_rate___b1_b1___b2_b2__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>AdamFactory</b>(double learning_rate = 0.0015, double b1 = 0.9, double b2 = 0.999)
+      : learning_rate(learning_rate), b1(b1), b2(b2) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Initialisation parameters for the Adam algorithm that influence the
+ optimization speed and accuracy.
+  - <pre class="inline_code">learning_rate</pre>: (sometimes called <pre class="inline_code">alpha</pre>) the step size per
+     optimization, i.e. the proportion weights are updated. Higher values
+     (e.g. 0.2) lead to a faster convergence, while lower values yield more
+     accurate convergence.
+  - <pre class="inline_code">b1</pre>: (sometimes called <pre class="inline_code">beta1</pre>) the exponential decay rate for the
+     first moment estimates.
+  - <pre class="inline_code">b2</pre>: (sometimes called <pre class="inline_code">beta2</pre>) the exponential decay rate for the
+     second moment estimates.
+ All Adam instances generated by  <a href="#s-_int_n__Optimizer_n__*generate_optimizer___const_"><pre class="inline_code">generate_optimizer</pre></a> are constructed with
+ the given parameters.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_int_n__Optimizer_n__*generate_optimizer___const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;int n&gt; Optimizer&lt;n&gt; <b>*generate_optimizer</b>() const </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Generates an Adam optimizer for a <pre class="inline_code">n</pre>-dimensional weight.
+</div></div><div style="display: block; height: 2em;"></div>
+
+
+      <div style="display: block; height: 2em;"></div>
+      <h1 id="losses"><u>dl/losses.hpp</u></h1>
+      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T_concept_GenericLoss_=____requires_T_a__Tensor_float__2__&t1__Tensor_int__2__&t2______________Tensor_double__2__&t3__Tensor_long__2__&t4__">template &lt;typename T&gt;
+concept GenericLoss =
+    <b>requires</b>(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
+             Tensor<double, 2> &t3, Tensor<long, 2> &t4) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-CrossEntropyLoss_">struct <b>CrossEntropyLoss </b></a><br/><br/></div>
+      <div style="display: block; height: 2em;"></div>
+      <div id="s-_typename_T_concept_GenericLoss_=____requires_T_a__Tensor_float__2__&t1__Tensor_int__2__&t2______________Tensor_double__2__&t3__Tensor_long__2__&t4__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt;
+concept GenericLoss =
+    <b>requires</b>(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
+             Tensor<double, 2> &t3, Tensor<long, 2> &t4) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Defines the general concept of a Loss function.
+ It receives two tensors: the actual output and the expected one.
+ It then calculates the loss as a double Tensor (since the weights are always
+ double Tensors as well).
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-CrossEntropyLoss_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>CrossEntropyLoss </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Calculates the Categorical Cross Entropy Loss with full summation. It is
+ advised to apply a softmax as the last activation layer in the calculation of
+ <pre class="inline_code">in</pre>.<div style="display:block; height: 0.5em"></div>
+ Calculates: <pre class="inline_code">sum(-expected * log(in))</pre>
+ </div></div><div style="display: block; height: 2em;"></div>
+
+    </div>
+  </center>
+  <div id="footer">
+    <center>
+    <div class="content">
+      <div class="row">
+        <div class="column">
+          © David Schwarzbeck, 2022</br>
+          Licensed under the <a href="https://github.com/Frobeniusnorm/Flint/blob/main/LICENCE">Apache License</a>, Version 2.0
+        </div>
+        <div class="column">&nbsp;</div>
+        <div class="column">&nbsp;</div>
+        <div class="column">
+          <a href="https://github.com/Frobeniusnorm/Flint/">Github</a>
+        </div>
+      </div>
+    </div>
+    <i style="color: #D0D0D0;">This site values your privacy, does not use cookies, javascript or other malware and does not sell anything.</i></center>
+    </center>
+  </div>
+</body>
+</html>
+

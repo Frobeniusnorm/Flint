@@ -45,10 +45,13 @@ double data2[] = {4,3,2,1};
 size_t shape[] = {2,2};
 FGraphNode *g1 = fCreateGraph(&data1[0], 4, F_FLOAT32, &shape[0]);
 FGraphNode *g2 = fCreateGraph(&data2[0], 4, F_FLOAT64, &shape[0]);
-FGraphNode *mm = fExecuteGraph(fmatmul(g1, g2));
+g2->reference_counter++;
+FGraphNode *mm = fOptimizeMemory(fExecuteGraph(fmatmul(g1, g2))); //also frees g1 but not g2
 FResultData *rd = mm->result_data;
 double* result = rd->data;
 size_t result_shape = {mm->operation->shape[0], mm->operation->shape[1]}; }
+fFreeGraph(mm); // also frees result and rd
+fFreeGraph(g2); // does not free g2, because of the reference_counter
           </pre>
         </p>
       </div>
@@ -84,6 +87,34 @@ std::vector<std::vector<double>> res = *mm; }
       <br/>
       <div class="card button2">
         <a href="flint_hpp.html">Documentation</a>
+      </div>
+      <div style="display: block; height: 2em;"></div>
+      <div class="card">
+        <span class="card_header">Deep Learning Headers</span>
+      </div>
+      <br />
+      <div class="card">
+        <p style="padding-bottom: 10px; padding-top: 2px;">
+          Implementation of a templated deep learning framework with Flint in C++.
+          Strongly works with templates and concepts to allow flexible usage and good performance.
+          <pre class="card code">@code{
+auto m = SequentialModel{
+  Conv2D(1, 10, 7, std::array<unsigned int, 2>{2, 2}, NO_PADDING),
+  Relu(),
+  Flatten(),
+  Connected(1210, 80),
+  Relu(),
+  Connected(80, 10),
+  SoftMax()
+};
+std::cout << m.summary() << std::endl;
+}
+          </pre>
+        </p>
+      </div>
+      <br/>
+      <div class="card button4">
+        <a href="dl.html">Documentation</a>
       </div>
     </div>
   </center>
