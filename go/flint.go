@@ -377,13 +377,17 @@ func Deserialize(data []byte) GraphNode {
 }
 
 func IncreaseRefCounter(node GraphNode) {
-	ref := (*graphRef(node)).reference_counter
-	ref += 1
+	var flintNode *C.FGraphNode = graphRef(node)
+	flintNode.reference_counter = C.size_t(flintNode.reference_counter + C.size_t(1))
 }
 
 func DecreaseRefCounter(node GraphNode) {
-	ref := (*graphRef(node)).reference_counter
-	ref -= 1
+	var flintNode *C.FGraphNode = graphRef(node)
+	// make sure it does not underflow!
+	if uint64(flintNode.reference_counter) == 0 {
+		return
+	}
+	flintNode.reference_counter = C.size_t(flintNode.reference_counter - C.size_t(1))
 }
 
 func ExecuteGraph(node GraphNode) GraphNode {

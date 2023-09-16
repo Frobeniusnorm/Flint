@@ -26,9 +26,9 @@ func main() {
 	kernel := flint.CreateGraph(kernelData, flint.Shape{1, 3, 3, 1})
 
 	flint.IncreaseRefCounter(kernel)
+	flint.IncreaseRefCounter(img)
 
 	for i := 0; i < 500; i++ {
-		fmt.Println("iteration", i)
 		// add padding
 		img = flint.Extend(
 			img,
@@ -40,20 +40,17 @@ func main() {
 		img = flint.Convolve(img, kernel, flint.Stride{1, 1, 1})
 
 		img = flint.ExecuteGraph(img)
-		// TODO: fix memory issue first
-		img = flint.OptimizeMemory(img) // FIXME: causes seg fault!!
+		img = flint.OptimizeMemory(img)
 	}
-
-	flint.DecreaseRefCounter(kernel)
-	flint.FreeGraph(kernel)
 
 	// channel back into last dim
 	img = flint.Transpose(img, flint.Axes{2, 1, 0})
 
 	flint.StoreImage(img, "./gauss.bmp", flint.BMP)
 
+	flint.DecreaseRefCounter(kernel)
+	flint.DecreaseRefCounter(img)
+	flint.FreeGraph(kernel)
 	flint.FreeGraph(img)
 	flint.Cleanup()
-
-	fmt.Println("done")
 }
