@@ -46,7 +46,7 @@ func main() {
 	// channel back into last dim
 	img = flint.Transpose(img, flint.Axes{2, 1, 0})
 
-	flint.StoreImage(img, "./gauss.bmp", flint.BMP)
+	flint.StoreImage(img, "./gauss.jpg", flint.JPEG)
 
 	flint.DecreaseRefCounter(kernel)
 	flint.DecreaseRefCounter(img)
