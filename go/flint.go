@@ -2,9 +2,15 @@
 package flint
 
 /*
-#cgo LDFLAGS: -lflint -lOpenCL -lstdc++
+* important rules for writing robust CGo code:
+* - only pass C types to C
+* - dont pass data from Go's stack memory to C. include stdlib and use C.malloc!
+*/
+
+/*
+#cgo LDFLAGS: -lflint -lOpenCL -lstdc++ -lm
+#include <flint/flint.h>
 #include <stdlib.h>  // needed for C.free!
-#include "../flint.h"
 */
 import "C"
 import (
@@ -76,7 +82,7 @@ func convertArray[In completeNumbers, Out completeNumbers | cNumbers](arr []In) 
 type Backend int
 
 const (
-	BACKEND_ONLY_CPU Backend = iota
+	BACKEND_ONLY_CPU Backend = iota + 1
 	BACKEND_ONLY_GPU
 	BACKEND_BOTH
 )
@@ -268,31 +274,33 @@ func fromCToArray[T completeNumbers](dataPtr unsafe.Pointer, length int, dataTyp
 // ////////////
 
 func CreateGraph[T Numeric](data []T, shape Shape) GraphNode {
+	// FIXME: support the other data types
 	datatype := F_FLOAT32
-	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
+	newShape := convertArray[uint, C.size_t](shape)
+	newData := convertArray[T, C.float](data)
 
-	dataPtr := unsafe.Pointer(&data[0])
-	flintNode := C.fCreateGraph(dataPtr, C.int(len(data)), uint32(datatype), shapePtr, C.int(len(shape)))
+	flintNode := C.fCreateGraph(unsafe.Pointer(&(newData[0])), C.int(len(data)), uint32(datatype), &(newShape[0]), C.int(len(shape)))
 	return GraphNode(unsafe.Pointer(flintNode))
 }
 
 func CreateGraphConstant[T Numeric](value T, shape Shape) GraphNode {
-	shapePtr := (*C.size_t)(unsafe.Pointer(&shape[0]))
+	newShape := convertArray[uint, C.size_t](shape)
+
 	var flintNode *C.FGraphNode
 	dimensions := C.int(len(shape))
 	switch v := any(value).(type) {
 	case int32:
-		flintNode = C.fconstant_i(C.int(v), shapePtr, dimensions)
+		flintNode = C.fconstant_i(C.int(v), &(newShape[0]), dimensions)
 	case int64:
-		flintNode = C.fconstant_l(C.long(v), shapePtr, dimensions)
+		flintNode = C.fconstant_l(C.long(v), &(newShape[0]), dimensions)
 	case float32:
-		flintNode = C.fconstant_f(C.float(v), shapePtr, dimensions)
+		flintNode = C.fconstant_f(C.float(v), &(newShape[0]), dimensions)
 	case float64:
-		flintNode = C.fconstant_d(C.double(v), shapePtr, dimensions)
+		flintNode = C.fconstant_d(C.double(v), &(newShape[0]), dimensions)
 	default:
 		panic("invalid data type")
 	}
-	return GraphNode(unsafe.Pointer(flintNode))
+	return GraphNode(flintNode)
 }
 
 func CreateGraphRandom(shape Shape) GraphNode {
@@ -362,6 +370,7 @@ func Serialize(a GraphNode) []byte {
 func Deserialize(data []byte) GraphNode {
 	unsafeData := C.CBytes(data)
 	defer C.free(unsafe.Pointer(unsafeData))
+	// this cast is necessary as the binay data needs to be passed as char *.
 	flintNode := C.fdeserialize((*C.char)(unsafeData))
 	return GraphNode(unsafe.Pointer(flintNode))
 }

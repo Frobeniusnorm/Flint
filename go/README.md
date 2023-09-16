@@ -74,3 +74,7 @@ The following "modern" C features do not work with cgo, all code needs to be in 
 ## Checking for memory safety
 
 Compile your code (e.g. the examples) with `go build examples/gauss.go` and run them with `valgrind`
+
+NOTE: valgrind will ALWAYS report some leaked error. this is due to the CGO overhead and has nothing to do with this
+program.
+To validate just test it with the program `examples/memtest.go`
