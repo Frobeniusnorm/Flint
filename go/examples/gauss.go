@@ -1,37 +1,56 @@
 package main
 
-import "flint"
+import (
+	"fmt"
+	"github.com/Frobeniusnorm/Flint/go"
+)
 
 func main() {
-	flint.Init(flint.BACKEND_ONLY_CPU)
-	flint.SetLoggingLevel(flint.DEBUG)
+	flint.Init(flint.BACKEND_BOTH)
+	flint.SetLoggingLevel(flint.INFO)
 
-	//data1 := []float32{1,2,3,4}
-	//data2 := []float64{4,3,2,1}
-	//shape := []int{2,2}
-	//var g1 flint.GraphNode := flint.NewGraphNode(data1, 4, flint.FLOAT32, shape)
-	//var g2 flint.GraphNode := flint.NewGraphNode(data2, 4, flint.FLOAT32, shape)
-	//var mm flint.GraphNode := flint.executeGraph(flint.matmul(g1, g2))
-	//var rd flint.ResultData := mm.resultData
-	//var result float64 := rd.data
+	img := flint.LoadImage("../../flint.png")
 
-	//var img flint.Tensor = 3 //[flint.INT32, 3] = flint.LoadImage("../flint.png")
-	//h, w, c int := img.GetShape()
-	//img = img.Transpose()
-	//
-	//for i := 0; i < 500; i++ {
-	//	// add left padding
-	//	img = img.extend([c, w+1, h+1], [0,1,1])
-	//	// gauss
-	//	img = img.reshape(c, w+1, h+1, 1).convolve(kernel, 1,1,1)
-	//	// undo padding
-	//	// TODO: img = img.slice()
-	//	img.Execute()
-	//}
-	//
-	//// undo transpose
-	//img = img.Transpose()
-	//
-	//flint.StoreImage(img, "flint.jpg", JPEG)
-	//flint.Cleanup()
+	imgShape := flint.GetShape(img)
+	h, w, c := imgShape[0], imgShape[1], imgShape[2]
+	fmt.Println("img shape (beginning):", imgShape)
+
+	// channel in first dim
+	img = flint.Transpose(img, flint.Axes{2, 1, 0})
+
+	var kernelData = []float32{
+		1.0 / 16.0, 1.0 / 8.0, 1.0 / 16.0,
+		1.0 / 8.0, 1.0 / 4.0, 1.0 / 8.0,
+		1.0 / 16.0, 1.0 / 8.0, 1.0 / 16.0,
+	}
+	kernel := flint.CreateGraph(kernelData, flint.Shape{1, 3, 3, 1})
+
+	flint.IncreaseRefCounter(kernel)
+	flint.IncreaseRefCounter(img)
+
+	for i := 0; i < 500; i++ {
+		// add padding
+		img = flint.Extend(
+			img,
+			flint.Shape{c, w + 2, h + 2},
+			flint.Axes{0, 1, 1},
+		)
+		// gaussian blur
+		img = flint.Reshape(img, flint.Shape{c, w + 2, h + 2, 1})
+		img = flint.Convolve(img, kernel, flint.Stride{1, 1, 1})
+
+		img = flint.ExecuteGraph(img)
+		img = flint.OptimizeMemory(img)
+	}
+
+	// channel back into last dim
+	img = flint.Transpose(img, flint.Axes{2, 1, 0})
+
+	flint.StoreImage(img, "./gauss.jpg", flint.JPEG)
+
+	flint.DecreaseRefCounter(kernel)
+	flint.DecreaseRefCounter(img)
+	flint.FreeGraph(kernel)
+	flint.FreeGraph(img)
+	flint.Cleanup()
 }
