@@ -26,22 +26,23 @@
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
 const char *fop_to_string[] = {
-    "FSTORE",      "FGEN_RANDOM", "FGEN_CONST",
-    "FGEN_ARANGE", "FADD",        "FSUB",
-    "FMUL",        "FDIV",        "FPOW",
-    "FNEG",        "FLOG",        "FSIGN",
-    "FEVEN",       "FLOG2",       "FLOG10",
-    "FSIN",        "FCOS",        "FTAN",
-    "FASIN",       "FACOS",       "FATAN",
-    "FSQRT",       "FEXP",        "FLATTEN",
-    "FMATMUL",     "FCONVERSION", "FRESHAPE",
-    "FMIN",        "FMAX",        "FREDUCE_SUM",
-    "FREDUCE_MUL", "FREDUCE_MIN", "FREDUCE_MAX",
-    "FSLICE",      "FABS",        "FREPEAT",
-    "FTRANSPOSE",  "FEXTEND",     "FCONCAT",
-    "FLESS",       "FEQUAL",      "FGREATER",
-    "FCONVOLVE",   "FSLIDE",      "FGRADIENT_CONVOLVE",
-    "FINDEX",      "FSET_INDEX",  "FSLIDING_WINDOW"};
+    "FSTORE",         "FGEN_RANDOM", "FGEN_CONST",
+    "FGEN_ARANGE",    "FADD",        "FSUB",
+    "FMUL",           "FDIV",        "FPOW",
+    "FNEG",           "FLOG",        "FSIGN",
+    "FEVEN",          "FLOG2",       "FLOG10",
+    "FSIN",           "FCOS",        "FTAN",
+    "FASIN",          "FACOS",       "FATAN",
+    "FSQRT",          "FEXP",        "FLATTEN",
+    "FMATMUL",        "FCONVERSION", "FRESHAPE",
+    "FMIN",           "FMAX",        "FREDUCE_SUM",
+    "FREDUCE_MUL",    "FREDUCE_MIN", "FREDUCE_MAX",
+    "FSLICE",         "FABS",        "FREPEAT",
+    "FTRANSPOSE",     "FEXTEND",     "FCONCAT",
+    "FLESS",          "FEQUAL",      "FGREATER",
+    "FCONVOLVE",      "FSLIDE",      "FGRADIENT_CONVOLVE",
+    "FINDEX",         "FSET_INDEX",  "FSLIDING_WINDOW",
+    "FUNSLIDE_WINDOW"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 // converts c++ type to flint type
 // TODO do execution of parents where necessary in parallel
@@ -1487,6 +1488,26 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
   memcpy(slidewin->size, size, a->operation.dimensions * sizeof(size_t));
   memcpy(slidewin->step, steps, a->operation.dimensions * sizeof(unsigned int));
   op.additional_data = (void *)(slidewin);
+  return addNode(op, {a});
+}
+FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
+                            const unsigned int *steps) {
+  FOperation op;
+  op.op_type = FUNSLIDE_WINDOW;
+  op.dimensions = a->operation.dimensions - 1;
+  op.data_type = a->operation.data_type;
+  op.shape = safe_mal<size_t>(op.dimensions);
+  size_t no_windows = 1;
+  for (int i = 0; i < a->operation.dimensions - 1; i++) {
+    size_t window_size = shape[i] - a->operation.shape[i + 1] + 1;
+    window_size = window_size % steps[i] == 0 ? window_size / steps[i]
+                                              : window_size / steps[i] + 1;
+    no_windows *= window_size;
+    op.shape[i] = shape[i];
+  }
+  unsigned int *csteps = safe_mal<unsigned int>(op.dimensions);
+  memcpy(csteps, steps, op.dimensions * sizeof(unsigned int));
+  op.additional_data = csteps;
   return addNode(op, {a});
 }
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax) {

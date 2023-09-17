@@ -177,6 +177,7 @@ enum FOperationType {
   FINDEX,
   FSET_INDEX,
   FSLIDING_WINDOW,
+  FUNSLIDE_WINDOW,
   FNUM_OPERATION_TYPES
 };
 /**
@@ -965,6 +966,8 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
  * will have `0` elements were the "gaps" between the windows were.
  * If in a dimension `steps` was smaller than `window_size` (the windows were
  * "overlapping") the overlapping elements are summed up in the result.
+ *
+ * `shape` and `steps` therefore have 1 entry less then `a` has dimensions.
  */
 FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
                             const unsigned int *steps);

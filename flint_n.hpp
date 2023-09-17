@@ -1386,7 +1386,7 @@ template <typename T, unsigned int n> struct Tensor {
    * behaviour (i.e. include padding) you can use `extend`, `slice` or similar.
    *
    * The resulting Tensor will therefor have a shape with dimensionality `n - 1`
-   * and size of `(shape[i] - kernel.get_shape()[i] - 1) / steps[i]` 
+   * and size of `(shape[i] - kernel.get_shape()[i] - 1) / steps[i]`
    * if `(shape[i] - kernel.get_shape()[i] - 1)` is divisable by `steps[i]`
    * else `(shape[i] - kernel.get_shape()[i] - 1) / steps[i] + 1`
    *
@@ -1529,6 +1529,19 @@ template <typename T, unsigned int n> struct Tensor {
     std::memcpy(ns.data(), nn->operation.shape, sizeof(size_t) * (n + 1));
     return Tensor<T, n + 1>(nn, ns);
   }
+  /**
+   * UNIMPLEMENTED FUTURE FUNCTION
+   */
+  Tensor<T, n - 1> unslide_window(std::array<size_t, n - 1> result_size,
+                                  std::array<unsigned int, n - 1> step_size = {
+                                      1}) const {
+    FGraphNode *nn =
+        funslide_window(node, result_size.data(), step_size.data());
+    std::array<size_t, n - 1> ns;
+    std::memcpy(ns.data(), nn->operation.shape, sizeof(size_t) * (n - 1));
+    return Tensor<T, n - 1>(nn, ns);
+  }
+
   /**
    * Randomly permutates (=swaps multiple elements with each other without
    * creating, copying or deleting new ones) one axis of the input tensor.
