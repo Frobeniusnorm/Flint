@@ -78,6 +78,7 @@ template <GenericLayer... T> struct SequentialModel {
   Tensor<LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
          get_output_dim<n, T...>()>
   forward(Tensor<K, n> &in) {
+    for (int i = 0; i < in.get_shape().size(); i++)
     return forward_helper<
         0,
         LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
@@ -168,7 +169,8 @@ template <GenericLayer... T> struct SequentialModel {
         for (unsigned int i = 0; i < vars.size(); i++) {
           plgrads[i] = std::vector<FGraphNode *>(vars[i].size());
           for (unsigned int j = 0; j < vars[i].size(); j++) {
-            plgrads[i][j] = fExecuteGraph(grads[index++]);
+            FGraphNode *curr_grad = grads[index++];
+            plgrads[i][j] = curr_grad ? fExecuteGraph(curr_grad) : nullptr;
           }
         }
         backward<0>(plgrads);

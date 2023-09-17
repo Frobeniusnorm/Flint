@@ -47,11 +47,8 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
   template <typename T, unsigned int k>
   void optimize(const Tensor<T, k> &error) {
     if (optimizer) {
-      Tensor<double, n> gw =
-          error.gradient(weight); // this line - somehow - is the problem
-      Tensor<double, n> nw = optimizer->update(weight, gw);
-      nw.execute();
-      weight = std::move(nw);
+      Tensor<double, n> gw = error.gradient(weight);
+      weight = optimizer->update(weight, gw);
       weight.watch();
     } else {
       flogging(F_WARNING, "No Optimizer for weight!");
@@ -66,19 +63,11 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
   }
   void update_weights(std::vector<FGraphNode *> &grads) {
     if (optimizer) {
-#ifdef FLINT_DL_PROFILE
-      auto start = std::chrono::high_resolution_clock::now();
-#endif
+      if (!grads[index])
+        return;
       Tensor<double, n> gw(grads[index], weight.get_shape());
-#ifdef FLINT_DL_PROFILE
-      std::chrono::duration<double, std::milli> elapsed =
-          std::chrono::high_resolution_clock::now() - start;
-      flogging(F_INFO,
-               "weights update took " + std::to_string(elapsed.count()) + "ms");
-#endif
-      Tensor<double, n> nw = optimizer->update(weight, gw);
-      nw.execute();
-      weight = std::move(nw);
+      weight = optimizer->update(weight, gw);
+      weight.execute();
       weight.watch();
     } else {
       flogging(F_WARNING, "No Optimizer for weight!");
@@ -111,9 +100,8 @@ struct WeightRef<index, n, wn...> {
   void optimize(const Tensor<T, k> &error) {
     if (optimizer) {
       Tensor<double, n> gw = error.gradient(weight);
-      Tensor<double, n> nw = optimizer->update(weight, gw);
-      nw.execute();
-      weight = std::move(nw);
+      weight = optimizer->update(weight, gw);
+      weight.execute();
       weight.watch();
     } else {
       flogging(F_WARNING, "No Optimizer for weight!");
@@ -121,10 +109,10 @@ struct WeightRef<index, n, wn...> {
     others.optimize(error);
   }
   template <int i, unsigned int k> Tensor<double, k> &get_weight() {
-    if (i == index)
+    if constexpr (i == index)
       return weight;
     else
-      others.template get_weight<i, k>();
+      return others.template get_weight<i, k>();
   }
   void collect_weights(std::vector<FGraphNode *> &nodes) {
     nodes[index] = weight.get_graph_node();
@@ -132,10 +120,13 @@ struct WeightRef<index, n, wn...> {
   }
   void update_weights(std::vector<FGraphNode *> &grads) {
     if (optimizer) {
-      Tensor<double, n> gw(grads[index], weight.get_shape());
-      Tensor<double, n> nw = optimizer->update(weight, gw);
-      weight = std::move(nw);
-      weight.watch();
+      if (grads[index]) {
+        Tensor<double, n> gw(grads[index], weight.get_shape());
+        Tensor<double, n> nw = optimizer->update(weight, gw);
+        nw.execute();
+        weight = std::move(nw);
+        weight.watch();
+      }
     } else {
       flogging(F_WARNING, "No Optimizer for weight!");
     }
@@ -243,11 +234,11 @@ protected:
   LayerHelper::WeightRef<0, wn...> weight_refs;
   template <unsigned int index, unsigned int n>
   void init_weights(Tensor<double, n> &t) {
-    weight_refs.template set_weight<index>(t);
+    weight_refs.template set_weight<index, n>(t);
   }
   template <unsigned int index, unsigned int n, typename... args>
   void init_weights(Tensor<double, n> &t, args &...weights) {
-    weight_refs.template set_weight<index>(t);
+    weight_refs.template set_weight<index, n>(t);
     init_weights<index + 1>(weights...);
   }
   template <int index, int w, int... wo> static constexpr int get_dim() {

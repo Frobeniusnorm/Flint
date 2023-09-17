@@ -353,16 +353,19 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         na = fmul(na, prev_adj);
         FGraphNode *res = nullptr;
         if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU) {
-          // we check if we can subdivide the reduction task for better parallel distribution
+          // we check if we can subdivide the reduction task for better parallel
+          // distribution
           int subdivs[] = {128, 100, 50, 10, 7, 5, 4, 3, 2};
           for (int i = 0; i < sizeof(subdivs) / sizeof(int); i++) {
-            if (na->operation.shape[0] % subdivs[i] == 0 && na->operation.shape[0] / subdivs[i] > 1) {
+            if (na->operation.shape[0] % subdivs[i] == 0 &&
+                na->operation.shape[0] / subdivs[i] > 1) {
               std::vector<size_t> subdiv_shape(na->operation.dimensions + 1);
               for (int i = 0; i < na->operation.dimensions; i++)
                 subdiv_shape[i + 1] = na->operation.shape[i];
               subdiv_shape[0] = subdivs[i];
               subdiv_shape[1] /= subdivs[i];
-              res = freduce_sum(freshape(na, subdiv_shape.data(), subdiv_shape.size()), 1);
+              res = freduce_sum(
+                  freshape(na, subdiv_shape.data(), subdiv_shape.size()), 1);
               break;
             }
           }
@@ -694,7 +697,7 @@ static void collect(FGraphNode *x, std::list<FGraphNode *> &stack,
       for (const FGraphNode *dx : dxs) {
         if (trace->contains(dx)) {
           skip = false;
-          continue;
+          break;
         }
       }
       if (skip)
@@ -756,7 +759,7 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
       }
       OCLCompilerThread::memory_barrier();
       std::chrono::duration<double, std::milli> elapsed =
-        std::chrono::high_resolution_clock::now() - start;
+          std::chrono::high_resolution_clock::now() - start;
     }
   }
   for (int i = 0; i < num_gradients; i++) {

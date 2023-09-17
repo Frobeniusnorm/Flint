@@ -364,6 +364,34 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
         data = &crd->data;
       }
     } break;
+    case FGEN_CONSTANT: {
+      switch (node->operation.data_type) {
+      case F_INT32: {
+        op.additional_data = safe_mal<int>(1);
+        *((int *)op.additional_data) =
+            *((int *)node->operation.additional_data);
+        break;
+      }
+      case F_INT64: {
+        op.additional_data = safe_mal<long>(1);
+        *((long *)op.additional_data) =
+            *((long *)node->operation.additional_data);
+        break;
+      }
+      case F_FLOAT32: {
+        op.additional_data = safe_mal<float>(1);
+        *((float *)op.additional_data) =
+            *((float *)node->operation.additional_data);
+        break;
+      }
+      case F_FLOAT64: {
+        op.additional_data = safe_mal<double>(1);
+        *((double *)op.additional_data) =
+            *((double *)node->operation.additional_data);
+        break;
+      }
+      }
+    } break;
     case FSLICE: {
       FSlice *osl = (FSlice *)node->operation.additional_data;
       FSlice *csl = new FSlice();
@@ -378,6 +406,23 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
       std::memcpy(csl->step, osl->step,
                   node->operation.dimensions * sizeof(long));
     } break;
+    case FSLIDING_WINDOW: {
+      FSlidingWindow *osl = (FSlidingWindow *)node->operation.additional_data;
+      FSlidingWindow *csl = new FSlidingWindow();
+      op.additional_data = (void *)csl;
+      csl->step = safe_mal<unsigned int>(node->operation.dimensions);
+      std::memcpy(csl->step, osl->step,
+                  node->operation.dimensions * sizeof(unsigned int));
+      csl->size = safe_mal<size_t>(node->operation.dimensions);
+      std::memcpy(csl->size, osl->size,
+                  node->operation.dimensions * sizeof(size_t));
+    } break;
+    case FGEN_RANDOM: {
+      op.additional_data = safe_mal<double>(1);
+      ((double *)op.additional_data)[0] =
+          ((double *)node->operation.additional_data)[0];
+    } break;
+    case FGEN_ARANGE:
     case FREDUCE_MAX:
     case FREDUCE_MIN:
     case FCONCAT:
@@ -653,8 +698,8 @@ FGraphNode *farange(const size_t *shape, const int dimensions, const int ax) {
   memcpy(op.shape, shape, op.dimensions * sizeof(size_t));
   op.op_type = FGEN_ARANGE;
   op.data_type = F_INT64;
-  op.additional_data = safe_mal<long>(1);
-  ((long *)op.additional_data)[0] = ax;
+  op.additional_data = safe_mal<int>(1);
+  ((int *)op.additional_data)[0] = ax;
   return addNode(op, {});
 }
 // adds the constant value to each entry in a
