@@ -38,8 +38,8 @@ extern "C" {
 
   To support C++ exceptions as well as keep C-compatibility there is a flag
   C_COMPATIBILITY that - when enabled during compilation - disables exception
-  throwing and sets the errno instead (if you use C++ probably SEGFAULTS with an error message
-  most of the time instead).
+  throwing and sets the errno instead (if you use C++ probably SEGFAULTS with an
+  error message most of the time instead).
 */
 #define FLINT_BACKEND_ONLY_CPU 1
 #define FLINT_BACKEND_ONLY_GPU 2
@@ -951,6 +951,22 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
  *   [[4, 5], [5, 6]]]]`
  */
 FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
+                            const unsigned int *steps);
+/**
+ * UNIMPLEMENTED FUTURE FUNCTION
+ * Reprojects the windows (first dimension of `a`) to a common tensor,
+ * i.e. if `a = fsliding_window(x, window_size, steps)` `shape` should be the
+ * shape of `x`, while steps remain the same and the resulting tensor will have
+ * the same shape of `x` with the elements in `a` reprojected to their original
+ * position in `x`.
+ * Overlapping elements will be summed up. Meaning if e.g. `window_size` and
+ *`steps` were the same, the result is exactly `x`.
+ * If in a dimension `steps` was larger than `window_size`, the resulting tensor
+ * will have `0` elements were the "gaps" between the windows were.
+ * If in a dimension `steps` was smaller than `window_size` (the windows were
+ * "overlapping") the overlapping elements are summed up in the result.
+ */
+FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
                             const unsigned int *steps);
 /**
  * Randomly permutates (=swaps multiple elements with each other without

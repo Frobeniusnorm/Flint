@@ -812,7 +812,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   OCLCompilerThread::memory_barrier();
   elapsed = chrono::high_resolution_clock::now() - start;
   flogging(F_DEBUG, "compilation took " + to_string(compilation_time.count()) +
-                        "ms, execution took " + to_string(elapsed.count()));
+                        "ms, execution took " + to_string(elapsed.count()) + " for " + to_string(global_size) + " elements");
   node->result_data = resultData;
   return node;
 }
