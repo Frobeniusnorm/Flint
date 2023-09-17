@@ -1,0 +1,11 @@
+# basic
+matmul
+matmul.o
+conv
+conv.o
+addition
+addition.o
+
+# gauss
+gauss
+gauss.o

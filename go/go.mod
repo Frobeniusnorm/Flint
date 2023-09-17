@@ -1,5 +1,5 @@
-module flint
+module github.com/Frobeniusnorm/Flint/go
 
 go 1.21.0
 
-// TODO: for mroe performance https://github.com/petermattis/fastcgo
+// TODO: for more performance https://github.com/petermattis/fastcgo
