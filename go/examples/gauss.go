@@ -1,15 +1,21 @@
+// this package provides a use case a little bit more complicated.
+// To avoid linear memory growth we need calls to optimize memory as well as managing the reference counter
 package main
 
 import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go"
+	"log"
 )
 
 func main() {
 	flint.Init(flint.BACKEND_BOTH)
 	flint.SetLoggingLevel(flint.INFO)
 
-	img := flint.LoadImage("../../flint.png")
+	img, err := flint.LoadImage("../../flint.png")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	imgShape := flint.GetShape(img)
 	h, w, c := imgShape[0], imgShape[1], imgShape[2]
@@ -28,7 +34,8 @@ func main() {
 	flint.IncreaseRefCounter(kernel)
 	flint.IncreaseRefCounter(img)
 
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 200; i++ {
+		fmt.Println("iteration:", i)
 		// add padding
 		img = flint.Extend(
 			img,
@@ -42,6 +49,7 @@ func main() {
 		img = flint.ExecuteGraph(img)
 		img = flint.OptimizeMemory(img)
 	}
+	fmt.Println("done")
 
 	// channel back into last dim
 	img = flint.Transpose(img, flint.Axes{2, 1, 0})

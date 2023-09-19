@@ -34,6 +34,24 @@ The following "modern" C features do not work with cgo, all code needs to be in 
 
 ## Error handling
 
+See cgo documentation:
+Any C function (even void functions) may be called in a multiple assignment context to retrieve both the return value (
+if any) and the C errno variable as an error (use _ to skip the result value if the function returns void). For example:
+
+```go
+n, err = C.sqrt(-1)
+_, err := C.voidFunc()
+var n, err = C.sqrt(1)
+```
+
+Further infos:
+
+- <https://utcc.utoronto.ca/~cks/space/blog/programming/GoCgoErrorReturns>
+- <https://www.grant.pizza/blog/cgo-errors/>
+- <https://stackoverflow.com/questions/38343414/how-do-i-set-errno-from-go>
+- <https://github.com/golang/go/issues/1360>
+- <https://github.com/golang/go/issues/23468>
+
 ## Memory management
 
 In iterative programs such as [`gauss.go`](./examples/gauss.go) a lot of unneeded nodes will be included in the graph at

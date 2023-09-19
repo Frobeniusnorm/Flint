@@ -3,8 +3,6 @@
 //
 // this wrapper is features complete, but should only be used as a basis for higher level software,
 // as there is no memory management or similar things.
-//
-// [../flint.h]
 package flint
 
 /*
@@ -18,6 +16,13 @@ NOTE: important rules for writing robust CGo code:
 #cgo LDFLAGS: -lflint -lOpenCL -lstdc++ -lm
 #include <flint/flint.h>
 #include <stdlib.h>  // needed for C.free!
+#include <errno.h>
+
+// simple go function for the go interface to reset the errno
+// WARNING: this MAY break in multi-threaded scenarios
+void reset_errno(void) {
+	errno = 0;
+}
 */
 import "C"
 import (
@@ -100,6 +105,16 @@ func convertArray[In completeNumbers, Out completeNumbers | cNumbers](arr []In) 
 //////////////
 // SETUP
 /////////////
+
+// Error offers a generic error struct in flint
+type Error struct {
+	message string
+}
+
+// FIXME: this stuff is currently unused
+func (err *Error) Error() string {
+	return err.message
+}
 
 type Backend int
 
@@ -185,14 +200,21 @@ const (
 	BMP
 )
 
-func LoadImage(path string) GraphNode {
+// LoadImage turns an image into a 3 dimensional Tensor
+// NOTE: this function exemplary shows how to properly deal with errno
+func LoadImage(path string) (GraphNode, error) {
+	C.reset_errno()
+
 	unsafePath := C.CString(path)
 	defer C.free(unsafe.Pointer(unsafePath))
-	flintNode, err := C.fload_image(unsafePath)
+
+	var flintNode *C.FGraphNode
+	var err error // has underlying syscall.Errno type
+	flintNode, err = C.fload_image(unsafePath)
 	if err != nil {
-		panic(err) // TODO: error handling everywhere
+		return nil, err
 	}
-	return GraphNode(unsafe.Pointer(flintNode))
+	return GraphNode(flintNode), nil
 }
 
 func StoreImage(node GraphNode, path string, format imageFormat) {
