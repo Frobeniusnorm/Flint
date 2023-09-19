@@ -18,6 +18,10 @@ template <typename T> struct Tensor<T, 1> {
   typedef std::vector<T> storage_type;
   typedef std::initializer_list<T> init_type;
   /**
+   * Uninitialized Tensor
+   */
+  Tensor() : node(nullptr) {}
+  /**
    * Creates a Tensor from a `std::vector`.
    * (`storage_type` is a recursive defined type definition, for `n=1` it is
    * just an alias for `std::vector`). E.g.

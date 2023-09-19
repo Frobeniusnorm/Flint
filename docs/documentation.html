@@ -56,10 +56,13 @@
 <span style="color: #FFF030">double</span> shape[] = {<span style="color: #30F0FF">2</span>,<span style="color: #30F0FF">2</span>};
 FGraphNode *g1 = fCreateGraph(&data1[<span style="color: #30F0FF">0</span>], <span style="color: #30F0FF">4</span>, F_FLOAT32, &shape[<span style="color: #30F0FF">0</span>]);
 FGraphNode *g2 = fCreateGraph(&data2[<span style="color: #30F0FF">0</span>], <span style="color: #30F0FF">4</span>, F_FLOAT64, &shape[<span style="color: #30F0FF">0</span>]);
-FGraphNode *mm = fExecuteGraph(fmatmul(g1, g2));
+g2-&gt;reference_counter++;
+FGraphNode *mm = fOptimizeMemory(fExecuteGraph(fmatmul(g1, g2))); <span style="color: #D0D0D0">//also frees g1 but not g2</span>
 FResultData *rd = mm-&gt;result_data;
 double* result = rd-&gt;data;
 <span style="color: #FFF030">double</span> result_shape = {mm-&gt;operation-&gt;shape[<span style="color: #30F0FF">0</span>], mm-&gt;operation-&gt;shape[<span style="color: #30F0FF">1</span>]};</pre>
+fFreeGraph(mm); // also frees result and rd
+fFreeGraph(g2); // does not free g2, because of the reference_counter
           </pre>
         </p>
       </div>
@@ -95,6 +98,33 @@ std::vector&lt;std::vector&lt;<span style="color: #FFF030">double</span>&gt;&gt;
       <br/>
       <div class="card button2">
         <a href="flint_hpp.html">Documentation</a>
+      </div>
+      <div style="display: block; height: 2em;"></div>
+      <div class="card">
+        <span class="card_header">Deep Learning Headers</span>
+      </div>
+      <br />
+      <div class="card">
+        <p style="padding-bottom: 10px; padding-top: 2px;">
+          Implementation of a templated deep learning framework with Flint in C++.
+          Strongly works with templates and concepts to allow flexible usage and good performance.
+          <pre class="card code"><pre class="card code" style="margin: 5px;">
+auto m = SequentialModel{
+  Conv2D(<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">7</span>, std::array&lt;unsigned <span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt;{<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>}, NO_PADDING),
+  Relu(),
+  Flatten(),
+  Connected(<span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">8</span><span style="color: #30F0FF">0</span>),
+  Relu(),
+  Connected(<span style="color: #30F0FF">8</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>),
+  SoftMax()
+};
+std::cout &lt;&lt; m.summary() &lt;&lt; std::endl;</pre>
+          </pre>
+        </p>
+      </div>
+      <br/>
+      <div class="card button4">
+        <a href="dl.html">Documentation</a>
       </div>
     </div>
   </center>

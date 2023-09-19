@@ -1,4 +1,6 @@
 #include "../layers.hpp"
+#include <flint/flint.h>
+#include <array>
 #include <initializer_list>
 /**
  * Padding of convolution operations
@@ -64,6 +66,7 @@ template <int n> class Convolution : public Layer<n, 1> {
   }
 
 public:
+  //static constexpr FType transform_type(FType t) { return F_FLOAT64; }
   PaddingMode padding_mode;
   /** Initializes the Convolution Layer.
    * - `units_in` number of channels (size of last dimension) of input tensor
@@ -88,7 +91,7 @@ public:
       : Layer<n, 1>(weight_init.template initialize<double>(
                         weight_shape(filters, kernel_size, units_in)),
                     bias_init.template initialize<double>(
-                        std::array<size_t, 1>{filters})),
+                        std::array<size_t, 1>{(size_t)filters})),
         padding_mode(padding_mode), kernel_size(kernel_size) {
     initialize_precalc(stride);
   }
@@ -112,7 +115,7 @@ public:
       : Layer<n, 1>(GlorotUniform().template initialize<double>(
                         weight_shape(filters, kernel_size, units_in)),
                     ConstantInitializer().template initialize<double>(
-                        std::array<size_t, 1>{filters})),
+                        std::array<size_t, 1>{(size_t)filters})),
         padding_mode(padding_mode), kernel_size(kernel_size) {
 
     initialize_precalc(stride);
@@ -120,11 +123,11 @@ public:
   std::string name() override { return "Convolution"; }
   std::string summary() override {
     const unsigned int filters =
-        Layer<n>::template get_weight<0>().get_shape()[0];
+        Layer<n, 1>::template get_weight<0>().get_shape()[0];
     const unsigned int units_in =
-        Layer<n>::template get_weight<0>().get_shape()[n - 1];
+        Layer<n, 1>::template get_weight<0>().get_shape()[n - 1];
     const unsigned int kernel_size =
-        Layer<n>::template get_weight<0>().get_shape()[1];
+        Layer<n, 1>::template get_weight<0>().get_shape()[1];
     return name() + ": input channels: " + std::to_string(units_in) +
            " filters: " + std::to_string(filters) +
            ", kernel size: " + std::to_string(kernel_size);
@@ -132,14 +135,14 @@ public:
   template <typename T, unsigned int k>
   Tensor<double, k> forward(Tensor<T, k> &in) {
     const unsigned int filters =
-        Layer<n>::template get_weight<0>().get_shape()[0];
+        Layer<n, 1>::template get_weight<0>().get_shape()[0];
     // actual convolve
     Tensor<double, k> res;
     for (unsigned int i = 0; i < filters; i++) {
       // in has shape [batch, dim1, ..., units_in]
       // has shape [1, kernel_size, ..., units_in]
       Tensor<double, n> filter =
-          Layer<n>::template get_weight<0>().slice(TensorRange(i, i + 1));
+          Layer<n, 1>::template get_weight<0>().slice(TensorRange(i, i + 1));
       Tensor<double, n - 1> filter_res = in.convolve_array(filter, act_stride);
       std::array<size_t, n> new_shape;
       for (int i = 0; i < n - 1; i++)
@@ -150,18 +153,18 @@ public:
       res = i == 0 ? local_res : Flint::concat(res, local_res, n - 1);
     }
     // repeat bias to the shape of res and add
-    std::array<size_t, n> bias_shape;
-    bias_shape[0] = 1;
-    for (int i = 1; i < n; i++)
+    std::array<size_t, n - 1> bias_shape;
+    bias_shape[n - 2] = filters;
+    for (int i = 0; i < n - 2; i++)
       bias_shape[i] = 1;
-    Tensor<double, n> bias =
-        Layer<n>::template get_weight<1>().reshape_array(bias_shape);
-    std::array<int, n> bias_repeat;
-    bias_repeat[0] = 0;
-    for (int i = 1; i < n; i++)
-      bias_repeat[i] = res.get_shape()[i] - 1;
-    res = res + bias.repeat_array(bias_repeat);
-    return res;
+    Tensor<double, n - 1> bias =
+        Layer<n, 1>::template get_weight<1>().reshape_array(bias_shape);
+    std::array<int, n - 1> bias_repeat;
+    bias_repeat[n - 2] = 0;
+    for (int i = 0; i < n - 2; i++)
+      bias_repeat[i] = res.get_shape()[i + 1] - 1;
+    bias = bias.repeat_array(bias_repeat);
+    return res + bias;
   }
 };
 /** For inputs of images with shape `(batch_size, width, height, channels)` */
@@ -169,8 +172,8 @@ typedef Convolution<4> Conv2D;
 
 enum PoolingMode { MAX_POOLING, MIN_POOLING, AVG_POOLING };
 template <int n> class Pooling : public UntrainableLayer {
-  std::array<size_t, n - 1> window_size;
-  std::array<unsigned int, n - 1> step_size;
+  std::array<size_t, n> window_size;
+  std::array<unsigned int, n> step_size;
   PoolingMode mode;
 
   static Pooling<n> pooling_helper(PoolingMode mode, std::initializer_list<size_t> window_size, std::initializer_list<unsigned int> step_size) {
@@ -187,9 +190,41 @@ template <int n> class Pooling : public UntrainableLayer {
     return Pooling(mode, window_size_a, step_size_a);
   }
 public:
-  Pooling(PoolingMode mode, std::array<size_t, n - 1> window_size,
-          std::array<unsigned int, n - 1> step_size)
-      : window_size(window_size), step_size(step_size), mode(mode) {}
+  Pooling(PoolingMode mode, std::array<size_t, n - 1> ws,
+          std::array<unsigned int, n - 1> ss)
+      : mode(mode) {
+    std::memcpy(window_size.data() + 1, ws.data(), (n - 1) * sizeof(size_t));
+    std::memcpy(step_size.data() + 1, ss.data(), (n - 1) * sizeof(unsigned int));
+  }
+
+  template <typename T, unsigned int k>
+  Tensor<T, k> forward(Tensor<T, k> &in) {
+    window_size[0] = in.get_shape()[0];
+    step_size[0] = in.get_shape()[0];
+    Tensor<T, n + 1> windows = in.sliding_window(window_size, step_size);
+    std::array<size_t, n> final_shape;
+    final_shape[0] = in.get_shape()[0];
+    for (int i = n; i >= 2; i--) {
+      Tensor<T, n> red;
+      switch (mode) {
+        case MAX_POOLING:
+          red = windows.reduce_max(i); 
+        break;
+        case MIN_POOLING:
+          red = windows.reduce_min(i); 
+        break;
+        case AVG_POOLING:
+          red = windows.reduce_sum(i) / (long)windows.get_shape()[i]; 
+        break;
+      }
+      windows = red.expand(i, 1);
+      size_t win = in.get_shape()[i - 1] - window_size[i - 1] + 1;
+      win = win % step_size[i - 1] == 0 ? win / step_size[i - 1]
+                                    : win / step_size[i - 1] + 1;
+      final_shape[i - 1] = win;
+    }
+    return windows.reshape_array(final_shape);
+  }
 
   std::string name() override { 
     std::string method;

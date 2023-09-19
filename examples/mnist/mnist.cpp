@@ -1,9 +1,8 @@
 // #define FLINT_DL_PROFILE
-#include <flint/dl/flint_dl.hpp>
 #include <cstring>
 #include <flint/flint.h>
 #include <flint/flint.hpp>
-#include <flint/flint_helper.hpp>
+#include "../../dl/flint_dl.hpp"
 #include <stdexcept>
 int reverseInt(int i) {
   unsigned char c1, c2, c3, c4;
@@ -78,7 +77,7 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // download and extract to the desired folder from
 // http://yann.lecun.com/exdb/mnist/
 int main() {
-  FlintContext _(FLINT_BACKEND_BOTH);
+  FlintContext _(FLINT_BACKEND_ONLY_GPU);
   fSetLoggingLevel(F_INFO);
   Tensor<float, 3> X = load_mnist_images("train-images-idx3-ubyte");
   Tensor<double, 2> Y =
@@ -99,6 +98,7 @@ int main() {
   auto m = SequentialModel{
     Conv2D(1, 10, 7, std::array<unsigned int, 2>{2, 2}, NO_PADDING),
     Relu(),
+    //Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}),
     Flatten(),
     Connected(1210, 80),
     Relu(),

@@ -262,6 +262,7 @@ inline void freeAdditionalData(FGraphNode *gn) {
   case FREDUCE_SUM:
   case FREDUCE_MUL:
     free(gn->operation.additional_data);
+    gn->operation.additional_data = nullptr;
   default:
     break;
   }

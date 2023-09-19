@@ -14,7 +14,7 @@
     <div class="left-spaced">
       <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
       <a class="item" href="index.html">About</a>
-      <span class="item selected" href="documentation.html">Documentation</span>
+      <a class="item selected" href="documentation.html">Documentation</a>
       <a class="item" href="tutorial.html">Tutorial</a>
     </div>
   </div>
@@ -131,7 +131,12 @@ concept GenericLayer =
 
 
       <h1 id="all_layers"><u>dl/layers/*</u></h1>
-      <h2>dl/layers/connected.hpp</h2>
+      <ul>
+        <li><a href="#connected">Fully Connected</a></li>
+        <li><a href="#convolution">Convolution and Pooling</a></li>
+        <li><a href="#normalization">Normalization</a></li>
+      </ul>
+      <h2 id="connected">dl/layers/connected.hpp</h2>
       <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-Connected_:_public_Layer_2__">struct <b>Connected : public Layer</b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_Initializer_InitWeights__Initializer_InitBias___Connected_size_t_units_in__size_t_units_out__InitWeights_init_weights_____________InitBias_init_bias_______:_Layer_2__Flint::concat_init_weights_template_initialize_double_____________________________________std::array_size_t__2_">template &lt;Initializer InitWeights, Initializer InitBias&gt;
   <b>Connected</b>(size_t units_in, size_t units_out, InitWeights init_weights,
             InitBias init_bias)
@@ -182,7 +187,7 @@ concept GenericLayer =
  the bias with 0s.
 </div></div><div style="display: block; height: 2em;"></div>
 
-      <h2>dl/layers/convolution.hpp</h2>
+      <h2 id="convolution">dl/layers/convolution.hpp</h2>
       <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-PaddingMode_">enum <b>PaddingMode </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_int_n__class_Convolution_:_public_Layer_n__1__">template &lt;int n&gt; class <b>Convolution : public Layer</b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_Initializer_InitWeights__Initializer_InitBias___Convolution_size_t_units_in__unsigned_int_filters__unsigned_int_kernel_size_______________InitWeights_weight_init__InitBias_bias_init_______________std::array_unsigned_int__n_-_2__stride_______________PaddingMode_padding_mode_=_NO_PADDING_______:_Layer_n__1__weight_init_template_initialize_double__________________________weight_shape_filters__kernel_size__units_in_______________________bias_init_template_initialize_double__________________________std::array_size_t__1_">template &lt;Initializer InitWeights, Initializer InitBias&gt;
   <b>Convolution</b>(size_t units_in, unsigned int filters, unsigned int kernel_size,
               InitWeights weight_init, InitBias bias_init,
@@ -289,7 +294,7 @@ concept GenericLayer =
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> For inputs of images with shape <pre class="inline_code">(batch_size, width, height, channels)</pre> </div></div><div style="display: block; height: 2em;"></div>
 
-      <h2>dl/layers/normalization.hpp</h2>
+      <h2 id="normalization">dl/layers/normalization.hpp</h2>
       <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-Dropout_:_public_UntrainableLayer_">class <b>Dropout : public UntrainableLayer </b></a><br/><br/></div>
       <div style="display: block; height: 2em;"></div>
       <div id="s-Dropout_:_public_UntrainableLayer_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">class <b>Dropout : public UntrainableLayer </b></pre></div>

@@ -3,7 +3,7 @@
     <div class="left-spaced">
       <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
       <a class="item" href="index.html">About</a>
-      <span class="item selected" href="documentation.html">Documentation</span>
+      <a class="item selected" href="documentation.html">Documentation</a>
       <a class="item" href="tutorial.html">Tutorial</a>
     </div>
   </div>
@@ -31,15 +31,20 @@
       @from_code("../dl/layers.hpp")
 
       <h1 id="all_layers"><u>dl/layers/*</u></h1>
-      <h2>dl/layers/connected.hpp</h2>
+      <ul>
+        <li><a href="#connected">Fully Connected</a></li>
+        <li><a href="#convolution">Convolution and Pooling</a></li>
+        <li><a href="#normalization">Normalization</a></li>
+      </ul>
+      <h2 id="connected">dl/layers/connected.hpp</h2>
       @gen_toc("../dl/layers/connected.hpp")
       <div style="display: block; height: 2em;"></div>
       @from_code("../dl/layers/connected.hpp")
-      <h2>dl/layers/convolution.hpp</h2>
+      <h2 id="convolution">dl/layers/convolution.hpp</h2>
       @gen_toc("../dl/layers/convolution.hpp")
       <div style="display: block; height: 2em;"></div>
       @from_code("../dl/layers/convolution.hpp")
-      <h2>dl/layers/normalization.hpp</h2>
+      <h2 id="normalization">dl/layers/normalization.hpp</h2>
       @gen_toc("../dl/layers/normalization.hpp")
       <div style="display: block; height: 2em;"></div>
       @from_code("../dl/layers/normalization.hpp")

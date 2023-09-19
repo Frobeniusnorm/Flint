@@ -143,6 +143,9 @@ template <GenericLayer... T> struct SequentialModel {
         if (b * batch_size == slice_to)
           break;
         // run batch and calculate error
+#ifdef FLINT_DL_PROFILE
+        auto start = std::chrono::high_resolution_clock::now();
+#endif
         auto input = sx.slice(TensorRange(b * batch_size, slice_to));
         auto expected = sy.slice(TensorRange(b * batch_size, slice_to));
         input.execute();
@@ -151,6 +154,12 @@ template <GenericLayer... T> struct SequentialModel {
         auto output = forward(input);
         auto error = loss.calculate_error(output, expected);
         fStopGradientContext();
+#ifdef FLINT_DL_PROFILE
+        error.execute();
+        std::chrono::duration<double, std::milli> elapsed =
+            std::chrono::high_resolution_clock::now() - start;
+        std::cout << " forward took " << elapsed.count() << std::flush;
+#endif
         // optimize weights
         // flatten all vars, but keep original structure for reconstruction
         std::vector<std::vector<FGraphNode *>> vars;
@@ -159,6 +168,9 @@ template <GenericLayer... T> struct SequentialModel {
         for (unsigned int i = 0; i < vars.size(); i++)
           flat_vars.insert(flat_vars.end(), vars[i].begin(), vars[i].end());
         std::vector<FGraphNode *> grads(flat_vars.size());
+#ifdef FLINT_DL_PROFILE
+        start = std::chrono::high_resolution_clock::now();
+#endif
         // calculate gradients
         fCalculateGradients(error.get_graph_node(), flat_vars.data(),
                             flat_vars.size(), grads.data());
@@ -168,9 +180,15 @@ template <GenericLayer... T> struct SequentialModel {
         for (unsigned int i = 0; i < vars.size(); i++) {
           plgrads[i] = std::vector<FGraphNode *>(vars[i].size());
           for (unsigned int j = 0; j < vars[i].size(); j++) {
-            plgrads[i][j] = fExecuteGraph(grads[index++]);
+            FGraphNode *curr_grad = grads[index++];
+            plgrads[i][j] = curr_grad ? fExecuteGraph(curr_grad) : nullptr;
           }
         }
+#ifdef FLINT_DL_PROFILE
+        elapsed =
+            std::chrono::high_resolution_clock::now() - start;
+        std::cout << " gradient calc took " << elapsed.count() << std::flush;
+#endif
         backward<0>(plgrads);
         // calculate error value
         double local_error = (double)(error.reduce_sum()[0]);

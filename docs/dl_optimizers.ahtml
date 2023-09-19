@@ -11,7 +11,7 @@
   <div id="showcase_background" style="min-height: 18em; background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(61,215,193,1) 0%, rgba(33,100,228,1) 100%);">
     <center style="margin-top:2em">
       <h1>
-        Documentation <u>dl/models.hpp</u>, <u>dl/trainer.hpp</u>
+        Documentation <u>dl/optimizers.hpp</u> <u>dl/losses.hpp</u>
       </h1>
       <div style="display: block; height: 0.5em;"></div>
       <h2>
@@ -22,19 +22,19 @@
   <center>
     <div class="content">
       Jump to documentation:
-      <div class="standalone-button button1"><a href="#models">models</a></div>
-      <div class="standalone-button button2"><a href="#trainer">trainer</a></div>
+      <div class="standalone-button button1"><a href="#optimizers">optimizers</a></div>
+      <div class="standalone-button button2"><a href="#losses">losses</a></div>
       <div style="display: block; height: 2em;"></div>
-      <h1 id="models"><u>dl/models.hpp</u></h1>
-      @gen_toc("../dl/models.hpp")
+      <h1 id="optimizers"><u>dl/optimizers.hpp</u></h1>
+      @gen_toc("../dl/optimizers.hpp")
       <div style="display: block; height: 2em;"></div>
-      @from_code("../dl/models.hpp")
+      @from_code("../dl/optimizers.hpp")
 
       <div style="display: block; height: 2em;"></div>
-      <h1 id="trainer"><u>dl/trainer.hpp</u></h1>
-      @gen_toc("../dl/trainer.hpp")
+      <h1 id="losses"><u>dl/losses.hpp</u></h1>
+      @gen_toc("../dl/losses.hpp")
       <div style="display: block; height: 2em;"></div>
-      @from_code("../dl/trainer.hpp")
+      @from_code("../dl/losses.hpp")
     </div>
   </center>
 @include("footer.html")

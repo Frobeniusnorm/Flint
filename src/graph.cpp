@@ -26,22 +26,23 @@
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
 const char *fop_to_string[] = {
-    "FSTORE",      "FGEN_RANDOM", "FGEN_CONST",
-    "FGEN_ARANGE", "FADD",        "FSUB",
-    "FMUL",        "FDIV",        "FPOW",
-    "FNEG",        "FLOG",        "FSIGN",
-    "FEVEN",       "FLOG2",       "FLOG10",
-    "FSIN",        "FCOS",        "FTAN",
-    "FASIN",       "FACOS",       "FATAN",
-    "FSQRT",       "FEXP",        "FLATTEN",
-    "FMATMUL",     "FCONVERSION", "FRESHAPE",
-    "FMIN",        "FMAX",        "FREDUCE_SUM",
-    "FREDUCE_MUL", "FREDUCE_MIN", "FREDUCE_MAX",
-    "FSLICE",      "FABS",        "FREPEAT",
-    "FTRANSPOSE",  "FEXTEND",     "FCONCAT",
-    "FLESS",       "FEQUAL",      "FGREATER",
-    "FCONVOLVE",   "FSLIDE",      "FGRADIENT_CONVOLVE",
-    "FINDEX",      "FSET_INDEX",  "FSLIDING_WINDOW"};
+    "FSTORE",         "FGEN_RANDOM", "FGEN_CONST",
+    "FGEN_ARANGE",    "FADD",        "FSUB",
+    "FMUL",           "FDIV",        "FPOW",
+    "FNEG",           "FLOG",        "FSIGN",
+    "FEVEN",          "FLOG2",       "FLOG10",
+    "FSIN",           "FCOS",        "FTAN",
+    "FASIN",          "FACOS",       "FATAN",
+    "FSQRT",          "FEXP",        "FLATTEN",
+    "FMATMUL",        "FCONVERSION", "FRESHAPE",
+    "FMIN",           "FMAX",        "FREDUCE_SUM",
+    "FREDUCE_MUL",    "FREDUCE_MIN", "FREDUCE_MAX",
+    "FSLICE",         "FABS",        "FREPEAT",
+    "FTRANSPOSE",     "FEXTEND",     "FCONCAT",
+    "FLESS",          "FEQUAL",      "FGREATER",
+    "FCONVOLVE",      "FSLIDE",      "FGRADIENT_CONVOLVE",
+    "FINDEX",         "FSET_INDEX",  "FSLIDING_WINDOW",
+    "FUNSLIDE_WINDOW"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 // converts c++ type to flint type
 // TODO do execution of parents where necessary in parallel
@@ -364,6 +365,34 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
         data = &crd->data;
       }
     } break;
+    case FGEN_CONSTANT: {
+      switch (node->operation.data_type) {
+      case F_INT32: {
+        op.additional_data = safe_mal<int>(1);
+        *((int *)op.additional_data) =
+            *((int *)node->operation.additional_data);
+        break;
+      }
+      case F_INT64: {
+        op.additional_data = safe_mal<long>(1);
+        *((long *)op.additional_data) =
+            *((long *)node->operation.additional_data);
+        break;
+      }
+      case F_FLOAT32: {
+        op.additional_data = safe_mal<float>(1);
+        *((float *)op.additional_data) =
+            *((float *)node->operation.additional_data);
+        break;
+      }
+      case F_FLOAT64: {
+        op.additional_data = safe_mal<double>(1);
+        *((double *)op.additional_data) =
+            *((double *)node->operation.additional_data);
+        break;
+      }
+      }
+    } break;
     case FSLICE: {
       FSlice *osl = (FSlice *)node->operation.additional_data;
       FSlice *csl = new FSlice();
@@ -378,6 +407,23 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
       std::memcpy(csl->step, osl->step,
                   node->operation.dimensions * sizeof(long));
     } break;
+    case FSLIDING_WINDOW: {
+      FSlidingWindow *osl = (FSlidingWindow *)node->operation.additional_data;
+      FSlidingWindow *csl = new FSlidingWindow();
+      op.additional_data = (void *)csl;
+      csl->step = safe_mal<unsigned int>(node->operation.dimensions);
+      std::memcpy(csl->step, osl->step,
+                  node->operation.dimensions * sizeof(unsigned int));
+      csl->size = safe_mal<size_t>(node->operation.dimensions);
+      std::memcpy(csl->size, osl->size,
+                  node->operation.dimensions * sizeof(size_t));
+    } break;
+    case FGEN_RANDOM: {
+      op.additional_data = safe_mal<double>(1);
+      ((double *)op.additional_data)[0] =
+          ((double *)node->operation.additional_data)[0];
+    } break;
+    case FGEN_ARANGE:
     case FREDUCE_MAX:
     case FREDUCE_MIN:
     case FCONCAT:
@@ -653,8 +699,8 @@ FGraphNode *farange(const size_t *shape, const int dimensions, const int ax) {
   memcpy(op.shape, shape, op.dimensions * sizeof(size_t));
   op.op_type = FGEN_ARANGE;
   op.data_type = F_INT64;
-  op.additional_data = safe_mal<long>(1);
-  ((long *)op.additional_data)[0] = ax;
+  op.additional_data = safe_mal<int>(1);
+  ((int *)op.additional_data)[0] = ax;
   return addNode(op, {});
 }
 // adds the constant value to each entry in a
@@ -1442,6 +1488,28 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
   memcpy(slidewin->size, size, a->operation.dimensions * sizeof(size_t));
   memcpy(slidewin->step, steps, a->operation.dimensions * sizeof(unsigned int));
   op.additional_data = (void *)(slidewin);
+  return addNode(op, {a});
+}
+FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
+                            const unsigned int *steps) {
+  FOperation op;
+  op.op_type = FUNSLIDE_WINDOW;
+  op.dimensions = a->operation.dimensions - 1;
+  op.data_type = a->operation.data_type;
+  op.shape = safe_mal<size_t>(op.dimensions);
+  size_t no_windows = 1;
+  for (int i = 0; i < a->operation.dimensions - 1; i++) {
+    size_t window_size = shape[i] - a->operation.shape[i + 1] + 1;
+    window_size = window_size % steps[i] == 0 ? window_size / steps[i]
+                                              : window_size / steps[i] + 1;
+    no_windows *= window_size;
+    op.shape[i] = shape[i];
+  }
+  if (no_windows != a->operation.shape[0])
+    flogging(F_ERROR, "Number of windows is not consistend with provided shape and steps for unslide! Provided parameters yield " + std::to_string(no_windows) + " windows, while the provided Tensor has " + std::to_string(a->operation.shape[0]));
+  unsigned int *csteps = safe_mal<unsigned int>(op.dimensions);
+  memcpy(csteps, steps, op.dimensions * sizeof(unsigned int));
+  op.additional_data = csteps;
   return addNode(op, {a});
 }
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax) {

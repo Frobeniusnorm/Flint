@@ -261,10 +261,12 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
   case FSLIDING_WINDOW: {
     FGraphNode *a = y->predecessors[0];
     if (0 == dx_i) {
-      // TODO i dont know, is this fast? is this slow?
+      // TODO while this works in reasonable time it has a grotesque memory consumption
+      // Better would be a custom function for the gradient
       FSlidingWindow *sliding_win =
           (FSlidingWindow *)y->operation.additional_data;
       std::vector<size_t> no_windows(a->operation.dimensions);
+      
       for (int i = 0; i < a->operation.dimensions; i++) {
         size_t window_size = a->operation.shape[i] - sliding_win->size[i] + 1;
         window_size = window_size % sliding_win->step[i] == 0
@@ -272,6 +274,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
                           : window_size / sliding_win->step[i] + 1;
         no_windows[i] = window_size;
       }
+      // OLD IDEA
       FGraphNode *working_adj = prev_adj;
       std::vector<size_t> shape_adj_working(
           working_adj->operation.shape,
@@ -285,9 +288,6 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         FGraphNode *ind = farange(&a->operation.shape[i], 1, 0);
         FGraphNode *win_ind =
             fsliding_window(ind, &sliding_win->size[i], &sliding_win->step[i]);
-        if (win_ind->operation.shape[0] != no_windows[i])
-          flogging(F_ERROR, "Developer mistake, Sliding Window Gradient, this "
-                            "should not happen!");
         reshape_working[i] = no_windows[i];
         reshape_working[reshape_working.size() - 1] =
             sliding_win->size[i]; // indices in that dimension
@@ -319,12 +319,11 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         shape_adj_working[i + 1] = a->operation.shape[i];
         FGraphNode *res = fconstant_d(0.0, shape_adj_working.data(),
                                       shape_adj_working.size());
-        // still bad performance v   (maybe nevertheless a index method that
-        // works in O(n) is necessary with an exception in the normal execution
-        // model...)
         working_adj = findex_set(res, working_adj, win_ind);
       }
-      return freduce_sum(working_adj, 0);
+      FGraphNode *res = freduce_sum(working_adj, 0);
+      res = res;
+      return res;
     } else
       return nullptr;
   } break;
@@ -353,16 +352,19 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         na = fmul(na, prev_adj);
         FGraphNode *res = nullptr;
         if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU) {
-          // we check if we can subdivide the reduction task for better parallel distribution
+          // we check if we can subdivide the reduction task for better parallel
+          // distribution
           int subdivs[] = {128, 100, 50, 10, 7, 5, 4, 3, 2};
           for (int i = 0; i < sizeof(subdivs) / sizeof(int); i++) {
-            if (na->operation.shape[0] % subdivs[i] == 0 && na->operation.shape[0] / subdivs[i] > 1) {
+            if (na->operation.shape[0] % subdivs[i] == 0 &&
+                na->operation.shape[0] / subdivs[i] > 1) {
               std::vector<size_t> subdiv_shape(na->operation.dimensions + 1);
               for (int i = 0; i < na->operation.dimensions; i++)
                 subdiv_shape[i + 1] = na->operation.shape[i];
               subdiv_shape[0] = subdivs[i];
               subdiv_shape[1] /= subdivs[i];
-              res = freduce_sum(freshape(na, subdiv_shape.data(), subdiv_shape.size()), 1);
+              res = freduce_sum(
+                  freshape(na, subdiv_shape.data(), subdiv_shape.size()), 1);
               break;
             }
           }
@@ -694,7 +696,7 @@ static void collect(FGraphNode *x, std::list<FGraphNode *> &stack,
       for (const FGraphNode *dx : dxs) {
         if (trace->contains(dx)) {
           skip = false;
-          continue;
+          break;
         }
       }
       if (skip)
@@ -756,7 +758,7 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
       }
       OCLCompilerThread::memory_barrier();
       std::chrono::duration<double, std::milli> elapsed =
-        std::chrono::high_resolution_clock::now() - start;
+          std::chrono::high_resolution_clock::now() - start;
     }
   }
   for (int i = 0; i < num_gradients; i++) {

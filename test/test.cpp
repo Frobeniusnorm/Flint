@@ -904,13 +904,13 @@ TEST_CASE("Convolve") {
   Tensor<float, 2> r1 = t1.convolve(k1, 1, 1);
   CHECK_EQ(44, r1[0][0]);
   CHECK_EQ(56, r1[0][1]);
-  //CHECK_EQ(25, r1[0][2]);
+  // CHECK_EQ(25, r1[0][2]);
   CHECK_EQ(54, r1[1][0]);
   CHECK_EQ(58, r1[1][1]);
-  //CHECK_EQ(31, r1[1][2]);
-  //CHECK_EQ(17, r1[2][0]);
-  //CHECK_EQ(29, r1[2][1]);
-  //CHECK_EQ(11, r1[2][2]);
+  // CHECK_EQ(31, r1[1][2]);
+  // CHECK_EQ(17, r1[2][0]);
+  // CHECK_EQ(29, r1[2][1]);
+  // CHECK_EQ(11, r1[2][2]);
   Tensor<float, 3> t2{{{0}, {1}, {2}, {3}}, {{3}, {2}, {1}, {0}}};
   Tensor<float, 3> k2{{{1}, {2}}};
   Tensor<float, 2> r2 = t2.convolve(k2, 1, 2);
@@ -1076,6 +1076,9 @@ TEST_CASE("Sliding Window") {
         for (int l = 0; l < 2; l++) {
           CHECK_EQ(a[j + (i / 3) * 3][k + (i % 3) * 3][l], b[i][j][k][l]);
         }
+  Tensor<double, 3> ao =
+      b.unslide_window(a.get_shape(), std::array<unsigned int, 3>{3, 3, 1});
+  CHECK_EQ(1, (ao.equal(a)).reduce_mul()[0]);
   // overlapping windows
   Tensor<int, 3> a2 = {{{1, 2}, {3, 4}, {5, 6}, {7, 8}},
                        {{9, 10}, {11, 12}, {13, 14}, {15, 16}},
@@ -1094,6 +1097,15 @@ TEST_CASE("Sliding Window") {
       for (int k = 0; k < exp.get_shape()[2]; k++)
         for (int l = 0; l < exp.get_shape()[3]; l++)
           CHECK_EQ(b2[i][j][k][l], exp[i][j][k][l]);
+  Tensor<int, 3> a3 = {{{1, 2}, {3, 4}}, {{5, 6}, {7, 8}}, {{9, 0}, {1, 2}},
+                       {{3, 4}, {5, 6}}, {{7, 8}, {9, 0}}, {{1, 2}, {3, 4}},
+                       {{5, 6}, {7, 8}}, {{9, 0}, {1, 2}}, {{3, 4}, {5, 6}}};
+  Tensor<int, 2> e3 = {
+      {1, 7, 15, 0}, {6, 22, 18, 4}, {10, 30, 6, 8}, {7, 9, 7, 6}};
+  Tensor<int, 2> b3 = a3.unslide_window({4, 4}, {1, 1});
+  for (int i = 0; i < e3.get_shape()[0]; i++)
+    for (int j = 0; j < e3.get_shape()[1]; j++)
+      CHECK_EQ(b3[i][j], e3[i][j]);
 }
 TEST_CASE("Saving and Loading to files") {
   Tensor<double, 3> a = Flint::constant(3.0, 9, 4, 1);

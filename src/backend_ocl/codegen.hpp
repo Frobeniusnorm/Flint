@@ -965,14 +965,14 @@ generateCode(FGraphNode *node,
                rest +
                ";\n"
                "int found_something = false;\n"
-               " for(long j = base_ind; j < base_ind + " +
+               " for(long j = 0; j < " +
                to_string(c->operation.shape[axis]) +
                "; j++){\n"
                "  const long ind = " +
                par3 +
-               "[j];\n"
+               "[base_ind + j];\n"
                "  if(ind == axi) {\n   " +
-               name + " += " + par2 + "[j * " + to_string(acc_sizes_ax) +
+               name + " += " + par2 + "[(base_ind + j) * " + to_string(acc_sizes_ax) +
                " + rest];\n"
                "   found_something = true;\n"
                "  }\n"

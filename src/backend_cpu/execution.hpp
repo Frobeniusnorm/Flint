@@ -479,6 +479,44 @@ static void executeNode(const FGraphNode *node,
       result[i] = ((const T *__restrict__)data)[base + offset];
     }
   } break;
+  case FUNSLIDE_WINDOW: {
+    const CPUResultData pred = predecessor_data[0];
+    const unsigned int *steps = (unsigned int *)node->operation.additional_data;
+    const std::vector<size_t> acc_sizes =
+        calcAccSizes(node->operation.dimensions, node->operation.shape);
+    const std::vector<size_t> acc_sizes_pred =
+        calcAccSizes(pred.shape.size(), pred.shape.data());
+    size_t no_windows[pred.shape.size() - 1];
+    for (int i = 0; i < pred.shape.size() - 1; i++) {
+      size_t window_size = node->operation.shape[i] - pred.shape[i + 1] + 1;
+      window_size = window_size % steps[i] == 0 ? window_size / steps[i]
+                                                : window_size / steps[i] + 1;
+      no_windows[i] = window_size;
+    }
+    const std::vector<size_t> acc_no_windows =
+        calcAccSizes(pred.shape.size() - 1, no_windows);
+    for (size_t i = from; i < from + size; i++) {
+      result[i] = 0;
+      // Naive implementation, this surely can be faster
+      for (size_t w = 0; w < pred.shape[0]; w++) {
+        bool contained = true;
+        size_t wi = 0;
+        for (int d = node->operation.dimensions - 1; d >= 0; d--) {
+          const unsigned int wd = (w / acc_no_windows[d]) % no_windows[d];
+          const unsigned int w_start = wd * steps[d];
+          const unsigned int id = (i / acc_sizes[d]) % node->operation.shape[d];
+          if (id >= w_start && id < w_start + pred.shape[d + 1]) {
+            wi += (id - w_start) * acc_sizes_pred[d + 1];
+          } else {
+            contained = false;
+            break;
+          }
+        }
+        if (contained) 
+          result[i] += ((const T *__restrict__)pred.data)[wi + w * acc_sizes_pred[0]];
+      }
+    }
+  } break;
   case FREDUCE_MIN:
   case FREDUCE_MAX:
   case FREDUCE_SUM:
