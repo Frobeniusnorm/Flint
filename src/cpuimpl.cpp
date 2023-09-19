@@ -74,7 +74,6 @@ static void threadRoutine() {
     auto [node, pred_data, result, from, to, sem] = thread_queue.pop_front();
     if (!node)
       break;
-
     switch (node->operation.data_type) {
     case F_FLOAT32:
       executeNode(node, pred_data, (float *)result, from, to);

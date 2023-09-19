@@ -1097,6 +1097,15 @@ TEST_CASE("Sliding Window") {
       for (int k = 0; k < exp.get_shape()[2]; k++)
         for (int l = 0; l < exp.get_shape()[3]; l++)
           CHECK_EQ(b2[i][j][k][l], exp[i][j][k][l]);
+  Tensor<int, 3> a3 = {{{1, 2}, {3, 4}}, {{5, 6}, {7, 8}}, {{9, 0}, {1, 2}},
+                       {{3, 4}, {5, 6}}, {{7, 8}, {9, 0}}, {{1, 2}, {3, 4}},
+                       {{5, 6}, {7, 8}}, {{9, 0}, {1, 2}}, {{3, 4}, {5, 6}}};
+  Tensor<int, 2> e3 = {
+      {1, 7, 15, 0}, {6, 22, 18, 4}, {10, 30, 6, 8}, {7, 9, 7, 6}};
+  Tensor<int, 2> b3 = a3.unslide_window({4, 4}, {1, 1});
+  for (int i = 0; i < e3.get_shape()[0]; i++)
+    for (int j = 0; j < e3.get_shape()[1]; j++)
+      CHECK_EQ(b3[i][j], e3[i][j]);
 }
 TEST_CASE("Saving and Loading to files") {
   Tensor<double, 3> a = Flint::constant(3.0, 9, 4, 1);
