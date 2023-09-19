@@ -29,6 +29,8 @@ The following "modern" C features do not work with cgo, all code needs to be in 
 
 - [ ] error handling: Cgo sets errno. Use go handling mechanism afterwards
 - [ ] documentation: both as a flint .ahtml file, as well as pkgsite (maybe even on <go.pkg.dev>)
+    - Note: examples are usually provided in a `name_test.go` file.
+- [ ] higher level library functions to abstract away the issues of memory management
 
 ## Error handling
 

@@ -1,3 +1,4 @@
+// this package provides a very simple example of basic flint functionality, where no memory management is needed
 package main
 
 import (
