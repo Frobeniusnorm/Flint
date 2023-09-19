@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>
+    Flint Documentation
+  </title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+</head>
+
+<body>
+
+  <div id="header-bar">
+    <div class="left-spaced">
+      <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
+      <a class="item selected" href="index.html">About</a>
+      <a class="item" href="documentation.html">Documentation</a>
+      <a class="item" href="tutorial.html">Tutorial</a>
+    </div>
+  </div>
+  <div id="showcase_background">
+    <center>
+      <h1>
+        Welcome to the Documentation of Flint
+      </h1>
+      </br>
+      <h2>
+        The portable, feature rich Tensor math library
+      </h2>
+    </center>
+  </div>
+  <center>
+    <div class="content">
+      <div class="card">
+        <span class="card_header">Why Flint?</span>
+      </div>
+      <br />
+      <div class="card">
+        <p style="padding-bottom: 10px; padding-top: 2px;">
+          Because i like to develop important software with easy deployable open source and fast libraries.<br />
+          Developing in Python may be fine for small research projects,
+          but it is nothing that should be used in performance critical applications.
+        <div style="display: block; height: 1em;"></div>
+        Training a network in Python and then rewriting everything for a faster language wastes programmer salary.</br>
+        Why not just use a machine learning framework that feels as easy as programming Python code in a language like
+        C++?
+        </p>
+      </div>
+      <div
+        style="display: inline-block; padding: 10px 20px; font-size: 1.3em; text-align: center; background: #DBD055;">
+        fast
+      </div>
+      <div
+        style="display: inline-block; padding: 10px 20px; font-size: 1.3em; text-align: center; background: #66DB99;">
+        open-source
+      </div>
+      <div
+        style="display: inline-block; padding: 10px 20px; font-size: 1.3em; text-align: center; background: #DB6699;">
+        portable
+      </div>
+      <div style="display: block; height: 2em"></div>
+      <div class="card" style="margin-top: 1em">
+        <span class="card_header">Example</span>
+      </div>
+      <br />
+<pre class="card code" style="margin: 5px;">
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; t1{{{<span style="color: #30F0FF">0</span>}, {<span style="color: #30F0FF">1</span>}}, {{<span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">3</span>}}};
+<span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; t2 = t1.repeat(<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>).flattened(<span style="color: #30F0FF">2</span>);
+std::cout &lt;&lt; t2 &lt;&lt; std::endl;
+<span style="color: #D0D0D0">/* Tensor&lt;INT32, shape: [<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">6</span>]&gt;( 
+ *  [[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>], 
+ *   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>], 
+ *   [<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>], 
+ *   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]]) */</span></pre>
+      <div style="display: block; height: 2em"></div>
+      <div class="card">
+        <span class="card_header">Efficiency</span>
+      </div>
+      <br />
+      <div class="card">
+        <p style="padding-top: 2px;">
+          Flint comes with two backends.</br>
+          The first one is a CPU backend with a thread pool.<br />
+          But the real performance is unlocked with the GPU Backend.<br />
+          Don't feel the necessity to buy CUDA capable devices because we<br /> deploy OpenCL to boost the computation
+          on nearly any available accelerator.<br/>
+          And it works quite well:<br/>
+          <img src="graph.png" width="630" height="392"/><br/>
+          <small><i>Several Benchmarks of example programs on an Intel i5 10600K and an AMD Radeon 5700XT,<br/> time in milliseconds</i></small>
+        </p>
+      </div>
+    </div>
+  </center>
+  <div id="footer">
+    <center>
+    <div class="content">
+      <div class="row">
+        <div class="column">
+          © David Schwarzbeck, 2022</br>
+          Licensed under the <a href="https://github.com/Frobeniusnorm/Flint/blob/main/LICENCE">Apache License</a>, Version 2.0
+        </div>
+        <div class="column">&nbsp;</div>
+        <div class="column">&nbsp;</div>
+        <div class="column">
+          <a href="https://github.com/Frobeniusnorm/Flint/">Github</a>
+        </div>
+      </div>
+    </div>
+    <i style="color: #D0D0D0;">This site values your privacy, does not use cookies, javascript or other malware and does not sell anything.</i></center>
+    </center>
+  </div>
+</body>
+</html>
+
