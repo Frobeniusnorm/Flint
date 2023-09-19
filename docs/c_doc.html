@@ -43,6 +43,7 @@
                     const unsigned int size)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fabs_g_FGraphNode_*a_">FGraphNode <b>*fabs_g</b>(FGraphNode *a)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-frepeat_FGraphNode_*a__int_*repititions_">FGraphNode <b>*frepeat</b>(FGraphNode *a, int *repititions)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-ftranspose_FGraphNode_*a__int_*transpositions_">FGraphNode <b>*ftranspose</b>(FGraphNode *a, int *transpositions)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fconvolve_FGraphNode_*a__FGraphNode_*kernel_______________________const_unsigned_int_*steps_">FGraphNode <b>*fconvolve</b>(FGraphNode *a, FGraphNode *kernel,
                       const unsigned int *steps)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fslide_FGraphNode_*a__FGraphNode_*kernel____________________const_unsigned_int_*steps_">FGraphNode <b>*fslide</b>(FGraphNode *a, FGraphNode *kernel,
                    const unsigned int *steps)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-findex_FGraphNode_*a__FGraphNode_*indices_">FGraphNode <b>*findex</b>(FGraphNode *a, FGraphNode *indices)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-findex_set_FGraphNode_*a__FGraphNode_*b__FGraphNode_*indices_">FGraphNode <b>*findex_set</b>(FGraphNode *a, FGraphNode *b, FGraphNode *indices)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fsliding_window_FGraphNode_*a__const_size_t_*size_____________________________const_unsigned_int_*steps_">FGraphNode <b>*fsliding_window</b>(FGraphNode *a, const size_t *size,
+                            const unsigned int *steps)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-funslide_window_FGraphNode_*a__const_size_t_*shape_____________________________const_unsigned_int_*steps_">FGraphNode <b>*funslide_window</b>(FGraphNode *a, const size_t *shape,
                             const unsigned int *steps)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fpermutate_FGraphNode_*a__unsigned_int_ax_">FGraphNode <b>*fpermutate</b>(FGraphNode *a, unsigned int ax)</a><br/><br/></div>
         <div style="display: block; height: 2em;"></div>
         <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
@@ -929,6 +930,24 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
    [[3, 4], [4, 5]]],
   [[[3, 4], [4, 5]],
    [[4, 5], [5, 6]]]]</pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-funslide_window_FGraphNode_*a__const_size_t_*shape_____________________________const_unsigned_int_*steps_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">FGraphNode <b>*funslide_window</b>(FGraphNode *a, const size_t *shape,
+                            const unsigned int *steps)</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ UNIMPLEMENTED FUTURE FUNCTION
+ Reprojects the windows (first dimension of <pre class="inline_code">a</pre>) to a common tensor,
+ i.e. if <pre class="inline_code">a = fsliding_window(x, window_size, steps)</pre> <pre class="inline_code">shape</pre> should be the
+ shape of <pre class="inline_code">x</pre>, while steps remain the same and the resulting tensor will have
+ the same shape of <pre class="inline_code">x</pre> with the elements in <pre class="inline_code">a</pre> reprojected to their original
+ position in <pre class="inline_code">x</pre>.
+ Overlapping elements will be summed up. Meaning if e.g. <pre class="inline_code">window_size</pre> and
+<pre class="inline_code">steps</pre> were the same, the result is exactly <pre class="inline_code">x</pre>.
+ If in a dimension <pre class="inline_code">steps</pre> was larger than <pre class="inline_code">window_size</pre>, the resulting tensor
+ will have <pre class="inline_code">0</pre> elements were the "gaps" between the windows were.
+ If in a dimension <pre class="inline_code">steps</pre> was smaller than <pre class="inline_code">window_size</pre> (the windows were
+ "overlapping") the overlapping elements are summed up in the result.<div style="display:block; height: 0.5em"></div>
+ <pre class="inline_code">shape</pre> and <pre class="inline_code">steps</pre> therefore have 1 entry less then <pre class="inline_code">a</pre> has dimensions.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-fpermutate_FGraphNode_*a__unsigned_int_ax_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">FGraphNode <b>*fpermutate</b>(FGraphNode *a, unsigned int ax)</pre></div>
 <br />
