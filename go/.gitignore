@@ -1,3 +1,6 @@
 # cgo
 _cgo*
 _obj/
+
+# datasets
+_data/
