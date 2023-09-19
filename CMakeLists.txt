@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
 project(flint VERSION 0.0.1)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(BUILD_TEST "Enable building unit tests" ON)
 option(BUILD_GRADIENT_TEST "Enable building gradient tests" ON)
 option(BUILD_BENCHMARK "Enable building benchmark program" ON)
