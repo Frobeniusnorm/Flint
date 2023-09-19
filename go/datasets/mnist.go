@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 )
 
 type MnistDataset struct {
 	Dataset
-	size uint
 }
 
 const (
-	trainImagesFile = "train-images-idx3-ubyte"
-	trainLabelsFile = "train-labels-idx1-ubyte"
-	testImagesFile  = "t10k-images-idx3-ubyte"
-	testLabelsFile  = "t10k-labels-idx1-ubyte"
+	trainImagesFile = "train-images.idx3-ubyte"
+	trainLabelsFile = "train-labels.idx1-ubyte"
+	testImagesFile  = "t10k-images.idx3-ubyte"
+	testLabelsFile  = "t10k-labels.idx1-ubyte"
 
 	labelsFileMagic int32 = 0x00000801
 	imagesFileMagic int32 = 0x00000803
@@ -44,17 +44,60 @@ func readWord(reader io.Reader) (int32, error) {
 // TODO: option to download mnist
 
 // NewMnistDataset returns the train and test dataset of MNIST
-func NewMnistDataset(path string) (MnistDataset, MnistDataset, error) {
-	//train, err := loadMnistImages(path)
-	//if err != nil {
-	//	return MnistDataset{}, MnistDataset{}, err
-	//}
-	//test, err := loadTestMnist(path)
-	//if err != nil {
-	//	return MnistDataset{}, MnistDataset{}, err
-	//}
-	//return train, test, nil
-	return MnistDataset{}, MnistDataset{}, nil
+func NewMnistDataset(baseDir string) (MnistDataset, MnistDataset, error) {
+	trainDataset, err := loadMnistDataset(path.Join(baseDir, trainImagesFile), path.Join(baseDir, trainLabelsFile))
+	if err != nil {
+		return MnistDataset{}, MnistDataset{}, err
+	}
+
+	testDataset, err := loadMnistDataset(path.Join(baseDir, testImagesFile), path.Join(baseDir, testLabelsFile))
+	if err != nil {
+		return MnistDataset{}, MnistDataset{}, err
+	}
+
+	return trainDataset, testDataset, nil
+}
+
+func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) {
+	images, err := loadMnistImages(imagePath)
+	if err != nil {
+		return MnistDataset{}, err
+	}
+
+	labels, err := loadMnistLabels(labelPath)
+	if err != nil {
+		return MnistDataset{}, err
+	}
+
+	if images.size != labels.size {
+		return MnistDataset{}, errors.New(fmt.Sprintf("number of labels (%d) and number of images (%d) does not match!", labels.size, images.size))
+	}
+	size := labels.size
+
+	data := make([]DatasetEntry, size)
+	for i := uint32(0); i < size; i++ {
+		imageByteSize := images.width * images.height
+		imageOffset := i * imageByteSize
+		image := make([][]uint8, imageByteSize)
+		for row := uint32(0); row < images.height; row++ {
+			rowOffset := imageOffset + row*images.height
+			image[row] = images.data[rowOffset : rowOffset+images.width]
+		}
+
+		data[i] = DatasetEntry{
+			label: labels.data[i],
+			data:  image,
+		}
+	}
+
+	dataset := MnistDataset{Dataset: Dataset{
+		Name:     "mnist",
+		path:     path.Dir(imagePath),
+		size:     uint(size),
+		labelMap: nil,
+		data:     data,
+	}}
+	return dataset, nil
 }
 
 func loadMnistLabels(path string) (struct {

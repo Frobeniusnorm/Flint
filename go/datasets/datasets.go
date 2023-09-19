@@ -1,7 +1,7 @@
 package datasets
 
 type Dataset struct {
-	name     string
+	Name     string
 	path     string
 	size     uint
 	labelMap map[uint]string
@@ -9,13 +9,18 @@ type Dataset struct {
 }
 
 type DatasetEntry struct {
-	label string
+	label any
 	data  any
 }
 
 type IndexableDataset interface {
 	Count() uint
 	Get(index uint) DatasetEntry
+}
+
+type IterableDataset interface {
+	Count() uint
+	Iterate()
 }
 
 func New() Dataset {
@@ -25,10 +30,10 @@ func New() Dataset {
 const eps float32 = 1e-5
 
 func (d *Dataset) TrainTestSplitAbsolute(trainSize uint, testSize uint) (Dataset, Dataset) {
-	return Dataset{}, Dataset{}
+	return Dataset{}, Dataset{} // TODO
 }
 
 func (d *Dataset) TrainTestSplitRelative(trainPercentage float32, testPercentage float32) (Dataset, Dataset) {
-	return Dataset{}, Dataset{}
+	return Dataset{}, Dataset{} // TODO
 
 }
