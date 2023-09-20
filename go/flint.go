@@ -75,6 +75,26 @@ type Axes []uint
 // needs to have one entry for each dimension of tensor
 type Shape []uint
 
+func (a Shape) NumItems() uint {
+	sum := uint(0)
+	for _, val := range a {
+		sum += val
+	}
+	return sum
+}
+
+func (a Shape) Equal(b Shape) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 type tensorDataType uint32
 
 const (
