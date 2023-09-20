@@ -1,30 +1,15 @@
 package datasets
 
-type Dataset struct {
-	Name     string
-	path     string
-	size     uint
-	labelMap map[uint]string
-	data     []DatasetEntry
-}
-
-type DatasetEntry struct {
-	label any
-	data  any
-}
+type Dataset struct{}
 
 type IndexableDataset interface {
 	Count() uint
-	Get(index uint) DatasetEntry
+	Get(index uint) any
 }
 
 type IterableDataset interface {
 	Count() uint
 	Iterate()
-}
-
-func New() Dataset {
-	return Dataset{}
 }
 
 const eps float32 = 1e-5

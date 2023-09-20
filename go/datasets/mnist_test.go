@@ -2,6 +2,7 @@ package datasets
 
 import (
 	"fmt"
+	flint "github.com/Frobeniusnorm/Flint/go"
 	"path"
 	"testing"
 )
@@ -12,13 +13,19 @@ func TestNewMnistDataset(t *testing.T) {
 
 	t.Run("happy path", func(t *testing.T) {
 		validPath := path.Clean("../_data/mnist")
-		trainDataset, testDataset, err := NewMnistDataset(validPath)
+		trainDataset, _, err := NewMnistDataset(validPath)
 		if err != nil {
 			t.Log(err)
 			t.Fatalf("loading from a valid path should NOT fail!")
 		}
-		fmt.Println(trainDataset.Get(0))
-		fmt.Println(testDataset.Get(5))
+
+		entry := trainDataset.Get(2)
+		var data = flint.CalculateResult[int32](entry.data)
+		fmt.Println("label:", entry.label)
+		fmt.Println("data:", data)
+		printImage(data.Data, data.Shape)
+
+		//fmt.Println(testDataset.Get(5))
 	})
 
 	t.Run("invalid path", func(t *testing.T) {
@@ -28,4 +35,21 @@ func TestNewMnistDataset(t *testing.T) {
 			t.Fatalf("should fail with invalid path")
 		}
 	})
+
+}
+
+// (debugging utility)
+func printImage(image []int32, shape flint.Shape) {
+	height, width := shape[0], shape[1]
+	for row := uint(0); row < height; row++ {
+		for col := uint(0); col < width; col++ {
+			pix := image[row*height+col]
+			if pix == 0 {
+				fmt.Print(" ")
+			} else {
+				fmt.Printf("%X", pix/16)
+			}
+		}
+		fmt.Println()
+	}
 }

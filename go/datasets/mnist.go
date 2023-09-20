@@ -3,13 +3,24 @@ package datasets
 import (
 	"errors"
 	"fmt"
+	flint "github.com/Frobeniusnorm/Flint/go"
 	"io"
 	"os"
 	"path"
+	"strings"
 )
 
 type MnistDataset struct {
 	Dataset
+	Name string
+	path string
+	size uint
+	data []MnistDatasetEntry
+}
+
+type MnistDatasetEntry struct {
+	label uint8
+	data  flint.GraphNode
 }
 
 const (
@@ -74,29 +85,31 @@ func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) 
 	}
 	size := labels.size
 
-	data := make([]DatasetEntry, size)
+	data := make([]MnistDatasetEntry, size)
 	for i := uint32(0); i < size; i++ {
 		imageByteSize := images.width * images.height
 		imageOffset := i * imageByteSize
-		image := make([][]uint8, imageByteSize)
-		for row := uint32(0); row < images.height; row++ {
-			rowOffset := imageOffset + row*images.height
-			image[row] = images.data[rowOffset : rowOffset+images.width]
-		}
+		imageData := images.data[imageOffset : imageOffset+imageByteSize]
+		image := flint.CreateGraph(imageData, flint.Shape{uint(images.height), uint(images.width)})
 
-		data[i] = DatasetEntry{
+		data[i] = MnistDatasetEntry{
 			label: labels.data[i],
 			data:  image,
 		}
 	}
 
-	dataset := MnistDataset{Dataset: Dataset{
-		Name:     "mnist",
-		path:     path.Dir(imagePath),
-		size:     uint(size),
-		labelMap: nil,
-		data:     data,
-	}}
+	name := "mnist"
+	if strings.HasPrefix(imagePath, "train") {
+		name = name + "-train"
+	} else {
+		name = name + "-test"
+	}
+	dataset := MnistDataset{
+		Name: name,
+		path: path.Dir(imagePath),
+		size: uint(size),
+		data: data,
+	}
 	return dataset, nil
 }
 
@@ -113,7 +126,9 @@ func loadMnistLabels(path string) (struct {
 	if err != nil {
 		return result, err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		_ = file.Close()
+	}(file)
 
 	// magic number
 	magic, err := readWord(file)
@@ -162,7 +177,9 @@ func loadMnistImages(path string) (struct {
 	if err != nil {
 		return result, err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		_ = file.Close()
+	}(file)
 
 	// magic number
 	magic, err := readWord(file)
@@ -210,13 +227,11 @@ func loadMnistImages(path string) (struct {
 }
 
 // Count returns the number of items in the dataset
-// also used to implement the IndexableDataset interface
 func (d *MnistDataset) Count() uint {
 	return d.size
 }
 
-// Get returns a DatasetEntry by index
-// also used to implement the IndexableDataset interface
-func (d *MnistDataset) Get(index uint) DatasetEntry {
+// Get returns a MnistDatasetEntry by index
+func (d *MnistDataset) Get(index uint) MnistDatasetEntry {
 	return d.data[index]
 }

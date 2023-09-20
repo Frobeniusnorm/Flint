@@ -8,7 +8,7 @@ package flint
 /*
 NOTE: important rules for writing robust CGo code:
 - only pass C types to C!
-- dont pass data from Go's stack memory to C. include stdlib and use C.malloc!
+- don't pass data from Go's stack memory to C. include stdlib and use C.malloc!
 - only pass unsafe.Pointer and C pointer to cgo!
 */
 
@@ -39,8 +39,8 @@ import (
 // Tensor is a higher level abstraction of a GraphNode. It includes the data using Go types
 // The zero value is only given when the execution did not yield any result.
 type Tensor[T Numeric] struct {
-	data  []T
-	shape Shape
+	Data  []T
+	Shape Shape
 }
 type FloatTensor Tensor[float32]
 type IntTensor Tensor[int32]
@@ -317,7 +317,7 @@ func fromCToArray[T completeNumbers](dataPtr unsafe.Pointer, length int, dataTyp
 // Creating and Executing Tensors
 // ////////////
 
-func CreateGraph[T Numeric](data []T, shape Shape) GraphNode {
+func CreateGraph[T completeNumbers](data []T, shape Shape) GraphNode {
 	// FIXME: support the other data types
 	datatype := F_FLOAT32
 	newShape := convertArray[uint, C.size_t](shape)
@@ -376,8 +376,8 @@ func CalculateResult[T Numeric](node GraphNode) Tensor[T] {
 	var shape = Shape(fromCToArray[uint](shapePtr, shapeSize, F_INT64))
 
 	return Tensor[T]{
-		data:  result,
-		shape: shape,
+		Data:  result,
+		Shape: shape,
 	}
 }
 
