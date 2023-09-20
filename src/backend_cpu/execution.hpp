@@ -489,15 +489,16 @@ static void executeNode(const FGraphNode *node,
     size_t no_windows[pred.shape.size() - 1];
     for (int i = 0; i < pred.shape.size() - 1; i++) {
       size_t window_size = node->operation.shape[i] - pred.shape[i + 1] + 1;
-      window_size = window_size % steps[i] == 0 ? window_size / steps[i]
+      no_windows[i] = window_size % steps[i] == 0 ? window_size / steps[i]
                                                 : window_size / steps[i] + 1;
-      no_windows[i] = window_size;
     }
     const std::vector<size_t> acc_no_windows =
         calcAccSizes(pred.shape.size() - 1, no_windows);
     for (size_t i = from; i < from + size; i++) {
       result[i] = 0;
       // Naive implementation, this surely can be faster
+      // TODO: instead of iterating over all windows only look at them that are
+      // in proximity of the element
       for (size_t w = 0; w < pred.shape[0]; w++) {
         bool contained = true;
         size_t wi = 0;
@@ -512,8 +513,9 @@ static void executeNode(const FGraphNode *node,
             break;
           }
         }
-        if (contained) 
-          result[i] += ((const T *__restrict__)pred.data)[wi + w * acc_sizes_pred[0]];
+        if (contained)
+          result[i] +=
+              ((const T *__restrict__)pred.data)[wi + w * acc_sizes_pred[0]];
       }
     }
   } break;

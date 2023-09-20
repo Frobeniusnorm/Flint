@@ -1492,6 +1492,8 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
 }
 FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
                             const unsigned int *steps) {
+  if (!a->result_data && a->operation.op_type != FSTORE)
+    fExecuteGraph(a);
   FOperation op;
   op.op_type = FUNSLIDE_WINDOW;
   op.dimensions = a->operation.dimensions - 1;
@@ -1506,7 +1508,11 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
     op.shape[i] = shape[i];
   }
   if (no_windows != a->operation.shape[0])
-    flogging(F_ERROR, "Number of windows is not consistend with provided shape and steps for unslide! Provided parameters yield " + std::to_string(no_windows) + " windows, while the provided Tensor has " + std::to_string(a->operation.shape[0]));
+    flogging(F_ERROR, "Number of windows is not consistend with provided shape "
+                      "and steps for unslide! Provided parameters yield " +
+                          std::to_string(no_windows) +
+                          " windows, while the provided Tensor has " +
+                          std::to_string(a->operation.shape[0]));
   unsigned int *csteps = safe_mal<unsigned int>(op.dimensions);
   memcpy(csteps, steps, op.dimensions * sizeof(unsigned int));
   op.additional_data = csteps;
