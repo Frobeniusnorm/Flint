@@ -13,7 +13,7 @@
    limitations under the License. */
 #ifndef FLINT_MODELS
 #define FLINT_MODELS
-#include "../dl/trainer.hpp"
+#include "trainer.hpp"
 #include "layers.hpp"
 #include "losses.hpp"
 #include "optimizers.hpp"
@@ -143,9 +143,6 @@ template <GenericLayer... T> struct SequentialModel {
         if (b * batch_size == slice_to)
           break;
         // run batch and calculate error
-#ifdef FLINT_DL_PROFILE
-        auto start = std::chrono::high_resolution_clock::now();
-#endif
         auto input = sx.slice(TensorRange(b * batch_size, slice_to));
         auto expected = sy.slice(TensorRange(b * batch_size, slice_to));
         input.execute();
@@ -154,12 +151,6 @@ template <GenericLayer... T> struct SequentialModel {
         auto output = forward(input);
         auto error = loss.calculate_error(output, expected);
         fStopGradientContext();
-#ifdef FLINT_DL_PROFILE
-        error.execute();
-        std::chrono::duration<double, std::milli> elapsed =
-            std::chrono::high_resolution_clock::now() - start;
-        std::cout << " forward took " << elapsed.count() << std::flush;
-#endif
         // optimize weights
         // flatten all vars, but keep original structure for reconstruction
         std::vector<std::vector<FGraphNode *>> vars;
@@ -169,7 +160,7 @@ template <GenericLayer... T> struct SequentialModel {
           flat_vars.insert(flat_vars.end(), vars[i].begin(), vars[i].end());
         std::vector<FGraphNode *> grads(flat_vars.size());
 #ifdef FLINT_DL_PROFILE
-        start = std::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
 #endif
         // calculate gradients
         fCalculateGradients(error.get_graph_node(), flat_vars.data(),
@@ -185,9 +176,9 @@ template <GenericLayer... T> struct SequentialModel {
           }
         }
 #ifdef FLINT_DL_PROFILE
-        elapsed =
+        std::chrono::duration<double, std::milli> elapsed =
             std::chrono::high_resolution_clock::now() - start;
-        std::cout << " gradient calc took " << elapsed.count() << std::flush;
+        std::cout << " gradient calc took " << elapsed.count() << std::endl;
 #endif
         backward<0>(plgrads);
         // calculate error value
@@ -268,11 +259,21 @@ private:
   template <int layer, typename T2, unsigned int n2, typename T1,
             unsigned int n1>
   Tensor<T2, n2> forward_helper(Tensor<T1, n1> &in) {
-    auto out = std::get<layer>(layers).forward(in);
+#ifdef FLINT_DL_PROFILE
+    auto start = std::chrono::high_resolution_clock::now();
+#endif
+    auto out = std::get<layer>(layers).forward(in)();
+#ifdef FLINT_DL_PROFILE
+    std::chrono::duration<double, std::milli> elapsed =
+        std::chrono::high_resolution_clock::now() - start;
+    std::cout << std::get<layer>(layers).name() << " " << elapsed.count()
+              << std::endl;
+#endif
     if constexpr (layer == sizeof...(T) - 1)
       return out;
-    else
+    else {
       return forward_helper<layer + 1, T2, n2>(out);
+    }
   }
 };
 #endif

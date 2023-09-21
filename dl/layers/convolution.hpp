@@ -203,6 +203,7 @@ public:
     step_size[0] = in.get_shape()[0];
     Tensor<T, n + 1> windows = in.sliding_window(window_size, step_size);
     std::array<size_t, n> final_shape;
+    std::array<int, n + 1> transpose;
     final_shape[0] = in.get_shape()[0];
     for (int i = n; i >= 2; i--) {
       Tensor<T, n> red;
@@ -222,7 +223,12 @@ public:
       win = win % step_size[i - 1] == 0 ? win / step_size[i - 1]
                                     : win / step_size[i - 1] + 1;
       final_shape[i - 1] = win;
+      transpose[i] = i;
     }
+    transpose[0] = 1;
+    transpose[1] = 0;
+    windows = windows.transpose_array(transpose);
+    // transpose so memory order is correct
     return windows.reshape_array(final_shape);
   }
 

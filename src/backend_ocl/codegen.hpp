@@ -591,7 +591,7 @@ generateCode(FGraphNode *node,
                         ";\n"
                         "  if(id>=w_start && id<w_start+" +
                         to_string(pred.shape[d + 1]) +
-                        ")"
+                        ")\n"
                         "   wi+=(id-w_start)*" +
                         to_string(acc_sizes_pred[d + 1]) +
                         ";\n"

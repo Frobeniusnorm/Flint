@@ -1350,14 +1350,20 @@ template <typename T, unsigned int n> struct Tensor {
       acc_trans[i++] = *it;
     while (i < n)
       acc_trans[i++] = n - i - 1;
+    return transpose_array(acc_trans);
+  }
+  /**
+   * Same as `transpose`, but with transpositions as array
+   */
+  Tensor<T, n> transpose_array(std::array<int, n> transposition) {
     std::array<size_t, n> new_shape;
     for (int j = 0; j < n; j++)
-      new_shape[j] = shape[acc_trans[j]];
-    FGraphNode *nn = ftranspose(node, acc_trans.data());
+      new_shape[j] = shape[transposition[j]];
+    FGraphNode *nn = ftranspose(node, transposition.data());
     return Tensor<T, n>(nn, new_shape);
   }
   /**
-   * Same as convolve, but with steps as an array
+   * Same as `convolve`, but with steps as an array
    */
   template <typename K>
   Tensor<stronger_return<K>, n - 1>

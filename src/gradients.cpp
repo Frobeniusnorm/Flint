@@ -261,68 +261,12 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
   case FSLIDING_WINDOW: {
     FGraphNode *a = y->predecessors[0];
     if (0 == dx_i) {
-      // TODO while this works in reasonable time it has a grotesque memory consumption
-      // Better would be a custom function for the gradient
+      // TODO while this works in reasonable time it has a grotesque memory
+      // consumption Better would be a custom function for the gradient
       FSlidingWindow *sliding_win =
           (FSlidingWindow *)y->operation.additional_data;
-      std::vector<size_t> no_windows(a->operation.dimensions);
-      
-      for (int i = 0; i < a->operation.dimensions; i++) {
-        size_t window_size = a->operation.shape[i] - sliding_win->size[i] + 1;
-        window_size = window_size % sliding_win->step[i] == 0
-                          ? window_size / sliding_win->step[i]
-                          : window_size / sliding_win->step[i] + 1;
-        no_windows[i] = window_size;
-      }
-      // OLD IDEA
-      FGraphNode *working_adj = prev_adj;
-      std::vector<size_t> shape_adj_working(
-          working_adj->operation.shape,
-          working_adj->operation.shape + working_adj->operation.dimensions);
-      std::vector<size_t> reshape_working(
-          a->operation.dimensions + 1,
-          1); // reshaping with efficient memory usage
-      std::vector<int> repeat_working(a->operation.dimensions + 1);
-      for (int i = 0; i < a->operation.dimensions; i++) {
-        // 1 dimensional index tensor since we only want that singular dimension
-        FGraphNode *ind = farange(&a->operation.shape[i], 1, 0);
-        FGraphNode *win_ind =
-            fsliding_window(ind, &sliding_win->size[i], &sliding_win->step[i]);
-        reshape_working[i] = no_windows[i];
-        reshape_working[reshape_working.size() - 1] =
-            sliding_win->size[i]; // indices in that dimension
-        // repeat indices according to sliding dimension for all windows
-        win_ind =
-            freshape(win_ind, reshape_working.data(), reshape_working.size());
-        reshape_working[i] = 1; // undo for future dimensions
-        reshape_working[reshape_working.size() - 1] = 1;
-        for (int j = 0; j < a->operation.dimensions; j++)
-          repeat_working[j] = i == j ? 0 : no_windows[j] - 1;
-        repeat_working[a->operation.dimensions + 1] = 0;
-        win_ind = frepeat(win_ind, repeat_working.data());
-        // now that we have the correct number of windows in the correct "order"
-        // (implicitly by dimensions)
-        // -> flatten to match windows and current dimensions window size
-        // then repeat for all previous dimensions
-        win_ind = fflatten(win_ind);
-        reshape_working[0] = prev_adj->operation.shape[0];
-        reshape_working[i + 1] = sliding_win->size[i];
-        win_ind = freshape(win_ind, reshape_working.data(), i + 2);
-        reshape_working[0] = 1;     // undo for future dimensions
-        reshape_working[i + 1] = 1; // undo for future dimensions
-        repeat_working[0] = 0;
-        for (int j = 0; j <= i + 1; j++)
-          repeat_working[j + 1] =
-              j < i ? working_adj->operation.shape[j + 1] - 1 : 0;
-        win_ind = frepeat(win_ind, repeat_working.data());
-        // now we can FINALLY project the index wtf is this
-        shape_adj_working[i + 1] = a->operation.shape[i];
-        FGraphNode *res = fconstant_d(0.0, shape_adj_working.data(),
-                                      shape_adj_working.size());
-        working_adj = findex_set(res, working_adj, win_ind);
-      }
-      FGraphNode *res = freduce_sum(working_adj, 0);
-      res = res;
+      FGraphNode *res =
+          funslide_window(prev_adj, a->operation.shape, sliding_win->step);
       return res;
     } else
       return nullptr;
@@ -748,7 +692,7 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
       FGraphNode *parent = curr->predecessors[i];
       if (!visited.contains(parent))
         continue;
-      auto start = std::chrono::high_resolution_clock::now();
+    //  auto start = std::chrono::high_resolution_clock::now();
       FGraphNode *local_grad =
           unbroadcast(local_gradient(curr, i, adj), parent);
       if (adjoints.contains(parent)) {
@@ -756,9 +700,9 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
       } else {
         adjoints.insert({parent, fExecuteGraph(local_grad)});
       }
-      OCLCompilerThread::memory_barrier();
-      std::chrono::duration<double, std::milli> elapsed =
-          std::chrono::high_resolution_clock::now() - start;
+    //  OCLCompilerThread::memory_barrier();
+    //  std::chrono::duration<double, std::milli> elapsed =
+    //      std::chrono::high_resolution_clock::now() - start;
     }
   }
   for (int i = 0; i < num_gradients; i++) {
