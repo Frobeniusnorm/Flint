@@ -603,12 +603,14 @@ generateCode(FGraphNode *node,
                         "  }\n"
                         " }\n";
         }
-        local_code += "forend" + to_string(variable_index) + ":\n"
-        " if(contained)"
-        "  " +
-            name + "+=" + par1 + "[wi+w*" + to_string(acc_sizes_pred[0]) +
-            "];\n"
-            "}\n";
+        local_code += "forend" + to_string(variable_index) +
+                      ":\n"
+                      " if(contained)"
+                      "  " +
+                      name + "+=" + par1 + "[wi+w*" +
+                      to_string(acc_sizes_pred[0]) +
+                      "];\n"
+                      "}\n";
         code = local_code + code;
       } break;
       case FMATMUL: {
@@ -1259,6 +1261,16 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "acc_sizes_win, __constant long* acc_sizes_rest, const long "
             "acc_sizes, __constant int* steps";
   } break;
+  case FUNSLIDE_WINDOW: {
+    code += ", const __global " + typeString(parameter_types[0]) +
+            "* P0"
+            ", const long num_entries0, const int dimensions0"
+            ", __constant long* shapeR, __constant "
+            "long* acc_sizes"
+            ", __constant long* shape0,  __constant long* acc_sizes_pred"
+            ", __constant long* acc_no_windows, __constant long* no_windows"
+            ", __constant int* steps";
+  } break;
   default:
     for (int i = 0; i < parameter_types.size(); i++)
       code += ", const __global " + typeString(parameter_types[i]) + "* P" +
@@ -1722,6 +1734,34 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             " rest %= acc_sizes_rest[d];\n"
             "}\n"
             "R[index] = P0[base + offset];\n";
+    break;
+  case FUNSLIDE_WINDOW:
+    // shape0 -> pred shape
+    // acc_sizes_pred
+    // shapeR
+    // dimensionsR -> node dimensions
+    // acc_no_windows
+    // no_windows
+    // steps
+    code += "if(index >= num_entriesR) return;\n";
+    code += "R[index] = 0;\n"
+            "for (long w = 0; w < shape0[0]; w++) {\n"
+            " int contained = true;\n"
+            " long wi = 0;\n"
+            " for (int d = dimensions0 - 2; d >= 0; d--) {\n"
+            "  const long wd = (w/acc_no_windows[d]) % no_windows[d];\n"
+            "  const long w_start = wd * steps[d]\n;"
+            "  const long id = (index / acc_sizes[d]) % shapeR[d];\n"
+            "  if (id >= w_start && id < w_start + shape0[d + 1])\n"
+            "   wi += (id - w_start) * acc_sizes_pred[d + 1];\n"
+            "  else {\n"
+            "   contained = false;\n"
+            "   break;\n"
+            "  }\n"
+            " }\n"
+            " if (contained)\n"
+            "   R[index] += P0[wi + w * acc_sizes_pred[0]];\n"
+            "}\n";
     break;
   }
   code += "\n}\n";
