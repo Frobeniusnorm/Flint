@@ -13,10 +13,10 @@
    limitations under the License. */
 #ifndef FLINT_MODELS
 #define FLINT_MODELS
-#include "trainer.hpp"
 #include "layers.hpp"
 #include "losses.hpp"
 #include "optimizers.hpp"
+#include "trainer.hpp"
 #include <chrono>
 #include <flint/flint.h>
 #include <flint/flint_helper.hpp>
@@ -259,6 +259,9 @@ private:
   template <int layer, typename T2, unsigned int n2, typename T1,
             unsigned int n1>
   Tensor<T2, n2> forward_helper(Tensor<T1, n1> &in) {
+    // TODO memory cant be freed since in has to be alive for the complete call
+    // -> maybe only build Tensor inplace for forward and use GraphNodes for
+    // rest so we can explicitly free them
 #ifdef FLINT_DL_PROFILE
     auto start = std::chrono::high_resolution_clock::now();
 #endif
