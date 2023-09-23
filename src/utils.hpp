@@ -249,6 +249,7 @@ inline void freeAdditionalData(FGraphNode *gn) {
     free(s->size);
     delete s;
   } break;
+  case FUNSLIDE_WINDOW:
   case FGEN_ARANGE:
   case FGEN_RANDOM:
   case FGEN_CONSTANT:

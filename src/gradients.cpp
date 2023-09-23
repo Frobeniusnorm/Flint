@@ -692,7 +692,7 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
       FGraphNode *parent = curr->predecessors[i];
       if (!visited.contains(parent))
         continue;
-    //  auto start = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
       FGraphNode *local_grad =
           unbroadcast(local_gradient(curr, i, adj), parent);
       if (adjoints.contains(parent)) {
@@ -700,15 +700,16 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
       } else {
         adjoints.insert({parent, fExecuteGraph(local_grad)});
       }
-    //  OCLCompilerThread::memory_barrier();
-    //  std::chrono::duration<double, std::milli> elapsed =
-    //      std::chrono::high_resolution_clock::now() - start;
+     OCLCompilerThread::memory_barrier();
+     std::chrono::duration<double, std::milli> elapsed =
+         std::chrono::high_resolution_clock::now() - start;
+     std::cout << fop_to_string[curr->operation.op_type] << " took " << elapsed.count() << std::endl;
     }
   }
   for (int i = 0; i < num_gradients; i++) {
-    if (adjoints.contains(dx[i]))
+    if (adjoints.contains(dx[i])) {
       gradients[i] = adjoints[dx[i]];
-    else {
+    } else {
       flogging(F_WARNING, "Operation graph did not contain the derivative!");
       gradients[i] = nullptr;
     }
