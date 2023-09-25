@@ -451,6 +451,73 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
     to_free.push_back(acc_rest_mem);
     to_free.push_back(steps);
   } break;
+  case FUNSLIDE_WINDOW: {
+    const FOperation pred = node->predecessors[0]->operation;
+    unsigned int *steps = (unsigned int *)node->operation.additional_data;
+    // dimensions 0
+    if (clSetKernelArg(kernel, par_index++, sizeof(int),
+                       (void *)&op.dimensions) != CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel!");
+    // shapeR
+    cl_mem shapeR = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        node->operation.dimensions * sizeof(long), node->operation.shape, &err_code);
+    if (!shapeR)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), &shapeR) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel! 0");
+    to_free.push_back(shapeR);
+    // acc_sizes
+    to_free.push_back(calcAndPushAccSize(node->operation.dimensions, node->operation.shape, kernel,
+                                         context, par_index));
+    // shapeR
+    cl_mem shape0 = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        pred.dimensions * sizeof(long), pred.shape, &err_code);
+    if (!shape0)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), &shape0) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel! 1");
+    to_free.push_back(shape0);
+    // acc_sizes_pred
+    to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape, kernel,
+                                         context, par_index));
+    size_t no_windows[pred.dimensions - 1];
+    for (int i = 0; i < pred.dimensions - 1; i++) {
+      size_t window_size = node->operation.shape[i] - pred.shape[i + 1] + 1;
+      no_windows[i] = window_size % steps[i] == 0 ? window_size / steps[i]
+                                                : window_size / steps[i] + 1;
+    }
+    // acc_no_windows
+    to_free.push_back(calcAndPushAccSize(pred.dimensions - 1, no_windows, kernel,
+                                         context, par_index));
+    // no_windows
+    cl_mem windows = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        (pred.dimensions - 1) * sizeof(long), no_windows, &err_code);
+    if (!windows)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), &windows) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Argument to kernel! 2");
+    to_free.push_back(windows);
+    // steps
+    cl_mem steps_mem = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        (pred.dimensions - 1) * sizeof(unsigned int), steps, &err_code);
+    if (!steps_mem)
+      flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+                            std::to_string(err_code));
+    if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), &steps_mem) !=
+        CL_SUCCESS)
+      flogging(F_ERROR, "Could not load Arguments to kernel! 3");
+    to_free.push_back(steps_mem);
+  } break;
   case FREPEAT: {
     if (clSetKernelArg(kernel, par_index++, sizeof(int),
                        (void *)&op.dimensions) != CL_SUCCESS)

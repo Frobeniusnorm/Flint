@@ -558,6 +558,33 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
     store->mem_id = rd->mem_id;
     store->num_entries = rd->num_entries;
     node->operation.additional_data = store;
+  } else if (node->gradient_data) {
+    // if the result data of the parent is not needed for certain gradient calculation operations, it may be freed
+    switch (node->operation.op_type) {
+      case FLATTEN:
+      case FRESHAPE:
+      case FSLIDING_WINDOW:
+      case FADD:
+      case FSUB:
+      case FTRANSPOSE:
+      case FINDEX:
+      case FSET_INDEX:
+        // all parents that are only referenced by this node can be freed
+        {
+          FGraphNode* parent = node->predecessors[0];
+          if (parent->result_data && parent->reference_counter == 1 && parent->operation.op_type != FSTORE) {
+            FResultData *rd = parent->result_data;
+            if (rd->data)
+              free(rd->data);
+            if (rd->mem_id)
+              clReleaseMemObject(rd->mem_id);
+            rd->mem_id = nullptr;
+            delete rd;
+            parent->result_data = nullptr;
+          }
+        }
+      default: break;
+    } 
   }
   return node;
 }
@@ -1492,6 +1519,8 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
 }
 FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
                             const unsigned int *steps) {
+  if (!a->result_data && a->operation.op_type != FSTORE)
+    fExecuteGraph(a);
   FOperation op;
   op.op_type = FUNSLIDE_WINDOW;
   op.dimensions = a->operation.dimensions - 1;
@@ -1506,7 +1535,11 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
     op.shape[i] = shape[i];
   }
   if (no_windows != a->operation.shape[0])
-    flogging(F_ERROR, "Number of windows is not consistend with provided shape and steps for unslide! Provided parameters yield " + std::to_string(no_windows) + " windows, while the provided Tensor has " + std::to_string(a->operation.shape[0]));
+    flogging(F_ERROR, "Number of windows is not consistend with provided shape "
+                      "and steps for unslide! Provided parameters yield " +
+                          std::to_string(no_windows) +
+                          " windows, while the provided Tensor has " +
+                          std::to_string(a->operation.shape[0]));
   unsigned int *csteps = safe_mal<unsigned int>(op.dimensions);
   memcpy(csteps, steps, op.dimensions * sizeof(unsigned int));
   op.additional_data = csteps;

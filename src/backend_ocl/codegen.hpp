@@ -545,6 +545,74 @@ generateCode(FGraphNode *node,
                "index = old_index" +
                to_string(old_idx) + ";\n" + code;
       } break;
+      case FUNSLIDE_WINDOW: {
+        push_pred = false;
+        FGraphNode *gnp1 = node->predecessors[0];
+        const FOperation pred = gnp1->operation;
+        std::string par1;
+        if (assigned_params.find(gnp1) != assigned_params.end()) {
+          par1 = assigned_params[gnp1];
+        } else {
+          par1 = "P" + to_string(assigned_params.size());
+          assigned_params.insert({gnp1, par1});
+          parameters.push_back({gnp1, par1});
+        }
+        const unsigned int *steps =
+            (unsigned int *)node->operation.additional_data;
+        const std::vector<size_t> acc_sizes =
+            calcAccSizes(node->operation.dimensions, node->operation.shape);
+        const std::vector<size_t> acc_sizes_pred =
+            calcAccSizes(pred.dimensions, pred.shape);
+        size_t no_windows[pred.dimensions - 1];
+        for (int i = 0; i < pred.dimensions - 1; i++) {
+          size_t window_size = node->operation.shape[i] - pred.shape[i + 1] + 1;
+          no_windows[i] = window_size % steps[i] == 0
+                              ? window_size / steps[i]
+                              : window_size / steps[i] + 1;
+        }
+        const std::vector<size_t> acc_no_windows =
+            calcAccSizes(pred.dimensions - 1, no_windows);
+        string local_code = type + " " + name +
+                            " = 0;\n"
+                            "for(long w=0;w<" +
+                            to_string(pred.shape[0]) +
+                            ";w++){\n"
+                            " bool contained = true;\n"
+                            " long wi = 0;\n";
+        for (int d = node->operation.dimensions - 1; d >= 0; d--) {
+          local_code += " {\n"
+                        "  const long w_start=((w/" +
+                        to_string(acc_no_windows[d]) + ")%" +
+                        to_string(no_windows[d]) + ")*" + to_string(steps[d]) +
+                        ";\n"
+                        "  const long id=(index/" +
+                        to_string(acc_sizes[d]) + ")%" +
+                        to_string(node->operation.shape[d]) +
+                        ";\n"
+                        "  if(id>=w_start && id<w_start+" +
+                        to_string(pred.shape[d + 1]) +
+                        ")\n"
+                        "   wi+=(id-w_start)*" +
+                        to_string(acc_sizes_pred[d + 1]) +
+                        ";\n"
+                        "  else{\n"
+                        "   contained = false;\n"
+                        "   goto forend" +
+                        to_string(variable_index) +
+                        ";\n"
+                        "  }\n"
+                        " }\n";
+        }
+        local_code += "forend" + to_string(variable_index) +
+                      ":\n"
+                      " if(contained)"
+                      "  " +
+                      name + "+=" + par1 + "[wi+w*" +
+                      to_string(acc_sizes_pred[0]) +
+                      "];\n"
+                      "}\n";
+        code = local_code + code;
+      } break;
       case FMATMUL: {
         string par1, par2;
         push_pred = false;
@@ -972,7 +1040,8 @@ generateCode(FGraphNode *node,
                par3 +
                "[base_ind + j];\n"
                "  if(ind == axi) {\n   " +
-               name + " += " + par2 + "[(base_ind + j) * " + to_string(acc_sizes_ax) +
+               name + " += " + par2 + "[(base_ind + j) * " +
+               to_string(acc_sizes_ax) +
                " + rest];\n"
                "   found_something = true;\n"
                "  }\n"
@@ -1191,6 +1260,16 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             ", __constant long* acc_sizes_pred, __constant long* "
             "acc_sizes_win, __constant long* acc_sizes_rest, const long "
             "acc_sizes, __constant int* steps";
+  } break;
+  case FUNSLIDE_WINDOW: {
+    code += ", const __global " + typeString(parameter_types[0]) +
+            "* P0"
+            ", const long num_entries0, const int dimensions0"
+            ", __constant long* shapeR, __constant "
+            "long* acc_sizes"
+            ", __constant long* shape0,  __constant long* acc_sizes_pred"
+            ", __constant long* acc_no_windows, __constant long* no_windows"
+            ", __constant int* steps";
   } break;
   default:
     for (int i = 0; i < parameter_types.size(); i++)
@@ -1655,6 +1734,34 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             " rest %= acc_sizes_rest[d];\n"
             "}\n"
             "R[index] = P0[base + offset];\n";
+    break;
+  case FUNSLIDE_WINDOW:
+    // shape0 -> pred shape
+    // acc_sizes_pred
+    // shapeR
+    // dimensionsR -> node dimensions
+    // acc_no_windows
+    // no_windows
+    // steps
+    code += "if(index >= num_entriesR) return;\n";
+    code += "R[index] = 0;\n"
+            "for (long w = 0; w < shape0[0]; w++) {\n"
+            " int contained = true;\n"
+            " long wi = 0;\n"
+            " for (int d = dimensions0 - 2; d >= 0; d--) {\n"
+            "  const long wd = (w/acc_no_windows[d]) % no_windows[d];\n"
+            "  const long w_start = wd * steps[d]\n;"
+            "  const long id = (index / acc_sizes[d]) % shapeR[d];\n"
+            "  if (id >= w_start && id < w_start + shape0[d + 1])\n"
+            "   wi += (id - w_start) * acc_sizes_pred[d + 1];\n"
+            "  else {\n"
+            "   contained = false;\n"
+            "   break;\n"
+            "  }\n"
+            " }\n"
+            " if (contained)\n"
+            "   R[index] += P0[wi + w * acc_sizes_pred[0]];\n"
+            "}\n";
     break;
   }
   code += "\n}\n";
