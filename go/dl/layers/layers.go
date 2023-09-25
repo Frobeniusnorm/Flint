@@ -1,18 +1,15 @@
 package layers
 
-type Tensor struct {
+import flint "github.com/Frobeniusnorm/Flint/go"
+
+type Tensor flint.GraphNode
+
+type BaseLayer struct {
+	trainable     bool
+	trainingPhase bool
 }
 
-type Layer struct {
-	trainable bool
-}
-
-type BaseLayer interface {
-	forward(x Tensor) Tensor
-}
-
-type Dropout struct {
-	Layer       // embed base layer
-	probability float32
-	_output     Tensor
+type Layer interface {
+	Forward(x Tensor) Tensor
+	Backward(x Tensor) Tensor
 }
