@@ -2,12 +2,21 @@
 
 ## Documentation
 
-There is [`go doc`](https://go.dev/blog/godoc), but maybe the documentation can also be added to work with the stuff
-that's already in `/docs`
+The automatically generated Go documentation is not yet published to <https://pkg.go.dev>,
+but you can run the same website locally using this command:
 
-See:
+```bash
+go install golang.org/x/pkgsite/cmd/pkgsite@latest && pkgsite
+```
 
-- <https://go.dev/doc/comment>
+**NOTE:** make sure your go path is working properly: `$PATH=$PATH:~/go`
+
+For information about a single function call you can also use the cli command `go doc`
+
+Further information:
+
+- [how to write good Go docstrings](https://tip.golang.org/doc/comment)
+- [how to configure pkgsite](https://pkg.go.dev/golang.org/x/pkgsite/cmd/pkgsite)
 
 ## Discussion
 
@@ -90,4 +99,6 @@ program.
     - <https://artem.krylysov.com/blog/2017/04/13/handling-cpp-exceptions-in-go/>
     - <https://github.com/golang/go/issues/12516>
     - <https://stackoverflow.com/questions/63185359/how-to-catch-the-c-c-lib-exceptions-in-go-code>
- 
+
+- cgo memory allocation / pinning / etc.:
+    - <https://stackoverflow.com/questions/76395957/cgo-write-memory-in-c-allocated-by-go>

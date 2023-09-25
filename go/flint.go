@@ -56,6 +56,13 @@ func graphRef(node GraphNode) *C.FGraphNode {
 	return (*C.FGraphNode)(node)
 }
 
+// The ResultData struct holds a pointer to some C memory including the output of an evaluated node
+type ResultData unsafe.Pointer
+
+func resultRef(res ResultData) *C.FResultData {
+	return (*C.FResultData)(res)
+}
+
 // Numeric is a constraint interface representing the supported types of C operations
 // TODO: as we no longer cast values between C and GO (we shouldn't!) this can be extended!
 type Numeric interface {
@@ -114,10 +121,18 @@ type cNumbers interface {
 	C.int | C.size_t | C.long | C.uint | C.float | C.double
 }
 
-func convertArray[In completeNumbers, Out completeNumbers | cNumbers](arr []In) []Out {
+type cTypes interface {
+	C.FGraphNode | *C.FGraphNode
+}
+
+// convertArray converts Arrays between arbitrary types
+// NOTE: does not work with nested arrays yet.
+// See: https://stackoverflow.com/questions/71587996/cannot-use-type-assertion-on-type-parameter-value
+func convertArray[In any, Out any](arr []In) []Out {
 	result := make([]Out, len(arr))
 	for idx, val := range arr {
-		result[idx] = Out(val)
+		x := any(val).(Out)
+		result[idx] = x
 	}
 	return result
 }
@@ -156,6 +171,14 @@ func InitializedBackend() Backend {
 
 func Cleanup() {
 	C.flintCleanup()
+}
+
+func CleanupCpu() {
+	C.flintCleanup_cpu()
+}
+
+func CleanupGpu() {
+	C.flintCleanup_gpu()
 }
 
 func FreeGraph(node GraphNode) {
@@ -381,6 +404,18 @@ func CreateGraphArrange(shape Shape, axis int) GraphNode {
 	return GraphNode(flintNode)
 }
 
+/*
+SyncMemory flushes all GPU data to the CPU.
+`fExecuteGraph` does not guarantee that memory is present on the cpu (it may
+be kept on the GPU for performance reasons). This method enforces all GPU
+data to be flushed to the CPU (but never executes the node!).
+Also see `fCalculateResult`.
+*/
+func SyncMemory(node GraphNode) ResultData {
+	res := C.fSyncMemory(graphRef(node))
+	return ResultData(res)
+}
+
 // CalculateResult essentially combines ExecuteGraph and SyncMemory
 func CalculateResult[T Numeric](node GraphNode) Tensor[T] {
 	var flintNode *C.FGraphNode = C.fCalculateResult(graphRef(node))
@@ -399,6 +434,46 @@ func CalculateResult[T Numeric](node GraphNode) Tensor[T] {
 		Data:  result,
 		Shape: shape,
 	}
+}
+
+/*
+CalculateGradient Calculates the overall gradient of an output node to a variable.
+The variable must be marked as a gradient variable, see
+`fMarkGradientVariable` and the output node `node` must be constructed
+in a gradient context (to remember which variables are directly or
+indirectly present in which operation), which can be started with
+`fStartGradientContext`. If you need to compute multiple gradients for one
+output use `fCalculateGradients` since it is far more efficient.
+  - `node`: the Node which represents the chain of functions of which
+    the gradient is to be computed.
+  - `dx`: the variable for which node is derived for
+*/
+func CalculateGradient(node GraphNode, dx GraphNode) GraphNode {
+	var flintNode *C.FGraphNode = C.fCalculateGradient(graphRef(node), graphRef(node))
+	return GraphNode(flintNode)
+}
+
+/*
+CalculateGradients Calculates the overall gradient of an output node to multiple variables.
+The variables must be marked as a gradient variable, see
+`fMarkGradientVariable` and the output node `node` must be constructed
+in a gradient context (to remember which variables are directly or
+indirectly present in which operation), which can be started with
+`fStartGradientContext`.
+  - `node`: the Node which represents the chain of functions of which
+    the gradients are to be computed.
+  - `dxs`: array of variables for which node is derived for.
+
+returns array with the same size as dxs
+*/
+func CalculateGradients(node GraphNode, dxs []GraphNode) []GraphNode {
+	//partials := convertArray[GraphNode, *C.FGraphNode](dxs)
+	//resPtr := C.malloc(C.int(len(dxs) * int(unsafe.Sizeof(*C.FGraphNode))))
+	//defer C.free(unsafe.Pointer(resPtr))
+	//C.fCalculateGradients(graphRef(node), &(partials[0]), C.uint(len(partials)), resPtr)
+	// FIXME: idk
+	// convertArray[*C.FGraphNode, GraphNode](resPtr)
+	return nil
 }
 
 func MarkGradientVariable(node GraphNode) {
@@ -458,7 +533,25 @@ func ExecuteGraph(node GraphNode) GraphNode {
 	return GraphNode(flintNode)
 }
 
-// TODO: fsyncmemory
+func ExecuteGraphCpu(node GraphNode) GraphNode {
+	var flintNode *C.FGraphNode = C.fExecuteGraph_cpu(graphRef(node))
+	return GraphNode(flintNode)
+}
+
+func ExecuteGraphGpu(node GraphNode) GraphNode {
+	var flintNode *C.FGraphNode = C.fExecuteGraph_gpu(graphRef(node))
+	return GraphNode(flintNode)
+}
+
+func ExecuteGraphCpuEagerly(node GraphNode) GraphNode {
+	var flintNode *C.FGraphNode = C.fExecuteGraph_cpu_eagerly(graphRef(node))
+	return GraphNode(flintNode)
+}
+
+func ExecuteGraphGpuEagerly(node GraphNode) GraphNode {
+	var flintNode *C.FGraphNode = C.fExecuteGraph_gpu_eagerly(graphRef(node))
+	return GraphNode(flintNode)
+}
 
 func OptimizeMemory(node GraphNode) GraphNode {
 	var flintNode *C.FGraphNode = C.fOptimizeMemory(graphRef(node))
@@ -900,16 +993,37 @@ func Concat(a GraphNode, b GraphNode, axis uint) GraphNode {
 	return GraphNode(flintNode)
 }
 
+/*
+Expand adds a new dimension at an arbitrary position to the tensor and repeats the
+following dimensions to match a given shape.
+  - `ax` the dimension prior to which the new dimension will be inserted (`0`
+    means a new dimension in the front, `n` means as a new last
+    dimension).
+  - `ax_size` the new size of that dimension (repeats the following
+    dimensions `ax_size - 1` times).
+*/
 func Expand(a GraphNode, axis uint, size uint) GraphNode {
 	var flintNode *C.FGraphNode = C.fexpand(graphRef(a), C.uint(axis), C.uint(size))
 	return GraphNode(flintNode)
 }
 
+/*
+Abs takes the elementwise absolute value of `a`, i.e. `|a[i]|`
+*/
 func Abs(a GraphNode) GraphNode {
 	var flintNode *C.FGraphNode = C.fabs_g(graphRef(a))
 	return GraphNode(flintNode)
 }
 
+/*
+Repeat dimensions of a tensor multiple times
+  - `a`: the node in which dimensions are to be repeated
+  - `repetitions`: array with the same number of entries as the tensor has
+    dimensions
+
+e.g. `repeat([[0,1], [2,3]], [2, 3]) = [[0,1,0,1,0,1],
+[2,3,2,3,2,3], [0,1,0,1,0,1], [2,3,2,3,2,3]]`
+*/
 func Repeat(a GraphNode, repetitions Axes) GraphNode {
 	newRepetitions := convertArray[uint, C.int](repetitions)
 
@@ -917,6 +1031,15 @@ func Repeat(a GraphNode, repetitions Axes) GraphNode {
 	return GraphNode(flintNode)
 }
 
+/*
+Transpose this tensor along multiple dimensions
+  - `a`: the node which should be transposed
+  - `transpositions`: an array with the same number of entries as the tensor
+    has dimensions, which gives the perumtation of dimensions.
+
+The tensor will have a resulting shape in which the size in dimension `i`
+corresponds to the former size in dimension `transpositions[i]`.
+*/
 func Transpose(a GraphNode, axes Axes) GraphNode {
 	newAxes := convertArray[uint, C.int](axes)
 
@@ -924,6 +1047,27 @@ func Transpose(a GraphNode, axes Axes) GraphNode {
 	return GraphNode(flintNode)
 }
 
+/*
+Convolve convolves the `n`-dimensional input tensor `a` with a `n`-dimensional filter
+kernel `kernel` and a per dimensional step size `steps` with size of `n-1`.
+It is expected that `a` and `kernel` have the same size in their last
+dimension (which will be completely reduced by the convolution). In all other
+dimensions the size of `a` should be larger or equal to the size of `kernel`.
+The `kernel` will be 'slid' over `a` in each dimension, multiplying all
+values of `kernel` with the corresponding ones in `a` and summing them up to
+a single value and moving the kernel further by the value given in `steps` in
+that corresponding dimension.
+
+The implementation does not include any padding, meaning only convolutions
+where the complete kernel still fits into the array will be executed (the
+shape will be calculated correspondingly). If you want to modify this
+behaviour (i.e. include padding) you can use `extend`, `slice` or similar.
+
+The resulting Tensor will therefor have a shape with dimensionality `n - 1`
+and size of `(shape[i] - kernel.get_shape()[i] - 1) / steps[i]`
+if `(shape[i] - kernel.get_shape()[i] - 1)` is dividable by `steps[i]`
+else `(shape[i] - kernel.get_shape()[i] - 1) / steps[i] + 1`
+*/
 func Convolve(a GraphNode, kernel GraphNode, stride Stride) GraphNode {
 	newStride := convertArray[int, C.uint](stride)
 
@@ -931,6 +1075,22 @@ func Convolve(a GraphNode, kernel GraphNode, stride Stride) GraphNode {
 	return GraphNode(flintNode)
 }
 
+/*
+Slide slides `kernel` along `a`, multiplying it with the elements of `a` it is slid
+over. For each element all multiplied values are summed up, so that the
+result has the same shape as `kernel` (every element in the result is the
+accumulated sum of the product of that element with all elements it was slid
+over). `kernel` is initially placed so that the first element of `a` and
+the first element of `kernel` overlap. It is then moved for each dimension
+`i` by `steps[i]` elements forward except for the last (steps should have 1
+dimension less than `a` and `kernel`), just like it would be by `fconvolve`
+with the difference, that everything is accumulated for the kernel instead of
+the original node.
+
+The last dimension of `a` and `kernel` should be equal, therefor it has no
+step in that dimension since the complete kernel is multiplied in that
+dimension.
+*/
 func Slide(a GraphNode, kernel GraphNode, stride Stride) GraphNode {
 	newStride := convertArray[int, C.uint](stride)
 
@@ -938,16 +1098,77 @@ func Slide(a GraphNode, kernel GraphNode, stride Stride) GraphNode {
 	return GraphNode(flintNode)
 }
 
+/*
+Index Selects single elements with a index-tensor (integer tensor containing
+indices for the selected dimension).
+It indexes a dimension of the input tensor and the result has
+the shape of the input tensor except for the indexed dimension.
+It is assumed that except for the last entry its shape is a prefix of the
+shape of the input tensor and the indexing will occur in the matched subsets
+(the last dimension of the `indices` Tensor is the one indexed in `a`).
+E.g.
+
+	`findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [1, 0])
+	= [[[4, 5], [6, 7]], [[0, 1], [2, 3]]]`
+	`findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [0, 0, 1])
+	 = [[[0, 1], [0, 1], [1, 2]], [[3, 4], [3, 4], [5, 6]], [[7, 8], [7, 8],
+	[9, 10]]]`
+	`findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [[0], [1],
+	[0]]) = [[[0], [2]], [[5], [7]], [[8], [10]]]`
+	`findex([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]], [[0, 0],
+	[1, 0], [0, 1]]) = [[[0, 0], [2, 2]], [[5, 4], [7, 6]], [[8, 9], [10, 11]]]`
+*/
 func Index(a GraphNode, indices GraphNode) GraphNode {
 	var flintNode *C.FGraphNode = C.findex(graphRef(a), graphRef(indices))
 	return GraphNode(flintNode)
 }
 
+/*
+IndexSet Assigns to each element in `b` one element in `a` where that element will be
+"send" to, i.e. the place in `a` the index points to will be set to the
+corresponding element from `b`. If multiple elements from `b` are sent to the
+same place in `a` they will be summed up. The shape of `indices` must be a
+prefix of the shape of `b`, meaning it can have as many dimensions as `b` or
+less, but the sizes of the dimensions must be the same as the first of the
+shape of `b`.
+E.g.
+
+	findex_set([[0, 1], [2, 3], [4, 5], [6, 7]], [[4, 5], [6, 7], [8, 9]], [0, 0, 2]) =
+		[[10, 12], [2, 3], [8, 9], [6, 7]]`
+	findex_set([[0, 1], [2, 3], [4, 5], [6, 7]],
+	            [[4, 5], [6, 7], [8, 9], [10, 11]],
+	            [[-1, 0], [1, 1], [1, 0], [1, -1]]) =
+		[[5, 1], [2, 13], [9, 8], [6, 10]]`
+*/
 func IndexSet(a GraphNode, b GraphNode, indices GraphNode) GraphNode {
 	var flintNode *C.FGraphNode = C.findex_set(graphRef(a), graphRef(b), graphRef(indices))
 	return GraphNode(flintNode)
 }
 
+/*
+SlidingWindow Moves a window view with size `size` along the original Tensor by starting
+with aligning the first element of the view with the first element of the
+tensor, copying the elements of the view and moving the window by the step
+size given for each dimension (the window is first moved in the innermost
+dimension and after each is iterated moves it in the outer dimensions).
+Each view becomes a new element in a new outer dimension.
+
+	fsliding_window([[0, 1], [2, 3], [4, 5], [6, 7]], [3, 2], [1, 1]) = [[[0, 1], [2, 3], [4, 5]], [[2, 3], [4, 5], [6, 7]]]
+
+	fsliding_window([[[0,1,2],[1,2,3],[2,3,4]],
+	                 [[1,2,3],[2,3,4],[3,4,5]],
+	                 [[2,3,4],[3,4,5],[4,5,6]],
+	                 [[3,4,5],[4,5,6],[5,6,7]]],
+	                 [2, 2, 2], [2, 1, 2]) =
+		[[[[0, 1], [1, 2]],
+		  [[1, 2], [2, 3]]],
+		 [[[1, 2], [2, 3]],
+		  [[2, 3], [3, 4]]],
+		 [[[2, 3], [3, 4]],
+		  [[3, 4], [4, 5]]],
+		 [[[3, 4], [4, 5]],
+		  [[4, 5], [5, 6]]]]
+*/
 func SlidingWindow(a GraphNode, size Shape, stride Stride) GraphNode {
 	newSize := convertArray[uint, C.size_t](size)
 	newStride := convertArray[int, C.uint](stride)
@@ -956,6 +1177,9 @@ func SlidingWindow(a GraphNode, size Shape, stride Stride) GraphNode {
 	return GraphNode(flintNode)
 }
 
+/*
+Permute Randomly permutes (=swaps multiple elements with each other without creating, copying or deleting new ones) one axis of the input tensor.
+*/
 func Permute(a GraphNode, axis uint) GraphNode {
 	var flintNode *C.FGraphNode = C.fpermutate(graphRef(a), C.uint(axis))
 	return GraphNode(flintNode)
