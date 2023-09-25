@@ -23,6 +23,9 @@ NOTE: important rules for writing robust CGo code:
 void reset_errno(void) {
 	errno = 0;
 }
+
+// typedef to get size of pointer using CGo
+typedef  FGraphNode* graph_ref;
 */
 import "C"
 import (
@@ -128,11 +131,13 @@ type cTypes interface {
 // convertArray converts Arrays between arbitrary types
 // NOTE: does not work with nested arrays yet.
 // See: https://stackoverflow.com/questions/71587996/cannot-use-type-assertion-on-type-parameter-value
-func convertArray[In any, Out any](arr []In) []Out {
+// FIXME: func convertArray[In any, Out any](arr []In) []Out {
+func convertArray[In completeNumbers, Out completeNumbers | cNumbers](arr []In) []Out {
 	result := make([]Out, len(arr))
 	for idx, val := range arr {
-		x := any(val).(Out)
-		result[idx] = x
+		result[idx] = Out(val)
+		//x := any(val).(Out)
+		//result[idx] = x
 	}
 	return result
 }
@@ -449,7 +454,7 @@ output use `fCalculateGradients` since it is far more efficient.
   - `dx`: the variable for which node is derived for
 */
 func CalculateGradient(node GraphNode, dx GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fCalculateGradient(graphRef(node), graphRef(node))
+	var flintNode *C.FGraphNode = C.fCalculateGradient(graphRef(node), graphRef(dx))
 	return GraphNode(flintNode)
 }
 
@@ -468,9 +473,8 @@ returns array with the same size as dxs
 */
 func CalculateGradients(node GraphNode, dxs []GraphNode) []GraphNode {
 	//partials := convertArray[GraphNode, *C.FGraphNode](dxs)
-	//resPtr := C.malloc(C.int(len(dxs) * int(unsafe.Sizeof(*C.FGraphNode))))
-	//defer C.free(unsafe.Pointer(resPtr))
-	//C.fCalculateGradients(graphRef(node), &(partials[0]), C.uint(len(partials)), resPtr)
+	//resPtr := C.malloc(C.ulong(len(partials) * C.sizeof_graph_ref))
+	//C.fCalculateGradients(graphRef(node), &(partials[0]), C.uint(len(partials)), (**C.FGraphNode)(resPtr))
 	// FIXME: idk
 	// convertArray[*C.FGraphNode, GraphNode](resPtr)
 	return nil
@@ -916,7 +920,7 @@ func Min[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 }
 
 func Max[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
-	var flintNode *C.FGraphNode = nil // FIXME: can i replace this type var?
+	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
 		flintNode = C.fmax_g(graphRef(a), graphRef(c))
