@@ -4,7 +4,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,25 +28,25 @@
 
 template <FType in> constexpr FType get_output_type() { return in; }
 template <FType in, GenericLayer K> constexpr FType get_output_type() {
-  return K::transform_type(in);
+	return K::transform_type(in);
 }
 template <FType in, GenericLayer K1, GenericLayer K2, GenericLayer... F>
 constexpr FType get_output_type() {
-  constexpr FType out = K2::transform_type(K1::transform_type(in));
-  return get_output_type<out, F...>();
+	constexpr FType out = K2::transform_type(K1::transform_type(in));
+	return get_output_type<out, F...>();
 }
 template <unsigned int in> constexpr unsigned int get_output_dim() {
-  return in;
+	return in;
 }
 template <unsigned int in, GenericLayer K>
 constexpr unsigned int get_output_dim() {
-  return K::transform_dimensionality(in);
+	return K::transform_dimensionality(in);
 }
 template <unsigned int in, GenericLayer K1, GenericLayer K2, GenericLayer... F>
 constexpr unsigned int get_output_dim() {
-  constexpr unsigned int out =
-      K2::transform_dimensionality(K1::transform_dimensionality(in));
-  return get_output_dim<out, F...>();
+	constexpr unsigned int out =
+		K2::transform_dimensionality(K1::transform_dimensionality(in));
+	return get_output_dim<out, F...>();
 }
 
 /**
@@ -64,8 +64,8 @@ constexpr unsigned int get_output_dim() {
  * }
  */
 template <GenericLayer... T> struct SequentialModel {
-  std::tuple<T...> layers;
-  SequentialModel(T... layers) : layers(std::move(layers)...) {}
+		std::tuple<T...> layers;
+		SequentialModel(T... layers) : layers(std::move(layers)...) {}
 
   template <OptimizerFactory Fac> void generate_optimizer(Fac fac) {
     gen_opt<0>(fac);
