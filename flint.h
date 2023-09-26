@@ -112,10 +112,10 @@ void flogging(enum FLogType type, const char *msg);
  * executed eagerly, i.e. they are executed during graph construction.
  *
  * This may improve performance when only using the CPU backend, in any other
- * case disabling eager execution should be prefered. */
+ * case disabling eager execution should be preferred. */
 void fEnableEagerExecution();
 /** Disable eager execution, i.e. the graph is constructed without execution of
- * the nodes until a operation makes the execution of a parent graph necessary
+ * the nodes until an operation makes the execution of a parent graph necessary
  * or the user calls `fExecuteGraph`. */
 void fDisableEagerExecution();
 /** Returns 1 if eager execution has been enabled, else 0 */
@@ -334,7 +334,7 @@ FGraphNode *frandom(const size_t *shape, const int dimensions);
 FGraphNode *farange(const size_t *shape, const int dimensions, const int ax);
 /** Decrements `FGraphNode.reference_counter` of `graph` (for reference
  * counting) and deallocates the node and its corresponding data, if the counter
- * becomes 0. If the node is deallocated, the same process is repeated with its
+ * reaches 0. If the node is deallocated, the same process is repeated with its
  * predecessors. So you can safely connect nodes multiple times and have only to
  * free the leaf nodes (i.e. the results), without caring about cross-reference,
  * since those are handled by the reference counting system.*/
@@ -350,7 +350,7 @@ FGraphNode *fCopyGraph(FGraphNode *graph);
  * If the graph is executed by the GPU
  * backend, a opencl kernel containing all selected operations (the nodes
  * operation and those indirect parent operations which were not yet
- * executed) are compiled and executed. The kernels are cashed, so it improves
+ * executed) are compiled and executed. The kernels are cached, so it improves
  * the performance of a program if the same graph-structures are reused (not
  * necessary the same nodes, but the same combination of nodes), since then the
  * backend can reuse already compiled kernels. The GPU backend is allowed to
@@ -365,7 +365,7 @@ FGraphNode *fCopyGraph(FGraphNode *graph);
  * The backend is selected by the framework if both
  * are initialized, else the one that is initialized will be chosen. If both are
  * uninitialized, both will be initialized prior to execution. If eager
- * exeuction is enabled each node will be executed eagerly upon construction or
+ * execution is enabled each node will be executed eagerly upon construction or
  * with this method.
  *
  * Also see `fEnableEagerExecution`, `fSyncMemory`*/
@@ -465,7 +465,7 @@ bool fIsGradientContext();
  * variable, to enable less memory usage and faster gradient calculation).
  */
 void fMarkGradientVariable(FGraphNode *node);
-/** Removes the gradient mark (ans subsequent memory overhead) for this node.
+/** Removes the gradient mark (and subsequent memory overhead) for this node.
  * After a call to this method no subsequent gradient calculations with this
  * node as a derivative will be possible.
  */
@@ -496,7 +496,7 @@ char *fserialize(FGraphNode *node, size_t *bytes_written);
 FGraphNode *fdeserialize(char *data);
 /** Loads an image from the given path.
  * The image will be stored in floating point data and the shape will be h, w, c
- * where w is the width, h is the height and c are the chanels.
+ * where w is the width, h is the height and c are the channels.
  * Supported formats include png, jpeg, bmp, gif, hdr ... essentially everything
  * stb_image supports
  */
