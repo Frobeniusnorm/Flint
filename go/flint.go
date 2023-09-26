@@ -1085,7 +1085,7 @@ Flatten the complete tensor to a tensor with one dimension.
 E.g:
 
 	Flatten([[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]) =
-		[3, 1, 4, 2, 1, 5, 0, 4, 2, 4, 7, 9]`.
+		[3, 1, 4, 2, 1, 5, 0, 4, 2, 4, 7, 9].
 */
 func Flatten(a GraphNode) GraphNode {
 	var flintNode *C.FGraphNode = C.fflatten(graphRef(a))
@@ -1173,6 +1173,8 @@ func Max[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
 /*
 ReduceSum reduces one dimension of the tensor by additive folding.
 
+E.g:
+
 	ReduceSum([[1,2,3], [4,5,6]], 0) = [5,7,9]
 	ReduceSum([[1,2,3], [4,5,6]], 1) = [6,15]
 
@@ -1250,7 +1252,7 @@ SliceWithStride selects a slice of the tensor [node] with a dimension wise start
 [start] and [end] may contain negative values, which are then subtracted from the end of the tensor
 (e.g. -1 means the element before the last element).
 [start] is inclusive and describes the start index of the selection per dimension and [end] describes the end index per dimension and is exclusive.
-[stride] contains the per dimension step size (e.g. `2` meaning every second element will be selected etc.) and may be negative as well,
+[stride] contains the per dimension step size (e.g. 2 meaning every second element will be selected etc.) and may be negative as well,
 which reverses the traversal order (the first elements are selected as the last ones).
 For a negative stride, [start] > [end] must hold (for a positive of course [end] > [start]) for each dimension.
 */
@@ -1470,12 +1472,12 @@ given for each dimension (the window is first moved in the innermost
 dimension and after each is iterated moves it in the outer dimensions).
 Each view becomes a new element in a new outer dimension.
 
-Moves a 3x2 rectangle across the node, each time taking one stride in each direction:
+This example moves a 3x2 rectangle across the node, each time taking one stride in each direction:
 
-	fsliding_window([[0, 1], [2, 3], [4, 5], [6, 7]], [3, 2], [1, 1]) =
+	SlidingWindow([[0, 1], [2, 3], [4, 5], [6, 7]], [3, 2], [1, 1]) =
 		[[[0, 1], [2, 3], [4, 5]], [[2, 3], [4, 5], [6, 7]]]
 
-Moves a 2x2x2 cube across the node, this time moving 2 across the first and last axis for each stride:
+This example moves a 2x2x2 cube across the node, this time moving 2 across the first and last axis for each stride:
 
 	SlidingWindow([[[0,1,2],[1,2,3],[2,3,4]],
 	                 [[1,2,3],[2,3,4],[3,4,5]],
