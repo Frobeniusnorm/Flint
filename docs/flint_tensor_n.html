@@ -69,8 +69,7 @@
                                              const args... steps) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__typename____args___Tensor_stronger_return_K___n__slide_const_Tensor_K__n__&kernel_______________________________________const_args____steps__const_">template &lt;typename K, typename... args&gt;
   Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>slide</b>(const Tensor<K, n> &kernel,
                                       const args... steps) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_+_1__sliding_window_std::array_size_t__n__window_size___________________________________std::array_unsigned_int__n__step_size_=_">Tensor&lt;T, n + 1&gt; <b>sliding_window</b>(std::array<size_t, n> window_size,
-                                  std::array<unsigned int, n> step_size = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__unslide_window_std::array_size_t__n_-_1__result_size___________________________________std::array_unsigned_int__n_-_1__step_size_=_">Tensor&lt;T, n - 1&gt; <b>unslide_window</b>(std::array<size_t, n - 1> result_size,
-                                  std::array<unsigned int, n - 1> step_size = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__permutate_unsigned_int_ax__const_">Tensor&lt;T, n&gt; <b>permutate</b>(unsigned int ax) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_double__k__gradient_const_Tensor_K__k__&dx__const_">template &lt;typename K, unsigned int k&gt;
+                                  std::array<unsigned int, n> step_size = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__permutate_unsigned_int_ax__const_">Tensor&lt;T, n&gt; <b>permutate</b>(unsigned int ax) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_double__k__gradient_const_Tensor_K__k__&dx__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;double, k&gt; <b>gradient</b>(const Tensor<K, k> &dx) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-watch___">void <b>watch</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-unwatch___">void <b>unwatch</b>() </a><br/><br/></div>
         <div style="display: block; height: 2em;"></div>
         <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
@@ -1015,7 +1014,7 @@
  shape will be calculated correspondingly). If you want to modify this
  behaviour (i.e. include padding) you can use <pre class="inline_code">extend</pre>, <pre class="inline_code">slice</pre> or similar.<div style="display:block; height: 0.5em"></div>
  The resulting Tensor will therefor have a shape with dimensionality <pre class="inline_code">n - 1</pre>
- and size of <pre class="inline_code">(shape[i] - kernel.get_shape()[i] - 1) / steps[i]</pre>
+ and size of <pre class="inline_code">(shape[i] - kernel.get_shape()[i] - 1) / steps[i]</pre> 
  if <pre class="inline_code">(shape[i] - kernel.get_shape()[i] - 1)</pre> is divisable by <pre class="inline_code">steps[i]</pre>
  else <pre class="inline_code">(shape[i] - kernel.get_shape()[i] - 1) / steps[i] + 1</pre><div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
@@ -1094,12 +1093,6 @@
  <span style="color: #D0D0D0">//    [<span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">6</span>]],</span>
  <span style="color: #D0D0D0">//   [[<span style="color: #30F0FF">2</span><span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">2</span>],</span>
  <span style="color: #D0D0D0">//    [<span style="color: #30F0FF">2</span><span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">4</span>]]]])</span></pre><div style="display:block; height: 0.5em"></div>
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-n_-_1__unslide_window_std::array_size_t__n_-_1__result_size___________________________________std::array_unsigned_int__n_-_1__step_size_=_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, n - 1&gt; <b>unslide_window</b>(std::array<size_t, n - 1> result_size,
-                                  std::array<unsigned int, n - 1> step_size = </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- UNIMPLEMENTED FUTURE FUNCTION
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-n__permutate_unsigned_int_ax__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>permutate</b>(unsigned int ax) const </pre></div>
 <br />
