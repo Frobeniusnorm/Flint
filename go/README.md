@@ -7,4 +7,10 @@ It has to be rewritten using the functions from `flint.h`
 
 ## Setup
 
-Make sure to first build and install the core library as described [here](https://github.com/Frobeniusnorm/Flint#readme).
+Make sure to first build and install the core library as
+described [here](https://github.com/Frobeniusnorm/Flint#readme).
+
+## Developer Guide
+
+More infos about the architecture and technical details,
+as well as the developer guide can be found [here](./DEVELOPMENT.md)
