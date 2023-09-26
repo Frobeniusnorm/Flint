@@ -662,7 +662,7 @@ FGraphNode *fequal_cd(FGraphNode *a, const double b);
  * Since for one entry of the
  * tensor multiple other previous entries are needed, the operand tensors need
  * to be executed first. Therefor the method will implicitly (or eagerly)
- * execute the two parameter nodes `a` and `b` if their data is not allready
+ * execute the two parameter nodes `a` and `b` if their data is not already
  * present. */
 FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b);
 /** Flattens the complete tensor to a tensor with one
@@ -673,7 +673,7 @@ E.g.`flattened([[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]) = [3, 1, 4, 2,
 FGraphNode *fflatten(FGraphNode *a);
 /** Flattens a tensor `a` with `n` dimensions along
 `dimension`, resulting in a tensor with `n-1` dimensions.
-Flattening a dimension will remove it from the shape of the tensor, therefor its
+Flattening a dimension will remove it from the shape of the tensor, therefor it's
 not possible to flatten the dimension 0.
 A Tensor `[[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]` flattened
 along dimension 1 will result in `[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]`.
@@ -736,16 +736,16 @@ FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
 FGraphNode *freduce_mul(FGraphNode *a, const int dimension);
 /** Reduces one dimension of the tensor by keeping the minimum e.g.
  *
- * `freduce_mul([[1,32,3], [4,5,3]], 0) = [1,5,3]`,
- * `freduce_mul([[9,2,3], [-1,5,6]], 1) = [2, -1]`
+ * `freduce_min([[1,32,3], [4,5,3]], 0) = [1,5,3]`,
+ * `freduce_min([[9,2,3], [-1,5,6]], 1) = [2, -1]`
  *
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node.*/
 FGraphNode *freduce_min(FGraphNode *a, const int dimension);
 /** Reduces one dimension of the tensor by keeping the maximum e.g.
  *
- * `freduce_mul([[1,32,3], [4,5,3]], 0) = [4,32,3]`,
- * `freduce_mul([[9,2,3], [-1,5,6]], 1) = [9, 6]`
+ * `freduce_max([[1,32,3], [4,5,3]], 0) = [4,32,3]`,
+ * `freduce_max([[9,2,3], [-1,5,6]], 1) = [9, 6]`
  *
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node.*/
