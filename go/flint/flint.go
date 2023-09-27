@@ -53,7 +53,7 @@ func (node GraphNode) GetShape() Shape {
 
 type ResultData struct {
 	resultRef *C.FResultData
-	nodeRef   *C.FResultData
+	nodeRef   *C.FGraphNode
 	Data      any
 	Shape     Shape
 	DataType  tensorDataType
