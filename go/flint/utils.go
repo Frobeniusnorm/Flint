@@ -43,34 +43,6 @@ func describe(i any) {
 	fmt.Printf("describe (value, underlying type): (%v, %T)\n", i, i)
 }
 
-/*
-func arrayFromC[T numeric | uint64 | uint32 | int | uint](length int, dataPtr unsafe.Pointer, dataType DataType) []T {
-	var sizeOf int
-	switch dataType {
-	case F_INT32:
-		sizeOf = int(C.sizeof_int)
-	case F_INT64:
-		sizeOf = int(C.sizeof_long)
-	case F_FLOAT32:
-		sizeOf = int(C.sizeof_float)
-	case F_FLOAT64:
-		sizeOf = int(C.sizeof_double)
-	default:
-		panic("invalid type")
-	}
-
-	var result = make([]T, length)
-	//voidPtr := (*C.void)(dataPtr)
-	for i := 0; i < length; i++ {
-		//x := *(voidPtr + C.int(i)) // add sizeof?
-		//x := unsafe.Pointer(dataPtr + C.int(i))
-		x := dataPtr + i*sizeOf
-		result[i] = T(x)
-	}
-	return result
-}
-*/
-
 func fromCToArray[T completeNumbers](dataPtr unsafe.Pointer, length int, dataType DataType) []T {
 	var result = make([]T, length)
 
