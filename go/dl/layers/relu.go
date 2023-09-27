@@ -10,8 +10,8 @@ type ReLU struct {
 func NewRelu() ReLU {
 	return ReLU{
 		BaseLayer: BaseLayer{
-			trainable:     false,
-			trainingPhase: false,
+			trainable:  false,
+			EnableGrad: false,
 		},
 		input: Tensor{},
 	}

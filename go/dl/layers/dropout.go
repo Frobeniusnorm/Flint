@@ -11,8 +11,8 @@ type Dropout struct {
 func NewDropout(prob float32) Dropout {
 	return Dropout{
 		BaseLayer: BaseLayer{
-			trainable:     false,
-			trainingPhase: false,
+			trainable:  false,
+			EnableGrad: false,
 		},
 		probability: prob,
 		output:      Tensor{},

@@ -10,8 +10,8 @@ type Tensor struct {
 }
 
 type BaseLayer struct {
-	trainable     bool
-	trainingPhase bool
+	trainable  bool
+	EnableGrad bool // Essentially the same as "training_phase". Grads are disabled while testing.
 }
 
 type Layer interface {
