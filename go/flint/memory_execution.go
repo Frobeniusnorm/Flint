@@ -108,7 +108,7 @@ Also see [CalculateResult].
 */
 func SyncMemory(node GraphNode) ResultData {
 	res := C.fSyncMemory(node.ref)
-	return ResultData{ref: res}
+	return ResultData{resultRef: res}
 }
 
 /*
@@ -132,9 +132,9 @@ func CalculateResult[T numeric](node GraphNode) ResultData {
 	var shape = Shape(fromCToArray[uint](shapePtr, shapeSize, F_INT64))
 
 	return ResultData{
-		ref:   nil,
-		Data:  result,
-		Shape: shape,
+		nodeRef: flintNode,
+		Data:    result,
+		Shape:   shape,
 	}
 }
 

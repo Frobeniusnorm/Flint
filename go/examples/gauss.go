@@ -17,7 +17,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	imgShape := flint.GetShape(img)
+	imgShape := img.GetShape()
 	h, w, c := imgShape[0], imgShape[1], imgShape[2]
 	fmt.Println("img shape (beginning):", imgShape)
 
@@ -29,7 +29,7 @@ func main() {
 		1.0 / 8.0, 1.0 / 4.0, 1.0 / 8.0,
 		1.0 / 16.0, 1.0 / 8.0, 1.0 / 16.0,
 	}
-	kernel := flint.CreateGraph(kernelData, flint.Shape{1, 3, 3, 1})
+	kernel := flint.CreateGraph(kernelData, flint.Shape{1, 3, 3, 1}, flint.F_FLOAT32)
 
 	flint.IncreaseRefCounter(kernel)
 	flint.IncreaseRefCounter(img)

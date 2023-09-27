@@ -23,13 +23,6 @@ func convertArray[In completeNumbers, Out completeNumbers | cNumbers](arr []In) 
 	return result
 }
 
-func GetShape(node GraphNode) Shape {
-	var flintNode *C.FGraphNode = node.ref
-	shapePtr := unsafe.Pointer(flintNode.operation.shape)
-	shapeSize := int(flintNode.operation.dimensions)
-	return fromCToArray[uint](shapePtr, shapeSize, F_INT64)
-}
-
 // use for type debugging
 func describe(i any) {
 	fmt.Printf("describe (value, underlying type): (%v, %T)\n", i, i)

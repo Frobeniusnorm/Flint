@@ -12,9 +12,7 @@ Params:
   - Type params [T]: the datatype of [data]
   - [shape]: Each entry describing the size of the corresponding dimension.
 */
-func CreateGraph[T completeNumbers](data []T, shape Shape) GraphNode {
-	// FIXME: support the other data types
-	datatype := F_FLOAT32
+func CreateGraph[T completeNumbers](data []T, shape Shape, datatype tensorDataType) GraphNode {
 	newShape := convertArray[uint, C.size_t](shape)
 	newData := convertArray[T, C.float](data)
 

@@ -32,6 +32,7 @@ typedef  FGraphNode* graph_ref;
 import "C"
 import (
 	"syscall"
+	"unsafe"
 )
 
 ///////////////
@@ -40,12 +41,22 @@ import (
 
 type GraphNode struct {
 	ref *C.FGraphNode
+	//DataType tensorDataType
+}
+
+func (node GraphNode) GetShape() Shape {
+	var flintNode *C.FGraphNode = node.ref
+	shapePtr := unsafe.Pointer(flintNode.operation.shape)
+	shapeSize := int(flintNode.operation.dimensions)
+	return fromCToArray[uint](shapePtr, shapeSize, F_INT64)
 }
 
 type ResultData struct {
-	ref   *C.FResultData
-	Data  any
-	Shape Shape
+	resultRef *C.FResultData
+	nodeRef   *C.FResultData
+	Data      any
+	Shape     Shape
+	DataType  tensorDataType
 }
 
 // numeric is a constraint interface representing the supported types of C operations
