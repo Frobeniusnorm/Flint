@@ -3,6 +3,14 @@ package flint
 // #include <flint/flint.h>
 import "C"
 
+type Backend int
+
+const (
+	BACKEND_ONLY_CPU Backend = iota + 1
+	BACKEND_ONLY_GPU
+	BACKEND_BOTH
+)
+
 /*
 Init initializes the backends.
 These functions are already implicitly called by the execution functions if necessary.

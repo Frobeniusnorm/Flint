@@ -21,7 +21,7 @@ func CreateGraph[T completeNumbers](data []T, shape Shape) GraphNode {
 	// FIXME: is shape and data properly freed after exiting this function?
 
 	var flintNode *C.FGraphNode = C.fCreateGraph(unsafe.Pointer(&(newData[0])), C.int(len(data)), uint32(datatype), &(newShape[0]), C.int(len(shape)))
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -31,7 +31,7 @@ Params:
   - [value]: the value this tensor should consist of
   - [shape]: Each entry describing the size of the corresponding dimension.
 */
-func CreateGraphConstant[T Numeric](value T, shape Shape) GraphNode {
+func CreateGraphConstant[T numeric](value T, shape Shape) GraphNode {
 	newShape := convertArray[uint, C.size_t](shape)
 
 	var flintNode *C.FGraphNode
@@ -48,7 +48,7 @@ func CreateGraphConstant[T Numeric](value T, shape Shape) GraphNode {
 	default:
 		panic("invalid data type")
 	}
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -61,7 +61,7 @@ func CreateGraphRandom(shape Shape) GraphNode {
 	newShape := convertArray[uint, C.size_t](shape)
 
 	var flintNode *C.FGraphNode = C.frandom(&(newShape[0]), C.int(len(shape)))
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -73,5 +73,5 @@ func CreateGraphArrange(shape Shape, axis int) GraphNode {
 	newShape := convertArray[uint, C.size_t](shape)
 
 	var flintNode *C.FGraphNode = C.farange(&(newShape[0]), C.int(len(shape)), C.int(axis))
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }

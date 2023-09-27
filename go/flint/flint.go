@@ -31,44 +31,26 @@ typedef  FGraphNode* graph_ref;
 */
 import "C"
 import (
-	"unsafe"
+	"syscall"
 )
 
 ///////////////
 // Types and Structs
 //////////////
 
-// Tensor is a higher level abstraction of a GraphNode. It includes the data using Go types
-// The zero value is only given when the execution did not yield any result.
-// FIXME: phase this out in favor or resultData
-type Tensor[T Numeric] struct {
-	Data  []T
+type GraphNode struct {
+	ref *C.FGraphNode
+}
+
+type ResultData struct {
+	ref   *C.FResultData
+	Data  any
 	Shape Shape
 }
-type FloatTensor Tensor[float32]
-type IntTensor Tensor[int32]
-type DoubleTensor Tensor[float64]
-type LongTensor Tensor[int64]
 
-// A GraphNode is just a points to a FGraphNode in C Heap memory
-type GraphNode unsafe.Pointer
-
-// graphRef turns the unsafe pointer into a C pointer
-// As C Types should not be exported, this function HAS to stay local
-func graphRef(node GraphNode) *C.FGraphNode {
-	return (*C.FGraphNode)(node)
-}
-
-// The ResultData struct holds a pointer to some C memory including the output of an evaluated node
-type ResultData unsafe.Pointer
-
-func resultRef(res ResultData) *C.FResultData {
-	return (*C.FResultData)(res)
-}
-
-// Numeric is a constraint interface representing the supported types of C operations
+// numeric is a constraint interface representing the supported types of C operations
 // TODO: as we no longer cast values between C and GO (we shouldn't!) this can be extended!
-type Numeric interface {
+type numeric interface {
 	~int32 | ~int64 | ~float32 | ~float64
 }
 
@@ -76,7 +58,7 @@ type Numeric interface {
 // needs to have one entry for each dimension of tensor
 type Stride []int
 
-// Axes indicate changes in dimensions (i.e transpose)
+// Axes indicate changes in dimensions (i.e. transpose)
 // needs to have one entry for each dimension of tensor
 // and each entry should not be higher than the number of dimensions
 type Axes []uint
@@ -115,7 +97,7 @@ const (
 )
 
 type completeNumbers interface {
-	Numeric | ~uint | ~int | ~int8 | ~int64 | ~uint64 | ~uint16 | ~uint8
+	numeric | ~uint | ~int | ~int8 | ~int64 | ~uint64 | ~uint16 | ~uint8
 }
 
 // cNumbers represents the usable C types
@@ -124,6 +106,7 @@ type cNumbers interface {
 	C.int | C.size_t | C.long | C.uint | C.float | C.double
 }
 
+// cNumbers is a constraint interface for commonly used C Types
 type cTypes interface {
 	C.FGraphNode | *C.FGraphNode
 }
@@ -131,20 +114,12 @@ type cTypes interface {
 // Error offers a generic error struct in flint
 type Error struct {
 	message string
+	errno   syscall.Errno
 }
 
-// FIXME: this stuff is currently unused
 func (err *Error) Error() string {
 	return err.message
 }
-
-type Backend int
-
-const (
-	BACKEND_ONLY_CPU Backend = iota + 1
-	BACKEND_ONLY_GPU
-	BACKEND_BOTH
-)
 
 func resetErrno() {
 	C.reset_errno()

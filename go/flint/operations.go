@@ -8,25 +8,25 @@ Add [operand1] and [operand2].
 At least one of the parameters HAS to be a [GraphNode].
 Addition is carried out element-wise.
 */
-func Add[T Numeric | GraphNode](operand1 GraphNode, operand2 T) GraphNode {
+func Add[T numeric | GraphNode](operand1 GraphNode, operand2 T) GraphNode {
 	var flintNode *C.FGraphNode
 
 	switch c := any(operand2).(type) {
 	case int32:
-		flintNode = C.fadd_ci(graphRef(operand1), C.int(c))
+		flintNode = C.fadd_ci(operand1.ref, C.int(c))
 	case int64:
-		flintNode = C.fadd_cl(graphRef(operand1), C.long(c))
+		flintNode = C.fadd_cl(operand1.ref, C.long(c))
 	case float32:
-		flintNode = C.fadd_cf(graphRef(operand1), C.float(c))
+		flintNode = C.fadd_cf(operand1.ref, C.float(c))
 	case float64:
-		flintNode = C.fadd_cd(graphRef(operand1), C.double(c))
+		flintNode = C.fadd_cd(operand1.ref, C.double(c))
 	case GraphNode:
-		flintNode = C.fadd_g(graphRef(operand1), graphRef(c))
+		flintNode = C.fadd_g(operand1.ref, c.ref)
 	default:
 		panic("invalid type")
 	}
 
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -34,23 +34,23 @@ Pow takes [base] to the power of [exponent].
 The [exponent] can be a constant number or another [GraphNode].
 The operation is carried out element-wise.
 */
-func Pow[T Numeric | GraphNode](base GraphNode, exponent T) GraphNode {
+func Pow[T numeric | GraphNode](base GraphNode, exponent T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(exponent).(type) {
 	case GraphNode:
-		flintNode = C.fpow_g(graphRef(base), graphRef(c))
+		flintNode = C.fpow_g(base.ref, c.ref)
 	case int32:
-		flintNode = C.fpow_ci(graphRef(base), C.int(c))
+		flintNode = C.fpow_ci(base.ref, C.int(c))
 	case int64:
-		flintNode = C.fpow_cl(graphRef(base), C.long(c))
+		flintNode = C.fpow_cl(base.ref, C.long(c))
 	case float32:
-		flintNode = C.fpow_cf(graphRef(base), C.float(c))
+		flintNode = C.fpow_cf(base.ref, C.float(c))
 	case float64:
-		flintNode = C.fpow_cd(graphRef(base), C.double(c))
+		flintNode = C.fpow_cd(base.ref, C.double(c))
 	default:
 		panic("invalid type")
 	}
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -58,23 +58,23 @@ Mul multiplies [operand1] by [operand2].
 At least one of the parameters HAS to be a [GraphNode]
 Multiplication is carried out element-wise.
 */
-func Mul[T Numeric | GraphNode](operand1 GraphNode, operand2 T) GraphNode {
+func Mul[T numeric | GraphNode](operand1 GraphNode, operand2 T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(operand2).(type) {
 	case GraphNode:
-		flintNode = C.fmul_g(graphRef(operand1), graphRef(c))
+		flintNode = C.fmul_g(operand1.ref, c.ref)
 	case int32:
-		flintNode = C.fmul_ci(graphRef(operand1), C.int(c))
+		flintNode = C.fmul_ci(operand1.ref, C.int(c))
 	case int64:
-		flintNode = C.fmul_cl(graphRef(operand1), C.long(c))
+		flintNode = C.fmul_cl(operand1.ref, C.long(c))
 	case float32:
-		flintNode = C.fmul_cf(graphRef(operand1), C.float(c))
+		flintNode = C.fmul_cf(operand1.ref, C.float(c))
 	case float64:
-		flintNode = C.fmul_cd(graphRef(operand1), C.double(c))
+		flintNode = C.fmul_cd(operand1.ref, C.double(c))
 	default:
 		panic("invalid type")
 	}
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -82,52 +82,52 @@ Divide [numerator] by [denominator].
 At least one of the parameters HAS to be a [GraphNode]
 Division is carried out element-wise.
 */
-func Divide[T Numeric | GraphNode](numerator T, denominator T) GraphNode {
+func Divide[T numeric | GraphNode](numerator T, denominator T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch x := any(numerator).(type) {
 	case GraphNode:
 		switch y := any(denominator).(type) {
 		case GraphNode:
-			flintNode = C.fdiv_g(graphRef(x), graphRef(y))
+			flintNode = C.fdiv_g(x.ref, y.ref)
 		case int32:
-			flintNode = C.fdiv_ci(graphRef(x), C.int(y))
+			flintNode = C.fdiv_ci(x.ref, C.int(y))
 		case int64:
-			flintNode = C.fdiv_cl(graphRef(x), C.long(y))
+			flintNode = C.fdiv_cl(x.ref, C.long(y))
 		case float32:
-			flintNode = C.fdiv_cf(graphRef(x), C.float(y))
+			flintNode = C.fdiv_cf(x.ref, C.float(y))
 		case float64:
-			flintNode = C.fdiv_cd(graphRef(x), C.double(y))
+			flintNode = C.fdiv_cd(x.ref, C.double(y))
 		default:
 			panic("invalid type")
 		}
 	case int32:
 		if y, isNode := any(denominator).(GraphNode); isNode == true {
-			flintNode = C.fdiv_ici(C.int(x), graphRef(y))
+			flintNode = C.fdiv_ici(C.int(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
 	case int64:
 		if y, isNode := any(denominator).(GraphNode); isNode == true {
-			flintNode = C.fdiv_icl(C.long(x), graphRef(y))
+			flintNode = C.fdiv_icl(C.long(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
 	case float32:
 		if y, isNode := any(denominator).(GraphNode); isNode == true {
-			flintNode = C.fdiv_icf(C.float(x), graphRef(y))
+			flintNode = C.fdiv_icf(C.float(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
 	case float64:
 		if y, isNode := any(denominator).(GraphNode); isNode == true {
-			flintNode = C.fdiv_icd(C.double(x), graphRef(y))
+			flintNode = C.fdiv_icd(C.double(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
 	default:
 		panic("invalid type")
 	}
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -135,124 +135,124 @@ Sub Subtracts [minuend] by [subtrahend].
 At least one of the parameters HAS to be a [GraphNode].
 Subtraction is carried out element-wise.
 */
-func Sub[T Numeric | GraphNode](minuend T, subtrahend T) GraphNode {
+func Sub[T numeric | GraphNode](minuend T, subtrahend T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch x := any(minuend).(type) {
 	case GraphNode:
 		switch y := any(subtrahend).(type) {
 		case GraphNode:
-			flintNode = C.fsub_g(graphRef(x), graphRef(y))
+			flintNode = C.fsub_g(x.ref, y.ref)
 		case int32:
-			flintNode = C.fsub_ci(graphRef(x), C.int(y))
+			flintNode = C.fsub_ci(x.ref, C.int(y))
 		case int64:
-			flintNode = C.fsub_cl(graphRef(x), C.long(y))
+			flintNode = C.fsub_cl(x.ref, C.long(y))
 		case float32:
-			flintNode = C.fsub_cf(graphRef(x), C.float(y))
+			flintNode = C.fsub_cf(x.ref, C.float(y))
 		case float64:
-			flintNode = C.fsub_cd(graphRef(x), C.double(y))
+			flintNode = C.fsub_cd(x.ref, C.double(y))
 		default:
 			panic("invalid type")
 		}
 	case int32:
 		if y, isNode := any(subtrahend).(GraphNode); isNode == true {
-			flintNode = C.fsub_ici(C.int(x), graphRef(y))
+			flintNode = C.fsub_ici(C.int(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
 	case int64:
 		if y, isNode := any(subtrahend).(GraphNode); isNode == true {
-			flintNode = C.fsub_icl(C.long(x), graphRef(y))
+			flintNode = C.fsub_icl(C.long(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
 	case float32:
 		if y, isNode := any(subtrahend).(GraphNode); isNode == true {
-			flintNode = C.fsub_icf(C.float(x), graphRef(y))
+			flintNode = C.fsub_icf(C.float(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
 	case float64:
 		if y, isNode := any(subtrahend).(GraphNode); isNode == true {
-			flintNode = C.fsub_icd(C.double(x), graphRef(y))
+			flintNode = C.fsub_icd(C.double(x), y.ref)
 		} else {
 			panic("invalid type")
 		}
 	default:
 		panic("invalid type")
 	}
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 // Log takes the element wise logarithm naturalis of x.
 func Log(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.flog(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.flog(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 // Log2 takes the element wise base 10 logarithm of x.
 func Log2(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.flog2(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.flog2(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 // Log10 takes the element wise base 10 logarithm of x.
 func Log10(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.flog10(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.flog10(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 // Sin takes the element wise sinus of x.
 func Sin(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fsin(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fsin(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 // Sqrt takes the element wise square root of x.
 func Sqrt(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fsqrt_g(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fsqrt_g(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 // Exp takes each element as the exponent for power of base e.
 func Exp(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fexp(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fexp(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 // Cos takes the element wise cosine of x.
 func Cos(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fcos(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fcos(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 // Tan takes the element wise tangent of x.
 func Tan(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.ftan(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.ftan(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 // Asin takes the element wise inverse sinus of x.
 func Asin(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fasin(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fasin(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 // Acos takes the element wise inverse cosine of x.
 func Acos(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.facos(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.facos(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 // Atan takes the element wise inverse tangent of x.
 func Atan(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fatan(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fatan(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 // Neg swaps the sign of each element.
 func Neg(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fneg(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fneg(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -262,8 +262,8 @@ The input tensor [x] must have an integer type.
 This function returns a [F_INT32] [GraphNode].
 */
 func Sign(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fsign(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fsign(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -272,74 +272,74 @@ i.e. x[i] = 1 if x[i] mod 2 == 0 else x[i] = 0
 This function returns a [F_INT32] [GraphNode].
 */
 func Even(x GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.feven(graphRef(x))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.feven(x.ref)
+	return GraphNode{ref: flintNode}
 }
 
 /*
 Equal compares a tensor and a constant elementwise by [a] = [b] and returns a 0,1 [F_INT32] [GraphNode].
 */
-func Equal[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
+func Equal[T numeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
-		flintNode = C.fequal_g(graphRef(a), graphRef(c))
+		flintNode = C.fequal_g(a.ref, c.ref)
 	case int32:
-		flintNode = C.fequal_ci(graphRef(a), C.int(c))
+		flintNode = C.fequal_ci(a.ref, C.int(c))
 	case int64:
-		flintNode = C.fequal_cl(graphRef(a), C.long(c))
+		flintNode = C.fequal_cl(a.ref, C.long(c))
 	case float32:
-		flintNode = C.fequal_cf(graphRef(a), C.float(c))
+		flintNode = C.fequal_cf(a.ref, C.float(c))
 	case float64:
-		flintNode = C.fequal_cd(graphRef(a), C.double(c))
+		flintNode = C.fequal_cd(a.ref, C.double(c))
 	default:
 		panic("invalid type")
 	}
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 /*
 Greater compares a tensor and a constant elementwise by [a] > [b] and returns a 0,1 [F_INT32] [GraphNode].
 */
-func Greater[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
+func Greater[T numeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
-		flintNode = C.fgreater_g(graphRef(a), graphRef(c))
+		flintNode = C.fgreater_g(a.ref, c.ref)
 	case int32:
-		flintNode = C.fgreater_ci(graphRef(a), C.int(c))
+		flintNode = C.fgreater_ci(a.ref, C.int(c))
 	case int64:
-		flintNode = C.fgreater_cl(graphRef(a), C.long(c))
+		flintNode = C.fgreater_cl(a.ref, C.long(c))
 	case float32:
-		flintNode = C.fgreater_cf(graphRef(a), C.float(c))
+		flintNode = C.fgreater_cf(a.ref, C.float(c))
 	case float64:
-		flintNode = C.fgreater_cd(graphRef(a), C.double(c))
+		flintNode = C.fgreater_cd(a.ref, C.double(c))
 	default:
 		panic("invalid type")
 	}
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 /*
 Less compares a tensor and a constant elementwise by [a] < [b] and returns a 0,1 [F_INT32] [GraphNode].
 */
-func Less[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
+func Less[T numeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
-		flintNode = C.fless_g(graphRef(a), graphRef(c))
+		flintNode = C.fless_g(a.ref, c.ref)
 	case int32:
-		flintNode = C.fless_ci(graphRef(a), C.int(c))
+		flintNode = C.fless_ci(a.ref, C.int(c))
 	case int64:
-		flintNode = C.fless_cl(graphRef(a), C.long(c))
+		flintNode = C.fless_cl(a.ref, C.long(c))
 	case float32:
-		flintNode = C.fless_cf(graphRef(a), C.float(c))
+		flintNode = C.fless_cf(a.ref, C.float(c))
 	case float64:
-		flintNode = C.fless_cd(graphRef(a), C.double(c))
+		flintNode = C.fless_cd(a.ref, C.double(c))
 	default:
 		panic("invalid type")
 	}
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -350,8 +350,8 @@ Since for one entry of the tensor multiple other previous entries are needed, th
 Therefor the method will implicitly (or eagerly) execute the two parameter nodes [a] and [b] if their data is not already present.
 */
 func Matmul(a GraphNode, b GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fmatmul(graphRef(a), graphRef(b))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fmatmul(a.ref, b.ref)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -362,8 +362,8 @@ E.g:
 		[3, 1, 4, 2, 1, 5, 0, 4, 2, 4, 7, 9].
 */
 func Flatten(a GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fflatten(graphRef(a))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fflatten(a.ref)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -376,16 +376,16 @@ E.g:
 		[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]
 */
 func FlattenDim(a GraphNode, dim int) GraphNode {
-	var flintNode *C.FGraphNode = C.fflatten_dimension(graphRef(a), C.int(dim))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fflatten_dimension(a.ref, C.int(dim))
+	return GraphNode{ref: flintNode}
 }
 
 /*
 Convert the data of [a] to the type given by [newType].
 */
 func Convert(a GraphNode, newType tensorDataType) GraphNode {
-	var flintNode *C.FGraphNode = C.fconvert(graphRef(a), C.enum_FType(newType))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fconvert(a.ref, C.enum_FType(newType))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -396,52 +396,52 @@ This means it must describe the same number of entries of the tensor.
 func Reshape(a GraphNode, shape Shape) GraphNode {
 	newShape := convertArray[uint, C.size_t](shape)
 
-	var flintNode *C.FGraphNode = C.freshape(graphRef(a), &(newShape[0]), C.int(len(shape)))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.freshape(a.ref, &(newShape[0]), C.int(len(shape)))
+	return GraphNode{ref: flintNode}
 }
 
 /*
 Min takes the minimum of two tensors (or a tensor and value) element wise along the last dimension of each.
 */
-func Min[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
+func Min[T numeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
-		flintNode = C.fmin_g(graphRef(a), graphRef(c))
+		flintNode = C.fmin_g(a.ref, c.ref)
 	case int32:
-		flintNode = C.fmin_ci(graphRef(a), C.int(c))
+		flintNode = C.fmin_ci(a.ref, C.int(c))
 	case int64:
-		flintNode = C.fmin_cl(graphRef(a), C.long(c))
+		flintNode = C.fmin_cl(a.ref, C.long(c))
 	case float32:
-		flintNode = C.fmin_cf(graphRef(a), C.float(c))
+		flintNode = C.fmin_cf(a.ref, C.float(c))
 	case float64:
-		flintNode = C.fmin_cd(graphRef(a), C.double(c))
+		flintNode = C.fmin_cd(a.ref, C.double(c))
 	default:
 		panic("invalid type")
 	}
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 /*
 Max takes the maximum of two tensors (or a tensor and value) element wise along the last dimension of each.
 */
-func Max[T Numeric | GraphNode](a GraphNode, b T) GraphNode {
+func Max[T numeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
-		flintNode = C.fmax_g(graphRef(a), graphRef(c))
+		flintNode = C.fmax_g(a.ref, c.ref)
 	case int32:
-		flintNode = C.fmax_ci(graphRef(a), C.int(c))
+		flintNode = C.fmax_ci(a.ref, C.int(c))
 	case int64:
-		flintNode = C.fmax_cl(graphRef(a), C.long(c))
+		flintNode = C.fmax_cl(a.ref, C.long(c))
 	case float32:
-		flintNode = C.fmax_cf(graphRef(a), C.float(c))
+		flintNode = C.fmax_cf(a.ref, C.float(c))
 	case float64:
-		flintNode = C.fmax_cd(graphRef(a), C.double(c))
+		flintNode = C.fmax_cd(a.ref, C.double(c))
 	default:
 		panic("invalid type")
 	}
-	return GraphNode(flintNode)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -456,8 +456,8 @@ The results of the predecessor node must be available, to
 ensure that the method may execute the parameter node.
 */
 func ReduceSum(a GraphNode, dim int) GraphNode {
-	var flintNode *C.FGraphNode = C.freduce_sum(graphRef(a), C.int(dim))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.freduce_sum(a.ref, C.int(dim))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -471,8 +471,8 @@ E.g:
 The results of the predecessor node must be available; to ensure that the method may execute the parameter node.
 */
 func ReduceMul(a GraphNode, dim int) GraphNode {
-	var flintNode *C.FGraphNode = C.freduce_mul(graphRef(a), C.int(dim))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.freduce_mul(a.ref, C.int(dim))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -486,8 +486,8 @@ E.g:
 The results of the predecessor node must be available; to ensure that the method may execute the parameter node.
 */
 func ReduceMin(a GraphNode, dim int) GraphNode {
-	var flintNode *C.FGraphNode = C.freduce_min(graphRef(a), C.int(dim))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.freduce_min(a.ref, C.int(dim))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -501,8 +501,8 @@ E.g:
 The results of the predecessor node must be available; to ensure that the method may execute the parameter node.
 */
 func ReduceMax(a GraphNode, dim int) GraphNode {
-	var flintNode *C.FGraphNode = C.freduce_max(graphRef(a), C.int(dim))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.freduce_max(a.ref, C.int(dim))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -516,8 +516,8 @@ func Slice(a GraphNode, start Axes, end Axes) GraphNode {
 	newStart := convertArray[uint, C.long](start)
 	newEnd := convertArray[uint, C.long](end)
 
-	var flintNode *C.FGraphNode = C.fslice(graphRef(a), &(newStart[0]), &(newEnd[0]))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fslice(a.ref, &(newStart[0]), &(newEnd[0]))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -536,8 +536,8 @@ func SliceWithStride(node GraphNode, start Axes, end Axes, stride Stride) GraphN
 	newEnd := convertArray[uint, C.long](end)
 	newStride := convertArray[int, C.long](stride)
 
-	var flintNode *C.FGraphNode = C.fslice_step(graphRef(node), &(newStart[0]), &(newEnd[0]), &(newStride[0]))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fslice_step(node.ref, &(newStart[0]), &(newEnd[0]), &(newStride[0]))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -551,8 +551,8 @@ func Extend(node GraphNode, shape Shape, insertAt Axes) GraphNode {
 	newShape := convertArray[uint, C.size_t](shape)
 	newInsertAt := convertArray[uint, C.size_t](insertAt)
 
-	var flintNode *C.FGraphNode = C.fextend(graphRef(node), &(newShape[0]), &(newInsertAt[0]))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fextend(node.ref, &(newShape[0]), &(newInsertAt[0]))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -568,8 +568,8 @@ func ExtendWithStride(node GraphNode, shape Shape, insertAt Axes, stride Stride)
 	newInsertAt := convertArray[uint, C.size_t](insertAt)
 	newStride := convertArray[int, C.long](stride)
 
-	var flintNode *C.FGraphNode = C.fextend_step(graphRef(node), &(newShape[0]), &(newInsertAt[0]), &(newStride[0]))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fextend_step(node.ref, &(newShape[0]), &(newInsertAt[0]), &(newStride[0]))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -583,8 +583,8 @@ E.g:
 	Concat({[[0, 1], [2, 3]], [[4, 5], [6, 7]]}, 1) = [[0, 1, 4, 5], [2, 3, 6, 7]]
 */
 func Concat(nodeA GraphNode, nodeB GraphNode, axis uint) GraphNode {
-	var flintNode *C.FGraphNode = C.fconcat(graphRef(nodeA), graphRef(nodeB), C.uint(axis))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fconcat(nodeA.ref, nodeB.ref, C.uint(axis))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -593,16 +593,16 @@ Expand adds a new dimension at an arbitrary position to the tensor and repeats t
   - [size]: the new size of that dimension (repeats the following dimensions ax_size - 1 times).
 */
 func Expand(a GraphNode, axis uint, size uint) GraphNode {
-	var flintNode *C.FGraphNode = C.fexpand(graphRef(a), C.uint(axis), C.uint(size))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fexpand(a.ref, C.uint(axis), C.uint(size))
+	return GraphNode{ref: flintNode}
 }
 
 /*
 Abs takes the elementwise absolute value of [node], i.e. |a[i]|
 */
 func Abs(node GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fabs_g(graphRef(node))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fabs_g(node.ref)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -618,8 +618,8 @@ E.g:
 func Repeat(node GraphNode, repetitions Axes) GraphNode {
 	newRepetitions := convertArray[uint, C.int](repetitions)
 
-	var flintNode *C.FGraphNode = C.frepeat(graphRef(node), &(newRepetitions[0]))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.frepeat(node.ref, &(newRepetitions[0]))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -631,8 +631,8 @@ The tensor will have a resulting shape in which the size each dimension correspo
 func Transpose(node GraphNode, axes Axes) GraphNode {
 	newAxes := convertArray[uint, C.int](axes)
 
-	var flintNode *C.FGraphNode = C.ftranspose(graphRef(node), &(newAxes[0]))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.ftranspose(node.ref, &(newAxes[0]))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -656,8 +656,8 @@ The resulting [GraphNode] will therefore have a shape with dimensionality n - 1 
 func Convolve(node GraphNode, kernel GraphNode, stride Stride) GraphNode {
 	newStride := convertArray[int, C.uint](stride)
 
-	var flintNode *C.FGraphNode = C.fconvolve(graphRef(node), graphRef(kernel), &(newStride[0]))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fconvolve(node.ref, kernel.ref, &(newStride[0]))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -675,8 +675,8 @@ therefore it has no stride in that dimension since the complete kernel is multip
 func Slide(node GraphNode, kernel GraphNode, stride Stride) GraphNode {
 	newStride := convertArray[int, C.uint](stride)
 
-	var flintNode *C.FGraphNode = C.fslide(graphRef(node), graphRef(kernel), &(newStride[0]))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.fslide(node.ref, kernel.ref, &(newStride[0]))
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -704,8 +704,8 @@ TODO example descriptions:
 		[[[0, 0], [2, 2]], [[5, 4], [7, 6]], [[8, 9], [10, 11]]]
 */
 func Index(node GraphNode, indices GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.findex(graphRef(node), graphRef(indices))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.findex(node.ref, indices.ref)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -734,8 +734,8 @@ In this case an index of -1 means to discard the element from nodeB and keep the
 		[[5, 1], [2, 13], [9, 8], [6, 10]]
 */
 func IndexSet(nodeA GraphNode, nodeB GraphNode, indices GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.findex_set(graphRef(nodeA), graphRef(nodeB), graphRef(indices))
-	return GraphNode(flintNode)
+	var flintNode *C.FGraphNode = C.findex_set(nodeA.ref, nodeB.ref, indices.ref)
+	return GraphNode{ref: flintNode}
 }
 
 /*
@@ -771,14 +771,14 @@ func SlidingWindow(node GraphNode, size Shape, stride Stride) (GraphNode, error)
 	newSize := convertArray[uint, C.size_t](size)
 	newStride := convertArray[int, C.uint](stride)
 
-	var flintNode *C.FGraphNode = C.fsliding_window(graphRef(node), &(newSize[0]), &(newStride[0]))
-	return GraphNode(flintNode), nil
+	var flintNode *C.FGraphNode = C.fsliding_window(node.ref, &(newSize[0]), &(newStride[0]))
+	return GraphNode{ref: flintNode}, nil
 }
 
 /*
 Permute randomly permutes (= swaps multiple elements with each other without creating, copying or deleting new ones) one axis of the input tensor.
 */
 func Permute(a GraphNode, axis uint) (GraphNode, error) {
-	var flintNode *C.FGraphNode = C.fpermutate(graphRef(a), C.uint(axis))
-	return GraphNode(flintNode), nil
+	var flintNode *C.FGraphNode = C.fpermutate(a.ref, C.uint(axis))
+	return GraphNode{ref: flintNode}, nil
 }

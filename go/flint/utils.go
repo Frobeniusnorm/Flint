@@ -24,7 +24,7 @@ func convertArray[In completeNumbers, Out completeNumbers | cNumbers](arr []In) 
 }
 
 func GetShape(node GraphNode) Shape {
-	var flintNode *C.FGraphNode = graphRef(node)
+	var flintNode *C.FGraphNode = node.ref
 	shapePtr := unsafe.Pointer(flintNode.operation.shape)
 	shapeSize := int(flintNode.operation.dimensions)
 	return fromCToArray[uint](shapePtr, shapeSize, F_INT64)
@@ -36,7 +36,7 @@ func describe(i any) {
 }
 
 /*
-func arrayFromC[T Numeric | uint64 | uint32 | int | uint](length int, dataPtr unsafe.Pointer, dataType tensorDataType) []T {
+func arrayFromC[T numeric | uint64 | uint32 | int | uint](length int, dataPtr unsafe.Pointer, dataType tensorDataType) []T {
 	var sizeOf int
 	switch dataType {
 	case F_INT32:

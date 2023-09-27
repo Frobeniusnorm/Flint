@@ -30,9 +30,9 @@ func LoadImage(path string) (GraphNode, error) {
 	var err error // has underlying syscall.Errno type
 	flintNode, err = C.fload_image(unsafePath)
 	if err != nil {
-		return nil, err
+		return GraphNode{}, err
 	}
-	return GraphNode(flintNode), nil
+	return GraphNode{ref: flintNode}, nil
 }
 
 /*
@@ -42,5 +42,5 @@ StoreImage saves the result of [node] in a given [imageFormat].
 func StoreImage(node GraphNode, path string, format imageFormat) {
 	unsafePath := C.CString(path)
 	defer C.free(unsafe.Pointer(unsafePath))
-	C.fstore_image(graphRef(node), unsafePath, C.enum_FImageFormat(format))
+	C.fstore_image(node.ref, unsafePath, C.enum_FImageFormat(format))
 }
