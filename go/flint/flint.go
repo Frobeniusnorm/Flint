@@ -41,7 +41,7 @@ import (
 
 type GraphNode struct {
 	ref *C.FGraphNode
-	//DataType tensorDataType
+	//DataType DataType
 }
 
 func (node GraphNode) GetShape() Shape {
@@ -56,7 +56,7 @@ type ResultData struct {
 	nodeRef   *C.FGraphNode
 	Data      any
 	Shape     Shape
-	DataType  tensorDataType
+	DataType  DataType
 }
 
 // numeric is a constraint interface representing the supported types of C operations
@@ -98,10 +98,10 @@ func (a Shape) Equal(b Shape) bool {
 	return true
 }
 
-type tensorDataType uint32
+type DataType uint32
 
 const (
-	F_INT32 tensorDataType = iota
+	F_INT32 DataType = iota
 	F_INT64
 	F_FLOAT32
 	F_FLOAT64

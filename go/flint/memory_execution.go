@@ -126,7 +126,7 @@ func CalculateResult[T numeric](node GraphNode) ResultData {
 	shapePtr := unsafe.Pointer(flintNode.operation.shape)
 	shapeSize := int(flintNode.operation.dimensions)
 
-	dataType := tensorDataType(flintNode.operation.data_type)
+	dataType := DataType(flintNode.operation.data_type)
 
 	var result = fromCToArray[T](dataPtr, dataSize, dataType)
 	var shape = Shape(fromCToArray[uint](shapePtr, shapeSize, F_INT64))
@@ -168,12 +168,22 @@ Params:
 Returns array with the same size as [dxs]
 */
 func CalculateGradients(node GraphNode, dxs []GraphNode) []GraphNode {
-	//partials := convertArray[GraphNode, *C.FGraphNode](dxs)
-	//resPtr := C.malloc(C.ulong(len(partials) * C.sizeof_graph_ref))
-	//C.fCalculateGradients(node.ref, &(partials[0]), C.uint(len(partials)), (**C.FGraphNode)(resPtr))
-	// FIXME: idk
-	// convertArray[*C.FGraphNode, GraphNode](resPtr)
-	return nil
+	n := len(dxs)
+
+	partials := make([]*C.FGraphNode, n)
+	for i, x := range dxs {
+		partials[i] = x.ref
+	}
+
+	res := make([]*C.FGraphNode, n)
+
+	C.fCalculateGradients(node.ref, &(partials[0]), C.uint(n), &(res[0]))
+
+	out := make([]GraphNode, n)
+	for i, x := range res {
+		out[i] = GraphNode{ref: x}
+	}
+	return out
 }
 
 /*

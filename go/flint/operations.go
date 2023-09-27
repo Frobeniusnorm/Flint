@@ -383,7 +383,7 @@ func FlattenDim(a GraphNode, dim int) GraphNode {
 /*
 Convert the data of [a] to the type given by [newType].
 */
-func Convert(a GraphNode, newType tensorDataType) GraphNode {
+func Convert(a GraphNode, newType DataType) GraphNode {
 	var flintNode *C.FGraphNode = C.fconvert(a.ref, C.enum_FType(newType))
 	return GraphNode{ref: flintNode}
 }

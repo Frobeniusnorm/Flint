@@ -23,13 +23,28 @@ func convertArray[In completeNumbers, Out completeNumbers | cNumbers](arr []In) 
 	return result
 }
 
+func convertToCType[T numeric](value T, dataType DataType) any {
+	switch dataType {
+	case F_INT32:
+		return C.int(value)
+	case F_INT64:
+		return C.long(value)
+	case F_FLOAT32:
+		return C.float(value)
+	case F_FLOAT64:
+		return C.double(value)
+	default:
+		panic("invalid data type")
+	}
+}
+
 // use for type debugging
 func describe(i any) {
 	fmt.Printf("describe (value, underlying type): (%v, %T)\n", i, i)
 }
 
 /*
-func arrayFromC[T numeric | uint64 | uint32 | int | uint](length int, dataPtr unsafe.Pointer, dataType tensorDataType) []T {
+func arrayFromC[T numeric | uint64 | uint32 | int | uint](length int, dataPtr unsafe.Pointer, dataType DataType) []T {
 	var sizeOf int
 	switch dataType {
 	case F_INT32:
@@ -56,7 +71,7 @@ func arrayFromC[T numeric | uint64 | uint32 | int | uint](length int, dataPtr un
 }
 */
 
-func fromCToArray[T completeNumbers](dataPtr unsafe.Pointer, length int, dataType tensorDataType) []T {
+func fromCToArray[T completeNumbers](dataPtr unsafe.Pointer, length int, dataType DataType) []T {
 	var result = make([]T, length)
 
 	switch dataType {

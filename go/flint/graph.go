@@ -11,38 +11,41 @@ Params:
   - [data]: the flattened data array that should be loaded into the [GraphNode]
   - Type params [T]: the datatype of [data]
   - [shape]: Each entry describing the size of the corresponding dimension.
+  - [datatype]: Specifying a valid flint [DataType]
 */
-func CreateGraph[T completeNumbers](data []T, shape Shape, datatype tensorDataType) GraphNode {
+func CreateGraph[T completeNumbers](data []T, shape Shape, datatype DataType) GraphNode {
 	newShape := convertArray[uint, C.size_t](shape)
 	newData := convertArray[T, C.float](data)
 
 	// FIXME: is shape and data properly freed after exiting this function?
 
-	var flintNode *C.FGraphNode = C.fCreateGraph(unsafe.Pointer(&(newData[0])), C.int(len(data)), uint32(datatype), &(newShape[0]), C.int(len(shape)))
+	var flintNode *C.FGraphNode = C.fCreateGraph(unsafe.Pointer(&(newData[0])),
+		C.int(len(data)), uint32(datatype), &(newShape[0]), C.int(len(shape)))
 	return GraphNode{ref: flintNode}
 }
 
 /*
-CreateGraphConstant creates a tensor in a specified [tensorDataType] that contains the single given values in all entries.
+CreateGraphConstant creates a tensor in a specified [DataType] that contains the single given values in all entries.
 
 Params:
   - [value]: the value this tensor should consist of
   - [shape]: Each entry describing the size of the corresponding dimension.
+  - [datatype]: Specifying a valid flint [DataType]
 */
-func CreateGraphConstant[T numeric](value T, shape Shape) GraphNode {
+func CreateGraphConstant[T numeric](value T, shape Shape, datatype DataType) GraphNode {
 	newShape := convertArray[uint, C.size_t](shape)
+	dimensions := C.int(len(shape))
 
 	var flintNode *C.FGraphNode
-	dimensions := C.int(len(shape))
-	switch v := any(value).(type) {
-	case int32:
-		flintNode = C.fconstant_i(C.int(v), &(newShape[0]), dimensions)
-	case int64:
-		flintNode = C.fconstant_l(C.long(v), &(newShape[0]), dimensions)
-	case float32:
-		flintNode = C.fconstant_f(C.float(v), &(newShape[0]), dimensions)
-	case float64:
-		flintNode = C.fconstant_d(C.double(v), &(newShape[0]), dimensions)
+	switch datatype {
+	case F_INT32:
+		flintNode = C.fconstant_i(C.int(value), &(newShape[0]), dimensions)
+	case F_INT64:
+		flintNode = C.fconstant_l(C.long(value), &(newShape[0]), dimensions)
+	case F_FLOAT32:
+		flintNode = C.fconstant_f(C.float(value), &(newShape[0]), dimensions)
+	case F_FLOAT64:
+		flintNode = C.fconstant_d(C.double(value), &(newShape[0]), dimensions)
 	default:
 		panic("invalid data type")
 	}
