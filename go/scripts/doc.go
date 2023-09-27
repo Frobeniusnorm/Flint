@@ -1,6 +1,10 @@
-// This package provides a way to comfortably turn the go comments and signatures into the html format Flint uses for documentation.
-//
-// For a reference on the Go docstring convention, look at: https://tip.golang.org/doc/comment
+/*
+This package provides a way to comfortably turn the go comments and signatures into the html format Flint uses for documentation.
+
+For a reference on the Go docstring convention, look at: [go doc]
+
+[go doc]: https://tip.golang.org/doc/comment
+*/
 package main
 
 import (
@@ -14,9 +18,9 @@ import (
 )
 
 func main() {
-	// TODO: use context and go/build to find matching go files 
+	// TODO: use context and go/build to find matching go files
 	//	var Default Context = defaultContext()
-	//	build.	
+	//	build.
 
 	// Create the AST by parsing src and test.
 	// fset is filled automatically by mustParse
@@ -59,6 +63,6 @@ func buildHtml(p *doc.Package) string {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	return "test"
 }

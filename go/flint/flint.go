@@ -62,7 +62,7 @@ type ResultData struct {
 // numeric is a constraint interface representing the supported types of C operations
 // TODO: as we no longer cast values between C and GO (we shouldn't!) this can be extended!
 type numeric interface {
-	~int32 | ~int64 | ~float32 | ~float64
+	~int32 | ~int64 | ~float32 | ~float64 | ~int
 }
 
 // Stride defines the steps for sliding operations

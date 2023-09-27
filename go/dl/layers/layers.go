@@ -1,10 +1,13 @@
 package layers
 
 import (
+	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 )
 
-type Tensor flint.GraphNode
+type Tensor struct {
+	node flint.GraphNode
+}
 
 type BaseLayer struct {
 	trainable     bool
@@ -12,6 +15,7 @@ type BaseLayer struct {
 }
 
 type Layer interface {
+	fmt.Stringer
 	Forward(x Tensor) Tensor
 	Backward(x Tensor) Tensor
 }
