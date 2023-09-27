@@ -2,7 +2,7 @@ package loss
 
 import (
 	"fmt"
-	flint "github.com/Frobeniusnorm/Flint/go"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 	"testing"
 )
 

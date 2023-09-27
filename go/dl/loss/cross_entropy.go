@@ -1,6 +1,8 @@
 package loss
 
-import flint "github.com/Frobeniusnorm/Flint/go"
+import (
+	"github.com/Frobeniusnorm/Flint/go/flint"
+)
 
 const eps float32 = 1e-12
 

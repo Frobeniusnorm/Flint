@@ -2,7 +2,7 @@ package datasets
 
 import (
 	"fmt"
-	flint "github.com/Frobeniusnorm/Flint/go"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 	"path"
 	"testing"
 )

@@ -18,6 +18,11 @@ Further information:
 - [how to write good Go docstrings](https://tip.golang.org/doc/comment)
 - [how to configure pkgsite](https://pkg.go.dev/golang.org/x/pkgsite/cmd/pkgsite)
 
+## Compiler Toolchain
+
+- [use go:generate](https://blog.carlmjohnson.net/post/2016-11-27-how-to-use-go-generate/)
+- [use go:embed](https://blog.carlmjohnson.net/post/2021/how-to-use-go-embed/)
+
 ## Discussion
 
 ### Logging

@@ -1,6 +1,8 @@
 package layers
 
-import flint "github.com/Frobeniusnorm/Flint/go"
+import (
+	"github.com/Frobeniusnorm/Flint/go/flint"
+)
 
 type Tensor flint.GraphNode
 

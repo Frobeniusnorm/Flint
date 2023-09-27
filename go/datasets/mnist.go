@@ -3,7 +3,7 @@ package datasets
 import (
 	"errors"
 	"fmt"
-	flint "github.com/Frobeniusnorm/Flint/go"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 	"io"
 	"os"
 	"path"

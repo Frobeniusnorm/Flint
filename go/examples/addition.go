@@ -3,7 +3,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 )
 
 func main() {
