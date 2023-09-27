@@ -17,8 +17,6 @@ func CreateGraph[T completeNumbers](data []T, shape Shape, datatype DataType) Gr
 	newShape := convertArray[uint, C.size_t](shape)
 	newData := convertArray[T, C.float](data)
 
-	// FIXME: is shape and data properly freed after exiting this function?
-
 	var flintNode *C.FGraphNode = C.fCreateGraph(unsafe.Pointer(&(newData[0])),
 		C.int(len(data)), uint32(datatype), &(newShape[0]), C.int(len(shape)))
 	return GraphNode{ref: flintNode}
