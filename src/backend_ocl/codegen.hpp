@@ -740,78 +740,70 @@ generateCode(FGraphNode *node,
       case FREDUCE_MAX:
       case FREDUCE_SUM:
       case FREDUCE_MUL: {
-        push_pred = false;
         FGraphNode *prev = node->predecessors[0];
-        // we ignore the value assignment of the parameters since we have to
-        // access the arrays directly parameter 1
-        std::string par1 = "";
-        if (assigned_params.find(prev) != assigned_params.end()) {
-          par1 = assigned_params[prev];
-        } else {
-          par1 = "P" + to_string(assigned_params.size());
-          parameters.push_back({prev, par1});
-          assigned_params.insert({prev, par1});
-        }
+        // we insert a index definition to introduce the for for our
+        // predecessors
+        std::string par1 = "v" + std::to_string(variable_index + 1);
         int red_dim = ((int *)node->operation.additional_data)[0];
         size_t it_dim =
             1; // iteration size <=> product of all dimensions along dim
         for (size_t d = red_dim + 1; d < prev->operation.dimensions; d++)
           it_dim *= prev->operation.shape[d];
-        std::string reduce_code = type + " " + name + " = ";
+        index_defs += type + " " + name + " = ";
         size_t total_el_size = 1;
         for (int i = 0; i < prev->operation.dimensions; i++)
           total_el_size *= prev->operation.shape[i];
-        const std::string init_elem =
-            par1 + "[((index / " + std::to_string(it_dim) + ") * " +
-            std::to_string(it_dim) + " * " +
-            std::to_string(prev->operation.shape[red_dim]) + " + (index % " +
-            std::to_string(it_dim) + ")) % " + to_string(total_el_size) + "]";
-        std::string i_init = "0";
         switch (node->operation.op_type) {
         case FREDUCE_SUM:
-          reduce_code += "0";
+          index_defs += "0";
           break;
         case FREDUCE_MUL:
-          reduce_code += "1";
+          index_defs += "1";
           break;
         case FREDUCE_MIN:
-          reduce_code += init_elem;
-          i_init = "1";
+          index_defs += maxForType(node->operation.data_type);
           break;
         case FREDUCE_MAX:
-          reduce_code += init_elem;
-          i_init = "1";
+          index_defs += minForType(node->operation.data_type);
           break;
         default:
           break;
         }
-        reduce_code += ";\nfor(long i = " + i_init + "; i < " +
-                       std::to_string(prev->operation.shape[red_dim]) +
-                       "; i++){\n";
-        const std::string par_val =
-            par1 + "[((index / " + std::to_string(it_dim) + ") * " +
+        const std::string itv = "i" + to_string(variable_index);
+        const unsigned int old_idx = num_indices++;
+        index_defs += ";\nlong old_idx" + to_string(old_idx) +
+                      " = index;\n"
+                      "for(long " +
+                      itv + " = 0; " + itv + " < " +
+                      to_string(prev->operation.shape[red_dim]) + "; " + itv +
+                      "++){\n"
+                      "index = ((old_idx" +
+                      to_string(old_idx) + " / " + to_string(it_dim) + ") * " +
 
-            std::to_string(it_dim) + " * " +
-            std::to_string(prev->operation.shape[red_dim]) + " + (index % " +
-            std::to_string(it_dim) + ") + i * " + std::to_string(it_dim) +
-            ") % " + to_string(total_el_size) + "]";
+                      to_string(it_dim) + " * " +
+                      to_string(prev->operation.shape[red_dim]) +
+                      " + (old_idx" + to_string(old_idx) + " % " +
+                      to_string(it_dim) + ") + " + itv + " * " +
+                      to_string(it_dim) + ") % " + to_string(total_el_size) +
+                      ";\n";
+        std::string reduce_code = "";
         switch (node->operation.op_type) {
         case FREDUCE_SUM:
-          reduce_code += " " + name + " += " + par_val;
+          reduce_code += " " + name + " += " + par1;
           break;
         case FREDUCE_MUL:
-          reduce_code += " " + name + " *= " + par_val;
+          reduce_code += " " + name + " *= " + par1;
           break;
         case FREDUCE_MIN:
-          reduce_code += " " + name + " = min(" + name + ", " + par_val + ")";
+          reduce_code += " " + name + " = min(" + name + ", " + par1 + ")";
           break;
         case FREDUCE_MAX:
-          reduce_code += " " + name + " = max(" + name + ", " + par_val + ")";
+          reduce_code += " " + name + " = max(" + name + ", " + par1 + ")";
           break;
         default:
           break;
         }
-        reduce_code += ";\n}\n";
+        reduce_code += ";\n}\nindex = old_idx" + to_string(old_idx) + ";\n";
         code = reduce_code + code;
       } break;
       case FSLICE: {

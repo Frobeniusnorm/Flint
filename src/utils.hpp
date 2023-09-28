@@ -221,11 +221,35 @@ template <typename T> static constexpr FType toFlintType() {
 static std::string epsilonForType(FType type) {
   switch (type) {
   case F_FLOAT32:
-    return "1.192093e-07";
+    return "FLT_EPSILON";
   case F_FLOAT64:
-    return "2.220446e-16";
+    return "DBL_EPSILON";
   default:
     return "0";
+  }
+}
+static std::string maxForType(FType type) {
+  switch (type) {
+  case F_FLOAT32:
+    return "FLT_MAX";
+  case F_FLOAT64:
+    return "DBL_MAX";
+  case F_INT32:
+    return "INT_MAX";
+  case F_INT64:
+    return "LONG_MAX";
+  }
+}
+static std::string minForType(FType type) {
+  switch (type) {
+  case F_FLOAT32:
+    return "-FLT_MAX";
+  case F_FLOAT64:
+    return "-DBL_MAX";
+  case F_INT32:
+    return "INT_MIN";
+  case F_INT64:
+    return "LONG_MIN";
   }
 }
 inline void freeAdditionalData(FGraphNode *gn) {

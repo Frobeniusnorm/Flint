@@ -140,7 +140,7 @@ void flintInit_gpu() {
   }
   clqueue = clCreateCommandQueueWithProperties(context, device, NULL, &status);
   if (status != CL_SUCCESS)
-    flogging(F_ERROR, "clCreateCommandQueue");
+    flogging(F_ERROR, "clCreateCommandQueue " + std::to_string(status));
   initialized = true;
   flogging(F_VERBOSE, "Flint GPU backend was initialized!");
 }
