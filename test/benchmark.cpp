@@ -141,6 +141,7 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
     for (const auto &bench : benches) {
       flogging(F_INFO, bench.first + "...");
       times.insert({bench.first, {bench.second(), 0, 0}});
+      flogging(F_INFO, "took " + to_string(std::get<0>(times[bench.first])));
     }
     flintCleanup();
   }
@@ -151,6 +152,7 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
     for (const auto &bench : benches) {
       flogging(F_INFO, bench.first + "...");
       std::get<1>(times[bench.first]) = bench.second();
+      flogging(F_INFO, "took " + to_string(std::get<1>(times[bench.first])));
     }
     flintCleanup();
   }
@@ -161,6 +163,7 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
     for (const auto &bench : benches) {
       flogging(F_INFO, bench.first + "...");
       std::get<2>(times[bench.first]) = bench.second();
+      flogging(F_INFO, "took " + to_string(std::get<2>(times[bench.first])));
     }
     flintCleanup();
   }

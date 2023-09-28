@@ -78,7 +78,7 @@ generateCode(FGraphNode *node,
         assigned_params.insert({node, "P" + to_string(pid)});
         parameters.push_back({node, "P" + to_string(pid)});
       }
-      code = type + " " + name + " = " + assigned_params[node] + "[index%" +
+      code = "const " + type + " " + name + " = " + assigned_params[node] + "[index%" +
              to_string(num_entries) + "];\n" + code;
     } else
       switch (node->operation.op_type) {
@@ -106,7 +106,7 @@ generateCode(FGraphNode *node,
         default:
           break; // shut up compiler
         }
-        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
                " " + op + " v" + to_string(variable_index + 2) + ";\n" + code;
         break;
       }
@@ -115,45 +115,45 @@ generateCode(FGraphNode *node,
         const FOperation y = node->predecessors[1]->operation;
         if ((x.data_type == F_FLOAT32 || x.data_type == F_FLOAT64) &&
             (y.data_type == F_FLOAT32 || y.data_type == F_FLOAT64))
-          code = type + " " + name + " = pow((" + type + ")v" +
+          code = "const " + type + " " + name + " = pow((" + type + ")v" +
                  to_string(variable_index + 1) + ", (" + type + ")v" +
                  to_string(variable_index + 2) + ");\n" + code;
         else if (x.data_type == F_INT64 &&
                  (y.data_type == F_INT32 || y.data_type == F_INT64))
-          code = type + " " + name + " = (long)pown((double)v" +
+          code = "const " + type + " " + name + " = (long)pown((double)v" +
                  to_string(variable_index + 1) + ", (int)v" +
                  to_string(variable_index + 2) + ");\n" + code;
         else if (x.data_type == F_INT32 &&
                  (y.data_type == F_INT32 || y.data_type == F_INT64))
-          code = type + " " + name + " = (int)pown((float)v" +
+          code = "const " + type + " " + name + " = (int)pown((float)v" +
                  to_string(variable_index + 1) + ", (int)v" +
                  to_string(variable_index + 2) + ");\n" + code;
         else
-          code = type + " " + name + " = pow((double)v" +
+          code = "const " + type + " " + name + " = pow((double)v" +
                  to_string(variable_index + 1) + ", (double)v" +
                  to_string(variable_index + 2) + ");\n" + code;
       } break;
       case FMIN: {
-        code = type + " " + name + " = min((" + type + ")v" +
+        code = "const " + type + " " + name + " = min((" + type + ")v" +
                to_string(variable_index + 1) + ", (" + type + ")v" +
                to_string(variable_index + 2) + ");\n" + code;
 
       } break;
       case FMAX: {
-        code = type + " " + name + " = max((" + type + ")v" +
+        code = "const " + type + " " + name + " = max((" + type + ")v" +
                to_string(variable_index + 1) + ", (" + type + ")v" +
                to_string(variable_index + 2) + ");\n" + code;
 
       } break;
       case FLESS: {
-        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
                " < v" + to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
 
       } break;
       case FEQUAL: {
         const FOperation x = node->predecessors[0]->operation;
         const FOperation y = node->predecessors[1]->operation;
-        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
                " + " + epsilonForType(x.data_type) + " >= v" +
                to_string(variable_index + 2) +
                " && "
@@ -164,7 +164,7 @@ generateCode(FGraphNode *node,
 
       } break;
       case FGREATER: {
-        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
                " > v" + to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
 
       } break;
@@ -214,7 +214,7 @@ generateCode(FGraphNode *node,
         size_t acc_sizes_ax = 1;
         for (unsigned int i = ax + 1; i < node->operation.dimensions; i++)
           acc_sizes_ax *= node->operation.shape[i];
-        code = type + " " + name + " = (index/" + to_string(acc_sizes_ax) +
+        code = "const " + type + " " + name + " = (index/" + to_string(acc_sizes_ax) +
                ")%" + to_string(node->operation.shape[ax]) + ";\n" + code;
       } break;
       case FGRADIENT_CONVOLVE: {
@@ -540,7 +540,7 @@ generateCode(FGraphNode *node,
                         to_string(acc_sizes_rest[d]) + ";\n";
         }
         index_defs += "}\n";
-        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
                ";\n"
                "index = old_index" +
                to_string(old_idx) + ";\n" + code;
@@ -664,75 +664,75 @@ generateCode(FGraphNode *node,
       } break;
       case FRESHAPE:
       case FLATTEN: {
-        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
                ";\n" + code;
       } break;
       case FCONVERSION: {
-        code = type + " " + name + " = (" + type + ")v" +
+        code = "const " + type + " " + name + " = (" + type + ")v" +
                to_string(variable_index + 1) + ";\n" + code;
       }; break;
       case FABS: {
         std::string par_name = "v" + std::to_string(variable_index + 1);
         if (node->operation.data_type < F_FLOAT32)
-          code = type + " " + name + " = abs(" + par_name + ");\n" + code;
+          code = "const " + type + " " + name + " = abs(" + par_name + ");\n" + code;
         else
-          code = type + " " + name + " = " + par_name + "< 0 ? -" + par_name +
+          code = "const " + type + " " + name + " = " + par_name + "< 0 ? -" + par_name +
                  " : " + par_name + ";\n" + code;
       } break;
       case FSQRT: {
-        code = type + " " + name + " = sqrt(v" +
+        code = "const " + type + " " + name + " = sqrt(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FEXP: {
-        code = type + " " + name + " = exp(v" +
+        code = "const " + type + " " + name + " = exp(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FSIN: {
-        code = type + " " + name + " = sin(v" +
+        code = "const " + type + " " + name + " = sin(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FCOS: {
-        code = type + " " + name + " = cos(v" +
+        code = "const " + type + " " + name + " = cos(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FTAN: {
-        code = type + " " + name + " = tan(v" +
+        code = "const " + type + " " + name + " = tan(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FASIN: {
-        code = type + " " + name + " = asin(v" +
+        code = "const " + type + " " + name + " = asin(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FACOS: {
-        code = type + " " + name + " = acos(v" +
+        code = "const " + type + " " + name + " = acos(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FATAN: {
-        code = type + " " + name + " = atan(v" +
+        code = "const " + type + " " + name + " = atan(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FLOG: {
-        code = type + " " + name + " = log(v" +
+        code = "const " + type + " " + name + " = log(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FLOG2: {
-        code = type + " " + name + " = log2(v" +
+        code = "const " + type + " " + name + " = log2(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FLOG10: {
-        code = type + " " + name + " = log10(v" +
+        code = "const " + type + " " + name + " = log10(v" +
                std::to_string(variable_index + 1) + ");\n" + code;
       } break;
       case FNEG: {
-        code = type + " " + name + " = -v" +
+        code = "const " + type + " " + name + " = -v" +
                std::to_string(variable_index + 1) + ";\n" + code;
       } break;
       case FSIGN: {
-        code = type + " " + name + " = v" + std::to_string(variable_index + 1) +
+        code = "const " + type + " " + name + " = v" + std::to_string(variable_index + 1) +
                " < 0 ? -1 : 1;\n" + code;
       } break;
       case FEVEN: {
-        code = type + " " + name + " = v" + std::to_string(variable_index + 1) +
+        code = "const " + type + " " + name + " = v" + std::to_string(variable_index + 1) +
                " % 2 == 0 ? 1 : 0;\n" + code;
       } break;
 
@@ -842,7 +842,7 @@ generateCode(FGraphNode *node,
         }
         index_defs += ") ;\n";
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
                ";\n" + code;
       } break;
       case FEXTEND: {
@@ -938,7 +938,7 @@ generateCode(FGraphNode *node,
         }
         index_defs += "}\n";
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
                ";\n" + code;
       } break;
       case FTRANSPOSE: {
@@ -972,7 +972,7 @@ generateCode(FGraphNode *node,
         }
         index_defs += "}\n";
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-        code = type + " " + name + " = v" + to_string(variable_index + 1) +
+        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
                ";\n" + code;
       } break;
       case FSET_INDEX: {

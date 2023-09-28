@@ -164,6 +164,7 @@ inline size_t typeSize(FType t) {
   case F_FLOAT64:
     return sizeof(double);
   }
+  flogging(F_ERROR, "Unknown Type: " + std::to_string((int)t));
   return 1;
 }
 inline FType higherType(const FType a, const FType b) {
@@ -239,6 +240,8 @@ static std::string maxForType(FType type) {
   case F_INT64:
     return "LONG_MAX";
   }
+  flogging(F_ERROR, "Unknown Type: " + std::to_string((int)type));
+  return "0";
 }
 static std::string minForType(FType type) {
   switch (type) {
@@ -251,6 +254,8 @@ static std::string minForType(FType type) {
   case F_INT64:
     return "LONG_MIN";
   }
+  flogging(F_ERROR, "Unknown Type: " + std::to_string((int)type));
+  return "0";
 }
 inline void freeAdditionalData(FGraphNode *gn) {
   switch (gn->operation.op_type) {
