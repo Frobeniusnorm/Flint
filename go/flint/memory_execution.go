@@ -18,6 +18,11 @@ func DecreaseRefCounter(node GraphNode) {
 	flintNode.reference_counter = C.size_t(flintNode.reference_counter - C.size_t(1))
 }
 
+func SetRefCounter(node GraphNode, value uint) {
+	var flintNode *C.FGraphNode = node.ref
+	flintNode.reference_counter = C.size_t(value)
+}
+
 /*
 FreeGraph Decrements [node]'s "reference_counter" and deallocates the node and its corresponding data, if the counter reaches 0.
 If the node is deallocated, the same process is repeated with its predecessors.

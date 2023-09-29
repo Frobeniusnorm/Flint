@@ -4,7 +4,6 @@ import "github.com/Frobeniusnorm/Flint/go/flint"
 
 type ReLU struct {
 	BaseLayer
-	input Tensor
 }
 
 func NewRelu() ReLU {
@@ -13,7 +12,6 @@ func NewRelu() ReLU {
 			trainable:  false,
 			EnableGrad: false,
 		},
-		input: Tensor{},
 	}
 }
 
