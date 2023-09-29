@@ -135,7 +135,7 @@ Sub Subtracts [minuend] by [subtrahend].
 At least one of the parameters HAS to be a [GraphNode].
 Subtraction is carried out element-wise.
 */
-func Sub[T numeric | GraphNode](minuend T, subtrahend T) GraphNode {
+func Sub[T1 numeric | GraphNode, T2 numeric | GraphNode](minuend T1, subtrahend T2) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch x := any(minuend).(type) {
 	case GraphNode:

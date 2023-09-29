@@ -18,7 +18,7 @@ func NewRelu() ReLU {
 }
 
 func (relu *ReLU) Forward(x Tensor) Tensor {
-	res := flint.Max(x.node, 0)
+	res := flint.Max(x.node, int32(0))
 	return Tensor{node: res}
 }
 
