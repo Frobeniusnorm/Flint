@@ -12,7 +12,6 @@ import (
 
 type MnistDataset struct {
 	Dataset
-	Name string
 	path string
 	size uint
 	data []MnistDatasetEntry
@@ -105,10 +104,10 @@ func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) 
 		name = name + "-test"
 	}
 	dataset := MnistDataset{
-		Name: name,
-		path: path.Dir(imagePath),
-		size: uint(size),
-		data: data,
+		Dataset: Dataset{Name: name},
+		path:    path.Dir(imagePath),
+		size:    uint(size),
+		data:    data,
 	}
 	return dataset, nil
 }
