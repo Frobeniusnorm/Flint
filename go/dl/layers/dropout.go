@@ -19,14 +19,14 @@ func NewDropout(prob float32) Dropout {
 	}
 }
 
-func (d *Dropout) Forward(x Tensor) Tensor {
+func (d Dropout) Forward(x Tensor) Tensor {
 	return x
 }
 
-func (d *Dropout) Backward(x Tensor) Tensor {
+func (d Dropout) Backward(x Tensor) Tensor {
 	return x
 }
 
-func (d *Dropout) String() string {
+func (d Dropout) String() string {
 	return fmt.Sprintf("Dropout(prob=%f)", d.probability)
 }

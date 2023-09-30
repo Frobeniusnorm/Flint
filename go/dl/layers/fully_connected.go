@@ -28,13 +28,13 @@ func NewFullyConnected(inputSize uint, outputSize uint) FullyConnected {
 	}
 }
 
-func (fc *FullyConnected) Forward(x Tensor) Tensor {
-	ones := flint.CreateGraphConstant(1, flint.Shape{x.node.GetShape()[0], 1}, flint.F_INT32)
-	combined := flint.Concat(x.node, ones, 1)
-	res := flint.Matmul(combined, fc.weights.node)
+func (fc FullyConnected) Forward(x Tensor) Tensor {
+	ones := flint.CreateGraphConstant(1, flint.Shape{x.Node.GetShape()[0], 1}, flint.F_INT32)
+	combined := flint.Concat(x.Node, ones, 1)
+	res := flint.Matmul(combined, fc.weights.Node)
 	return NewTensor(res)
 }
 
-func (fc *FullyConnected) String() string {
+func (fc FullyConnected) String() string {
 	return fmt.Sprintf("FullyConnected(in: %d, out: %d)", fc.inputSize, fc.outputSize)
 }

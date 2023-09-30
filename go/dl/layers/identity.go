@@ -11,10 +11,10 @@ func NewIdentity() Identity {
 	}}
 }
 
-func (id *Identity) Forward(x Tensor) Tensor {
+func (id Identity) Forward(x Tensor) Tensor {
 	return x
 }
 
-func (id *Identity) String() string {
+func (id Identity) String() string {
 	return "Identity()"
 }

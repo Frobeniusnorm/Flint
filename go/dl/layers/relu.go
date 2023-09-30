@@ -15,15 +15,11 @@ func NewRelu() ReLU {
 	}
 }
 
-func (relu *ReLU) Forward(x Tensor) Tensor {
-	res := flint.Max(x.node, int32(0))
-	return Tensor{node: res}
+func (relu ReLU) Forward(x Tensor) Tensor {
+	res := flint.Max(x.Node, int32(0))
+	return Tensor{Node: res}
 }
 
-func (relu *ReLU) Backward(x Tensor) Tensor {
-	return x
-}
-
-func (relu *ReLU) String() string {
+func (relu ReLU) String() string {
 	return "ReLU()"
 }

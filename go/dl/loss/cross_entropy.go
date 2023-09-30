@@ -14,6 +14,8 @@ func CrossEntropyLoss(predictions flint.GraphNode, labels flint.GraphNode) flint
 		panic("shapes do not match")
 	}
 
+	// FIXME: given one hot encoding we can also do: L(y, ŷ) = − log(ŷ_k)|y_k =1
+
 	offset := flint.CreateGraphConstant(eps, shape, flint.F_FLOAT32)
 	t := flint.Neg(flint.Mul(flint.Log(flint.Add(offset, predictions)), labels))
 	for len(t.GetShape()) > 1 {

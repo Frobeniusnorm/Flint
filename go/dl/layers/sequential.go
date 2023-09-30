@@ -28,7 +28,7 @@ func NewSequential(layers ...Layer) Sequential {
 //	return Sequential{}
 //}
 
-func (seq *Sequential) Forward(x Tensor) Tensor {
+func (seq Sequential) Forward(x Tensor) Tensor {
 	var res Tensor
 	res = x
 	for _, l := range seq.layers {
@@ -37,7 +37,7 @@ func (seq *Sequential) Forward(x Tensor) Tensor {
 	return res
 }
 
-func (seq *Sequential) String() string {
+func (seq Sequential) String() string {
 	var res strings.Builder
 	res.WriteString("Sequential([\n")
 	for _, l := range seq.layers {
