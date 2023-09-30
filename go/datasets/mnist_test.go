@@ -23,7 +23,7 @@ func TestNewMnistDataset(t *testing.T) {
 		var data = flint.CalculateResult[int32](entry.data)
 		fmt.Println("label:", entry.label)
 		fmt.Println("data:", data)
-		printImage(data.Data, data.Shape)
+		printImage(data.Data.([]int32), data.Shape)
 
 		//fmt.Println(testDataset.Get(5))
 	})
