@@ -89,7 +89,8 @@ void flintInit_gpu() {
                     &dev_vend_size);
     clGetDeviceInfo(curr_dev, CL_DEVICE_TYPE, sizeof(dev_type),
                     (void *)&dev_type, &dev_type_size);
-    clGetDeviceInfo(curr_dev, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &dev_no_units, nullptr);
+    clGetDeviceInfo(curr_dev, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint),
+                    &dev_no_units, nullptr);
     if (dev_no_units > highest_no_units) {
       highest_no_units = dev_no_units;
       device = curr_dev;
@@ -181,8 +182,9 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
   cl_int err_code;
   cl_kernel kernel = nullptr;
   auto start = std::chrono::high_resolution_clock::now();
-  // generate code for this operation for all datatypes (one kernel for each parameter / return type combination)
-  // will be used to store all kernels for this operation
+  // generate code for this operation for all datatypes (one kernel for each
+  // parameter / return type combination) will be used to store all kernels for
+  // this operation
   std::string code;
   // the kernel for `node`
   std::string our_kernel;
@@ -702,15 +704,15 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   code += graph_code;
   // store result
   code += "R[index] = v0;\n}";
-  chrono::duration<double, std::milli> elapsed =
-      chrono::high_resolution_clock::now() - start;
-  flogging(F_DEBUG, "code generation finished (in " +
-                        to_string(elapsed.count()) + " ms): \n" + code);
   // don't create code when in cache
   auto cache_val = OCLCompilerThread::kernel_cache.find(code);
   cl_kernel kernel = nullptr;
   cl_int err_code;
+  chrono::duration<double, std::milli> elapsed =
+      chrono::high_resolution_clock::now() - start;
   if (cache_val == OCLCompilerThread::kernel_cache.end()) {
+    flogging(F_DEBUG, "code generation finished (in " +
+                          to_string(elapsed.count()) + " ms): \n" + code);
     kernel = OCLCompilerThread::lazy_compile(node, code);
   } else {
     flogging(F_DEBUG, "code from cache");
@@ -812,7 +814,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   OCLCompilerThread::memory_barrier();
   elapsed = chrono::high_resolution_clock::now() - start;
   flogging(F_DEBUG, "compilation took " + to_string(compilation_time.count()) +
-                        "ms, execution took " + to_string(elapsed.count()) + " for " + to_string(global_size) + " elements");
+                        "ms, execution took " + to_string(elapsed.count()) +
+                        " for " + to_string(global_size) + " elements");
   node->result_data = resultData;
   return node;
 }

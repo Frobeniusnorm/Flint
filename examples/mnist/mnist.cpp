@@ -77,7 +77,7 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // download and extract to the desired folder from
 // http://yann.lecun.com/exdb/mnist/
 int main() {
-  FlintContext _(FLINT_BACKEND_ONLY_GPU);
+  FlintContext _(FLINT_BACKEND_ONLY_CPU);
   fSetLoggingLevel(F_INFO);
   Tensor<float, 3> X = load_mnist_images("train-images-idx3-ubyte");
   Tensor<double, 2> Y =
@@ -96,11 +96,11 @@ int main() {
             << " labels)" << std::endl;
   std::cout << "loaded data. Starting training." << std::endl;
   auto m = SequentialModel{
-    Conv2D(1, 32, 7, std::array<unsigned int, 2>{2, 2}, NO_PADDING),
-    Relu(),
-    Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}),
+  //  Conv2D(1, 32, 7, std::array<unsigned int, 2>{2, 2}, NO_PADDING),
+  //  Relu(),
+  //  Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}),
     Flatten(),
-    Connected(800, 80),
+    Connected(784, 80),
     Relu(),
     Connected(80, 10),
     SoftMax()

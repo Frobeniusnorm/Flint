@@ -69,13 +69,22 @@ template <typename T, unsigned int n> struct Tensor {
    */
   Tensor(FGraphNode *node, std::array<size_t, n> shape)
       : node(node), shape(shape) {
-    // here data is still fine
     total_size = 1;
     for (int ds : shape)
       total_size *= ds;
     node->reference_counter++;
     fOptimizeMemory(node); // should be legal here, since C++ header adjust
                            // reference_counter
+  }
+  /**
+   * Constructs a Tensor directly from a `FGraphNode`   */
+  Tensor(FGraphNode *node) : node(node) {
+    memcpy(shape.data(), node->operation.shape, n * sizeof(size_t));
+    total_size = 1;
+    for (int ds : shape)
+      total_size *= ds;
+    node->reference_counter++;
+    fOptimizeMemory(node); // should be legal here, since C++ header adjust
   }
   /**
    * Copy constructor. Copies the underlying Graph structure by creating a new

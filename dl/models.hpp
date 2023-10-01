@@ -48,7 +48,35 @@ constexpr unsigned int get_output_dim() {
       K2::transform_dimensionality(K1::transform_dimensionality(in));
   return get_output_dim<out, F...>();
 }
-
+template <unsigned int layer, unsigned int in, unsigned int curr,
+          GenericLayer K>
+constexpr unsigned int get_layer_dim() {
+  static_assert(layer == curr, "Could not deduce Layer dimensionality!");
+  return K::transform_dimensionality(in);
+}
+template <unsigned int layer, unsigned int in, unsigned int curr,
+          GenericLayer K, GenericLayer... F>
+constexpr unsigned int get_layer_dim() {
+  constexpr unsigned int out = K::transform_dimensionality(in);
+  if constexpr (layer == curr)
+    return out;
+  else
+    return get_layer_dim<layer, out, curr + 1, F...>();
+}
+template <unsigned int layer, FType in, unsigned int curr, GenericLayer K>
+constexpr FType get_layer_type() {
+  static_assert(layer == curr, "Could not deduce Layer dimensionality!");
+  return K::transform_type(in);
+}
+template <unsigned int layer, FType in, unsigned int curr, GenericLayer K,
+          GenericLayer... F>
+constexpr FType get_layer_type() {
+  constexpr FType out = K::transform_type(in);
+  if constexpr (layer == curr)
+    return out;
+  else
+    return get_layer_type<layer, out, curr + 1, F...>();
+}
 /**
  * Model where each layer outputs the input of the next layer.
  * Best used with C++ auto typing:
@@ -78,10 +106,12 @@ template <GenericLayer... T> struct SequentialModel {
   Tensor<LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
          get_output_dim<n, T...>()>
   forward(Tensor<K, n> &in) {
-    return forward_helper<
+    in.get_graph_node()->reference_counter++;
+    auto out = forward_helper<
         0,
         LayerHelper::FlintTypeToCpp<get_output_type<toFlintType<K>(), T...>()>,
-        get_output_dim<n, T...>()>(in);
+        get_output_dim<n, T...>(), K, n>(in.get_graph_node());
+    return out;
   }
   /**
    * Optimizes the weights (calculates the gradients + calls the optimizers) of
@@ -148,8 +178,16 @@ template <GenericLayer... T> struct SequentialModel {
         input.execute();
         expected.execute();
         fStartGradientContext();
+#ifdef FLINT_DL_PROFILE
+        auto start = std::chrono::high_resolution_clock::now();
+#endif
         auto output = forward(input);
         auto error = loss.calculate_error(output, expected);
+#ifdef FLINT_DL_PROFILE
+        std::chrono::duration<double, std::milli> elapsed =
+            std::chrono::high_resolution_clock::now() - start;
+        std::cout << " forward took " << elapsed.count() << std::endl;
+#endif
         fStopGradientContext();
         // optimize weights
         // flatten all vars, but keep original structure for reconstruction
@@ -160,7 +198,7 @@ template <GenericLayer... T> struct SequentialModel {
           flat_vars.insert(flat_vars.end(), vars[i].begin(), vars[i].end());
         std::vector<FGraphNode *> grads(flat_vars.size());
 #ifdef FLINT_DL_PROFILE
-        auto start = std::chrono::high_resolution_clock::now();
+        start = std::chrono::high_resolution_clock::now();
 #endif
         // calculate gradients
         fCalculateGradients(error.get_graph_node(), flat_vars.data(),
@@ -176,8 +214,7 @@ template <GenericLayer... T> struct SequentialModel {
           }
         }
 #ifdef FLINT_DL_PROFILE
-        std::chrono::duration<double, std::milli> elapsed =
-            std::chrono::high_resolution_clock::now() - start;
+        elapsed = std::chrono::high_resolution_clock::now() - start;
         std::cout << " gradient calc took " << elapsed.count() << std::endl;
 #endif
         backward<0>(plgrads);
@@ -258,24 +295,36 @@ private:
   }
   template <int layer, typename T2, unsigned int n2, typename T1,
             unsigned int n1>
-  Tensor<T2, n2> forward_helper(Tensor<T1, n1> &in) {
-    // TODO memory cant be freed since in has to be alive for the complete call
-    // -> maybe only build Tensor inplace for forward and use GraphNodes for
-    // rest so we can explicitly free them
+  Tensor<T2, n2> forward_helper(FGraphNode *in) {
+    FGraphNode *out;
+    {
+      Tensor<T1, n1> it(in);
 #ifdef FLINT_DL_PROFILE
-    auto start = std::chrono::high_resolution_clock::now();
+      auto start = std::chrono::high_resolution_clock::now();
 #endif
-    auto out = std::get<layer>(layers).forward(in)();
+      auto ot = std::get<layer>(layers).forward(it)();
 #ifdef FLINT_DL_PROFILE
-    std::chrono::duration<double, std::milli> elapsed =
-        std::chrono::high_resolution_clock::now() - start;
-    std::cout << std::get<layer>(layers).name() << " " << elapsed.count()
-              << std::endl;
+      std::chrono::duration<double, std::milli> elapsed =
+          std::chrono::high_resolution_clock::now() - start;
+      std::cout << std::get<layer>(layers).name() << " " << elapsed.count()
+                << std::endl;
 #endif
-    if constexpr (layer == sizeof...(T) - 1)
-      return out;
-    else {
-      return forward_helper<layer + 1, T2, n2>(out);
+      // now in is no longer needed (reference counter has been artifically
+      // incremented) will be freed with it at the end of the block
+      in->reference_counter--;
+      // out is still needed -> save the GraphNode handle from destruction with
+      out = ot.get_graph_node();
+      out->reference_counter++;
+    }
+    if constexpr (layer == sizeof...(T) - 1) {
+      // will be hold by the Tensor
+      out->reference_counter--;
+      return Tensor<T2, n2>(out);
+    } else {
+      return forward_helper<layer + 1, T2, n2,
+                            LayerHelper::FlintTypeToCpp<get_layer_type<
+                                layer, toFlintType<T1>(), 0, T...>()>,
+                            get_layer_dim<layer, n1, 0, T...>()>(out);
     }
   }
 };
