@@ -9,22 +9,6 @@ type BaseLayer struct {
 
 type Layer interface {
 	fmt.Stringer
-	Parameters(recurse bool) []Tensor
+	Parameters(recurse bool) []Parameter
 	Forward(x Tensor) Tensor
 }
-
-/*
-LayerList is a storage container for layers.
-Just passing them around may not create the EnableGrad flag properly
-
-What's the difference between a [Sequential] and a [LayerList]?
-A [LayerList] is exactly what it sounds like -- a list for storing [Layer]'s!
-On the other hand, the layers in a [Sequential] are connected in a cascading way.
-*/
-type LayerList struct {
-}
-
-/*
-Parameter is a container object for a trainable Tensor
-*/
-type Parameter Tensor

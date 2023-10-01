@@ -41,9 +41,11 @@ func main() {
 	//batch := testDataloader.Next()
 	data := layers.NewTensor(flint.CreateGraphRandom(flint.Shape{1, 4}))
 	labels := flint.CreateGraphConstant(10, flint.Shape{1, 2}, flint.F_INT32)
+	flint.StartGradientContext()
 	output := model.Forward(data)
-	fmt.Println(flint.CalculateResult[float32](output.Node))
+	fmt.Println("output:", flint.CalculateResult[float32](output.Node))
 	loss := layers.NewTensor(crit(output.Node, labels))
 	fmt.Println("loss:", flint.CalculateResult[float32](loss.Node))
-	optim.Step(loss) // FIXME: is still broken because of memory issues. Maybe some tensors are not properly initialized?
+	flint.StopGradientContext()
+	optim.Step(loss)
 }

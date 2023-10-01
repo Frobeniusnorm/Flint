@@ -37,15 +37,15 @@ func (seq Sequential) Forward(x Tensor) Tensor {
 	return res
 }
 
-func (seq Sequential) Parameters(recurse bool) []Tensor {
+func (seq Sequential) Parameters(recurse bool) []Parameter {
 	if recurse {
-		var res []Tensor
+		var res []Parameter
 		for _, layer := range seq.layers {
 			res = append(res, layer.Parameters(recurse)...)
 		}
 		return res
 	} else {
-		return []Tensor{}
+		return []Parameter{}
 	}
 }
 

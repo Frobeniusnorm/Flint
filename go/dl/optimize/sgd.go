@@ -12,7 +12,7 @@ type Sgd struct {
 	learningRate float32
 }
 
-func NewSgd(params []layers.Tensor, learningRate float32) Sgd {
+func NewSgd(params []layers.Parameter, learningRate float32) Sgd {
 	if learningRate < 0.0 {
 		log.Panicf("Invalid learning rate: %f", learningRate)
 	}

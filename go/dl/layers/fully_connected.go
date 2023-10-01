@@ -9,7 +9,7 @@ type FullyConnected struct {
 	BaseLayer
 	inputSize      uint
 	outputSize     uint
-	weightsAndBias Tensor
+	weightsAndBias Parameter
 }
 
 // n = input size
@@ -18,7 +18,7 @@ type FullyConnected struct {
 func NewFullyConnected(inputSize uint, outputSize uint) FullyConnected {
 	weights := flint.CreateGraphRandom(flint.Shape{inputSize, outputSize})
 	bias := flint.CreateGraphConstant(1, flint.Shape{1, outputSize}, flint.F_FLOAT32)
-	weightsAndBias := NewTensor(flint.Concat(weights, bias, 0))
+	weightsAndBias := NewParameter(flint.Concat(weights, bias, 0))
 
 	return FullyConnected{
 		BaseLayer: BaseLayer{
@@ -40,8 +40,8 @@ func (fc FullyConnected) Forward(x Tensor) Tensor {
 	return NewTensor(res)
 }
 
-func (fc FullyConnected) Parameters(recurse bool) []Tensor {
-	return []Tensor{fc.weightsAndBias}
+func (fc FullyConnected) Parameters(recurse bool) []Parameter {
+	return []Parameter{fc.weightsAndBias}
 }
 
 func (fc FullyConnected) String() string {

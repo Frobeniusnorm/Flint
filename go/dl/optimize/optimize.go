@@ -7,7 +7,7 @@ import (
 )
 
 type baseOptimizer struct {
-	params      []layers.Tensor
+	params      []layers.Parameter
 	regularizer Regularizer
 }
 
