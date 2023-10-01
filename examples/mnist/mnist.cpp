@@ -1,4 +1,4 @@
-// #define FLINT_DL_PROFILE
+//#define FLINT_DL_PROFILE
 #include <cstring>
 #include <flint/flint.h>
 #include <flint/flint.hpp>
@@ -77,7 +77,7 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // download and extract to the desired folder from
 // http://yann.lecun.com/exdb/mnist/
 int main() {
-  FlintContext _(FLINT_BACKEND_ONLY_CPU);
+  FlintContext _(FLINT_BACKEND_BOTH);
   fSetLoggingLevel(F_INFO);
   Tensor<float, 3> X = load_mnist_images("train-images-idx3-ubyte");
   Tensor<double, 2> Y =
@@ -95,12 +95,23 @@ int main() {
             << "x" << data.X.get_shape()[1] << " (and " << data.Y.get_shape()[0]
             << " labels)" << std::endl;
   std::cout << "loaded data. Starting training." << std::endl;
-  auto m = SequentialModel{
-  //  Conv2D(1, 32, 7, std::array<unsigned int, 2>{2, 2}, NO_PADDING),
+  //auto m = SequentialModel{
+  //  Conv2D(1, 32, 3, std::array<unsigned int, 2>{1, 1}, NO_PADDING),
   //  Relu(),
-  //  Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}),
+  //  Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}),
+  //  Conv2D(32, 64, 3, std::array<unsigned int, 2>{1, 1}, NO_PADDING),
+  //  Relu(),
+  //  Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}),
+  //  Flatten(),
+  //  Connected(1600, 10),
+  //  SoftMax()
+  //};
+  auto m = SequentialModel{
+    Conv2D(1, 32, 7, std::array<unsigned int, 2>{2, 2}, NO_PADDING),
+    Relu(),
+    Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}),
     Flatten(),
-    Connected(784, 80),
+    Connected(800, 80),
     Relu(),
     Connected(80, 10),
     SoftMax()
@@ -108,5 +119,5 @@ int main() {
   std::cout << m.summary() << std::endl;
   AdamFactory opt(0.003);
   m.generate_optimizer(opt);
-  m.train(data, CrossEntropyLoss(), 10, 4000);
+  m.train(data, CrossEntropyLoss(), 25, 4000);
 }

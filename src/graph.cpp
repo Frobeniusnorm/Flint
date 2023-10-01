@@ -562,17 +562,28 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
     // if the result data of the parent is not needed for certain gradient
     // calculation operations, it may be freed
     switch (node->operation.op_type) {
+    case FADD:
+    case FNEG:
+    case FCONCAT:
+    case FSUB:
     case FLATTEN:
     case FRESHAPE:
     case FSLIDING_WINDOW:
-    case FADD:
-    case FSUB:
     case FTRANSPOSE:
-    case FINDEX:
-    case FSET_INDEX:
+    case FCONVERSION:
+    case FREDUCE_SUM:
+    case FREDUCE_MUL:
+    case FREPEAT:
+    case FSLICE:
+    case FEXTEND:
+    case FSIGN:
+    case FEVEN:
+    case FLESS:
+    case FEQUAL:
+    case FGREATER:
       // all parents that are only referenced by this node can be freed
-      {
-        FGraphNode *parent = node->predecessors[0];
+      for (int i = 0; i < node->num_predecessor; i++) {
+        FGraphNode *parent = node->predecessors[i];
         if (parent->result_data && parent->reference_counter == 1 &&
             parent->operation.op_type != FSTORE) {
           FResultData *rd = parent->result_data;
@@ -585,6 +596,7 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
           parent->result_data = nullptr;
         }
       }
+
     default:
       break;
     }
@@ -1067,7 +1079,8 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
                                            FOperationType type) {
   size_t total = 1;
   for (int i = 0; i < a->operation.dimensions; i++)
-    if (i != dimension) total *= a->operation.shape[i];
+    if (i != dimension)
+      total *= a->operation.shape[i];
   if (total <= 128) { // small reduction size will be slow on gpu
     fExecuteGraph(a);
   } else if (!a->result_data) {
@@ -1127,7 +1140,8 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
   op.additional_data = safe_mal<int>(1);
   ((int *)op.additional_data)[0] = dimension;
   foo->operation = op;
-  if (total < 128) foo = fExecuteGraph(foo);
+  if (total < 128)
+    foo = fExecuteGraph(foo);
   return eager_execution && total >= 128 ? execute_eagerly(foo) : foo;
 }
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
