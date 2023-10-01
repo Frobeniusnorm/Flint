@@ -1,6 +1,7 @@
 package loss
 
 import (
+	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 )
 
@@ -9,6 +10,10 @@ const eps float32 = 1e-10
 // CrossEntropyLoss calculates the cross entropy loss between a set of two tensors
 // TODO: for now: one hot encoding is implicitly assumed!
 func CrossEntropyLoss(predictions flint.GraphNode, labels flint.GraphNode) flint.GraphNode {
+
+	fmt.Println("pred shape:", predictions.GetShape())
+	fmt.Println("labels shape:", labels.GetShape())
+
 	shape := predictions.GetShape()
 	if !shape.Equal(labels.GetShape()) {
 		panic("shapes do not match")

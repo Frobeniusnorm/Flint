@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/dl/layers"
+	losses "github.com/Frobeniusnorm/Flint/go/dl/loss"
+	"github.com/Frobeniusnorm/Flint/go/dl/optimize"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 )
 
@@ -29,18 +31,19 @@ func main() {
 	//	layers.NewRelu(),
 	//)
 
-	model := layers.NewFullyConnected(32, 4)
+	model := layers.NewFullyConnected(4, 2)
 	fmt.Println(model)
 
-	//optim := optimize.NewSgd(model.Parameters(true), 1e-3)
-	//crit := losses.CrossEntropyLoss
+	optim := optimize.NewSgd(model.Parameters(true), 1e-3)
+	crit := losses.CrossEntropyLoss
 
 	//for i := uint(0); i < testDataloader.Count(); i++ {
 	//batch := testDataloader.Next()
-	data := layers.NewTensor(flint.CreateGraphRandom(flint.Shape{8, 32}))
-	//labels := flint.CreateGraphArrange(flint.Shape{4}, 0)
+	data := layers.NewTensor(flint.CreateGraphRandom(flint.Shape{1, 4}))
+	labels := flint.CreateGraphConstant(10, flint.Shape{1, 2}, flint.F_INT32)
 	output := model.Forward(data)
 	fmt.Println(flint.CalculateResult[float32](output.Node))
-	//loss := layers.NewTensor(crit(output.Node, labels))
-	//optim.Step(loss)
+	loss := layers.NewTensor(crit(output.Node, labels))
+	fmt.Println("loss:", flint.CalculateResult[float32](loss.Node))
+	optim.Step(loss) // FIXME: is still broken because of memory issues. Maybe some tensors are not properly initialized?
 }

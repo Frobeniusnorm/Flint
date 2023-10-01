@@ -36,11 +36,6 @@ func (fc FullyConnected) Forward(x Tensor) Tensor {
 	inputShape[len(inputShape)-1] = 1
 	ones := flint.CreateGraphConstant(1, inputShape, flint.F_INT32)
 	combined := flint.Concat(x.Node, ones, uint(len(inputShape)-1))
-
-	fmt.Println("weights + bias shape:", fc.weightsAndBias.Node.GetShape())
-	fmt.Println("ones shape:", ones.GetShape())
-	fmt.Println("input shape:", x.Node.GetShape())
-	fmt.Println("combined shape:", combined.GetShape())
 	res := flint.Matmul(combined, fc.weightsAndBias.Node)
 	return NewTensor(res)
 }
