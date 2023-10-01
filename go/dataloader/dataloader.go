@@ -37,7 +37,7 @@ func (dl *Dataloader) Count() uint {
 	}
 }
 
-func (dl *Dataloader) Next() (batch any, ok bool) {
+func (dl *Dataloader) Next() any {
 	var data flint.GraphNode = dl.dataset.Get(dl.prevIndex)
 	flint.Concat()
 

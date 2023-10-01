@@ -7,32 +7,46 @@ import (
 
 type FullyConnected struct {
 	BaseLayer
-	inputSize  uint
-	outputSize uint
-	weights    Tensor //Parameter
-	bias       Tensor //Parameter
+	inputSize      uint
+	outputSize     uint
+	weightsAndBias Tensor
 }
 
+// n = input size
+// m = output_size
+
 func NewFullyConnected(inputSize uint, outputSize uint) FullyConnected {
-	weights := NewTensor(flint.CreateGraphRandom(flint.Shape{1 + inputSize, outputSize}))
-	bias := NewTensor(flint.CreateGraphConstant(1, flint.Shape{outputSize}, flint.F_FLOAT32))
+	weights := flint.CreateGraphRandom(flint.Shape{inputSize, outputSize})
+	bias := flint.CreateGraphConstant(1, flint.Shape{1, outputSize}, flint.F_FLOAT32)
+	weightsAndBias := NewTensor(flint.Concat(weights, bias, 0))
+
 	return FullyConnected{
 		BaseLayer: BaseLayer{
 			trainable:  true,
 			EnableGrad: true,
 		},
-		inputSize:  inputSize,
-		outputSize: outputSize,
-		weights:    weights,
-		bias:       bias,
+		inputSize:      inputSize,
+		outputSize:     outputSize,
+		weightsAndBias: weightsAndBias,
 	}
 }
 
 func (fc FullyConnected) Forward(x Tensor) Tensor {
-	ones := flint.CreateGraphConstant(1, flint.Shape{x.Node.GetShape()[0], 1}, flint.F_INT32)
-	combined := flint.Concat(x.Node, ones, 1)
-	res := flint.Matmul(combined, fc.weights.Node)
+	inputShape := x.Node.GetShape()
+	inputShape[len(inputShape)-1] = 1
+	ones := flint.CreateGraphConstant(1, inputShape, flint.F_INT32)
+	combined := flint.Concat(x.Node, ones, uint(len(inputShape)-1))
+
+	fmt.Println("weights + bias shape:", fc.weightsAndBias.Node.GetShape())
+	fmt.Println("ones shape:", ones.GetShape())
+	fmt.Println("input shape:", x.Node.GetShape())
+	fmt.Println("combined shape:", combined.GetShape())
+	res := flint.Matmul(combined, fc.weightsAndBias.Node)
 	return NewTensor(res)
+}
+
+func (fc FullyConnected) Parameters(recurse bool) []Tensor {
+	return []Tensor{fc.weightsAndBias}
 }
 
 func (fc FullyConnected) String() string {

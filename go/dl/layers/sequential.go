@@ -37,6 +37,18 @@ func (seq Sequential) Forward(x Tensor) Tensor {
 	return res
 }
 
+func (seq Sequential) Parameters(recurse bool) []Tensor {
+	if recurse {
+		var res []Tensor
+		for _, layer := range seq.layers {
+			res = append(res, layer.Parameters(recurse)...)
+		}
+		return res
+	} else {
+		return []Tensor{}
+	}
+}
+
 func (seq Sequential) String() string {
 	var res strings.Builder
 	res.WriteString("Sequential([\n")

@@ -9,8 +9,8 @@ type BaseLayer struct {
 
 type Layer interface {
 	fmt.Stringer
+	Parameters(recurse bool) []Tensor
 	Forward(x Tensor) Tensor
-	//Backward(x Tensor) Tensor
 }
 
 /*
