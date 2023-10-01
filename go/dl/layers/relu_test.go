@@ -7,11 +7,6 @@ import (
 )
 import "github.com/stretchr/testify/assert"
 
-func TestNewRelu(t *testing.T) {
-	relu := NewRelu()
-	assert.False(t, relu.trainable)
-}
-
 func TestReLU_Forward(t *testing.T) {
 	relu := NewRelu()
 

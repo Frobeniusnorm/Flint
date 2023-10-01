@@ -6,27 +6,20 @@ import (
 )
 
 /*
-Sequential is a convenience module for executing a number of trainable layers one after another.
+Sequential is a convenience module for executing a number of layers one after another.
 This saves writing the tedious and repetitive forward method
 */
 type Sequential struct {
 	BaseLayer
-	layers []Layer
+	layers        []Layer
+	trainingPhase bool
 }
 
 func NewSequential(layers ...Layer) Sequential {
 	return Sequential{
-		BaseLayer: BaseLayer{
-			trainable:  true,
-			EnableGrad: true,
-		},
 		layers: layers,
 	}
 }
-
-//func NewSequentialFromLayerList(layers LayerList) Sequential {
-//	return Sequential{}
-//}
 
 func (seq Sequential) Forward(x Tensor) Tensor {
 	var res Tensor
@@ -46,6 +39,18 @@ func (seq Sequential) Parameters(recurse bool) []Parameter {
 		return res
 	} else {
 		return []Parameter{}
+	}
+}
+
+func (seq Sequential) Train() {
+	for _, layer := range seq.layers {
+		layer.Train()
+	}
+}
+
+func (seq Sequential) Eval() {
+	for _, layer := range seq.layers {
+		layer.Eval()
 	}
 }
 
