@@ -162,7 +162,8 @@ template <GenericLayer... T> struct SequentialModel {
       // shuffle each epoch
       Tensor<T1, n1> sx = data.X.index(indices);
       Tensor<T2, n2> sy = data.Y.index(indices);
-      indices = indices.permutate(0)();
+      indices = indices.permutate(0);
+      indices.execute();
       // iterate through batches
       size_t number_batches = batches / batch_size + 1;
       double total_error = 0;
@@ -200,19 +201,19 @@ template <GenericLayer... T> struct SequentialModel {
 #ifdef FLINT_DL_PROFILE
         start = std::chrono::high_resolution_clock::now();
 #endif
-        // calculate gradients
-        fCalculateGradients(error.get_graph_node(), flat_vars.data(),
-                            flat_vars.size(), grads.data());
-        // reconstruct for layers
-        std::vector<std::vector<FGraphNode *>> plgrads(vars.size());
-        int index = 0;
-        for (unsigned int i = 0; i < vars.size(); i++) {
-          plgrads[i] = std::vector<FGraphNode *>(vars[i].size());
-          for (unsigned int j = 0; j < vars[i].size(); j++) {
-            FGraphNode *curr_grad = grads[index++];
-            plgrads[i][j] = curr_grad ? fExecuteGraph(curr_grad) : nullptr;
-          }
-        }
+       // calculate gradients
+       fCalculateGradients(error.get_graph_node(), flat_vars.data(),
+                           flat_vars.size(), grads.data());
+       // reconstruct for layers
+       std::vector<std::vector<FGraphNode *>> plgrads(vars.size());
+       int index = 0;
+       for (unsigned int i = 0; i < vars.size(); i++) {
+         plgrads[i] = std::vector<FGraphNode *>(vars[i].size());
+         for (unsigned int j = 0; j < vars[i].size(); j++) {
+           FGraphNode *curr_grad = grads[index++];
+           plgrads[i][j] = curr_grad ? fExecuteGraph(curr_grad) : nullptr;
+         }
+       }
 #ifdef FLINT_DL_PROFILE
         elapsed = std::chrono::high_resolution_clock::now() - start;
         std::cout << " gradient calc took " << elapsed.count() << std::endl;
@@ -302,16 +303,17 @@ private:
 #ifdef FLINT_DL_PROFILE
       auto start = std::chrono::high_resolution_clock::now();
 #endif
-      auto ot = std::get<layer>(layers).forward(it)();
+      // now in is no longer needed (reference counter has been artifically
+      // incremented) will be freed with it at the end of the block
+      in->reference_counter--;
+      auto ot = std::get<layer>(layers).forward(it);
+      ot.execute();
 #ifdef FLINT_DL_PROFILE
       std::chrono::duration<double, std::milli> elapsed =
           std::chrono::high_resolution_clock::now() - start;
       std::cout << std::get<layer>(layers).name() << " " << elapsed.count()
                 << std::endl;
 #endif
-      // now in is no longer needed (reference counter has been artifically
-      // incremented) will be freed with it at the end of the block
-      in->reference_counter--;
       // out is still needed -> save the GraphNode handle from destruction with
       out = ot.get_graph_node();
       out->reference_counter++;

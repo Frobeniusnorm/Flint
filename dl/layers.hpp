@@ -49,6 +49,7 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
     if (optimizer) {
       Tensor<double, n> gw = error.gradient(weight);
       weight = optimizer->update(weight, gw);
+      weight.execute();
       weight.watch();
     } else {
       flogging(F_WARNING, "No Optimizer for weight!");
@@ -122,9 +123,8 @@ struct WeightRef<index, n, wn...> {
     if (optimizer) {
       if (grads[index]) {
         Tensor<double, n> gw(grads[index], weight.get_shape());
-        Tensor<double, n> nw = optimizer->update(weight, gw);
-        nw.execute();
-        weight = std::move(nw);
+        weight = optimizer->update(weight, gw);
+        weight.execute();
         weight.watch();
       }
     } else {
