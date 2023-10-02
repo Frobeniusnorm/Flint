@@ -26,7 +26,6 @@ TEST_CASE("Arange") {
     for (int j = 0; j < 4; j++)
       for (int k = 0; k < 4; k++)
         CHECK_EQ(a1[i][j][k], j);
-  std::cout << a1 << std::endl;
 }
 TEST_SUITE("Graph implementation") {
   TEST_CASE("createGraph, add, mul, sub, div") {

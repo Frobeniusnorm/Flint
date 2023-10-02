@@ -490,18 +490,32 @@ static void executeNode(const FGraphNode *node,
     for (int i = 0; i < pred.shape.size() - 1; i++) {
       size_t window_size = node->operation.shape[i] - pred.shape[i + 1] + 1;
       no_windows[i] = window_size % steps[i] == 0 ? window_size / steps[i]
-                                                : window_size / steps[i] + 1;
+                                                  : window_size / steps[i] + 1;
     }
     const std::vector<size_t> acc_no_windows =
         calcAccSizes(pred.shape.size() - 1, no_windows);
     for (size_t i = from; i < from + size; i++) {
       result[i] = 0;
-      // Naive implementation, this surely can be faster
-      // TODO: instead of iterating over all windows only look at them that are
-      // in proximity of the element
-      for (size_t w = 0; w < pred.shape[0]; w++) {
+      size_t first_w = 0, last_w = 0;
+      // calculate first and last hit
+      for (int d = 0; d < node->operation.dimensions; d++) {
+        const unsigned int id = (i / acc_sizes[d]) % node->operation.shape[d];
+        // first hit is where the window overlaps with the element of window
+        // size - 1 before this element (since the window reaches to this
+        // element)
+        const size_t wdf =
+            ((std::max(0l, (long)id - (long)pred.shape[d + 1] + 1) / steps[d]));
+        const size_t wfl = id / steps[d];
+        first_w += wdf * acc_no_windows[d];
+        last_w += wfl * acc_no_windows[d];
+      }
+      size_t w = first_w;
+      while (w <= last_w) {
+        // tests if this window is a hit or not, if not calculates the distance
+        // to the next window
         bool contained = true;
         size_t wi = 0;
+        size_t wpp = 0;
         for (int d = node->operation.dimensions - 1; d >= 0; d--) {
           const unsigned int wd = (w / acc_no_windows[d]) % no_windows[d];
           const unsigned int w_start = wd * steps[d];
@@ -510,12 +524,16 @@ static void executeNode(const FGraphNode *node,
             wi += (id - w_start) * acc_sizes_pred[d + 1];
           } else {
             contained = false;
-            break;
+            // we cant break yet -> advance to next window in dimension
+            wpp += acc_no_windows[d];
           }
         }
-        if (contained)
+        if (contained) {
           result[i] +=
               ((const T *__restrict__)pred.data)[wi + w * acc_sizes_pred[0]];
+          wpp = 1;
+        }
+        w += wpp;
       }
     }
   } break;
