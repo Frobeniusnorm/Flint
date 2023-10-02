@@ -4,3 +4,6 @@ _obj/
 
 # datasets
 _data/
+
+# profiling files
+*.prof
