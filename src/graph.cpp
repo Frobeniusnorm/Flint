@@ -559,32 +559,47 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
     store->num_entries = rd->num_entries;
     node->operation.additional_data = store;
   } else if (node->gradient_data) {
-    // if the result data of the parent is not needed for certain gradient calculation operations, it may be freed
+    // if the result data of the parent is not needed for certain gradient
+    // calculation operations, it may be freed
     switch (node->operation.op_type) {
-      case FLATTEN:
-      case FRESHAPE:
-      case FSLIDING_WINDOW:
-      case FADD:
-      case FSUB:
-      case FTRANSPOSE:
-      case FINDEX:
-      case FSET_INDEX:
-        // all parents that are only referenced by this node can be freed
-        {
-          FGraphNode* parent = node->predecessors[0];
-          if (parent->result_data && parent->reference_counter == 1 && parent->operation.op_type != FSTORE) {
-            FResultData *rd = parent->result_data;
-            if (rd->data)
-              free(rd->data);
-            if (rd->mem_id)
-              clReleaseMemObject(rd->mem_id);
-            rd->mem_id = nullptr;
-            delete rd;
-            parent->result_data = nullptr;
-          }
+    case FADD:
+    case FNEG:
+    case FCONCAT:
+    case FSUB:
+    case FLATTEN:
+    case FRESHAPE:
+    case FSLIDING_WINDOW:
+    case FTRANSPOSE:
+    case FCONVERSION:
+    case FREDUCE_SUM:
+    case FREDUCE_MUL:
+    case FREPEAT:
+    case FSLICE:
+    case FEXTEND:
+    case FSIGN:
+    case FEVEN:
+    case FLESS:
+    case FEQUAL:
+    case FGREATER:
+      // all parents that are only referenced by this node can be freed
+      for (int i = 0; i < node->num_predecessor; i++) {
+        FGraphNode *parent = node->predecessors[i];
+        if (parent->result_data && parent->reference_counter == 1 &&
+            parent->operation.op_type != FSTORE) {
+          FResultData *rd = parent->result_data;
+          if (rd->data)
+            free(rd->data);
+          if (rd->mem_id)
+            clReleaseMemObject(rd->mem_id);
+          rd->mem_id = nullptr;
+          delete rd;
+          parent->result_data = nullptr;
         }
-      default: break;
-    } 
+      }
+
+    default:
+      break;
+    }
   }
   return node;
 }
@@ -1060,11 +1075,43 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   ;
 }
 
-static inline FGraphNode *reduce_operation(FGraphNode *x, const int dimension,
+static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
                                            FOperationType type) {
-  FGraphNode *a = x;
-  if (a->operation.op_type != FSTORE && !a->result_data) {
-    a = fExecuteGraph(a);
+  size_t total = 1;
+  for (int i = 0; i < a->operation.dimensions; i++)
+    if (i != dimension)
+      total *= a->operation.shape[i];
+  if (total <= 128) { // small reduction size will be slow on gpu
+    fExecuteGraph(a);
+  } else if (!a->result_data) {
+    // we dont want interleaved reduction since that is slow
+    std::list<FGraphNode *> todo;
+    todo.push_back(a);
+    while (!todo.empty()) {
+      FGraphNode *curr = todo.front();
+      todo.pop_front();
+      bool terminate = false;
+      if (curr->result_data)
+        continue;
+      switch (curr->operation.op_type) {
+      case FCONVOLVE:
+      case FMATMUL:
+      case FSLIDE:
+      case FGRADIENT_CONVOLVE:
+      case FREDUCE_MAX:
+      case FREDUCE_MIN:
+      case FREDUCE_MUL:
+      case FREDUCE_SUM:
+        curr = fExecuteGraph(curr);
+        terminate = true;
+      default:
+        break;
+      }
+      if (terminate)
+        continue;
+      for (int i = 0; i < curr->num_predecessor; i++)
+        todo.push_back(curr->predecessors[i]);
+    }
   }
   FGraphNode *foo = new FGraphNode();
   configureGradientInformation(foo, {a});
@@ -1093,7 +1140,9 @@ static inline FGraphNode *reduce_operation(FGraphNode *x, const int dimension,
   op.additional_data = safe_mal<int>(1);
   ((int *)op.additional_data)[0] = dimension;
   foo->operation = op;
-  return eager_execution ? execute_eagerly(foo) : foo;
+  if (total < 128)
+    foo = fExecuteGraph(foo);
+  return eager_execution && total >= 128 ? execute_eagerly(foo) : foo;
 }
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
 // freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]

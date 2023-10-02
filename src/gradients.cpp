@@ -261,8 +261,6 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
   case FSLIDING_WINDOW: {
     FGraphNode *a = y->predecessors[0];
     if (0 == dx_i) {
-      // TODO while this works in reasonable time it has a grotesque memory
-      // consumption Better would be a custom function for the gradient
       FSlidingWindow *sliding_win =
           (FSlidingWindow *)y->operation.additional_data;
       FGraphNode *res =
@@ -681,41 +679,47 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
   list<FGraphNode *> todo;
   std::unordered_set<FGraphNode *> visited;
   collect(y, todo, visited, vars);
+  // used to determine when a node may be freed
+  unordered_map<const FGraphNode *, unsigned int> needed_by(adjoints.size());
+  for (FGraphNode *curr : todo) {
+  }
   // initialize
   adjoints[y] = constant_tensor(1., F_FLOAT64, y->operation.shape,
                                 y->operation.dimensions);
-  while (!todo.empty()) {
-    FGraphNode *curr = todo.front();
-    todo.pop_front();
+  for (FGraphNode *curr : todo) {
     FGraphNode *adj = adjoints[curr];
+    bool allowed_to_free = true;
     adj->reference_counter++;
     for (int i = 0; i < curr->num_predecessor; i++) {
       FGraphNode *parent = curr->predecessors[i];
       if (!visited.contains(parent))
         continue;
-      // auto start = std::chrono::high_resolution_clock::now();
+      auto start = std::chrono::high_resolution_clock::now();
       FGraphNode *local_grad =
           unbroadcast(local_gradient(curr, i, adj), parent);
       if (adjoints.contains(parent)) {
         adjoints[parent] = fExecuteGraph(fadd(adjoints[parent], local_grad));
       } else {
         adjoints.insert({parent, fExecuteGraph(local_grad)});
+        if (local_grad == adj)
+          allowed_to_free = false;
       }
-      // OCLCompilerThread::memory_barrier();
-      //  std::chrono::duration<double, std::milli> elapsed =
-      //      std::chrono::high_resolution_clock::now() - start;
-      //  std::cout << fop_to_string[curr->operation.op_type] << " took "
-      //            << elapsed.count() << std::endl;
+     // std::chrono::duration<double, std::milli> elapsed =
+     //     std::chrono::high_resolution_clock::now() - start;
+     // std::cout << fop_to_string[curr->operation.op_type] << " took "
+     //           << elapsed.count() << std::endl;
       fOptimizeMemory(adjoints[parent]);
     }
+    if (!vars.contains(curr)) {
+      if (--adj->reference_counter <= 0) {
+        if (allowed_to_free) {
+          fFreeGraph(adj);
+        }
+      }
+      adjoints[curr] = nullptr;
+    }
   }
-  for (const FGraphNode* v : vars)
-    adjoints[v]->reference_counter++;
-  for (auto &[_, adj] : adjoints) {
-    if (--adj->reference_counter == 0)
-      fFreeGraph(adj);
-  }
-  for (const FGraphNode* v : vars)
+  for (const FGraphNode *v : vars)
     adjoints[v]->reference_counter--;
   for (int i = 0; i < num_gradients; i++) {
     if (adjoints.contains(dx[i])) {

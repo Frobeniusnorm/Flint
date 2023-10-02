@@ -45,6 +45,13 @@ template <typename T> struct Tensor<T, 1> {
                            // reference_counter
   }
   /**
+   * Constructs a Tensor directly from a `FGraphNode`   */
+  Tensor(FGraphNode *node) : node(node) {
+    shape[0] = node->operation.shape[0];
+    node->reference_counter++;
+    fOptimizeMemory(node); // should be legal here, since C++ header adjust
+  }
+  /**
    * Creates a Tensor from a `std::initializer_list`.
    * (`init_type` is a recursive defined type definition, for `n=1` it is just
    * an alias for `std::initializer_list`). E.g.
