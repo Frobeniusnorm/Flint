@@ -3,6 +3,7 @@ package datasets
 import (
 	"errors"
 	"fmt"
+	"github.com/Frobeniusnorm/Flint/go/dl/layers"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 	"io"
 	"os"
@@ -18,8 +19,8 @@ type MnistDataset struct {
 }
 
 type MnistDatasetEntry struct {
-	label uint8
-	data  flint.GraphNode
+	Label layers.Tensor
+	Data  layers.Tensor
 }
 
 const (
@@ -82,18 +83,19 @@ func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) 
 	if images.size != labels.size {
 		return MnistDataset{}, errors.New(fmt.Sprintf("number of labels (%d) and number of images (%d) does not match!", labels.size, images.size))
 	}
-	size := labels.size
+	datasetSize := labels.size
 
-	data := make([]MnistDatasetEntry, size)
-	for i := uint32(0); i < size; i++ {
+	data := make([]MnistDatasetEntry, datasetSize)
+	for i := uint32(0); i < datasetSize; i++ {
 		imageByteSize := images.width * images.height
 		imageOffset := i * imageByteSize
 		imageData := images.data[imageOffset : imageOffset+imageByteSize]
-		image := flint.CreateGraph(imageData, flint.Shape{uint(images.height), uint(images.width)}, flint.F_FLOAT32)
 
+		image := flint.CreateGraph(imageData, flint.Shape{uint(images.height), uint(images.width)}, flint.F_FLOAT32)
+		label := flint.CreateGraph([]uint8{labels.data[i]}, flint.Shape{1}, flint.F_INT32)
 		data[i] = MnistDatasetEntry{
-			label: labels.data[i],
-			data:  image,
+			Label: layers.NewTensor(label),
+			Data:  layers.NewTensor(image),
 		}
 	}
 
@@ -106,7 +108,7 @@ func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) 
 	dataset := MnistDataset{
 		baseDataset: baseDataset{Name: name},
 		path:        path.Dir(imagePath),
-		size:        uint(size),
+		size:        uint(datasetSize),
 		data:        data,
 	}
 	return dataset, nil
@@ -233,4 +235,12 @@ func (d MnistDataset) Count() uint {
 // Get returns a MnistDatasetEntry by index
 func (d MnistDataset) Get(index uint) DatasetEntry {
 	return d.data[index]
+}
+
+func (d MnistDataset) Collate(items []MnistDatasetEntry) MnistDatasetEntry {
+	return items[0]
+}
+
+func (d MnistDataset) String() string {
+	return fmt.Sprintf("MnistDataset (%s) with %d items", d.Name, d.Count())
 }

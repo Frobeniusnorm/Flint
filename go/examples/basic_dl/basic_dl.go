@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/dataloader"
 	"github.com/Frobeniusnorm/Flint/go/datasets"
@@ -26,8 +27,6 @@ func main() {
 	testDataloader := dataloader.NewDataloader(testDataset, 32, true)
 	fmt.Println(testDataloader)
 
-	// TODO: transform 28x28x3 images to 28*28*1 and then 784 linear
-
 	model := layers.NewSequential(
 		layers.NewFlatten(),
 		layers.NewIdentity(),
@@ -45,21 +44,19 @@ func main() {
 	optim := optimize.NewSgd(model.Parameters(true), 1e-3)
 	crit := losses.CrossEntropyLoss
 
-	dataTempl := layers.NewTensor(flint.CreateGraphRandom(flint.Shape{64, 784}))
-
-	//for i := uint(0); i < testDataloader.Count(); i++ {
 	for {
-		batch, err := trainDataloader.Next()
+		batchRaw, err := trainDataloader.Next()
+		if errors.Is(err, dataloader.Done) {
+			break
+		}
 		if err != nil {
 			log.Println(err)
 			break
 		}
-		//batch := testDataloader.Next()
-		labels := flint.CreateGraphConstant(10, flint.Shape{64, 10}, flint.F_INT32)
+		batch := batchRaw.(datasets.MnistDatasetEntry)
 		flint.StartGradientContext()
-		data := layers.NewTensor(flint.CopyGraph(dataTempl.Node))
-		output := model.Forward(data)
-		loss := layers.NewTensor(crit(output.Node, labels))
+		output := model.Forward(batch.Data)
+		loss := layers.NewTensor(crit(output.Node, batch.Label.Node))
 		flint.StopGradientContext()
 		optim.Step(loss)
 		flint.OptimizeMemory(loss.Node)

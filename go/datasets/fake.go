@@ -1,6 +1,7 @@
 package datasets
 
 import (
+	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/dl/layers"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 	"math/rand"
@@ -36,4 +37,8 @@ func (d FakeDataset) Get(index uint) DatasetEntry {
 		label: rand.Int(),
 		data:  layers.NewTensor(flint.CreateGraphRandom(d.itemShape)),
 	}
+}
+
+func (d FakeDataset) String() string {
+	return fmt.Sprintf("FakeDataset (%s) with %d items", d.Name, d.Count())
 }
