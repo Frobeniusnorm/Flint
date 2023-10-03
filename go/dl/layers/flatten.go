@@ -1,25 +1,40 @@
 package layers
 
+import "github.com/Frobeniusnorm/Flint/go/flint"
+
+/*
+Flatten layer takes in an n-dimensional tensor (n >= 2) and turns it into a 2-dimensional tensor.
+It is assumed that the first dimension is for the batches, while the second dimension represents the flattened contents.
+*/
 type Flatten struct {
-	BaseLayer
 }
 
 func NewFlatten() Flatten {
 	return Flatten{}
 }
 
-func (fl Flatten) Parameters(recurse bool) []Parameter {
+func (f Flatten) Parameters(recurse bool) []Parameter {
 	return []Parameter{}
 }
 
-func (fl Flatten) Forward(x Tensor) Tensor {
-	return x // TODO
+func (f Flatten) Forward(x Tensor) Tensor {
+	shape := x.Node.GetShape()
+	if len(shape) < 2 {
+		panic("Flatten: input tensors needs to be at least 2-dimensional")
+	}
+	var res = x.Node
+	for i := len(shape) - 1; i > 1; i-- {
+		res = flint.FlattenDim(res, i)
+	}
+	return NewTensor(res)
 }
 
-func (fl Flatten) Train() {}
+func (f Flatten) Train() {
+}
 
-func (fl Flatten) Eval() {}
+func (f Flatten) Eval() {
+}
 
-func (fl Flatten) String() string {
+func (f Flatten) String() string {
 	return "Flatten()"
 }
