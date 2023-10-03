@@ -1,4 +1,4 @@
-# Go Bindings for Flint
+# Go Bindings for Flint and a Deep Learning Framework
 
 This go library provides a Go wrapper for [Flint](https://github.com/Frobeniusnorm/Flint).
 Specifically, the `flint.h` file is wrapped.

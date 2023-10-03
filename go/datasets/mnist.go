@@ -11,7 +11,7 @@ import (
 )
 
 type MnistDataset struct {
-	Dataset
+	baseDataset
 	path string
 	size uint
 	data []MnistDatasetEntry
@@ -104,10 +104,10 @@ func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) 
 		name = name + "-test"
 	}
 	dataset := MnistDataset{
-		Dataset: Dataset{Name: name},
-		path:    path.Dir(imagePath),
-		size:    uint(size),
-		data:    data,
+		baseDataset: baseDataset{Name: name},
+		path:        path.Dir(imagePath),
+		size:        uint(size),
+		data:        data,
 	}
 	return dataset, nil
 }
@@ -226,11 +226,11 @@ func loadMnistImages(path string) (struct {
 }
 
 // Count returns the number of items in the dataset
-func (d *MnistDataset) Count() uint {
+func (d MnistDataset) Count() uint {
 	return d.size
 }
 
 // Get returns a MnistDatasetEntry by index
-func (d *MnistDataset) Get(index uint) MnistDatasetEntry {
+func (d MnistDataset) Get(index uint) DatasetEntry {
 	return d.data[index]
 }
