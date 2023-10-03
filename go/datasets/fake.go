@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/dl/layers"
 	"github.com/Frobeniusnorm/Flint/go/flint"
+	"log"
 	"math/rand"
 )
 
@@ -15,8 +16,8 @@ type FakeDataset struct {
 }
 
 type FakeDatasetEntry struct {
-	label int
-	data  layers.Tensor
+	Label layers.Tensor
+	Data  layers.Tensor
 }
 
 func NewFakeDataset(categories uint, itemShape flint.Shape, numItems uint) FakeDataset {
@@ -32,10 +33,38 @@ func (d FakeDataset) Count() uint {
 	return d.numItems
 }
 
-func (d FakeDataset) Get(index uint) DatasetEntry {
+func (d FakeDataset) Get(_ uint) FakeDatasetEntry {
+	class := rand.Intn(int(d.categories))
+	label := flint.CreateGraph([]int{class}, flint.Shape{1}, flint.F_INT32)
+	label = flint.Extend(label, flint.Shape{d.categories}, flint.Axes{uint(class)})
+	data := flint.CreateGraphRandom(d.itemShape)
 	return FakeDatasetEntry{
-		label: rand.Int(),
-		data:  layers.NewTensor(flint.CreateGraphRandom(d.itemShape)),
+		Label: layers.NewTensor(label),
+		Data:  layers.NewTensor(data),
+	}
+}
+
+func (d FakeDataset) Collate(items []FakeDatasetEntry) FakeDatasetEntry {
+	if len(items) <= 0 {
+		log.Panicf("cannot collate items - invalid batch size (%d)", len(items))
+	}
+	newDataShape := flint.Shape{1}
+	for _, val := range items[0].Data.Node.GetShape() {
+		newDataShape = append(newDataShape, val)
+	}
+	label := flint.Reshape(items[0].Label.Node, flint.Shape{1, 1})
+	data := flint.Reshape(items[0].Data.Node, newDataShape)
+	items[0].Label.Close()
+	items[0].Data.Close()
+	for _, val := range items[1:] {
+		label = flint.Concat(label, val.Label.Node, 0)
+		data = flint.Concat(data, val.Data.Node, 0)
+		val.Data.Close()
+		val.Label.Close()
+	}
+	return FakeDatasetEntry{
+		Label: layers.NewTensor(label),
+		Data:  layers.NewTensor(data),
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/Frobeniusnorm/Flint/go/dl/layers"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 	"io"
+	"log"
 	"os"
 	"path"
 	"strings"
@@ -92,7 +93,9 @@ func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) 
 		imageData := images.data[imageOffset : imageOffset+imageByteSize]
 
 		image := flint.CreateGraph(imageData, flint.Shape{uint(images.height), uint(images.width)}, flint.F_FLOAT32)
-		label := flint.CreateGraph([]uint8{labels.data[i]}, flint.Shape{1}, flint.F_INT32)
+		class := labels.data[i]
+		label := flint.CreateGraph([]uint8{class}, flint.Shape{1}, flint.F_INT32)
+		label = flint.Extend(label, flint.Shape{10}, flint.Axes{uint(class)})
 		data[i] = MnistDatasetEntry{
 			Label: layers.NewTensor(label),
 			Data:  layers.NewTensor(image),
@@ -233,12 +236,32 @@ func (d MnistDataset) Count() uint {
 }
 
 // Get returns a MnistDatasetEntry by index
-func (d MnistDataset) Get(index uint) DatasetEntry {
+func (d MnistDataset) Get(index uint) MnistDatasetEntry {
 	return d.data[index]
 }
 
 func (d MnistDataset) Collate(items []MnistDatasetEntry) MnistDatasetEntry {
-	return items[0]
+	if len(items) <= 0 {
+		log.Panicf("cannot collate items - invalid batch size (%d)", len(items))
+	}
+	newDataShape := flint.Shape{1}
+	for _, val := range items[0].Data.Node.GetShape() {
+		newDataShape = append(newDataShape, val)
+	}
+	label := flint.Reshape(items[0].Label.Node, flint.Shape{1, 1})
+	data := flint.Reshape(items[0].Data.Node, newDataShape)
+	items[0].Label.Close()
+	items[0].Data.Close()
+	for _, val := range items[1:] {
+		label = flint.Concat(label, val.Label.Node, 0)
+		data = flint.Concat(data, val.Data.Node, 0)
+		val.Data.Close()
+		val.Label.Close()
+	}
+	return MnistDatasetEntry{
+		Label: layers.NewTensor(label),
+		Data:  layers.NewTensor(data),
+	}
 }
 
 func (d MnistDataset) String() string {
