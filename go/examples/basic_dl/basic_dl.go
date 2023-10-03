@@ -22,7 +22,7 @@ func main() {
 		panic(err)
 	}
 
-	trainDataloader := dataloader.NewDataloader[datasets.MnistDatasetEntry](trainDataset, 64, true)
+	trainDataloader := dataloader.NewDataloader[datasets.MnistDatasetEntry](trainDataset, 2, true)
 	fmt.Println(trainDataloader)
 	testDataloader := dataloader.NewDataloader[datasets.MnistDatasetEntry](testDataset, 32, true)
 	fmt.Println(testDataloader)
@@ -44,7 +44,7 @@ func main() {
 	optim := optimize.NewSgd(model.Parameters(true), 1e-3)
 	crit := losses.CrossEntropyLoss
 
-	for {
+	for i := 0; ; i++ {
 		batch, err := trainDataloader.Next()
 		if errors.Is(err, dataloader.Done) {
 			break
@@ -52,6 +52,10 @@ func main() {
 		if err != nil {
 			log.Println(err)
 			break
+		}
+		if i%50 == 0 {
+			fmt.Printf("iteration: %d", i)
+			fmt.Println(flint.CalculateResult[int](batch.Label.Node))
 		}
 		flint.StartGradientContext()
 		output := model.Forward(batch.Data)

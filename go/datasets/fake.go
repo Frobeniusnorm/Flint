@@ -48,23 +48,15 @@ func (d FakeDataset) Collate(items []FakeDatasetEntry) FakeDatasetEntry {
 	if len(items) <= 0 {
 		log.Panicf("cannot collate items - invalid batch size (%d)", len(items))
 	}
-	newDataShape := flint.Shape{1}
-	for _, val := range items[0].Data.Node.GetShape() {
-		newDataShape = append(newDataShape, val)
-	}
-	label := flint.Reshape(items[0].Label.Node, flint.Shape{1, 1})
-	data := flint.Reshape(items[0].Data.Node, newDataShape)
-	items[0].Label.Close()
-	items[0].Data.Close()
-	for _, val := range items[1:] {
-		label = flint.Concat(label, val.Label.Node, 0)
-		data = flint.Concat(data, val.Data.Node, 0)
-		val.Data.Close()
-		val.Label.Close()
+	labels := make([]layers.Tensor, len(items))
+	images := make([]layers.Tensor, len(items))
+	for idx, val := range items {
+		labels[idx] = val.Label
+		images[idx] = val.Data
 	}
 	return FakeDatasetEntry{
-		Label: layers.NewTensor(label),
-		Data:  layers.NewTensor(data),
+		Label: TrivialCollate(labels),
+		Data:  TrivialCollate(images),
 	}
 }
 
