@@ -580,11 +580,26 @@ generateCode(FGraphNode *node,
             calcAccSizes(pred.dimensions - 1, no_windows);
         string local_code = type + " " + name +
                             " = 0;\n"
-                            "for(long w=0;w<" +
-                            to_string(pred.shape[0]) +
-                            ";w++){\n"
-                            " bool contained = true;\n"
-                            " long wi = 0;\n";
+                            "{\n"
+                            "const long first_w = 0";
+        for (int d = node->operation.dimensions - 1; d >= 0; d--) {
+          local_code += " + max(0l, ((index / " + to_string(acc_sizes[d]) +
+                        ") % " + to_string(node->operation.shape[d]) + ") - " +
+                        to_string(pred.shape[d + 1]) + " + 1) / " +
+                        to_string(steps[d]) + " * " +
+                        to_string(acc_no_windows[d]);
+        }
+        local_code += ";\nconst long last_w = 0";
+        for (int d = node->operation.dimensions - 1; d >= 0; d--) {
+          local_code += " + ((index / " + to_string(acc_sizes[d]) + ") % " +
+                        to_string(node->operation.shape[d]) + ") / " +
+                        to_string(steps[d]) + " * " +
+                        to_string(acc_no_windows[d]);
+        }
+        local_code += ";\nfor(long w=first_w;w<=last_w;){\n"
+                      " bool contained = true;\n"
+                      " long wi = 0;\n"
+                      " long wpp = 0;\n";
         for (int d = node->operation.dimensions - 1; d >= 0; d--) {
           local_code += " {\n"
                         "  const long w_start=((w/" +
@@ -603,20 +618,21 @@ generateCode(FGraphNode *node,
                         ";\n"
                         "  else{\n"
                         "   contained = false;\n"
-                        "   goto forend" +
-                        to_string(variable_index) +
+                        "   wpp += " +
+                        to_string(acc_no_windows[d]) +
                         ";\n"
                         "  }\n"
                         " }\n";
         }
-        local_code += "forend" + to_string(variable_index) +
-                      ":\n"
-                      " if(contained)"
+        local_code += " if(contained) {"
                       "  " +
                       name + "+=" + par1 + "[wi+w*" +
                       to_string(acc_sizes_pred[0]) +
                       "];\n"
-                      "}\n";
+                      "  wpp = 1;\n}\n"
+                      " w += wpp;\n"
+                      "}\n"
+                      "}";
         code = local_code + code;
       } break;
       case FMATMUL: {
