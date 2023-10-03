@@ -2,9 +2,7 @@ package layers
 
 import "github.com/Frobeniusnorm/Flint/go/flint"
 
-type ReLU struct {
-	BaseLayer
-}
+type ReLU struct{}
 
 func NewRelu() ReLU {
 	return ReLU{}

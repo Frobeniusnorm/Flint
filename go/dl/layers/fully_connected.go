@@ -6,7 +6,6 @@ import (
 )
 
 type FullyConnected struct {
-	BaseLayer
 	inputSize      uint
 	outputSize     uint
 	weightsAndBias Parameter

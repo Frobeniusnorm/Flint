@@ -10,7 +10,6 @@ Sequential is a convenience module for executing a number of layers one after an
 This saves writing the tedious and repetitive forward method
 */
 type Sequential struct {
-	BaseLayer
 	layers        []Layer
 	trainingPhase bool
 }

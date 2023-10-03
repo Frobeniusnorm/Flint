@@ -3,7 +3,6 @@ package layers
 import "fmt"
 
 type Dropout struct {
-	BaseLayer
 	probability float32
 }
 
