@@ -81,7 +81,7 @@ type Shape []uint
 func (a Shape) NumItems() uint {
 	sum := uint(0)
 	for _, val := range a {
-		sum += val
+		sum *= val
 	}
 	return sum
 }
