@@ -25,9 +25,9 @@ var Done = errors.New("no more items in Dataloader")
 
 // Dataloader is a custom type that wraps a dataset and allows to iterate it in batches
 // see (for inspiration): https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
-type Dataloader struct {
+type Dataloader[T any] struct {
 	// dataset from which to load the data.
-	dataset datasets.Dataset
+	dataset datasets.Dataset[T]
 
 	//  how many samples per batch to load
 	batchSize uint
@@ -46,7 +46,7 @@ type Dataloader struct {
 	batchSampler func(remainingIndices *[]uint) (indices []uint)
 
 	// collate is a function that turns multiple dataset entries int a batch of dataset entries
-	collate func(data []datasets.DatasetEntry) datasets.DatasetEntry
+	collate func(data []T) T
 
 	// a function called upon initialization of the worker
 	workerInit func(id uint)
@@ -60,23 +60,23 @@ type Dataloader struct {
 
 	numWorkers     uint
 	workerChannels []chan int
-	workerData     []chan datasets.DatasetEntry
+	workerData     []chan T
 	closeChan      chan struct{} // empty struct so it doesn't allocate any memory
 
 	//wg sync.WaitGroup
 }
 
 // NewDataloader initializes a single-threaded dataloader from a given dataset.
-func NewDataloader(dataset datasets.Dataset, batchSize uint, dropLast bool) *Dataloader {
+func NewDataloader[T any](dataset datasets.Dataset[T], batchSize uint, dropLast bool) *Dataloader[T] {
 	return NewDataloaderMulti(dataset, batchSize, dropLast, 1)
 }
 
 // NewDataloaderMulti initializes a multi-threaded dataloader from a given dataset.
-func NewDataloaderMulti(dataset datasets.Dataset, batchSize uint, dropLast bool, numWorkers uint) *Dataloader {
+func NewDataloaderMulti[T any](dataset datasets.Dataset[T], batchSize uint, dropLast bool, numWorkers uint) *Dataloader[T] {
 	// Make sure [prefetchFactor * numWorkers > batchSize] to avoid bottlenecks.
 	prefetchFactor := uint(2) // TODO: turn into param
 
-	res := Dataloader{
+	res := Dataloader[T]{
 		// required  basics
 		dataset:   dataset,
 		batchSize: batchSize,
@@ -93,7 +93,7 @@ func NewDataloaderMulti(dataset datasets.Dataset, batchSize uint, dropLast bool,
 		// workers
 		numWorkers:     numWorkers,
 		workerChannels: make([]chan int, numWorkers),
-		workerData:     make([]chan datasets.DatasetEntry, numWorkers),
+		workerData:     make([]chan T, numWorkers),
 		closeChan:      make(chan struct{}),
 	}
 
@@ -104,7 +104,7 @@ func NewDataloaderMulti(dataset datasets.Dataset, batchSize uint, dropLast bool,
 
 	// start the workers
 	for i := uint(0); i < numWorkers; i++ {
-		res.workerData[i] = make(chan datasets.DatasetEntry, prefetchFactor)
+		res.workerData[i] = make(chan T, prefetchFactor)
 		res.workerChannels[i] = make(chan int)
 		go res.worker(i)
 
@@ -117,7 +117,7 @@ func NewDataloaderMulti(dataset datasets.Dataset, batchSize uint, dropLast bool,
 	return &res
 }
 
-func (dl *Dataloader) sendBatchIndices(workerId uint) {
+func (dl *Dataloader[T]) sendBatchIndices(workerId uint) {
 	if dl.batchSampler != nil {
 		for _, v := range dl.batchSampler(&dl.remainingIndices) {
 			dl.workerChannels[workerId] <- int(v)
@@ -129,9 +129,9 @@ func (dl *Dataloader) sendBatchIndices(workerId uint) {
 	}
 }
 
-func (dl *Dataloader) worker(id uint) {
+func (dl *Dataloader[T]) worker(id uint) {
 	//defer dl.wg.Done()
-	var storage = NewQueue[datasets.DatasetEntry](dl.batchSize)
+	var storage = NewQueue[T](dl.batchSize)
 	for {
 		select {
 		case index, ok := <-dl.workerChannels[id]:
@@ -145,7 +145,8 @@ func (dl *Dataloader) worker(id uint) {
 
 			if storage.Length() == dl.batchSize {
 				batch := storage.DequeueAll()
-				dl.workerData[id] <- batch
+				collatedBatch := dl.dataset.Collate(batch)
+				dl.workerData[id] <- collatedBatch
 			}
 
 		case <-dl.closeChan:
@@ -156,7 +157,7 @@ func (dl *Dataloader) worker(id uint) {
 }
 
 // Count returns the number of batches in the Dataloader
-func (dl *Dataloader) Count() uint {
+func (dl *Dataloader[T]) Count() uint {
 	dsSize := dl.dataset.Count()
 	fullBatches := dsSize / dl.batchSize
 	if dl.dropLast {
@@ -166,7 +167,7 @@ func (dl *Dataloader) Count() uint {
 	}
 }
 
-func (dl *Dataloader) Next() (datasets.DatasetEntry, error) {
+func (dl *Dataloader[T]) Next() (T, error) {
 	workerId := dl.prevWorker
 	dl.prevWorker = (dl.prevWorker + 1) % dl.numWorkers
 
@@ -182,7 +183,7 @@ func (dl *Dataloader) Next() (datasets.DatasetEntry, error) {
 	return data, nil
 }
 
-func (dl *Dataloader) Close() {
+func (dl *Dataloader[T]) Close() {
 	close(dl.closeChan)
 	for _, ch := range dl.workerChannels {
 		close(ch)
@@ -190,7 +191,7 @@ func (dl *Dataloader) Close() {
 	//dl.wg.Wait()
 }
 
-func (dl *Dataloader) String() string {
+func (dl *Dataloader[T]) String() string {
 	return fmt.Sprintf("Dataloader(dataset:%s, batch size: %d, dropLast: %t)",
 		dl.dataset, dl.batchSize, dl.dropLast)
 }

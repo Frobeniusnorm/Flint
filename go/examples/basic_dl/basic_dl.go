@@ -22,9 +22,9 @@ func main() {
 		panic(err)
 	}
 
-	trainDataloader := dataloader.NewDataloader(trainDataset, 64, true)
+	trainDataloader := dataloader.NewDataloader[datasets.MnistDatasetEntry](trainDataset, 64, true)
 	fmt.Println(trainDataloader)
-	testDataloader := dataloader.NewDataloader(testDataset, 32, true)
+	testDataloader := dataloader.NewDataloader[datasets.MnistDatasetEntry](testDataset, 32, true)
 	fmt.Println(testDataloader)
 
 	model := layers.NewSequential(
@@ -45,7 +45,7 @@ func main() {
 	crit := losses.CrossEntropyLoss
 
 	for {
-		batchRaw, err := trainDataloader.Next()
+		batch, err := trainDataloader.Next()
 		if errors.Is(err, dataloader.Done) {
 			break
 		}
@@ -53,7 +53,6 @@ func main() {
 			log.Println(err)
 			break
 		}
-		batch := batchRaw.(datasets.MnistDatasetEntry)
 		flint.StartGradientContext()
 		output := model.Forward(batch.Data)
 		loss := layers.NewTensor(crit(output.Node, batch.Label.Node))
