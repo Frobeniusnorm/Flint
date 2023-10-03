@@ -1,5 +1,7 @@
 package datasets
 
+import "fmt"
+
 type baseDataset struct {
 	Name string
 }
@@ -7,8 +9,12 @@ type baseDataset struct {
 type DatasetEntry any
 
 type Dataset interface {
+	fmt.Stringer
 	Count() uint
 	Get(index uint) (value DatasetEntry)
+
+	// Collate combines multiple dataset entries into a single batched dataset entry
+	Collate(items []DatasetEntry) DatasetEntry
 }
 
 const eps float32 = 1e-5
