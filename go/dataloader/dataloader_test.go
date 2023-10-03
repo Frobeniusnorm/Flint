@@ -32,3 +32,13 @@ func TestDataloader_Count(t *testing.T) {
 		assert.Equal(t, dlSize, uint(938))
 	})
 }
+
+func TestNewDataloader(t *testing.T) {
+	ds, _, err := datasets.NewMnistDataset(path.Join("..", "_data", "mnist"))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	dl := NewDataloader(ds, 64, false)
+	fmt.Println(dl)
+}
