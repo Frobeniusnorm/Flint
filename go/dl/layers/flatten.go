@@ -29,10 +29,10 @@ func (f Flatten) Forward(x Tensor) Tensor {
 	return NewTensor(res)
 }
 
-func (f Flatten) Train() {
+func (f Flatten) TrainMode() {
 }
 
-func (f Flatten) Eval() {
+func (f Flatten) EvalMode() {
 }
 
 func (f Flatten) String() string {

@@ -21,9 +21,9 @@ func (id Identity) Forward(x Tensor) Tensor {
 	return x
 }
 
-func (id Identity) Train() {}
+func (id Identity) TrainMode() {}
 
-func (id Identity) Eval() {}
+func (id Identity) EvalMode() {}
 
 func (id Identity) String() string {
 	return "Identity()"

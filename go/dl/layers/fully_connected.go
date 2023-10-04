@@ -35,9 +35,9 @@ func (fc FullyConnected) Forward(x Tensor) Tensor {
 	return NewTensor(res)
 }
 
-func (fc FullyConnected) Train() {}
+func (fc FullyConnected) TrainMode() {}
 
-func (fc FullyConnected) Eval() {}
+func (fc FullyConnected) EvalMode() {}
 
 func (fc FullyConnected) Parameters(recurse bool) []Parameter {
 	return []Parameter{fc.weightsAndBias}

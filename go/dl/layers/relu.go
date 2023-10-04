@@ -17,9 +17,9 @@ func (relu ReLU) Forward(x Tensor) Tensor {
 	return Tensor{Node: res}
 }
 
-func (relu ReLU) Train() {}
+func (relu ReLU) TrainMode() {}
 
-func (relu ReLU) Eval() {}
+func (relu ReLU) EvalMode() {}
 
 func (relu ReLU) String() string {
 	return "ReLU()"

@@ -41,15 +41,15 @@ func (seq Sequential) Parameters(recurse bool) []Parameter {
 	}
 }
 
-func (seq Sequential) Train() {
+func (seq Sequential) TrainMode() {
 	for _, layer := range seq.layers {
-		layer.Train()
+		layer.TrainMode()
 	}
 }
 
-func (seq Sequential) Eval() {
+func (seq Sequential) EvalMode() {
 	for _, layer := range seq.layers {
-		layer.Eval()
+		layer.EvalMode()
 	}
 }
 

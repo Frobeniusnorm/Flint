@@ -12,13 +12,13 @@ type Layer interface {
 	// Forward run the inference of the layer
 	Forward(x Tensor) Tensor
 
-	// Train puts the layer in training mode.
+	// TrainMode puts the layer in training mode.
 	// This is just a feature toggle to change the behaviour of certain layers in the different phases of the pipeline (e.g Dropout)
 	// Changing this mode has no effect on the gradients whatsoever.
-	Train()
+	TrainMode()
 
-	// Eval puts the layer in eval mode.
+	// EvalMode puts the layer in eval mode.
 	// This is just a feature toggle to change the behaviour of certain layers in the different phases of the pipeline (e.g Dropout)
 	// Changing this mode has no effect on the gradients whatsoever.
-	Eval()
+	EvalMode()
 }
