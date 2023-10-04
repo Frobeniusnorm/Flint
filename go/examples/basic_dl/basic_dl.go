@@ -22,7 +22,7 @@ func main() {
 		panic(err)
 	}
 
-	trainDataloader := dataloader.NewDataloader[datasets.MnistDatasetEntry](trainDataset, 2, true)
+	trainDataloader := dataloader.NewDataloader[datasets.MnistDatasetEntry](trainDataset, 64, true)
 	fmt.Println(trainDataloader)
 	testDataloader := dataloader.NewDataloader[datasets.MnistDatasetEntry](testDataset, 32, true)
 	fmt.Println(testDataloader)
@@ -36,16 +36,25 @@ func main() {
 		layers.NewFullyConnected(16, 10),
 		layers.NewRelu(),
 	)
-	model.Train()
-
-	//model := layers.NewFullyConnected(4, 2)
 	fmt.Println(model)
 
 	optim := optimize.NewSgd(model.Parameters(true), 1e-3)
-	crit := losses.CrossEntropyLoss
+	scheduler := optimize.NewStepLR(optim)
 
-	for i := 0; ; i++ {
-		batch, err := trainDataloader.Next()
+	for epoch := 0; epoch < 3; epoch++ {
+		train(model, trainDataloader, optim)
+		test(model, trainDataloader, optim)
+		scheduler.Step()
+	}
+
+	flint.Cleanup()
+}
+
+// train for one epoch
+func train(model layers.Layer, dl dataloader.Dataloader[datasets.MnistDatasetEntry], optim optimize.Optimizer) {
+	model.EvalMode()
+	for {
+		batch, err := dl.Next()
 		if errors.Is(err, dataloader.Done) {
 			break
 		}
@@ -53,18 +62,34 @@ func main() {
 			log.Println(err)
 			break
 		}
-		if i%50 == 0 {
-			fmt.Printf("iteration: %d", i)
-			fmt.Println(flint.CalculateResult[int](batch.Label.Node))
-		}
+
 		flint.StartGradientContext()
 		output := model.Forward(batch.Data)
-		loss := layers.NewTensor(crit(output.Node, batch.Label.Node))
+		loss := layers.NewTensor(losses.CrossEntropyLoss(output.Node, batch.Label.Node))
 		flint.StopGradientContext()
 		optim.Step(loss)
 		flint.OptimizeMemory(loss.Node)
 		flint.FreeGraph(loss.Node)
-	}
 
-	flint.Cleanup()
+		break
+	}
+}
+
+// test the model on the test dataset
+func test(model layers.Layer, dl dataloader.Dataloader[datasets.MnistDatasetEntry], optim optimize.Optimizer) {
+	model.EvalMode()
+	for {
+		batch, err := dl.Next()
+		if errors.Is(err, dataloader.Done) {
+			break
+		}
+		if err != nil {
+			log.Println(err)
+			break
+		}
+
+		output := model.Forward(batch.Data)
+		loss := layers.NewTensor(losses.CrossEntropyLoss(output.Node, batch.Label.Node))
+		log.Println("test loss:", loss)
+	}
 }
