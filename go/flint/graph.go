@@ -22,6 +22,11 @@ func CreateGraph[T completeNumbers](data []T, shape Shape, datatype DataType) Gr
 	return GraphNode{ref: flintNode}
 }
 
+// CreateScalar creates a scalar tensors [(Shape{1})]
+func CreateScalar[T completeNumbers](value T, dataType DataType) GraphNode {
+	return CreateGraph[T]([]T{value}, Shape{1}, dataType)
+}
+
 /*
 CreateGraphConstant creates a tensor in a specified [DataType] that contains the single given values in all entries.
 

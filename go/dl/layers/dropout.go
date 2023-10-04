@@ -20,9 +20,9 @@ func (d Dropout) Forward(x Tensor) Tensor {
 	return x // TODO
 }
 
-func (d Dropout) Train() {}
+func (d Dropout) TrainMode() {}
 
-func (d Dropout) Eval() {}
+func (d Dropout) EvalMode() {}
 
 func (d Dropout) String() string {
 	return fmt.Sprintf("Dropout(prob=%f)", d.probability)
