@@ -11,13 +11,8 @@ type baseOptimizer struct {
 	regularizer Regularizer
 }
 
-type baseRegularizer struct {
-}
-
-type Regularizer interface{}
-
 type Optimizer interface {
 	fmt.Stringer
 	calculateUpdate(weightTensor flint.GraphNode, gradientTensor flint.GraphNode) flint.GraphNode
-	Step()
+	Step(loss layers.Tensor)
 }
