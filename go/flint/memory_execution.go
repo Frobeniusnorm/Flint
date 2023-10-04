@@ -137,9 +137,10 @@ func CalculateResult[T numeric](node GraphNode) ResultData {
 	var shape = Shape(fromCToArray[uint](shapePtr, shapeSize, F_INT64))
 
 	return ResultData{
-		nodeRef: flintNode,
-		Data:    result,
-		Shape:   shape,
+		nodeRef:  flintNode,
+		Data:     result,
+		Shape:    shape,
+		DataType: dataType,
 	}
 }
 

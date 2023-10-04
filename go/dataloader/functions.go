@@ -5,7 +5,7 @@ import (
 )
 
 // linearSampler picks the next index from the list of available indices.
-// NOTE: the picked index will be removed from remainingIndices as a side effect!
+// NOTE: the picked index will be removed from [remainingIndices] as a side effect!
 func linearSampler(remainingIndices *[]uint) (nextIndex uint) {
 	idc := *remainingIndices
 	res := idc[0]
@@ -15,7 +15,7 @@ func linearSampler(remainingIndices *[]uint) (nextIndex uint) {
 }
 
 // randomSample picks one random index from the list of available indices.
-// NOTE: the picked index will be removed from remainingIndices as a side effect!
+// NOTE: the picked index will be removed from [remainingIndices] as a side effect!
 func randomSample(remainingIndices *[]uint) (nextIndex uint) {
 	idc := *remainingIndices
 	resIdx := rand.Intn(len(idc))

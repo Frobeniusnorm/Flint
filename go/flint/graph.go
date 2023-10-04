@@ -51,7 +51,7 @@ func CreateGraphConstant[T numeric](value T, shape Shape, datatype DataType) Gra
 }
 
 /*
-CreateGraphRandom creates a [F_FLOAT32] tensor that contains randomly distributed values in the range of [0, 1)
+CreateGraphRandom creates a [F_FLOAT64] tensor that contains randomly distributed values in the range of [0, 1)
 
 Params:
   - [shape]: Each entry describing the size of the corresponding dimension.
