@@ -67,12 +67,12 @@ type Dataloader[T any] struct {
 }
 
 // NewDataloader initializes a single-threaded dataloader from a given dataset.
-func NewDataloader[T any](dataset datasets.Dataset[T], batchSize uint, dropLast bool) *Dataloader[T] {
+func NewDataloader[T any](dataset datasets.Dataset[T], batchSize uint, dropLast bool) Dataloader[T] {
 	return NewDataloaderMulti(dataset, batchSize, dropLast, 1)
 }
 
 // NewDataloaderMulti initializes a multi-threaded dataloader from a given dataset.
-func NewDataloaderMulti[T any](dataset datasets.Dataset[T], batchSize uint, dropLast bool, numWorkers uint) *Dataloader[T] {
+func NewDataloaderMulti[T any](dataset datasets.Dataset[T], batchSize uint, dropLast bool, numWorkers uint) Dataloader[T] {
 	// Make sure [prefetchFactor * numWorkers > batchSize] to avoid bottlenecks.
 	prefetchFactor := uint(2) // TODO: turn into param
 
@@ -114,7 +114,7 @@ func NewDataloaderMulti[T any](dataset datasets.Dataset[T], batchSize uint, drop
 		}
 	}
 
-	return &res
+	return res
 }
 
 func (dl *Dataloader[T]) sendBatchIndices(workerId uint) {

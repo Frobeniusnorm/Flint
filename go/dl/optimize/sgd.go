@@ -25,11 +25,11 @@ func NewSgd(params []layers.Parameter, learningRate float32) Sgd {
 	}
 }
 
-func (sgd *Sgd) calculateUpdate(weightTensor flint.GraphNode, gradientTensor flint.GraphNode) flint.GraphNode {
+func (sgd Sgd) calculateUpdate(weightTensor flint.GraphNode, gradientTensor flint.GraphNode) flint.GraphNode {
 	return flint.Sub(weightTensor, flint.Mul(gradientTensor, sgd.learningRate))
 }
 
-func (sgd *Sgd) Step(loss layers.Tensor) {
+func (sgd Sgd) Step(loss layers.Tensor) {
 	paramsSimple := make([]flint.GraphNode, len(sgd.params))
 	for i, p := range sgd.params {
 		paramsSimple[i] = p.Node
@@ -41,6 +41,6 @@ func (sgd *Sgd) Step(loss layers.Tensor) {
 	}
 }
 
-func (sgd *Sgd) String() string {
+func (sgd Sgd) String() string {
 	return fmt.Sprintf("Sgd(learningRate: %f)", sgd.learningRate)
 }
