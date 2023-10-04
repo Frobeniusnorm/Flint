@@ -39,7 +39,7 @@ func (fc FullyConnected) TrainMode() {}
 
 func (fc FullyConnected) EvalMode() {}
 
-func (fc FullyConnected) Parameters(recurse bool) []Parameter {
+func (fc FullyConnected) Parameters(_ bool) []Parameter {
 	return []Parameter{fc.weightsAndBias}
 }
 

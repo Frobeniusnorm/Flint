@@ -8,7 +8,7 @@ func NewRelu() ReLU {
 	return ReLU{}
 }
 
-func (relu ReLU) Parameters(recurse bool) []Parameter {
+func (relu ReLU) Parameters(_ bool) []Parameter {
 	return []Parameter{}
 }
 

@@ -1,7 +1,7 @@
 package optimize
 
-type baseRegularizer struct {
-}
+//type baseRegularizer struct {
+//}
 
 type Regularizer interface{}
 

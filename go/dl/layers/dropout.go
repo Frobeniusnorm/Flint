@@ -12,7 +12,7 @@ func NewDropout(prob float32) Dropout {
 	}
 }
 
-func (d Dropout) Parameters(recurse bool) []Parameter {
+func (d Dropout) Parameters(_ bool) []Parameter {
 	return []Parameter{}
 }
 

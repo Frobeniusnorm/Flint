@@ -13,7 +13,7 @@ func NewIdentity() Identity {
 	return Identity{}
 }
 
-func (id Identity) Parameters(recurse bool) []Parameter {
+func (id Identity) Parameters(_ bool) []Parameter {
 	return []Parameter{}
 }
 

@@ -13,7 +13,7 @@ func NewFlatten() Flatten {
 	return Flatten{}
 }
 
-func (f Flatten) Parameters(recurse bool) []Parameter {
+func (f Flatten) Parameters(_ bool) []Parameter {
 	return []Parameter{}
 }
 

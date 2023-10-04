@@ -43,7 +43,7 @@ func main() {
 
 	for epoch := 0; epoch < 3; epoch++ {
 		train(model, trainDataloader, optim)
-		test(model, trainDataloader, optim)
+		test(model, trainDataloader)
 		scheduler.Step()
 	}
 
@@ -76,7 +76,7 @@ func train(model layers.Layer, dl dataloader.Dataloader[datasets.MnistDatasetEnt
 }
 
 // test the model on the test dataset
-func test(model layers.Layer, dl dataloader.Dataloader[datasets.MnistDatasetEntry], optim optimize.Optimizer) {
+func test(model layers.Layer, dl dataloader.Dataloader[datasets.MnistDatasetEntry]) {
 	model.EvalMode()
 	for {
 		batch, err := dl.Next()
