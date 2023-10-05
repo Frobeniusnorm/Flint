@@ -2,6 +2,7 @@ package layers
 
 import (
 	"fmt"
+	"github.com/Frobeniusnorm/Flint/go/dl"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 	"testing"
 )
@@ -13,7 +14,7 @@ func TestReLU_Forward(t *testing.T) {
 	input := flint.CreateGraphArrange(flint.Shape{5}, 0)
 	input = flint.Sub(input, int64(3))
 
-	output := relu.Forward(Tensor{Node: input})
+	output := relu.Forward(dl.Tensor{Node: input})
 
 	expected := []int64{0, 0, 0, 0, 1}
 

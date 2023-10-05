@@ -1,4 +1,4 @@
-package layers
+package dl
 
 import "github.com/Frobeniusnorm/Flint/go/flint"
 

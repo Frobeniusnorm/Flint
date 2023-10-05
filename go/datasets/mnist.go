@@ -3,7 +3,7 @@ package datasets
 import (
 	"errors"
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/dl/layers"
+	"github.com/Frobeniusnorm/Flint/go/dl"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 	"io"
 	"log"
@@ -20,8 +20,8 @@ type MnistDataset struct {
 }
 
 type MnistDatasetEntry struct {
-	Label layers.Tensor
-	Data  layers.Tensor
+	Label dl.Tensor
+	Data  dl.Tensor
 }
 
 const (
@@ -97,8 +97,8 @@ func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) 
 		label := flint.CreateGraph([]uint8{class}, flint.Shape{1}, flint.F_INT32)
 		label = flint.Extend(label, flint.Shape{10}, flint.Axes{uint(class)})
 		data[i] = MnistDatasetEntry{
-			Label: layers.NewTensor(label),
-			Data:  layers.NewTensor(image),
+			Label: dl.NewTensor(label),
+			Data:  dl.NewTensor(image),
 		}
 	}
 
@@ -247,8 +247,8 @@ func (d MnistDataset) Collate(items []MnistDatasetEntry) MnistDatasetEntry {
 	if len(items) <= 0 {
 		log.Panicf("cannot collate items - invalid batch size (%d)", len(items))
 	}
-	labels := make([]layers.Tensor, len(items))
-	images := make([]layers.Tensor, len(items))
+	labels := make([]dl.Tensor, len(items))
+	images := make([]dl.Tensor, len(items))
 	for idx, val := range items {
 		labels[idx] = val.Label
 		images[idx] = val.Data

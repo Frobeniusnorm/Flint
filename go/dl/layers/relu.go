@@ -1,6 +1,9 @@
 package layers
 
-import "github.com/Frobeniusnorm/Flint/go/flint"
+import (
+	"github.com/Frobeniusnorm/Flint/go/dl"
+	"github.com/Frobeniusnorm/Flint/go/flint"
+)
 
 type ReLU struct{}
 
@@ -8,13 +11,13 @@ func NewRelu() ReLU {
 	return ReLU{}
 }
 
-func (relu ReLU) Parameters(_ bool) []Parameter {
-	return []Parameter{}
+func (relu ReLU) Parameters(_ bool) []dl.Parameter {
+	return []dl.Parameter{}
 }
 
-func (relu ReLU) Forward(x Tensor) Tensor {
+func (relu ReLU) Forward(x dl.Tensor) dl.Tensor {
 	res := flint.Max(x.Node, int32(0))
-	return Tensor{Node: res}
+	return dl.Tensor{Node: res}
 }
 
 func (relu ReLU) TrainMode() {}

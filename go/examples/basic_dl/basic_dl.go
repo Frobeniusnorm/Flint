@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/dataloader"
 	"github.com/Frobeniusnorm/Flint/go/datasets"
+	"github.com/Frobeniusnorm/Flint/go/dl"
 	"github.com/Frobeniusnorm/Flint/go/dl/layers"
 	losses "github.com/Frobeniusnorm/Flint/go/dl/loss"
 	"github.com/Frobeniusnorm/Flint/go/dl/optimize"
@@ -51,10 +52,10 @@ func main() {
 }
 
 // train for one epoch
-func train(model layers.Layer, dl dataloader.Dataloader[datasets.MnistDatasetEntry], optim optimize.Optimizer) {
+func train(model layers.Layer, trainDl dataloader.Dataloader[datasets.MnistDatasetEntry], optim optimize.Optimizer) {
 	model.EvalMode()
 	for {
-		batch, err := dl.Next()
+		batch, err := trainDl.Next()
 		if errors.Is(err, dataloader.Done) {
 			break
 		}
@@ -65,7 +66,7 @@ func train(model layers.Layer, dl dataloader.Dataloader[datasets.MnistDatasetEnt
 
 		flint.StartGradientContext()
 		output := model.Forward(batch.Data)
-		loss := layers.NewTensor(losses.CrossEntropyLoss(output.Node, batch.Label.Node))
+		loss := dl.NewTensor(losses.CrossEntropyLoss(output.Node, batch.Label.Node))
 		flint.StopGradientContext()
 		optim.Step(loss)
 		flint.OptimizeMemory(loss.Node)
@@ -76,10 +77,10 @@ func train(model layers.Layer, dl dataloader.Dataloader[datasets.MnistDatasetEnt
 }
 
 // test the model on the test dataset
-func test(model layers.Layer, dl dataloader.Dataloader[datasets.MnistDatasetEntry]) {
+func test(model layers.Layer, testDl dataloader.Dataloader[datasets.MnistDatasetEntry]) {
 	model.EvalMode()
 	for {
-		batch, err := dl.Next()
+		batch, err := testDl.Next()
 		if errors.Is(err, dataloader.Done) {
 			break
 		}
@@ -89,7 +90,7 @@ func test(model layers.Layer, dl dataloader.Dataloader[datasets.MnistDatasetEntr
 		}
 
 		output := model.Forward(batch.Data)
-		loss := layers.NewTensor(losses.CrossEntropyLoss(output.Node, batch.Label.Node))
+		loss := dl.NewTensor(losses.CrossEntropyLoss(output.Node, batch.Label.Node))
 		log.Println("test loss:", loss)
 	}
 }

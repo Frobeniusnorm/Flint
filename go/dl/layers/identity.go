@@ -1,5 +1,7 @@
 package layers
 
+import "github.com/Frobeniusnorm/Flint/go/dl"
+
 /*
 Identity is a layer that essentially does nothing.
 The tensor is just passed through without any changes and the gradient is constant as well.
@@ -13,11 +15,11 @@ func NewIdentity() Identity {
 	return Identity{}
 }
 
-func (id Identity) Parameters(_ bool) []Parameter {
-	return []Parameter{}
+func (id Identity) Parameters(_ bool) []dl.Parameter {
+	return []dl.Parameter{}
 }
 
-func (id Identity) Forward(x Tensor) Tensor {
+func (id Identity) Forward(x dl.Tensor) dl.Tensor {
 	return x
 }
 

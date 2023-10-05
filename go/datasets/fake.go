@@ -2,7 +2,7 @@ package datasets
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/dl/layers"
+	"github.com/Frobeniusnorm/Flint/go/dl"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 	"log"
 	"math/rand"
@@ -16,8 +16,8 @@ type FakeDataset struct {
 }
 
 type FakeDatasetEntry struct {
-	Label layers.Tensor
-	Data  layers.Tensor
+	Label dl.Tensor
+	Data  dl.Tensor
 }
 
 func NewFakeDataset(categories uint, itemShape flint.Shape, numItems uint) FakeDataset {
@@ -39,8 +39,8 @@ func (d FakeDataset) Get(index uint) FakeDatasetEntry {
 	}
 	label := rand.Intn(int(d.categories))
 	return FakeDatasetEntry{
-		Label: layers.NewTensor(flint.CreateScalar(label, flint.F_INT32)),
-		Data:  layers.NewTensor(flint.CreateGraphRandom(d.itemShape)),
+		Label: dl.NewTensor(flint.CreateScalar(label, flint.F_INT32)),
+		Data:  dl.NewTensor(flint.CreateGraphRandom(d.itemShape)),
 	}
 }
 
@@ -48,8 +48,8 @@ func (d FakeDataset) Collate(items []FakeDatasetEntry) FakeDatasetEntry {
 	if len(items) <= 0 {
 		log.Panicf("cannot collate items - invalid batch size (%d)", len(items))
 	}
-	labels := make([]layers.Tensor, len(items))
-	images := make([]layers.Tensor, len(items))
+	labels := make([]dl.Tensor, len(items))
+	images := make([]dl.Tensor, len(items))
 	for idx, val := range items {
 		labels[idx] = val.Label
 		images[idx] = val.Data

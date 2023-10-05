@@ -1,6 +1,9 @@
 package layers
 
-import "github.com/Frobeniusnorm/Flint/go/flint"
+import (
+	"github.com/Frobeniusnorm/Flint/go/dl"
+	"github.com/Frobeniusnorm/Flint/go/flint"
+)
 
 /*
 Flatten layer takes in an n-dimensional tensor (n >= 2) and turns it into a 2-dimensional tensor.
@@ -13,11 +16,11 @@ func NewFlatten() Flatten {
 	return Flatten{}
 }
 
-func (f Flatten) Parameters(_ bool) []Parameter {
-	return []Parameter{}
+func (f Flatten) Parameters(_ bool) []dl.Parameter {
+	return []dl.Parameter{}
 }
 
-func (f Flatten) Forward(x Tensor) Tensor {
+func (f Flatten) Forward(x dl.Tensor) dl.Tensor {
 	shape := x.Node.GetShape()
 	if len(shape) < 2 {
 		panic("Flatten: input tensors needs to be at least 2-dimensional")
@@ -26,7 +29,7 @@ func (f Flatten) Forward(x Tensor) Tensor {
 	for i := len(shape) - 1; i > 1; i-- {
 		res = flint.FlattenDim(res, i)
 	}
-	return NewTensor(res)
+	return dl.NewTensor(res)
 }
 
 func (f Flatten) TrainMode() {

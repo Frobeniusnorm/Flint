@@ -2,7 +2,7 @@ package optimize
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/dl/layers"
+	"github.com/Frobeniusnorm/Flint/go/dl"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 	"log"
 )
@@ -12,7 +12,7 @@ type Sgd struct {
 	learningRate float32
 }
 
-func NewSgd(params []layers.Parameter, learningRate float32) Sgd {
+func NewSgd(params []dl.Parameter, learningRate float32) Sgd {
 	if learningRate < 0.0 {
 		log.Panicf("Invalid learning rate: %f", learningRate)
 	}
@@ -29,7 +29,7 @@ func (sgd Sgd) calculateUpdate(weightTensor flint.GraphNode, gradientTensor flin
 	return flint.Sub(weightTensor, flint.Mul(gradientTensor, sgd.learningRate))
 }
 
-func (sgd Sgd) Step(loss layers.Tensor) {
+func (sgd Sgd) Step(loss dl.Tensor) {
 	paramsSimple := make([]flint.GraphNode, len(sgd.params))
 	for i, p := range sgd.params {
 		paramsSimple[i] = p.Node
