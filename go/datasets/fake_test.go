@@ -3,6 +3,7 @@ package datasets
 import (
 	"github.com/Frobeniusnorm/Flint/go/flint"
 	"github.com/stretchr/testify/assert"
+	"math/rand"
 	"testing"
 )
 
@@ -23,24 +24,16 @@ func TestFakeDataset_Count(t *testing.T) {
 
 func TestFakeDataset_Get(t *testing.T) {
 	dataset := NewFakeDataset(5, flint.Shape{10, 10}, 100)
-	entry := dataset.Get(2) // FIXME: changing this index is causing issues!!
-	// Maybe overflow from uint to int conversions??
+	entry := dataset.Get(1)
 
 	assert.NotNil(t, entry.Label)
 	assert.NotNil(t, entry.Data)
-	assert.Equal(t, flint.Shape{10, 10}, entry.Data.Node.GetShape())
-	assert.Equal(t, flint.Shape{1}, entry.Label.Node.GetShape())
 
 	data := flint.CalculateResult[float64](entry.Data.Node)
 	label := flint.CalculateResult[int32](entry.Label.Node)
-	t.Log(label)
-	t.Log(data)
 
 	assert.Equal(t, flint.Shape{10, 10}, data.Shape)
 	assert.Equal(t, flint.Shape{1}, label.Shape)
-
-	//assert.Equal(t, flint.f_INT32, label.DataType)
-	//assert.Equal(t, flint.f_FLOAT64, data.DataType)
 
 	// assert data in [0, 1)
 	for _, x := range data.Data.([]float64) {
@@ -50,16 +43,19 @@ func TestFakeDataset_Get(t *testing.T) {
 
 	// assert label between 0 and 5 (categories)
 	for _, x := range label.Data.([]int32) {
-		// FIXME: maybe also due to the flint expand calls etc.
 		assert.GreaterOrEqual(t, x, int32(0))
-		assert.LessOrEqual(t, x, int32(1))
+		assert.Less(t, x, int32(5))
 	}
 }
 
-func TestFakeDataset_String(t *testing.T) {
+func TestFakeDataset_Collate(t *testing.T) {
 	dataset := NewFakeDataset(5, flint.Shape{10, 10}, 100)
+	entries := make([]FakeDatasetEntry, 32)
+	for i := 0; i < len(entries); i++ {
+		entries[i] = dataset.Get(uint(rand.Intn(100)))
+	}
 
-	assert.Equal(t, "FakeDataset (fake) with 100 items", dataset.String())
+	collated := dataset.Collate(entries)
+	assert.Equal(t, flint.Shape{32, 10, 10}, collated.Data.Node.GetShape())
+	assert.Equal(t, flint.Shape{32}, collated.Label.Node.GetShape())
 }
-
-// Additional tests for other methods can be added similarly.

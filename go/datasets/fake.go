@@ -54,10 +54,12 @@ func (d FakeDataset) Collate(items []FakeDatasetEntry) FakeDatasetEntry {
 		labels[idx] = val.Label
 		images[idx] = val.Data
 	}
-	return FakeDatasetEntry{
+	res := FakeDatasetEntry{
 		Label: TrivialCollate(labels),
 		Data:  TrivialCollate(images),
 	}
+	res.Label.Node = flint.Flatten(res.Label.Node)
+	return res
 }
 
 func (d FakeDataset) String() string {

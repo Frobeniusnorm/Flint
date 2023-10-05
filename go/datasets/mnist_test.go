@@ -1,31 +1,27 @@
 package datasets
 
 import (
-	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/stretchr/testify/assert"
+	"math/rand"
 	"path"
 	"testing"
 )
+
+func validPath() string {
+	return path.Clean(path.Join("..", "_data", "mnist"))
+}
 
 // TestNewMnistDataset tests if the dataset at a given path can be loaded
 // checking with valid and invalid path
 func TestNewMnistDataset(t *testing.T) {
 
 	t.Run("happy path", func(t *testing.T) {
-		validPath := path.Clean("../_data/mnist")
-		trainDataset, _, err := NewMnistDataset(validPath)
-		if err != nil {
-			t.Log(err)
-			t.Fatalf("loading from a valid path should NOT fail!")
-		}
+		trainDataset, testDataset, err := NewMnistDataset(validPath())
+		assert.NoError(t, err)
+		assert.Equal(t, "mnist-train", trainDataset.Name)
+		assert.Equal(t, "mnist-test", testDataset.Name)
 
-		entry := trainDataset.Get(2)
-		var data = flint.CalculateResult[int32](entry.Data.Node)
-		fmt.Println("Label:", entry.Label)
-		fmt.Println("Data:", data)
-		printImage(data.Data.([]int32), data.Shape)
-
-		//fmt.Println(testDataset.Get(5))
 	})
 
 	t.Run("invalid path", func(t *testing.T) {
@@ -38,20 +34,52 @@ func TestNewMnistDataset(t *testing.T) {
 
 }
 
-// (debugging utility)
-func printImage(image []int32, shape flint.Shape) {
-	height, width := shape[0], shape[1]
-	for row := uint(0); row < height; row++ {
-		for col := uint(0); col < width; col++ {
-			pix := image[row*height+col]
-			if pix == 0 {
-				fmt.Print(" ")
-			} else {
-				fmt.Printf("%X", pix/16)
-			}
-		}
-		fmt.Println()
+func TestMnistDataset_Count(t *testing.T) {
+	trainDataset, testDataset, err := NewMnistDataset(validPath())
+	assert.NoError(t, err)
+	assert.Equal(t, uint(60000), trainDataset.size)
+	assert.Equal(t, uint(10000), testDataset.size)
+	assert.Equal(t, uint(60000), trainDataset.Count())
+	assert.Equal(t, uint(10000), testDataset.Count())
+}
+
+func TestMnistDataset_Get(t *testing.T) {
+	dataset, _, err := NewMnistDataset(validPath())
+	assert.NoError(t, err)
+
+	entry := dataset.Get(1)
+
+	assert.NotNil(t, entry.Label)
+	assert.NotNil(t, entry.Data)
+
+	data := flint.CalculateResult[float64](entry.Data.Node)
+	label := flint.CalculateResult[int32](entry.Label.Node)
+
+	assert.Equal(t, flint.Shape{28, 28}, data.Shape)
+	assert.Equal(t, flint.Shape{1}, label.Shape)
+
+	// assert data in [0, 256)
+	for _, x := range data.Data.([]float64) {
+		assert.GreaterOrEqual(t, x, float64(0))
+		assert.Less(t, x, float64(256))
+	}
+
+	// assert label between 0 and 9 (categories)
+	for _, x := range label.Data.([]int32) {
+		assert.GreaterOrEqual(t, x, int32(0))
+		assert.Less(t, x, int32(10))
 	}
 }
 
-// FIXME: label is completely wrong. Tests dont catch it!!!!!
+func TestMnistDataset_Collate(t *testing.T) {
+	dataset, _, err := NewMnistDataset(validPath())
+	assert.NoError(t, err)
+	entries := make([]MnistDatasetEntry, 32)
+	for i := 0; i < len(entries); i++ {
+		entries[i] = dataset.Get(uint(rand.Intn(100)))
+	}
+
+	collated := dataset.Collate(entries)
+	assert.Equal(t, flint.Shape{32, 28, 28}, collated.Data.Node.GetShape())
+	assert.Equal(t, flint.Shape{32}, collated.Label.Node.GetShape())
+}

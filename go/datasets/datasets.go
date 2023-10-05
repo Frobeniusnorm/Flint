@@ -48,3 +48,19 @@ func TrivialCollate(items []dl.Tensor) dl.Tensor {
 	}
 	return dl.NewTensor(res)
 }
+
+// (debugging utility)
+func printImage(image []int32, shape flint.Shape) {
+	height, width := shape[0], shape[1]
+	for row := uint(0); row < height; row++ {
+		for col := uint(0); col < width; col++ {
+			pix := image[row*height+col]
+			if pix == 0 {
+				fmt.Print(" ")
+			} else {
+				fmt.Printf("%X", pix/16)
+			}
+		}
+		fmt.Println()
+	}
+}

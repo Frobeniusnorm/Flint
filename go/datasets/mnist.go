@@ -95,7 +95,6 @@ func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) 
 		image := flint.CreateGraph(imageData, flint.Shape{uint(images.height), uint(images.width)})
 		class := labels.data[i]
 		label := flint.CreateScalar(class)
-		label = flint.Extend(label, flint.Shape{10}, flint.Axes{uint(class)})
 		data[i] = MnistDatasetEntry{
 			Label: dl.NewTensor(label),
 			Data:  dl.NewTensor(image),
@@ -103,7 +102,7 @@ func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) 
 	}
 
 	name := "mnist"
-	if strings.HasPrefix(imagePath, "train") {
+	if strings.HasPrefix(path.Base(imagePath), "train") {
 		name = name + "-train"
 	} else {
 		name = name + "-test"
@@ -237,9 +236,6 @@ func (d MnistDataset) Count() uint {
 
 // Get returns a MnistDatasetEntry by index
 func (d MnistDataset) Get(index uint) MnistDatasetEntry {
-	res := flint.CalculateResult[int64](d.data[index].Label.Node)
-	fmt.Println("first stuff")
-	fmt.Println(res)
 	return d.data[index]
 }
 
@@ -253,10 +249,12 @@ func (d MnistDataset) Collate(items []MnistDatasetEntry) MnistDatasetEntry {
 		labels[idx] = val.Label
 		images[idx] = val.Data
 	}
-	return MnistDatasetEntry{
+	res := MnistDatasetEntry{
 		Label: TrivialCollate(labels),
 		Data:  TrivialCollate(images),
 	}
+	res.Label.Node = flint.Flatten(res.Label.Node)
+	return res
 }
 
 func (d MnistDataset) String() string {
