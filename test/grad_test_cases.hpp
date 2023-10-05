@@ -419,7 +419,6 @@ TEST_SUITE("Autodiff") {
     CHECK_EQ(1, dx[4][1][0]);
     CHECK_EQ(-3, dx[4][2][0]);
     CHECK_EQ(1, dx[4][3][0]);
-    std::cout << dx << std::endl;
     // check if last dimension is same
     for (int i = 0; i < 4; i++)
       for (int j = 0; j < 3; j++)

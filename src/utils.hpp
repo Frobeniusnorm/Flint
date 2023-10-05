@@ -115,6 +115,10 @@ static inline int operationScore(const FGraphNode *g) {
   case FGEN_CONSTANT: {
     return 10;
   }
+  case FSLIDING_WINDOW:
+    return g->operation.shape[0];
+  case FUNSLIDE_WINDOW:
+    return g->predecessors[0]->operation.shape[0];
   default: 
     break;
   }

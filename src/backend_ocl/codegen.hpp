@@ -78,8 +78,8 @@ generateCode(FGraphNode *node,
         assigned_params.insert({node, "P" + to_string(pid)});
         parameters.push_back({node, "P" + to_string(pid)});
       }
-      code = "const " + type + " " + name + " = " + assigned_params[node] + "[index%" +
-             to_string(num_entries) + "];\n" + code;
+      code = "const " + type + " " + name + " = " + assigned_params[node] +
+             "[index%" + to_string(num_entries) + "];\n" + code;
     } else
       switch (node->operation.op_type) {
       // Binary Operators
@@ -106,8 +106,9 @@ generateCode(FGraphNode *node,
         default:
           break; // shut up compiler
         }
-        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
-               " " + op + " v" + to_string(variable_index + 2) + ";\n" + code;
+        code = "const " + type + " " + name + " = v" +
+               to_string(variable_index + 1) + " " + op + " v" +
+               to_string(variable_index + 2) + ";\n" + code;
         break;
       }
       case FPOW: {
@@ -146,15 +147,17 @@ generateCode(FGraphNode *node,
 
       } break;
       case FLESS: {
-        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
-               " < v" + to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
+        code = "const " + type + " " + name + " = v" +
+               to_string(variable_index + 1) + " < v" +
+               to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
 
       } break;
       case FEQUAL: {
         const FOperation x = node->predecessors[0]->operation;
         const FOperation y = node->predecessors[1]->operation;
-        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
-               " + " + epsilonForType(x.data_type) + " >= v" +
+        code = "const " + type + " " + name + " = v" +
+               to_string(variable_index + 1) + " + " +
+               epsilonForType(x.data_type) + " >= v" +
                to_string(variable_index + 2) +
                " && "
                "v" +
@@ -164,8 +167,9 @@ generateCode(FGraphNode *node,
 
       } break;
       case FGREATER: {
-        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
-               " > v" + to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
+        code = "const " + type + " " + name + " = v" +
+               to_string(variable_index + 1) + " > v" +
+               to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
 
       } break;
       case FCONCAT: {
@@ -214,8 +218,9 @@ generateCode(FGraphNode *node,
         size_t acc_sizes_ax = 1;
         for (unsigned int i = ax + 1; i < node->operation.dimensions; i++)
           acc_sizes_ax *= node->operation.shape[i];
-        code = "const " + type + " " + name + " = (index/" + to_string(acc_sizes_ax) +
-               ")%" + to_string(node->operation.shape[ax]) + ";\n" + code;
+        code = "const " + type + " " + name + " = (index/" +
+               to_string(acc_sizes_ax) + ")%" +
+               to_string(node->operation.shape[ax]) + ";\n" + code;
       } break;
       case FGRADIENT_CONVOLVE: {
         string par1, par2;
@@ -540,7 +545,8 @@ generateCode(FGraphNode *node,
                         to_string(acc_sizes_rest[d]) + ";\n";
         }
         index_defs += "}\n";
-        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
+        code = "const " + type + " " + name + " = v" +
+               to_string(variable_index + 1) +
                ";\n"
                "index = old_index" +
                to_string(old_idx) + ";\n" + code;
@@ -574,11 +580,26 @@ generateCode(FGraphNode *node,
             calcAccSizes(pred.dimensions - 1, no_windows);
         string local_code = type + " " + name +
                             " = 0;\n"
-                            "for(long w=0;w<" +
-                            to_string(pred.shape[0]) +
-                            ";w++){\n"
-                            " bool contained = true;\n"
-                            " long wi = 0;\n";
+                            "{\n"
+                            "const long first_w = 0";
+        for (int d = node->operation.dimensions - 1; d >= 0; d--) {
+          local_code += " + max(0l, ((index / " + to_string(acc_sizes[d]) +
+                        ") % " + to_string(node->operation.shape[d]) + ") - " +
+                        to_string(pred.shape[d + 1]) + " + 1) / " +
+                        to_string(steps[d]) + " * " +
+                        to_string(acc_no_windows[d]);
+        }
+        local_code += ";\nconst long last_w = 0";
+        for (int d = node->operation.dimensions - 1; d >= 0; d--) {
+          local_code += " + ((index / " + to_string(acc_sizes[d]) + ") % " +
+                        to_string(node->operation.shape[d]) + ") / " +
+                        to_string(steps[d]) + " * " +
+                        to_string(acc_no_windows[d]);
+        }
+        local_code += ";\nfor(long w=first_w;w<=last_w;){\n"
+                      " bool contained = true;\n"
+                      " long wi = 0;\n"
+                      " long wpp = 0;\n";
         for (int d = node->operation.dimensions - 1; d >= 0; d--) {
           local_code += " {\n"
                         "  const long w_start=((w/" +
@@ -597,20 +618,21 @@ generateCode(FGraphNode *node,
                         ";\n"
                         "  else{\n"
                         "   contained = false;\n"
-                        "   goto forend" +
-                        to_string(variable_index) +
+                        "   wpp += " +
+                        to_string(acc_no_windows[d]) +
                         ";\n"
                         "  }\n"
                         " }\n";
         }
-        local_code += "forend" + to_string(variable_index) +
-                      ":\n"
-                      " if(contained)"
+        local_code += " if(contained) {"
                       "  " +
                       name + "+=" + par1 + "[wi+w*" +
                       to_string(acc_sizes_pred[0]) +
                       "];\n"
-                      "}\n";
+                      "  wpp = 1;\n}\n"
+                      " w += wpp;\n"
+                      "}\n"
+                      "}";
         code = local_code + code;
       } break;
       case FMATMUL: {
@@ -664,8 +686,8 @@ generateCode(FGraphNode *node,
       } break;
       case FRESHAPE:
       case FLATTEN: {
-        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
-               ";\n" + code;
+        code = "const " + type + " " + name + " = v" +
+               to_string(variable_index + 1) + ";\n" + code;
       } break;
       case FCONVERSION: {
         code = "const " + type + " " + name + " = (" + type + ")v" +
@@ -674,10 +696,11 @@ generateCode(FGraphNode *node,
       case FABS: {
         std::string par_name = "v" + std::to_string(variable_index + 1);
         if (node->operation.data_type < F_FLOAT32)
-          code = "const " + type + " " + name + " = abs(" + par_name + ");\n" + code;
+          code = "const " + type + " " + name + " = abs(" + par_name + ");\n" +
+                 code;
         else
-          code = "const " + type + " " + name + " = " + par_name + "< 0 ? -" + par_name +
-                 " : " + par_name + ";\n" + code;
+          code = "const " + type + " " + name + " = " + par_name + "< 0 ? -" +
+                 par_name + " : " + par_name + ";\n" + code;
       } break;
       case FSQRT: {
         code = "const " + type + " " + name + " = sqrt(v" +
@@ -728,12 +751,13 @@ generateCode(FGraphNode *node,
                std::to_string(variable_index + 1) + ";\n" + code;
       } break;
       case FSIGN: {
-        code = "const " + type + " " + name + " = v" + std::to_string(variable_index + 1) +
-               " < 0 ? -1 : 1;\n" + code;
+        code = "const " + type + " " + name + " = v" +
+               std::to_string(variable_index + 1) + " < 0 ? -1 : 1;\n" + code;
       } break;
       case FEVEN: {
-        code = "const " + type + " " + name + " = v" + std::to_string(variable_index + 1) +
-               " % 2 == 0 ? 1 : 0;\n" + code;
+        code = "const " + type + " " + name + " = v" +
+               std::to_string(variable_index + 1) + " % 2 == 0 ? 1 : 0;\n" +
+               code;
       } break;
 
       case FREDUCE_MIN:
@@ -842,8 +866,8 @@ generateCode(FGraphNode *node,
         }
         index_defs += ") ;\n";
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
-               ";\n" + code;
+        code = "const " + type + " " + name + " = v" +
+               to_string(variable_index + 1) + ";\n" + code;
       } break;
       case FEXTEND: {
         const FOperation pred = node->predecessors[0]->operation;
@@ -938,8 +962,8 @@ generateCode(FGraphNode *node,
         }
         index_defs += "}\n";
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
-               ";\n" + code;
+        code = "const " + type + " " + name + " = v" +
+               to_string(variable_index + 1) + ";\n" + code;
       } break;
       case FTRANSPOSE: {
         const FOperation op = node->operation;
@@ -972,8 +996,8 @@ generateCode(FGraphNode *node,
         }
         index_defs += "}\n";
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
-        code = "const " + type + " " + name + " = v" + to_string(variable_index + 1) +
-               ";\n" + code;
+        code = "const " + type + " " + name + " = v" +
+               to_string(variable_index + 1) + ";\n" + code;
       } break;
       case FSET_INDEX: {
         FGraphNode *a = node->predecessors[0];
@@ -1735,11 +1759,21 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     // acc_no_windows
     // no_windows
     // steps
-    code += "if(index >= num_entriesR) return;\n";
-    code += "R[index] = 0;\n"
-            "for (long w = 0; w < shape0[0]; w++) {\n"
+    code += "if(index >= num_entriesR) return;\n"
+            "R[index] = 0;\n"
+            "long first_w = 0;\n"
+            "long last_w = 0;\n"
+            "for (int d = 0; d < dimensions0 - 1; d++) {\n"
+            " const long id = (index / acc_sizes[d]) % shapeR[d];\n"
+            " const long wdf = max(0l, (id - shape0[d + 1] + 1)) / steps[d];\n"
+            " const long wfl = id / steps[d];\n"
+            " first_w += wdf * acc_no_windows[d];\n"
+            " last_w += wfl * acc_no_windows[d];\n"
+            "}\n"
+            "for (long w = first_w; w <= last_w;) {\n"
             " int contained = true;\n"
             " long wi = 0;\n"
+            " long wpp = 0;\n"
             " for (int d = dimensions0 - 2; d >= 0; d--) {\n"
             "  const long wd = (w/acc_no_windows[d]) % no_windows[d];\n"
             "  const long w_start = wd * steps[d]\n;"
@@ -1748,11 +1782,14 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "   wi += (id - w_start) * acc_sizes_pred[d + 1];\n"
             "  else {\n"
             "   contained = false;\n"
-            "   break;\n"
+            "   wpp += acc_no_windows[d];\n"
             "  }\n"
             " }\n"
-            " if (contained)\n"
+            " if (contained) {\n"
             "   R[index] += P0[wi + w * acc_sizes_pred[0]];\n"
+            "   wpp = 1;\n"
+            " }\n"
+            " w += wpp;\n"
             "}\n";
     break;
   }
