@@ -37,7 +37,7 @@ func LoadImage(path string) (GraphNode, error) {
 
 /*
 StoreImage saves the result of [node] in a given [imageFormat].
-[node] has to be of type [F_FLOAT32] or [F_FLOAT64] datatype and needs to have 3 dimensions.
+[node] has to be of type [f_FLOAT32] or [f_FLOAT64] datatype and needs to have 3 dimensions.
 */
 func StoreImage(node GraphNode, path string, format imageFormat) {
 	unsafePath := C.CString(path)

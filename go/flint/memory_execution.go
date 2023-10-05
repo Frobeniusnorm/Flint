@@ -123,7 +123,7 @@ It represents execution with one of both backends and additional memory synchron
 
 FIXME: return [ResultDataOld] instead of tensor. Tensor should be moved to DL framework!
 */
-func CalculateResult[T numeric](node GraphNode) ResultData {
+func CalculateResult[T completeNumeric](node GraphNode) ResultData {
 	var flintNode *C.FGraphNode = C.fCalculateResult(node.ref)
 
 	dataSize := int(flintNode.result_data.num_entries)
@@ -134,7 +134,7 @@ func CalculateResult[T numeric](node GraphNode) ResultData {
 	dataType := DataType(flintNode.operation.data_type)
 
 	var result = fromCToArray[T](dataPtr, dataSize, dataType)
-	var shape = Shape(fromCToArray[uint](shapePtr, shapeSize, F_INT64))
+	var shape = Shape(fromCToArray[uint](shapePtr, shapeSize, f_INT64))
 
 	return ResultData{
 		nodeRef:  flintNode,

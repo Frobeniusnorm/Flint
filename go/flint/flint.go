@@ -15,7 +15,7 @@ package flint
 /*
 #cgo LDFLAGS: -lflint -lOpenCL -lstdc++ -lm
 #include <flint/flint.h>
-#include <stdlib.h>  // needed for C.free!
+#include <stdlib.h> // needed for C.free!
 #include <errno.h>
 
 
@@ -27,12 +27,11 @@ void reset_errno(void) {
 
 
 // typedef to get size of pointer using CGo
-typedef  FGraphNode* graph_ref;
+typedef FGraphNode* graph_ref;
 */
 import "C"
 import (
 	"syscall"
-	"unsafe"
 )
 
 ///////////////
@@ -44,25 +43,12 @@ type GraphNode struct {
 	//DataType DataType
 }
 
-func (node GraphNode) GetShape() Shape {
-	var flintNode *C.FGraphNode = node.ref
-	shapePtr := unsafe.Pointer(flintNode.operation.shape)
-	shapeSize := int(flintNode.operation.dimensions)
-	return fromCToArray[uint](shapePtr, shapeSize, F_INT64)
-}
-
 type ResultData struct {
 	resultRef *C.FResultData
 	nodeRef   *C.FGraphNode
 	Data      any
 	Shape     Shape
 	DataType  DataType
-}
-
-// numeric is a constraint interface representing the supported types of C operations
-// NOTE: As we no longer cast values between C and GO (we shouldn't!) this can be extended!
-type numeric interface {
-	~int32 | ~int64 | ~float32 | ~float64 | ~int
 }
 
 // Stride defines the steps for sliding operations
@@ -79,48 +65,47 @@ type Axes []uint
 type Shape []uint
 
 func (a Shape) NumItems() uint {
-	sum := uint(0)
+	sum := uint(1)
 	for _, val := range a {
 		sum *= val
 	}
 	return sum
 }
 
-func (a Shape) Equal(b Shape) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
+// DataType represents the valid datatypes for the flint backend
 type DataType uint32
 
 const (
-	F_INT32 DataType = iota
-	F_INT64
-	F_FLOAT32
-	F_FLOAT64
+	f_INT32 DataType = iota
+	f_INT64
+	f_FLOAT32
+	f_FLOAT64
 )
 
-type completeNumbers interface {
-	numeric | ~uint | ~int | ~int8 | ~int64 | ~uint64 | ~uint16 | ~uint8
+//////////////////
+// Number types
+//////////////////
+
+// baseNumeric is a constraint interface representing the supported types of C operations
+type baseNumeric interface {
+	~int32 | ~int64 | ~float32 | ~float64
 }
 
-// cNumbers represents the usable C types
-// size_t is equivalent to ulong
+// completeNumeric is a constraint interface representing all numeric types that can be used in flint!
+// NOTE: cant support uint64 as casting it to int64 might cause overflows
+type completeNumeric interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~float32 | ~float64
+}
+
+// cNumbers represents the basic C types available in CGo
+// NOTE: size_t should be equivalent to ulong
 type cNumbers interface {
 	C.int | C.size_t | C.long | C.uint | C.float | C.double
 }
 
-// cNumbers is a constraint interface for commonly used C Types
-type cTypes interface {
-	C.FGraphNode | *C.FGraphNode
-}
+//////////////////
+// Error handling
+//////////////////
 
 // Error offers a generic error struct in flint
 type Error struct {

@@ -40,7 +40,7 @@ func main() {
 	fmt.Println(model)
 
 	optim := optimize.NewSgd(model.Parameters(true), 1e-3)
-	scheduler := optimize.NewStepLR(optim)
+	scheduler := optimize.NewStepLR(optim, 10, 0.1) // essentially multiply learning rate by 0.1 every 10 epochs
 
 	for epoch := 0; epoch < 3; epoch++ {
 		train(model, trainDataloader, optim)

@@ -8,7 +8,7 @@ Add [operand1] and [operand2].
 At least one of the parameters HAS to be a [GraphNode].
 Addition is carried out element-wise.
 */
-func Add[T numeric | GraphNode](operand1 GraphNode, operand2 T) GraphNode {
+func Add[T baseNumeric | GraphNode](operand1 GraphNode, operand2 T) GraphNode {
 	var flintNode *C.FGraphNode
 
 	switch c := any(operand2).(type) {
@@ -34,7 +34,7 @@ Pow takes [base] to the power of [exponent].
 The [exponent] can be a constant number or another [GraphNode].
 The operation is carried out element-wise.
 */
-func Pow[T numeric | GraphNode](base GraphNode, exponent T) GraphNode {
+func Pow[T baseNumeric | GraphNode](base GraphNode, exponent T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(exponent).(type) {
 	case GraphNode:
@@ -58,7 +58,7 @@ Mul multiplies [operand1] by [operand2].
 At least one of the parameters HAS to be a [GraphNode]
 Multiplication is carried out element-wise.
 */
-func Mul[T numeric | GraphNode](operand1 GraphNode, operand2 T) GraphNode {
+func Mul[T baseNumeric | GraphNode](operand1 GraphNode, operand2 T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(operand2).(type) {
 	case GraphNode:
@@ -82,7 +82,7 @@ Divide [numerator] by [denominator].
 At least one of the parameters HAS to be a [GraphNode]
 Division is carried out element-wise.
 */
-func Divide[T numeric | GraphNode](numerator T, denominator T) GraphNode {
+func Divide[T baseNumeric | GraphNode](numerator T, denominator T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch x := any(numerator).(type) {
 	case GraphNode:
@@ -135,7 +135,7 @@ Sub Subtracts [minuend] by [subtrahend].
 At least one of the parameters HAS to be a [GraphNode].
 Subtraction is carried out element-wise.
 */
-func Sub[T1 numeric | GraphNode, T2 numeric | GraphNode](minuend T1, subtrahend T2) GraphNode {
+func Sub[T1 baseNumeric | GraphNode, T2 baseNumeric | GraphNode](minuend T1, subtrahend T2) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch x := any(minuend).(type) {
 	case GraphNode:
@@ -259,7 +259,7 @@ func Neg(x GraphNode) GraphNode {
 Sign applies the sign function to each element.
 i.e. x[i] = 1 if x[i] >= 0 else x[i] = -1
 The input tensor [x] must have an integer type.
-This function returns a [F_INT32] [GraphNode].
+This function returns a [f_INT32] [GraphNode].
 */
 func Sign(x GraphNode) GraphNode {
 	var flintNode *C.FGraphNode = C.fsign(x.ref)
@@ -269,7 +269,7 @@ func Sign(x GraphNode) GraphNode {
 /*
 Even gives the result of module 2 for each element.
 i.e. x[i] = 1 if x[i] mod 2 == 0 else x[i] = 0
-This function returns a [F_INT32] [GraphNode].
+This function returns a [f_INT32] [GraphNode].
 */
 func Even(x GraphNode) GraphNode {
 	var flintNode *C.FGraphNode = C.feven(x.ref)
@@ -277,9 +277,9 @@ func Even(x GraphNode) GraphNode {
 }
 
 /*
-Equal compares a tensor and a constant elementwise by [a] = [b] and returns a 0,1 [F_INT32] [GraphNode].
+Equal compares a tensor and a constant elementwise by [a] = [b] and returns a 0,1 [f_INT32] [GraphNode].
 */
-func Equal[T numeric | GraphNode](a GraphNode, b T) GraphNode {
+func Equal[T baseNumeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
@@ -299,9 +299,9 @@ func Equal[T numeric | GraphNode](a GraphNode, b T) GraphNode {
 }
 
 /*
-Greater compares a tensor and a constant elementwise by [a] > [b] and returns a 0,1 [F_INT32] [GraphNode].
+Greater compares a tensor and a constant elementwise by [a] > [b] and returns a 0,1 [f_INT32] [GraphNode].
 */
-func Greater[T numeric | GraphNode](a GraphNode, b T) GraphNode {
+func Greater[T baseNumeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
@@ -321,9 +321,9 @@ func Greater[T numeric | GraphNode](a GraphNode, b T) GraphNode {
 }
 
 /*
-Less compares a tensor and a constant elementwise by [a] < [b] and returns a 0,1 [F_INT32] [GraphNode].
+Less compares a tensor and a constant elementwise by [a] < [b] and returns a 0,1 [f_INT32] [GraphNode].
 */
-func Less[T numeric | GraphNode](a GraphNode, b T) GraphNode {
+func Less[T baseNumeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
@@ -403,7 +403,7 @@ func Reshape(a GraphNode, shape Shape) GraphNode {
 /*
 Min takes the minimum of two tensors (or a tensor and value) element wise along the last dimension of each.
 */
-func Min[T numeric | GraphNode](a GraphNode, b T) GraphNode {
+func Min[T baseNumeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
@@ -425,7 +425,7 @@ func Min[T numeric | GraphNode](a GraphNode, b T) GraphNode {
 /*
 Max takes the maximum of two tensors (or a tensor and value) element wise along the last dimension of each.
 */
-func Max[T numeric | GraphNode](a GraphNode, b T) GraphNode {
+func Max[T baseNumeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
