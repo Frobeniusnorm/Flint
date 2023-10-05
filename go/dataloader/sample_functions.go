@@ -34,7 +34,7 @@ func randomSampler(remainingIndices *[]uint) (nextIndex uint, err error) {
 	resIdx := rand.Intn(len(idc))
 	nextIndex = idc[resIdx]
 	idc[resIdx] = idc[len(idc)-1] // replace removed element with the last one
-	idc = idc[:len(idc)-1]        // cut of last element
+	idc = idc[:len(idc)-1]        // cut off last element
 	*remainingIndices = idc
 	return nextIndex, nil
 }

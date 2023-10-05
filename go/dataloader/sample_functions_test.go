@@ -36,6 +36,8 @@ func TestLinearSampler(t *testing.T) {
 	assert.ErrorIs(t, err, Done)
 }
 
+// FIXME run tests for random samplers multiple times!
+
 func TestRandomSampler(t *testing.T) {
 	remainingIndices := make([]uint, 3)
 	for i := 0; i < 3; i++ {
@@ -52,10 +54,10 @@ func TestRandomSampler(t *testing.T) {
 	// test the limits
 	nextIndex, err = randomSampler(&remainingIndices)
 	assert.NoError(t, err)
-	assert.Equal(t, uint(1), nextIndex)
+	assert.Less(t, nextIndex, uint(3))
 
 	nextIndex, err = randomSampler(&remainingIndices)
-	assert.Equal(t, uint(2), nextIndex)
+	assert.Less(t, nextIndex, uint(3))
 	assert.NoError(t, err)
 
 	nextIndex, err = randomSampler(&remainingIndices)
