@@ -45,9 +45,6 @@ type Dataloader[T any] struct {
 	// Mutually exclusive with batch_size, shuffle, sampler, and dropLast.
 	batchSampler func(remainingIndices *[]uint, batchSize uint, dropLast bool) (indices []uint, err error)
 
-	// collate is a function that turns multiple dataset entries int a batch of dataset entries
-	collate func(data []T) T
-
 	// a function called upon initialization of the worker
 	workerInit func(id uint)
 
@@ -82,9 +79,8 @@ func NewDataloaderMulti[T any](dataset datasets.Dataset[T], batchSize uint, drop
 		batchSize: batchSize,
 		dropLast:  dropLast,
 		// functions
-		sampler:      linearSampler,
+		sampler:      linearSampler, // FIXME: params
 		batchSampler: nil,
-		collate:      nil,
 		workerInit:   nil,
 		// worker information
 		prefetchFactor:   prefetchFactor,
