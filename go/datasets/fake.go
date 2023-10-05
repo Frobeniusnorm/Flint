@@ -33,14 +33,14 @@ func (d FakeDataset) Count() uint {
 	return d.numItems
 }
 
-func (d FakeDataset) Get(_ uint) FakeDatasetEntry {
-	class := rand.Intn(int(d.categories))
-	label := flint.CreateGraph([]int{class}, flint.Shape{1}, flint.F_INT32)
-	label = flint.Extend(label, flint.Shape{d.categories}, flint.Axes{uint(class)})
-	data := flint.CreateGraphRandom(d.itemShape)
+func (d FakeDataset) Get(index uint) FakeDatasetEntry {
+	if index >= d.numItems {
+		panic("index out of bounds")
+	}
+	label := rand.Intn(int(d.categories))
 	return FakeDatasetEntry{
-		Label: layers.NewTensor(label),
-		Data:  layers.NewTensor(data),
+		Label: layers.NewTensor(flint.CreateScalar(label, flint.F_INT32)),
+		Data:  layers.NewTensor(flint.CreateGraphRandom(d.itemShape)),
 	}
 }
 

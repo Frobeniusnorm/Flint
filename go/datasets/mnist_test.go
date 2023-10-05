@@ -53,3 +53,5 @@ func printImage(image []int32, shape flint.Shape) {
 		fmt.Println()
 	}
 }
+
+// FIXME: label is completely wrong. Tests dont catch it!!!!!

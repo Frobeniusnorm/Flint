@@ -237,6 +237,9 @@ func (d MnistDataset) Count() uint {
 
 // Get returns a MnistDatasetEntry by index
 func (d MnistDataset) Get(index uint) MnistDatasetEntry {
+	res := flint.CalculateResult[int64](d.data[index].Label.Node)
+	fmt.Println("first stuff")
+	fmt.Println(res)
 	return d.data[index]
 }
 
