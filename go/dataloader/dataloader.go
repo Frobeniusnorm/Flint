@@ -39,11 +39,11 @@ type Dataloader[T any] struct {
 	// defines the strategy to draw samples from the dataset.
 	// Must return the next dataset index for each element in the dataset.
 	// If specified, shuffle must not be specified.
-	sampler func(remainingIndices *[]uint) (index uint)
+	sampler func(remainingIndices *[]uint) (index uint, err error)
 
 	// like sampler, but returns a batch of indices at a time.
 	// Mutually exclusive with batch_size, shuffle, sampler, and dropLast.
-	batchSampler func(remainingIndices *[]uint) (indices []uint)
+	batchSampler func(remainingIndices *[]uint, batchSize uint, dropLast bool) (indices []uint, err error)
 
 	// collate is a function that turns multiple dataset entries int a batch of dataset entries
 	collate func(data []T) T
@@ -110,22 +110,35 @@ func NewDataloaderMulti[T any](dataset datasets.Dataset[T], batchSize uint, drop
 
 		// make them prefetch a few batches
 		for p := uint(0); p < res.prefetchFactor; p++ {
-			res.sendBatchIndices(i)
+			err := res.sendBatchIndices(i)
+			if err != nil {
+				panic("dataset does not even fit a single batch!")
+			}
 		}
 	}
 
 	return res
 }
 
-func (dl *Dataloader[T]) sendBatchIndices(workerId uint) {
+func (dl *Dataloader[T]) sendBatchIndices(workerId uint) error {
 	if dl.batchSampler != nil {
-		for _, v := range dl.batchSampler(&dl.remainingIndices) {
+		indices, err := dl.batchSampler(&dl.remainingIndices, dl.batchSize, dl.dropLast)
+		if err != nil {
+			return err
+		}
+		for _, v := range indices {
 			dl.workerChannels[workerId] <- int(v)
 		}
+		return nil
 	} else {
 		for i := uint(0); i < dl.batchSize; i++ {
-			dl.workerChannels[workerId] <- int(dl.sampler(&dl.remainingIndices))
+			index, err := dl.sampler(&dl.remainingIndices)
+			if err != nil && !dl.dropLast {
+				return err
+			}
+			dl.workerChannels[workerId] <- int(index)
 		}
+		return nil
 	}
 }
 
@@ -167,7 +180,7 @@ func (dl *Dataloader[T]) Count() uint {
 	}
 }
 
-func (dl *Dataloader[T]) Next() (T, error) {
+func (dl *Dataloader[T]) Next() (batch T, err error) {
 	workerId := dl.prevWorker
 	dl.prevWorker = (dl.prevWorker + 1) % dl.numWorkers
 
@@ -176,7 +189,10 @@ func (dl *Dataloader[T]) Next() (T, error) {
 		log.Println("idk")
 	}
 
-	dl.sendBatchIndices(workerId)
+	err = dl.sendBatchIndices(workerId)
+	if err != nil {
+		return batch, err
+	}
 
 	// TODO: signal "Done"
 
