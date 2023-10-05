@@ -17,7 +17,7 @@ type FullyConnected struct {
 
 func NewFullyConnected(inputSize uint, outputSize uint) FullyConnected {
 	weights := flint.CreateGraphRandom(flint.Shape{inputSize, outputSize})
-	bias := flint.CreateGraphConstant(1, flint.Shape{1, outputSize}, flint.F_FLOAT32)
+	bias := flint.CreateGraphConstant(1, flint.Shape{1, outputSize})
 	weightsAndBias := dl.NewParameter(flint.Concat(weights, bias, 0))
 
 	return FullyConnected{
@@ -30,7 +30,7 @@ func NewFullyConnected(inputSize uint, outputSize uint) FullyConnected {
 func (fc FullyConnected) Forward(x dl.Tensor) dl.Tensor {
 	inputShape := x.Node.GetShape()
 	inputShape[len(inputShape)-1] = 1
-	ones := flint.CreateGraphConstant(1, inputShape, flint.F_INT32)
+	ones := flint.CreateGraphConstant(1, inputShape)
 	combined := flint.Concat(x.Node, ones, uint(len(inputShape)-1))
 	res := flint.Matmul(combined, fc.weightsAndBias.Node)
 	return dl.NewTensor(res)

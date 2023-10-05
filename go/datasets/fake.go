@@ -39,7 +39,7 @@ func (d FakeDataset) Get(index uint) FakeDatasetEntry {
 	}
 	label := rand.Intn(int(d.categories))
 	return FakeDatasetEntry{
-		Label: dl.NewTensor(flint.CreateScalar(label, flint.F_INT32)),
+		Label: dl.NewTensor(flint.CreateScalar(label)),
 		Data:  dl.NewTensor(flint.CreateGraphRandom(d.itemShape)),
 	}
 }

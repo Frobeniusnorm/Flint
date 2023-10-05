@@ -1,12 +1,18 @@
 package optimize
 
 type StepLR struct {
-	optim Optimizer
+	optim     Optimizer
+	stepSize  uint
+	gamma     float32
+	lastEpoch int
 }
 
-func NewStepLR(optim Optimizer) StepLR {
+func NewStepLR(optim Optimizer, stepSize uint, gamma float32) StepLR {
 	return StepLR{
-		optim: optim,
+		optim:     optim,
+		stepSize:  stepSize,
+		gamma:     gamma,
+		lastEpoch: -1,
 	}
 }
 

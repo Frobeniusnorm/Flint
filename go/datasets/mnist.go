@@ -92,9 +92,9 @@ func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) 
 		imageOffset := i * imageByteSize
 		imageData := images.data[imageOffset : imageOffset+imageByteSize]
 
-		image := flint.CreateGraph(imageData, flint.Shape{uint(images.height), uint(images.width)}, flint.F_FLOAT32)
+		image := flint.CreateGraph(imageData, flint.Shape{uint(images.height), uint(images.width)})
 		class := labels.data[i]
-		label := flint.CreateGraph([]uint8{class}, flint.Shape{1}, flint.F_INT32)
+		label := flint.CreateScalar(class)
 		label = flint.Extend(label, flint.Shape{10}, flint.Axes{uint(class)})
 		data[i] = MnistDatasetEntry{
 			Label: dl.NewTensor(label),

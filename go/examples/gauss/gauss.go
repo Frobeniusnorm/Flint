@@ -29,7 +29,7 @@ func main() {
 		1.0 / 8.0, 1.0 / 4.0, 1.0 / 8.0,
 		1.0 / 16.0, 1.0 / 8.0, 1.0 / 16.0,
 	}
-	kernel := flint.CreateGraph(kernelData, flint.Shape{1, 3, 3, 1}, flint.F_FLOAT32)
+	kernel := flint.CreateGraph(kernelData, flint.Shape{1, 3, 3, 1})
 
 	flint.IncreaseRefCounter(kernel)
 	flint.IncreaseRefCounter(img)

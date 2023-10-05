@@ -17,7 +17,7 @@ func TestCrossEntropyLoss(t *testing.T) {
 
 	t.Run("test_zero_loss", func(t *testing.T) {
 		labelData := make([]float32, batchSize*labels)
-		labelNode := flint.CreateGraph(labelData, flint.Shape{batchSize, labels}, flint.F_FLOAT32)
+		labelNode := flint.CreateGraph(labelData, flint.Shape{batchSize, labels})
 		resNode := CrossEntropyLoss(labelNode, labelNode)
 		fmt.Println("label node:", flint.CalculateResult[float32](labelNode))
 		res := flint.CalculateResult[float32](resNode)
@@ -29,14 +29,14 @@ func TestCrossEntropyLoss(t *testing.T) {
 		for i := 1; i < batchSize*labels; i += batchSize {
 			labelData[i] = 1
 		}
-		labelNode := flint.CreateGraph(labelData, flint.Shape{batchSize, labels}, flint.F_FLOAT32)
+		labelNode := flint.CreateGraph(labelData, flint.Shape{batchSize, labels})
 		fmt.Println("label node:", flint.CalculateResult[float32](labelNode))
 
 		inputData := make([]float32, batchSize*labels)
 		for i := 2; i < batchSize*labels; i += batchSize {
 			inputData[i] = 1
 		}
-		inputNode := flint.CreateGraph(inputData, flint.Shape{batchSize, labels}, flint.F_FLOAT32)
+		inputNode := flint.CreateGraph(inputData, flint.Shape{batchSize, labels})
 		fmt.Println("input node:", flint.CalculateResult[float32](inputNode))
 
 		resNode := CrossEntropyLoss(labelNode, inputNode)
