@@ -9,7 +9,7 @@ import (
 // NOTE: the picked index will be removed from [remainingIndices] as a side effect!
 func linearSampler(remainingIndices *[]uint) (nextIndex uint, err error) {
 	if remainingIndices == nil {
-		return nextIndex, errors.New("remainingIndices should not be empty")
+		return nextIndex, errors.New("remainingIndices should not be nil")
 	}
 	idc := *remainingIndices
 	if len(idc) == 0 {
@@ -25,7 +25,7 @@ func linearSampler(remainingIndices *[]uint) (nextIndex uint, err error) {
 // NOTE: the picked index will be removed from [remainingIndices] as a side effect!
 func randomSampler(remainingIndices *[]uint) (nextIndex uint, err error) {
 	if remainingIndices == nil {
-		return nextIndex, errors.New("remainingIndices should not be empty")
+		return nextIndex, errors.New("remainingIndices should not be nil")
 	}
 	idc := *remainingIndices
 	if len(idc) == 0 {
@@ -43,13 +43,13 @@ func randomSampler(remainingIndices *[]uint) (nextIndex uint, err error) {
 // NOTE: the picked indices will be removed from [remainingIndices] as a side effect!
 func linearBatchSampler(remainingIndices *[]uint, batchSize uint, dropLast bool) (nextIndices []uint, err error) {
 	if remainingIndices == nil {
-		return nextIndices, errors.New("remainingIndices should not be empty")
+		return nextIndices, errors.New("remainingIndices should not be nil")
 	}
 	idc := *remainingIndices
 	if len(idc) == 0 {
 		return nextIndices, Done
 	}
-	if dropLast == false && uint(len(idc)) < batchSize {
+	if dropLast == true && uint(len(idc)) < batchSize {
 		return nextIndices, Done
 	}
 	idxLimit := min(uint(len(idc)), batchSize)
@@ -63,13 +63,13 @@ func linearBatchSampler(remainingIndices *[]uint, batchSize uint, dropLast bool)
 // NOTE: the picked indices will be removed from [remainingIndices] as a side effect!
 func randomBatchSampler(remainingIndices *[]uint, batchSize uint, dropLast bool) (nextIndices []uint, err error) {
 	if remainingIndices == nil {
-		return nextIndices, errors.New("remainingIndices should not be empty")
+		return nextIndices, errors.New("remainingIndices should not be nil")
 	}
 	idc := *remainingIndices
 	if len(idc) == 0 {
 		return nil, Done
 	}
-	if dropLast == false && uint(len(idc)) < batchSize {
+	if dropLast == true && uint(len(idc)) < batchSize {
 		return nextIndices, Done
 	}
 	idxLimit := min(len(idc), int(batchSize))

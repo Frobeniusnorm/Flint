@@ -22,21 +22,23 @@ func TestLinearSampler(t *testing.T) {
 	nextIndex, err = linearSampler(&remainingIndices)
 	assert.NoError(t, err)
 	assert.Equal(t, uint(1), nextIndex)
+	assert.Len(t, remainingIndices, 1)
 
 	nextIndex, err = linearSampler(&remainingIndices)
-	assert.Equal(t, uint(2), nextIndex)
 	assert.NoError(t, err)
+	assert.Equal(t, uint(2), nextIndex)
+	assert.Len(t, remainingIndices, 0)
 
 	nextIndex, err = linearSampler(&remainingIndices)
-	assert.Equal(t, uint(0), nextIndex)
 	assert.ErrorIs(t, err, Done)
+	assert.Equal(t, uint(0), nextIndex)
+	assert.Len(t, remainingIndices, 0)
 
 	nextIndex, err = linearSampler(&remainingIndices)
-	assert.Equal(t, uint(0), nextIndex)
 	assert.ErrorIs(t, err, Done)
+	assert.Equal(t, uint(0), nextIndex)
+	assert.Len(t, remainingIndices, 0)
 }
-
-// FIXME run tests for random samplers multiple times!
 
 func TestRandomSampler(t *testing.T) {
 	remainingIndices := make([]uint, 3)
@@ -55,18 +57,22 @@ func TestRandomSampler(t *testing.T) {
 	nextIndex, err = randomSampler(&remainingIndices)
 	assert.NoError(t, err)
 	assert.Less(t, nextIndex, uint(3))
+	assert.Len(t, remainingIndices, 1)
 
 	nextIndex, err = randomSampler(&remainingIndices)
-	assert.Less(t, nextIndex, uint(3))
 	assert.NoError(t, err)
+	assert.Less(t, nextIndex, uint(3))
+	assert.Len(t, remainingIndices, 0)
 
 	nextIndex, err = randomSampler(&remainingIndices)
-	assert.Equal(t, uint(0), nextIndex)
 	assert.ErrorIs(t, err, Done)
+	assert.Equal(t, uint(0), nextIndex)
+	assert.Len(t, remainingIndices, 0)
 
 	nextIndex, err = randomSampler(&remainingIndices)
-	assert.Equal(t, uint(0), nextIndex)
 	assert.ErrorIs(t, err, Done)
+	assert.Equal(t, uint(0), nextIndex)
+	assert.Len(t, remainingIndices, 0)
 }
 
 func TestLinearBatchSampler(t *testing.T) {
@@ -78,10 +84,10 @@ func TestLinearBatchSampler(t *testing.T) {
 		assert.Len(t, remainingIndices, 3)
 
 		nextIndices, err := linearBatchSampler(&remainingIndices, 2, false)
-		assert.Len(t, remainingIndices, 1)
 		assert.NoError(t, err)
 		assert.Len(t, nextIndices, 2)
 		assert.Equal(t, []uint{0, 1}, nextIndices)
+		assert.Len(t, remainingIndices, 1)
 	})
 
 	t.Run("dataset size not divisible by batch size and no dropLast", func(t *testing.T) {
@@ -92,29 +98,46 @@ func TestLinearBatchSampler(t *testing.T) {
 		assert.Len(t, remainingIndices, 3)
 
 		// happy execution
-		_, err := linearBatchSampler(&remainingIndices, 2, false)
+		nextIndices, err := linearBatchSampler(&remainingIndices, 2, false)
 		assert.NoError(t, err)
+		assert.Len(t, nextIndices, 2)
+		assert.Equal(t, []uint{0, 1}, nextIndices)
+		assert.Len(t, remainingIndices, 1)
+		// should run fine
+		nextIndices, err = linearBatchSampler(&remainingIndices, 2, false)
+		assert.NoError(t, err)
+		assert.Len(t, nextIndices, 1)
+		assert.Equal(t, []uint{2}, nextIndices)
+		assert.Len(t, remainingIndices, 0)
 		// provoke error
-		_, err = linearBatchSampler(&remainingIndices, 2, false)
+		nextIndices, err = linearBatchSampler(&remainingIndices, 2, false)
 		assert.ErrorIs(t, err, Done)
+		assert.Len(t, remainingIndices, 0)
 	})
 
 	t.Run("dataset size divisible by batch size and no dropLast", func(t *testing.T) {
 		remainingIndices := make([]uint, 4)
-		for i := 0; i < 3; i++ {
+		for i := 0; i < 4; i++ {
 			remainingIndices[i] = uint(i)
 		}
 		assert.Len(t, remainingIndices, 4)
 
 		// happy execution
-		_, err := linearBatchSampler(&remainingIndices, 2, false)
+		nextIndices, err := linearBatchSampler(&remainingIndices, 2, false)
 		assert.NoError(t, err)
-		// another happy execution
-		_, err = linearBatchSampler(&remainingIndices, 2, false)
+		assert.Len(t, nextIndices, 2)
+		assert.Equal(t, []uint{0, 1}, nextIndices)
+		assert.Len(t, remainingIndices, 2)
+		// should run fine
+		nextIndices, err = linearBatchSampler(&remainingIndices, 2, false)
 		assert.NoError(t, err)
+		assert.Len(t, nextIndices, 2)
+		assert.Equal(t, []uint{2, 3}, nextIndices)
+		assert.Len(t, remainingIndices, 0)
 		// provoke error
-		_, err = linearBatchSampler(&remainingIndices, 2, false)
+		nextIndices, err = linearBatchSampler(&remainingIndices, 2, false)
 		assert.ErrorIs(t, err, Done)
+		assert.Len(t, remainingIndices, 0)
 	})
 
 	t.Run("dataset size not divisible by batch size and dropLast", func(t *testing.T) {
@@ -126,33 +149,39 @@ func TestLinearBatchSampler(t *testing.T) {
 
 		// happy execution
 		nextIndices, err := linearBatchSampler(&remainingIndices, 2, true)
+		assert.NoError(t, err)
 		assert.Len(t, nextIndices, 2)
-		assert.NoError(t, err)
-		// another happy (but short) execution
-		nextIndices, err = linearBatchSampler(&remainingIndices, 2, true)
-		assert.Len(t, nextIndices, 1)
-		assert.NoError(t, err)
+		assert.Equal(t, []uint{0, 1}, nextIndices)
+		assert.Len(t, remainingIndices, 1)
 		// provoke error
 		nextIndices, err = linearBatchSampler(&remainingIndices, 2, true)
 		assert.ErrorIs(t, err, Done)
+		assert.Len(t, remainingIndices, 1)
 	})
 
 	t.Run("dataset size divisible by batch size and dropLast", func(t *testing.T) {
-		remainingIndices := make([]uint, 3)
-		for i := 0; i < 3; i++ {
+		remainingIndices := make([]uint, 4)
+		for i := 0; i < 4; i++ {
 			remainingIndices[i] = uint(i)
 		}
-		assert.Len(t, remainingIndices, 3)
+		assert.Len(t, remainingIndices, 4)
 
 		// happy execution
-		_, err := linearBatchSampler(&remainingIndices, 2, true)
+		nextIndices, err := linearBatchSampler(&remainingIndices, 2, true)
 		assert.NoError(t, err)
-		// another happy execution
-		_, err = linearBatchSampler(&remainingIndices, 2, true)
+		assert.Len(t, nextIndices, 2)
+		assert.Equal(t, []uint{0, 1}, nextIndices)
+		assert.Len(t, remainingIndices, 2)
+		// should run fine
+		nextIndices, err = linearBatchSampler(&remainingIndices, 2, true)
 		assert.NoError(t, err)
+		assert.Len(t, nextIndices, 2)
+		assert.Equal(t, []uint{2, 3}, nextIndices)
+		assert.Len(t, remainingIndices, 0)
 		// provoke error
-		_, err = linearBatchSampler(&remainingIndices, 2, true)
+		nextIndices, err = linearBatchSampler(&remainingIndices, 2, true)
 		assert.ErrorIs(t, err, Done)
+		assert.Len(t, remainingIndices, 0)
 	})
 }
 
@@ -165,11 +194,9 @@ func TestRandomBatchSampler(t *testing.T) {
 		assert.Len(t, remainingIndices, 3)
 
 		nextIndices, err := randomBatchSampler(&remainingIndices, 2, false)
-		assert.Len(t, remainingIndices, 1)
 		assert.NoError(t, err)
 		assert.Len(t, nextIndices, 2)
-		assert.Less(t, nextIndices[0], uint(3))
-		assert.Less(t, nextIndices[1], uint(3))
+		assert.Len(t, remainingIndices, 1)
 	})
 
 	t.Run("dataset size not divisible by batch size and no dropLast", func(t *testing.T) {
@@ -180,29 +207,42 @@ func TestRandomBatchSampler(t *testing.T) {
 		assert.Len(t, remainingIndices, 3)
 
 		// happy execution
-		_, err := randomBatchSampler(&remainingIndices, 2, false)
+		nextIndices, err := randomBatchSampler(&remainingIndices, 2, false)
 		assert.NoError(t, err)
+		assert.Len(t, nextIndices, 2)
+		assert.Len(t, remainingIndices, 1)
+		// should run fine
+		nextIndices, err = randomBatchSampler(&remainingIndices, 2, false)
+		assert.NoError(t, err)
+		assert.Len(t, nextIndices, 1)
+		assert.Len(t, remainingIndices, 0)
 		// provoke error
-		_, err = randomBatchSampler(&remainingIndices, 2, false)
+		nextIndices, err = randomBatchSampler(&remainingIndices, 2, false)
 		assert.ErrorIs(t, err, Done)
+		assert.Len(t, remainingIndices, 0)
 	})
 
 	t.Run("dataset size divisible by batch size and no dropLast", func(t *testing.T) {
 		remainingIndices := make([]uint, 4)
-		for i := 0; i < 3; i++ {
+		for i := 0; i < 4; i++ {
 			remainingIndices[i] = uint(i)
 		}
 		assert.Len(t, remainingIndices, 4)
 
 		// happy execution
-		_, err := randomBatchSampler(&remainingIndices, 2, false)
+		nextIndices, err := randomBatchSampler(&remainingIndices, 2, false)
 		assert.NoError(t, err)
-		// another happy execution
-		_, err = randomBatchSampler(&remainingIndices, 2, false)
+		assert.Len(t, nextIndices, 2)
+		assert.Len(t, remainingIndices, 2)
+		// should run fine
+		nextIndices, err = randomBatchSampler(&remainingIndices, 2, false)
 		assert.NoError(t, err)
+		assert.Len(t, nextIndices, 2)
+		assert.Len(t, remainingIndices, 0)
 		// provoke error
-		_, err = randomBatchSampler(&remainingIndices, 2, false)
+		nextIndices, err = randomBatchSampler(&remainingIndices, 2, false)
 		assert.ErrorIs(t, err, Done)
+		assert.Len(t, remainingIndices, 0)
 	})
 
 	t.Run("dataset size not divisible by batch size and dropLast", func(t *testing.T) {
@@ -214,32 +254,35 @@ func TestRandomBatchSampler(t *testing.T) {
 
 		// happy execution
 		nextIndices, err := randomBatchSampler(&remainingIndices, 2, true)
+		assert.NoError(t, err)
 		assert.Len(t, nextIndices, 2)
-		assert.NoError(t, err)
-		// another happy (but short) execution
-		nextIndices, err = randomBatchSampler(&remainingIndices, 2, true)
-		assert.Len(t, nextIndices, 1)
-		assert.NoError(t, err)
+		assert.Len(t, remainingIndices, 1)
 		// provoke error
 		nextIndices, err = randomBatchSampler(&remainingIndices, 2, true)
 		assert.ErrorIs(t, err, Done)
+		assert.Len(t, remainingIndices, 1)
 	})
 
 	t.Run("dataset size divisible by batch size and dropLast", func(t *testing.T) {
-		remainingIndices := make([]uint, 3)
-		for i := 0; i < 3; i++ {
+		remainingIndices := make([]uint, 4)
+		for i := 0; i < 4; i++ {
 			remainingIndices[i] = uint(i)
 		}
-		assert.Len(t, remainingIndices, 3)
+		assert.Len(t, remainingIndices, 4)
 
 		// happy execution
-		_, err := randomBatchSampler(&remainingIndices, 2, true)
+		nextIndices, err := randomBatchSampler(&remainingIndices, 2, true)
 		assert.NoError(t, err)
-		// another happy execution
-		_, err = randomBatchSampler(&remainingIndices, 2, true)
+		assert.Len(t, nextIndices, 2)
+		assert.Len(t, remainingIndices, 2)
+		// should run fine
+		nextIndices, err = randomBatchSampler(&remainingIndices, 2, true)
 		assert.NoError(t, err)
+		assert.Len(t, nextIndices, 2)
+		assert.Len(t, remainingIndices, 0)
 		// provoke error
-		_, err = randomBatchSampler(&remainingIndices, 2, true)
+		nextIndices, err = randomBatchSampler(&remainingIndices, 2, true)
 		assert.ErrorIs(t, err, Done)
+		assert.Len(t, remainingIndices, 0)
 	})
 }
