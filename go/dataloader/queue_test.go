@@ -6,7 +6,6 @@ import (
 
 func TestQueue(t *testing.T) {
 	q := NewQueue[int](10)
-
 	q.Enqueue(1)
 	q.Enqueue(2)
 	q.Enqueue(3)

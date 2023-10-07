@@ -18,13 +18,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/datasets"
-	"log"
+	"math"
 )
 
 var Done = errors.New("no more items in Dataloader")
 
 // Dataloader is a custom type that wraps a dataset and allows to iterate it in batches
 // see (for inspiration): https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
+//
+// NOTE: even tough this implementation supports multiple workers, it is NOT thread safe.
+// Calling Next() from different goroutines is strongly discouraged!
 type Dataloader[T any] struct {
 	// dataset from which to load the data.
 	dataset datasets.Dataset[T]
@@ -42,7 +45,7 @@ type Dataloader[T any] struct {
 	sampler func(remainingIndices *[]uint) (index uint, err error)
 
 	// like sampler, but returns a batch of indices at a time.
-	// Mutually exclusive with batch_size, shuffle, sampler, and dropLast.
+	// Mutually exclusive with batch_size, sampler, and dropLast.
 	batchSampler func(remainingIndices *[]uint, batchSize uint, dropLast bool) (indices []uint, err error)
 
 	// a function called upon initialization of the worker
@@ -52,147 +55,250 @@ type Dataloader[T any] struct {
 	// 2 means there will be a total of 2 * num_workers batches prefetched across all workers.
 	prefetchFactor uint
 
-	prevWorker       uint
+	// number of available workers
+	numWorkers uint
+
+	// number of batches that have yet to be requested
+	remainingBatches int
+
+	// batches are collected in round-robin fashion.
+	// prevWorker is used to determine the next worker to collect from
+	// No need to synchronize as this is only used by a single thread!
+	prevWorker uint
+
+	// the available indices of the dataset still left in this run.
+	// No need to synchronize as this is only used by a single thread!
 	remainingIndices []uint
 
-	numWorkers     uint
-	workerChannels []chan int
-	workerData     []chan T
-	closeChan      chan struct{} // empty struct so it doesn't allocate any memory
+	// workers receive the indices they should load through this channel
+	workerChannels []chan []uint
 
-	//wg sync.WaitGroup
+	// workers send the result back through this channel
+	workerData []chan T
+
+	// central communication channel for shutdowns etc.
+	closeChan chan struct{} // empty struct so it doesn't allocate any memory
 }
 
-// NewDataloader initializes a single-threaded dataloader from a given dataset.
-func NewDataloader[T any](dataset datasets.Dataset[T], batchSize uint, dropLast bool) Dataloader[T] {
-	return NewDataloaderMulti(dataset, batchSize, dropLast, 1)
+func NewDataloaderSmart[T any](dataset datasets.Dataset[T], batchSize uint, shuffle bool) *Dataloader[T] {
+	var sampler func(remainingIndices *[]uint) (index uint, err error)
+	if shuffle {
+		sampler = randomSampler
+	} else {
+		sampler = linearSampler
+	}
+
+	// TODO find a system to infer some good values for these
+	numWorkers := uint(4)
+	prefetchFactor := uint(4)
+
+	res := &Dataloader[T]{
+		dataset:        dataset,
+		batchSize:      batchSize,
+		dropLast:       true,
+		sampler:        sampler,
+		batchSampler:   nil,
+		workerInit:     nil,
+		prefetchFactor: prefetchFactor,
+		numWorkers:     numWorkers,
+	}
+	return res.init()
+}
+
+func NewDataloader[T any](dataset datasets.Dataset[T], numWorkers uint, batchSize uint, dropLast bool, workerInit func(id uint), prefetchFactor uint, shuffle bool) *Dataloader[T] {
+	var sampler func(remainingIndices *[]uint) (index uint, err error)
+	if shuffle {
+		sampler = randomSampler
+	} else {
+		sampler = linearSampler
+	}
+	res := &Dataloader[T]{
+		dataset:        dataset,
+		batchSize:      batchSize,
+		dropLast:       dropLast,
+		sampler:        sampler,
+		batchSampler:   nil,
+		workerInit:     workerInit,
+		prefetchFactor: prefetchFactor,
+		numWorkers:     numWorkers,
+	}
+	return res.init()
+}
+
+func NewDataloaderFromSampler[T any](dataset datasets.Dataset[T], numWorkers uint, batchSize uint, dropLast bool, workerInit func(id uint), prefetchFactor uint, sampler func(remainingIndices *[]uint) (index uint, err error)) *Dataloader[T] {
+	res := &Dataloader[T]{
+		dataset:        dataset,
+		batchSize:      batchSize,
+		dropLast:       dropLast,
+		sampler:        sampler,
+		batchSampler:   nil,
+		workerInit:     workerInit,
+		prefetchFactor: prefetchFactor,
+		numWorkers:     numWorkers,
+	}
+	return res.init()
+}
+
+func NewDataloaderFromBatchSampler[T any](dataset datasets.Dataset[T], numWorkers uint, batchSize uint, batchSampler func(remainingIndices *[]uint, batchSize uint, dropLast bool) (indices []uint, err error), workerInit func(id uint), prefetchFactor uint) *Dataloader[T] {
+	res := &Dataloader[T]{
+		dataset:        dataset,
+		batchSize:      batchSize,
+		dropLast:       false,
+		sampler:        nil,
+		batchSampler:   batchSampler,
+		workerInit:     workerInit,
+		prefetchFactor: prefetchFactor,
+		numWorkers:     numWorkers,
+	}
+	return res.init()
 }
 
 // NewDataloaderMulti initializes a multi-threaded dataloader from a given dataset.
-func NewDataloaderMulti[T any](dataset datasets.Dataset[T], batchSize uint, dropLast bool, numWorkers uint) Dataloader[T] {
-	// Make sure [prefetchFactor * numWorkers > batchSize] to avoid bottlenecks.
-	prefetchFactor := uint(2) // TODO: turn into param
-
-	res := Dataloader[T]{
-		// required  basics
-		dataset:   dataset,
-		batchSize: batchSize,
-		dropLast:  dropLast,
-		// functions
-		sampler:      linearSampler, // FIXME: params
-		batchSampler: nil,
-		workerInit:   nil,
-		// worker information
-		prefetchFactor:   prefetchFactor,
-		prevWorker:       0,
-		remainingIndices: make([]uint, dataset.Count()),
-		// workers
-		numWorkers:     numWorkers,
-		workerChannels: make([]chan int, numWorkers),
-		workerData:     make([]chan T, numWorkers),
-		closeChan:      make(chan struct{}),
-	}
+func (dl *Dataloader[T]) init() *Dataloader[T] {
+	// worker stuff
+	dl.prevWorker = 0
+	dl.remainingIndices = make([]uint, dl.dataset.Count())
+	dl.workerChannels = make([]chan []uint, dl.numWorkers)
+	dl.workerData = make([]chan T, dl.numWorkers)
+	dl.closeChan = make(chan struct{})
+	dl.remainingBatches = int(dl.Count())
 
 	// fill the remaining indices
-	for i := uint(0); i < dataset.Count(); i++ {
-		res.remainingIndices[i] = i
+	for i := uint(0); i < dl.dataset.Count(); i++ {
+		dl.remainingIndices[i] = i
 	}
 
 	// start the workers
-	for i := uint(0); i < numWorkers; i++ {
-		res.workerData[i] = make(chan T, prefetchFactor)
-		res.workerChannels[i] = make(chan int)
-		go res.worker(i)
+	for i := uint(0); i < dl.numWorkers; i++ {
+		dl.workerData[i] = make(chan T, dl.prefetchFactor+10)          // buffer needed so worker isn't blocked and can still receive.
+		dl.workerChannels[i] = make(chan []uint, dl.prefetchFactor+10) // buffer needed so worker isn't blocked and can still receive.
+		go dl.worker(i)
 
 		// make them prefetch a few batches
-		for p := uint(0); p < res.prefetchFactor; p++ {
-			err := res.sendBatchIndices(i)
+		for p := uint(0); p < dl.prefetchFactor; p++ {
+			indices, err := dl.getNextIndicesBatch()
 			if err != nil {
-				panic("dataset does not even fit a single batch!")
+				panic("dataset does not even contain enough batches for preloading!")
 			}
+			dl.workerChannels[i] <- indices
 		}
 	}
-
-	return res
+	return dl
 }
 
-func (dl *Dataloader[T]) sendBatchIndices(workerId uint) error {
-	if dl.batchSampler != nil {
-		indices, err := dl.batchSampler(&dl.remainingIndices, dl.batchSize, dl.dropLast)
-		if err != nil {
-			return err
-		}
-		for _, v := range indices {
-			dl.workerChannels[workerId] <- int(v)
-		}
-		return nil
-	} else {
-		for i := uint(0); i < dl.batchSize; i++ {
-			index, err := dl.sampler(&dl.remainingIndices)
-			if err != nil && !dl.dropLast {
-				return err
-			}
-			dl.workerChannels[workerId] <- int(index)
-		}
-		return nil
+// Reset prepares the dataloader for a new runs after it is done
+// NOTE: this is done by copying most of the internal datastructures and reinitializing.
+// Therefore, be careful when calling this, to avoid performance issues.
+// This method is supposed to be called at the end of each epoch
+func (dl *Dataloader[T]) Reset() *Dataloader[T] {
+	res := &Dataloader[T]{
+		dataset:        dl.dataset,
+		batchSize:      dl.batchSize,
+		dropLast:       dl.dropLast,
+		sampler:        dl.sampler,
+		batchSampler:   dl.batchSampler,
+		workerInit:     dl.workerInit,
+		prefetchFactor: dl.prefetchFactor,
+		numWorkers:     dl.numWorkers,
 	}
-}
-
-func (dl *Dataloader[T]) worker(id uint) {
-	//defer dl.wg.Done()
-	var storage = NewQueue[T](dl.batchSize)
-	for {
-		select {
-		case index, ok := <-dl.workerChannels[id]:
-			if !ok {
-				fmt.Printf("worker %d: taskChan closed\n", id)
-				return
-			}
-
-			data := dl.dataset.Get(uint(index))
-			storage.Enqueue(data)
-
-			if storage.Length() == dl.batchSize {
-				batch := storage.DequeueAll()
-				collatedBatch := dl.dataset.Collate(batch)
-				dl.workerData[id] <- collatedBatch
-			}
-
-		case <-dl.closeChan:
-			log.Printf("closing worker: %d.\n", id)
-			return
-		}
-	}
+	dl.Close()
+	*dl = *res.init() // replace the pointer contents with the newly initialized dataloader
+	return dl
 }
 
 // Count returns the number of batches in the Dataloader
 func (dl *Dataloader[T]) Count() uint {
 	dsSize := dl.dataset.Count()
-	fullBatches := dsSize / dl.batchSize
+	fullBatches := float64(dsSize) / float64(dl.batchSize)
 	if dl.dropLast {
-		return fullBatches
+		return uint(math.Floor(fullBatches))
 	} else {
-		return fullBatches + 1
+		return uint(math.Ceil(fullBatches))
+	}
+}
+
+// getNextIndicesBatch creates a list of indices for the next batch.
+// Handles all the edge cases or drop last, batchSampler etc.
+func (dl *Dataloader[T]) getNextIndicesBatch() ([]uint, error) {
+	if dl.batchSampler != nil {
+		indices, err := dl.batchSampler(&dl.remainingIndices, dl.batchSize, dl.dropLast)
+		return indices, err
+	} else {
+		indices := make([]uint, 0, dl.batchSize)
+		for i := uint(0); i < dl.batchSize; i++ {
+			index, err := dl.sampler(&dl.remainingIndices)
+			if err != nil {
+				if dl.dropLast && len(indices) > 0 {
+					break
+				} else {
+					return nil, err
+				}
+			}
+			indices = append(indices, index)
+		}
+		return indices, nil
+	}
+}
+
+func (dl *Dataloader[T]) worker(id uint) {
+	fmt.Println("start worker:", id)
+	for {
+		select {
+		case indices, ok := <-dl.workerChannels[id]:
+			fmt.Println("worker", id, "received - index, ok:", indices, ok)
+			if !ok {
+				close(dl.workerData[id])
+				fmt.Println("shutdown worker:", id)
+				return
+			}
+
+			batch := make([]T, len(indices))
+			for i, index := range indices {
+				batch[i] = dl.dataset.Get(index)
+			}
+			collatedBatch := dl.dataset.Collate(batch)
+			dl.workerData[id] <- collatedBatch
+
+		case <-dl.closeChan: // FIXME: remove this case?
+			fmt.Println("shutdown worker:", id)
+			return
+		}
 	}
 }
 
 func (dl *Dataloader[T]) Next() (batch T, err error) {
+	if dl.remainingBatches <= 0 {
+		return batch, Done
+	}
+
+	// select next worker in a round-robin fashion
 	workerId := dl.prevWorker
 	dl.prevWorker = (dl.prevWorker + 1) % dl.numWorkers
 
-	data, ok := <-dl.workerData[workerId]
-	if !ok {
-		log.Println("idk")
-	}
-
-	err = dl.sendBatchIndices(workerId)
+	// try to get and send next batch
+	indices, err := dl.getNextIndicesBatch()
+	fmt.Println("next indices", indices, err)
 	if err != nil {
-		return batch, err
+		close(dl.workerChannels[workerId])
+	} else {
+		dl.workerChannels[workerId] <- indices
 	}
+	//if err != nil && dl.remainingBatches > int(dl.prefetchFactor*dl.numWorkers) {
+	//	fmt.Println("closing down")
+	//	dl.Close()
+	//	return batch, err
+	//}
 
-	// TODO: signal "Done"
+	// read the data from the worker (must be there, either prefetched or because we just sent the indices
+	batch = <-dl.workerData[workerId]
 
-	return data, nil
+	//// close the workers input channel if it is the last batch
+	//if dl.remainingBatches < int(dl.numWorkers) {
+	//	close(dl.workerChannels[workerId])
+	//}
+
+	dl.remainingBatches--
+	return batch, nil
 }
 
 func (dl *Dataloader[T]) Close() {
@@ -200,10 +306,9 @@ func (dl *Dataloader[T]) Close() {
 	for _, ch := range dl.workerChannels {
 		close(ch)
 	}
-	//dl.wg.Wait()
 }
 
 func (dl *Dataloader[T]) String() string {
 	return fmt.Sprintf("Dataloader(dataset:%s, batch size: %d, dropLast: %t)",
-		dl.dataset, dl.batchSize, dl.dropLast)
+		dl.dataset.String(), dl.batchSize, dl.dropLast)
 }
