@@ -26,9 +26,8 @@ func Init(backend Backend) {
 }
 
 // InitializedBackend returns the initialized [Backend].
+// BUG: this might break when a new backend is added, as this go frontend does support the bit magic
 func InitializedBackend() Backend {
-	// FIXME: this might break when a new backend is added,
-	// as this go frontend does not doe the bit magic
 	return Backend(C.flintInitializedBackends())
 }
 

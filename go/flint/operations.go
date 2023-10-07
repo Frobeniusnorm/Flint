@@ -82,7 +82,7 @@ Divide [numerator] by [denominator].
 At least one of the parameters HAS to be a [GraphNode]
 Division is carried out element-wise.
 */
-func Divide[T baseNumeric | GraphNode](numerator T, denominator T) GraphNode {
+func Divide[T1 baseNumeric | GraphNode, T2 baseNumeric | GraphNode](numerator T1, denominator T2) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch x := any(numerator).(type) {
 	case GraphNode:
