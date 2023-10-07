@@ -80,7 +80,11 @@ type Dataloader[T any] struct {
 	closeChan chan struct{} // empty struct so it doesn't allocate any memory
 }
 
-func NewDataloaderSmart[T any](dataset datasets.Dataset[T], batchSize uint, shuffle bool) *Dataloader[T] {
+func NewDataloaderSmart[T any](
+	dataset datasets.Dataset[T],
+	batchSize uint,
+	shuffle bool,
+) *Dataloader[T] {
 	var sampler func(remainingIndices *[]uint) (index uint, err error)
 	if shuffle {
 		sampler = randomSampler
@@ -105,7 +109,15 @@ func NewDataloaderSmart[T any](dataset datasets.Dataset[T], batchSize uint, shuf
 	return res.init()
 }
 
-func NewDataloader[T any](dataset datasets.Dataset[T], numWorkers uint, batchSize uint, dropLast bool, workerInit func(id uint), prefetchFactor uint, shuffle bool) *Dataloader[T] {
+func NewDataloader[T any](
+	dataset datasets.Dataset[T],
+	numWorkers uint,
+	batchSize uint,
+	dropLast bool,
+	workerInit func(id uint),
+	prefetchFactor uint,
+	shuffle bool,
+) *Dataloader[T] {
 	var sampler func(remainingIndices *[]uint) (index uint, err error)
 	if shuffle {
 		sampler = randomSampler
@@ -125,7 +137,15 @@ func NewDataloader[T any](dataset datasets.Dataset[T], numWorkers uint, batchSiz
 	return res.init()
 }
 
-func NewDataloaderFromSampler[T any](dataset datasets.Dataset[T], numWorkers uint, batchSize uint, dropLast bool, workerInit func(id uint), prefetchFactor uint, sampler func(remainingIndices *[]uint) (index uint, err error)) *Dataloader[T] {
+func NewDataloaderFromSampler[T any](
+	dataset datasets.Dataset[T],
+	numWorkers uint,
+	batchSize uint,
+	dropLast bool,
+	workerInit func(id uint),
+	prefetchFactor uint,
+	sampler func(remainingIndices *[]uint) (index uint, err error),
+) *Dataloader[T] {
 	res := &Dataloader[T]{
 		dataset:        dataset,
 		batchSize:      batchSize,
@@ -139,7 +159,14 @@ func NewDataloaderFromSampler[T any](dataset datasets.Dataset[T], numWorkers uin
 	return res.init()
 }
 
-func NewDataloaderFromBatchSampler[T any](dataset datasets.Dataset[T], numWorkers uint, batchSize uint, batchSampler func(remainingIndices *[]uint, batchSize uint, dropLast bool) (indices []uint, err error), workerInit func(id uint), prefetchFactor uint) *Dataloader[T] {
+func NewDataloaderFromBatchSampler[T any](
+	dataset datasets.Dataset[T],
+	numWorkers uint,
+	batchSize uint,
+	batchSampler func(remainingIndices *[]uint, batchSize uint, dropLast bool) (indices []uint, err error),
+	workerInit func(id uint),
+	prefetchFactor uint,
+) *Dataloader[T] {
 	res := &Dataloader[T]{
 		dataset:        dataset,
 		batchSize:      batchSize,
@@ -283,19 +310,9 @@ func (dl *Dataloader[T]) Next() (batch T, err error) {
 	} else {
 		dl.workerChannels[workerId] <- indices
 	}
-	//if err != nil && dl.remainingBatches > int(dl.prefetchFactor*dl.numWorkers) {
-	//	fmt.Println("closing down")
-	//	dl.Close()
-	//	return batch, err
-	//}
 
 	// read the data from the worker (must be there, either prefetched or because we just sent the indices
 	batch = <-dl.workerData[workerId]
-
-	//// close the workers input channel if it is the last batch
-	//if dl.remainingBatches < int(dl.numWorkers) {
-	//	close(dl.workerChannels[workerId])
-	//}
 
 	dl.remainingBatches--
 	return batch, nil

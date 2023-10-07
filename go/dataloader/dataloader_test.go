@@ -44,7 +44,7 @@ func TestNewDataloader(t *testing.T) {
 
 	assert.Equal(t, dl.dataset, dataset)
 	assert.Equal(t, batchSize, dl.batchSize)
-	assert.Equal(t, dl.dropLast, false)
+	assert.Equal(t, false, dl.dropLast)
 	assert.NotNil(t, dl.sampler)
 	assert.Nil(t, dl.batchSampler)
 	assert.Equal(t, prefetchFactor, dl.prefetchFactor)
@@ -57,22 +57,71 @@ func TestNewDataloader(t *testing.T) {
 }
 
 func TestNewDataloaderFromSampler(t *testing.T) {
-	t.Fail()
+	dataset := datasets.NewFakeDataset(10, flint.Shape{10, 10}, 1000)
+	numWorkers := uint(3)
+	batchSize := uint(32)
+	prefetchFactor := uint(2)
+	dl := NewDataloaderFromSampler[datasets.FakeDatasetEntry](dataset, numWorkers, batchSize, false, nil, prefetchFactor, linearSampler)
+
+	assert.Equal(t, dl.dataset, dataset)
+	assert.Equal(t, batchSize, dl.batchSize)
+	assert.Equal(t, false, dl.dropLast)
+	assert.NotNil(t, dl.sampler)
+	assert.Nil(t, dl.batchSampler)
+	assert.Equal(t, prefetchFactor, dl.prefetchFactor)
+	assert.Equal(t, uint(0), dl.prevWorker)
+	assert.Len(t, dl.remainingIndices, int(dataset.Count()-(2*3*uint(32))))
+	assert.Equal(t, numWorkers, dl.numWorkers)
+	assert.Len(t, dl.workerChannels, int(dl.numWorkers))
+	assert.Len(t, dl.workerData, int(dl.numWorkers))
+	assert.NotNil(t, dl.closeChan)
 }
 
 func TestNewDataloaderFromBatchSampler(t *testing.T) {
-	t.Fail()
+	dataset := datasets.NewFakeDataset(10, flint.Shape{10, 10}, 1000)
+	numWorkers := uint(3)
+	batchSize := uint(32)
+	prefetchFactor := uint(2)
+	dl := NewDataloaderFromBatchSampler[datasets.FakeDatasetEntry](dataset, numWorkers, batchSize, linearBatchSampler, nil, prefetchFactor)
+
+	assert.Equal(t, dl.dataset, dataset)
+	assert.Equal(t, batchSize, dl.batchSize)
+	assert.Equal(t, false, dl.dropLast)
+	assert.Nil(t, dl.sampler)
+	assert.NotNil(t, dl.batchSampler)
+	assert.Equal(t, prefetchFactor, dl.prefetchFactor)
+	assert.Equal(t, uint(0), dl.prevWorker)
+	assert.Len(t, dl.remainingIndices, int(dataset.Count()-(2*3*uint(32))))
+	assert.Equal(t, numWorkers, dl.numWorkers)
+	assert.Len(t, dl.workerChannels, int(dl.numWorkers))
+	assert.Len(t, dl.workerData, int(dl.numWorkers))
+	assert.NotNil(t, dl.closeChan)
 }
 
 func TestNewDataloaderSmart(t *testing.T) {
-	t.Fail()
+	dataset := datasets.NewFakeDataset(10, flint.Shape{10, 10}, 1000)
+	batchSize := uint(32)
+	dl := NewDataloaderSmart[datasets.FakeDatasetEntry](dataset, batchSize, false)
+
+	assert.Equal(t, dl.dataset, dataset)
+	assert.Equal(t, batchSize, dl.batchSize)
+	assert.Equal(t, true, dl.dropLast)
+	assert.NotNil(t, dl.sampler)
+	assert.Nil(t, dl.batchSampler)
+	assert.Equal(t, dl.prefetchFactor, uint(4))
+	assert.Equal(t, uint(0), dl.prevWorker)
+	assert.Len(t, dl.remainingIndices, int(dataset.Count()-(4*4*uint(32))))
+	assert.Equal(t, dl.numWorkers, uint(4))
+	assert.Len(t, dl.workerChannels, int(dl.numWorkers))
+	assert.Len(t, dl.workerData, int(dl.numWorkers))
+	assert.NotNil(t, dl.closeChan)
 }
 
 func TestDataloader_Next(t *testing.T) {
-	dataset := datasets.NewFakeDataset(10, flint.Shape{10, 10}, 9)
-	numWorkers := uint(1)
+	dataset := datasets.NewFakeDataset(10, flint.Shape{10, 10}, 5)
+	numWorkers := uint(2)
 	batchSize := uint(2)
-	prefetchFactor := uint(2)
+	prefetchFactor := uint(1)
 	// we have at least 9 batches, 6 of them will be prefetched at the start
 	dl := NewDataloader[datasets.FakeDatasetEntry](dataset, numWorkers, batchSize, true, nil, prefetchFactor, false)
 
