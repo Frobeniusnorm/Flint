@@ -75,9 +75,6 @@ type Dataloader[T any] struct {
 
 	// workers send the result back through this channel
 	workerData []chan T
-
-	// central communication channel for shutdowns etc.
-	closeChan chan struct{} // empty struct so it doesn't allocate any memory
 }
 
 func NewDataloaderSmart[T any](
@@ -187,7 +184,6 @@ func (dl *Dataloader[T]) init() *Dataloader[T] {
 	dl.remainingIndices = make([]uint, dl.dataset.Count())
 	dl.workerChannels = make([]chan []uint, dl.numWorkers)
 	dl.workerData = make([]chan T, dl.numWorkers)
-	dl.closeChan = make(chan struct{})
 	dl.remainingBatches = int(dl.Count())
 
 	// fill the remaining indices
@@ -272,7 +268,6 @@ func (dl *Dataloader[T]) worker(id uint) {
 	for {
 		select {
 		case indices, ok := <-dl.workerChannels[id]:
-			fmt.Println("worker", id, "received - index, ok:", indices, ok)
 			if !ok {
 				close(dl.workerData[id])
 				fmt.Println("shutdown worker:", id)
@@ -285,10 +280,6 @@ func (dl *Dataloader[T]) worker(id uint) {
 			}
 			collatedBatch := dl.dataset.Collate(batch)
 			dl.workerData[id] <- collatedBatch
-
-		case <-dl.closeChan: // FIXME: remove this case?
-			fmt.Println("shutdown worker:", id)
-			return
 		}
 	}
 }
@@ -304,7 +295,6 @@ func (dl *Dataloader[T]) Next() (batch T, err error) {
 
 	// try to get and send next batch
 	indices, err := dl.getNextIndicesBatch()
-	fmt.Println("next indices", indices, err)
 	if err != nil {
 		close(dl.workerChannels[workerId])
 	} else {
@@ -319,7 +309,6 @@ func (dl *Dataloader[T]) Next() (batch T, err error) {
 }
 
 func (dl *Dataloader[T]) Close() {
-	close(dl.closeChan)
 	for _, ch := range dl.workerChannels {
 		close(ch)
 	}

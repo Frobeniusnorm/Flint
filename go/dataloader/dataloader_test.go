@@ -53,7 +53,6 @@ func TestNewDataloader(t *testing.T) {
 	assert.Equal(t, numWorkers, dl.numWorkers)
 	assert.Len(t, dl.workerChannels, int(dl.numWorkers))
 	assert.Len(t, dl.workerData, int(dl.numWorkers))
-	assert.NotNil(t, dl.closeChan)
 }
 
 func TestNewDataloaderFromSampler(t *testing.T) {
@@ -74,7 +73,6 @@ func TestNewDataloaderFromSampler(t *testing.T) {
 	assert.Equal(t, numWorkers, dl.numWorkers)
 	assert.Len(t, dl.workerChannels, int(dl.numWorkers))
 	assert.Len(t, dl.workerData, int(dl.numWorkers))
-	assert.NotNil(t, dl.closeChan)
 }
 
 func TestNewDataloaderFromBatchSampler(t *testing.T) {
@@ -95,7 +93,6 @@ func TestNewDataloaderFromBatchSampler(t *testing.T) {
 	assert.Equal(t, numWorkers, dl.numWorkers)
 	assert.Len(t, dl.workerChannels, int(dl.numWorkers))
 	assert.Len(t, dl.workerData, int(dl.numWorkers))
-	assert.NotNil(t, dl.closeChan)
 }
 
 func TestNewDataloaderSmart(t *testing.T) {
@@ -114,7 +111,6 @@ func TestNewDataloaderSmart(t *testing.T) {
 	assert.Equal(t, dl.numWorkers, uint(4))
 	assert.Len(t, dl.workerChannels, int(dl.numWorkers))
 	assert.Len(t, dl.workerData, int(dl.numWorkers))
-	assert.NotNil(t, dl.closeChan)
 }
 
 func TestDataloader_Next(t *testing.T) {
