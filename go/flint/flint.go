@@ -41,7 +41,13 @@ import (
 
 type GraphNode struct {
 	ref *C.FGraphNode
-	//DataType DataType
+}
+
+// Valid tells if a GraphNode has a valid structure.
+// This can be useful, as a precondition to decide whether to check errno or not.
+// BUG: FIXME for now this is not possible as flint does not return "invalid" GraphNodes yet.
+func (node GraphNode) Valid() bool {
+	return true
 }
 
 type Result[T completeNumeric] struct {

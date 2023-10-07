@@ -21,7 +21,8 @@ Supported formats include png, jpeg, bmp, gif, hdr ... essentially everything st
 NOTE for CGo: this function exemplary shows how to properly deal with errno
 */
 func LoadImage(path string) (GraphNode, error) {
-	resetErrno()
+	resetErrno() // FIXME: this should not be needed, but right now the function does not return a value indicating an error.
+	// The errno should only be read once we are sure there has been an error!
 
 	unsafePath := C.CString(path)
 	defer C.free(unsafe.Pointer(unsafePath))
