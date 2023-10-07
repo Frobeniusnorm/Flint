@@ -401,9 +401,9 @@ func Reshape(a GraphNode, shape Shape) GraphNode {
 }
 
 /*
-Min takes the minimum of two tensors (or a tensor and value) element wise along the last dimension of each.
+Minimum takes the minimum of two tensors (or a tensor and value) element wise along the last dimension of each.
 */
-func Min[T baseNumeric | GraphNode](a GraphNode, b T) GraphNode {
+func Minimum[T baseNumeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
@@ -423,9 +423,9 @@ func Min[T baseNumeric | GraphNode](a GraphNode, b T) GraphNode {
 }
 
 /*
-Max takes the maximum of two tensors (or a tensor and value) element wise along the last dimension of each.
+Maximum takes the maximum of two tensors (or a tensor and value) element wise along the last dimension of each.
 */
-func Max[T baseNumeric | GraphNode](a GraphNode, b T) GraphNode {
+func Maximum[T baseNumeric | GraphNode](a GraphNode, b T) GraphNode {
 	var flintNode *C.FGraphNode = nil
 	switch c := any(b).(type) {
 	case GraphNode:
@@ -787,4 +787,21 @@ Permute randomly permutes (= swaps multiple elements with each other without cre
 func Permute(a GraphNode, axis uint) (GraphNode, error) {
 	var flintNode *C.FGraphNode = C.fpermutate(a.ref, C.uint(axis))
 	return GraphNode{ref: flintNode}, nil
+}
+
+// Max returns the maximum value across all dimensions
+// see: https://numpy.org/doc/stable/reference/generated/numpy.max.html
+// FIXME: func Max(a GraphNode, axes Axis, scalar bool, keepDims bool) {
+func Max[Out completeNumeric](node GraphNode) Out {
+	//for !node.GetShape().Equal(Shape{1}) { }
+	node = Flatten(node)
+	node = ReduceMax(node, 0)
+	return CalculateResult[Out](node).Data[0]
+}
+
+// Min returns the minimum value across all dimensions
+func Min[Out completeNumeric](node GraphNode) Out {
+	node = Flatten(node)
+	node = ReduceMin(node, 0)
+	return CalculateResult[Out](node).Data[0]
 }
