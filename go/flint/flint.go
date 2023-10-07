@@ -31,6 +31,7 @@ typedef FGraphNode* graph_ref;
 */
 import "C"
 import (
+	"fmt"
 	"syscall"
 )
 
@@ -43,22 +44,36 @@ type GraphNode struct {
 	//DataType DataType
 }
 
-type ResultData struct {
+type Result[T completeNumeric] struct {
 	resultRef *C.FResultData
 	nodeRef   *C.FGraphNode
-	Data      any
+	Data      ResultData[T]
 	Shape     Shape
 	DataType  DataType
+}
+
+type ResultData[T completeNumeric] []T
+
+func (a ResultData[T]) String() string {
+	return fmt.Sprintf("%v", []T(a))
 }
 
 // Stride defines the steps for sliding operations
 // needs to have one entry for each dimension of tensor
 type Stride []int
 
+func (a Stride) String() string {
+	return fmt.Sprintf("%v", []int(a))
+}
+
 // Axes indicate changes in dimensions (i.e. transpose)
 // needs to have one entry for each dimension of tensor
 // and each entry should not be higher than the number of dimensions
 type Axes []uint
+
+func (a Axes) String() string {
+	return fmt.Sprintf("%v", []uint(a))
+}
 
 // Shape represents the size of a tensor.
 // needs to have one entry for each dimension of tensor
@@ -70,6 +85,22 @@ func (a Shape) NumItems() uint {
 		sum *= val
 	}
 	return sum
+}
+
+func (a Shape) String() string {
+	return fmt.Sprintf("%v", []uint(a))
+}
+
+func (a Shape) Equal(b Shape) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // DataType represents the valid datatypes for the flint backend

@@ -46,7 +46,7 @@ ExecuteGraph executes the graph node operations from all yet to be executed pred
 
 If the graph is executed by the GPU backend, an OpenCL kernel containing all selected operations (the nodes operation and those indirect parent operations which were not yet executed) are compiled and executed.
 The kernels are cached to improve performance of a program if the same graph-structures are reused (not necessary the same nodes, but the same combination of nodes), since then the backend can reuse already compiled kernels.
-The GPU backend is allowed to keep the Result data on the GPU without synchronizing it (so the generated [ResultDataOld] may not have a "data" member!).
+The GPU backend is allowed to keep the result data on the GPU without synchronizing it (so the generated [ResultDataOld] may not have a "data" member!).
 To force synchronization use [SyncMemory] or replace the call with [CalculateResult].
 
 If the CPU backend is chosen, it does not matter, since every operation is executed independently (here eager execution might be faster).
@@ -111,9 +111,10 @@ SyncMemory flushes all GPU data to the CPU.
 This method enforces all GPU data to be flushed to the CPU (but never executes the node!).
 Also see [CalculateResult].
 */
-func SyncMemory(node GraphNode) ResultData {
-	res := C.fSyncMemory(node.ref)
-	return ResultData{resultRef: res}
+func SyncMemory(node GraphNode) {
+	C.fSyncMemory(node.ref)
+	//res := C.fSyncMemory(node.ref)
+	//return Result{resultRef: res}
 }
 
 /*
@@ -123,20 +124,19 @@ It represents execution with one of both backends and additional memory synchron
 
 FIXME: return [ResultDataOld] instead of tensor. Tensor should be moved to DL framework!
 */
-func CalculateResult[T completeNumeric](node GraphNode) ResultData {
+func CalculateResult[T completeNumeric](node GraphNode) Result[T] {
 	var flintNode *C.FGraphNode = C.fCalculateResult(node.ref)
 
 	dataSize := int(flintNode.result_data.num_entries)
 	dataPtr := unsafe.Pointer(flintNode.result_data.data)
 	shapePtr := unsafe.Pointer(flintNode.operation.shape)
 	shapeSize := int(flintNode.operation.dimensions)
-
 	dataType := DataType(flintNode.operation.data_type)
 
 	var result = fromCToArray[T](dataPtr, dataSize, dataType)
 	var shape = Shape(fromCToArray[uint](shapePtr, shapeSize, f_INT64))
 
-	return ResultData{
+	return Result[T]{
 		nodeRef:  flintNode,
 		Data:     result,
 		Shape:    shape,
