@@ -31,6 +31,8 @@ func CrossEntropyLossExtended(predictions dl.Tensor, labels dl.Tensor, weight dl
 
 	// find out if the labels contain class indices (discrete) or probabilities (continuous)
 
+	// TODO: take a look at flint.Equal
+
 	// FIXME: everything basically lol (see pt)
 
 	// FIXME: given one hot encoding we can also do: L(y, ŷ) = − log(ŷ_k)|y_k =1
