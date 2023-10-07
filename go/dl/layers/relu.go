@@ -16,8 +16,8 @@ func (relu ReLU) Parameters(_ bool) []dl.Parameter {
 }
 
 func (relu ReLU) Forward(x dl.Tensor) dl.Tensor {
-	res := flint.Max(x.Node, int32(0))
-	return dl.Tensor{Node: res}
+	res := flint.Maximum(x.Node, int32(0))
+	return dl.NewTensor(res)
 }
 
 func (relu ReLU) TrainMode() {}
