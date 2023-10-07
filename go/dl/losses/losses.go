@@ -1,4 +1,4 @@
-package loss
+package losses
 
 import "fmt"
 

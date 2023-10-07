@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/dataloader"
 	"github.com/Frobeniusnorm/Flint/go/datasets"
-	"github.com/Frobeniusnorm/Flint/go/dl"
 	"github.com/Frobeniusnorm/Flint/go/dl/layers"
-	losses "github.com/Frobeniusnorm/Flint/go/dl/loss"
+	"github.com/Frobeniusnorm/Flint/go/dl/losses"
 	"github.com/Frobeniusnorm/Flint/go/dl/optimize"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 	"log"
@@ -23,9 +22,9 @@ func main() {
 		panic(err)
 	}
 
-	trainDataloader := dataloader.NewDataloader[datasets.MnistDatasetEntry](trainDataset, 64, true)
+	trainDataloader := dataloader.NewDataloader[datasets.MnistDatasetEntry](trainDataset, 3, 64, true, nil, 2, false)
 	fmt.Println(trainDataloader)
-	testDataloader := dataloader.NewDataloader[datasets.MnistDatasetEntry](testDataset, 32, true)
+	testDataloader := dataloader.NewDataloader[datasets.MnistDatasetEntry](testDataset, 3, 32, true, nil, 1, false)
 	fmt.Println(testDataloader)
 
 	model := layers.NewSequential(
@@ -46,13 +45,15 @@ func main() {
 		train(model, trainDataloader, optim)
 		test(model, trainDataloader)
 		scheduler.Step()
+		trainDataloader.Reset()
+		testDataloader.Reset()
 	}
 
 	flint.Cleanup()
 }
 
 // train for one epoch
-func train(model layers.Layer, trainDl dataloader.Dataloader[datasets.MnistDatasetEntry], optim optimize.Optimizer) {
+func train(model layers.Layer, trainDl *dataloader.Dataloader[datasets.MnistDatasetEntry], optim optimize.Optimizer) {
 	model.EvalMode()
 	for {
 		batch, err := trainDl.Next()
@@ -66,18 +67,16 @@ func train(model layers.Layer, trainDl dataloader.Dataloader[datasets.MnistDatas
 
 		flint.StartGradientContext()
 		output := model.Forward(batch.Data)
-		loss := dl.NewTensor(losses.CrossEntropyLoss(output.Node, batch.Label.Node))
+		loss := losses.CrossEntropyLoss(output, batch.Label)
 		flint.StopGradientContext()
 		optim.Step(loss)
 		flint.OptimizeMemory(loss.Node)
 		flint.FreeGraph(loss.Node)
-
-		break
 	}
 }
 
 // test the model on the test dataset
-func test(model layers.Layer, testDl dataloader.Dataloader[datasets.MnistDatasetEntry]) {
+func test(model layers.Layer, testDl *dataloader.Dataloader[datasets.MnistDatasetEntry]) {
 	model.EvalMode()
 	for {
 		batch, err := testDl.Next()
@@ -90,7 +89,7 @@ func test(model layers.Layer, testDl dataloader.Dataloader[datasets.MnistDataset
 		}
 
 		output := model.Forward(batch.Data)
-		loss := dl.NewTensor(losses.CrossEntropyLoss(output.Node, batch.Label.Node))
+		loss := losses.CrossEntropyLoss(output, batch.Label)
 		log.Println("test loss:", loss)
 	}
 }
