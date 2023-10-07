@@ -23,6 +23,12 @@ import (
 
 var Done = errors.New("no more items in Dataloader")
 
+type Sampler func(remainingIndices *[]uint) (index uint, err error)
+
+type BatchSampler func(remainingIndices *[]uint, batchSize uint, dropLast bool) (indices []uint, err error)
+
+type WorkerInit func(id uint)
+
 // Dataloader is a custom type that wraps a dataset and allows to iterate it in batches
 // see (for inspiration): https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
 //
@@ -42,14 +48,14 @@ type Dataloader[T any] struct {
 	// defines the strategy to draw samples from the dataset.
 	// Must return the next dataset index for each element in the dataset.
 	// If specified, shuffle must not be specified.
-	sampler func(remainingIndices *[]uint) (index uint, err error)
+	sampler Sampler
 
 	// like sampler, but returns a batch of indices at a time.
 	// Mutually exclusive with batch_size, sampler, and dropLast.
-	batchSampler func(remainingIndices *[]uint, batchSize uint, dropLast bool) (indices []uint, err error)
+	batchSampler BatchSampler
 
 	// a function called upon initialization of the worker
-	workerInit func(id uint)
+	workerInit WorkerInit
 
 	// Number of batches loaded in advance by each worker.
 	// 2 means there will be a total of 2 * num_workers batches prefetched across all workers.
@@ -82,7 +88,7 @@ func NewDataloaderSmart[T any](
 	batchSize uint,
 	shuffle bool,
 ) *Dataloader[T] {
-	var sampler func(remainingIndices *[]uint) (index uint, err error)
+	var sampler Sampler
 	if shuffle {
 		sampler = randomSampler
 	} else {
@@ -111,11 +117,11 @@ func NewDataloader[T any](
 	numWorkers uint,
 	batchSize uint,
 	dropLast bool,
-	workerInit func(id uint),
+	workerInit WorkerInit,
 	prefetchFactor uint,
 	shuffle bool,
 ) *Dataloader[T] {
-	var sampler func(remainingIndices *[]uint) (index uint, err error)
+	var sampler Sampler
 	if shuffle {
 		sampler = randomSampler
 	} else {
@@ -139,9 +145,9 @@ func NewDataloaderFromSampler[T any](
 	numWorkers uint,
 	batchSize uint,
 	dropLast bool,
-	workerInit func(id uint),
+	workerInit WorkerInit,
 	prefetchFactor uint,
-	sampler func(remainingIndices *[]uint) (index uint, err error),
+	sampler Sampler,
 ) *Dataloader[T] {
 	res := &Dataloader[T]{
 		dataset:        dataset,
@@ -160,8 +166,8 @@ func NewDataloaderFromBatchSampler[T any](
 	dataset datasets.Dataset[T],
 	numWorkers uint,
 	batchSize uint,
-	batchSampler func(remainingIndices *[]uint, batchSize uint, dropLast bool) (indices []uint, err error),
-	workerInit func(id uint),
+	batchSampler BatchSampler,
+	workerInit WorkerInit,
 	prefetchFactor uint,
 ) *Dataloader[T] {
 	res := &Dataloader[T]{
