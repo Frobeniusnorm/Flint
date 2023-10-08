@@ -694,7 +694,7 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
       FGraphNode *parent = curr->predecessors[i];
       if (!visited.contains(parent))
         continue;
-     // auto start = std::chrono::high_resolution_clock::now();
+     auto start = std::chrono::high_resolution_clock::now();
       FGraphNode *local_grad =
           unbroadcast(local_gradient(curr, i, adj), parent);
       if (adjoints.contains(parent)) {
@@ -704,10 +704,10 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
         if (local_grad == adj)
           allowed_to_free = false;
       }
-     // std::chrono::duration<double, std::milli> elapsed =
-     //     std::chrono::high_resolution_clock::now() - start;
-     // std::cout << fop_to_string[curr->operation.op_type] << " took "
-     //           << elapsed.count() << std::endl;
+     std::chrono::duration<double, std::milli> elapsed =
+         std::chrono::high_resolution_clock::now() - start;
+     std::cout << fop_to_string[curr->operation.op_type] << " took "
+               << elapsed.count() << std::endl;
       fOptimizeMemory(adjoints[parent]);
     }
     if (!vars.contains(curr)) {

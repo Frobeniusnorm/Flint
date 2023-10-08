@@ -1411,26 +1411,28 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
   if (!kernel->result_data && bo.op_type != FSTORE) {
     fExecuteGraph(kernel); // TODO mem leak
   }
-  if (ao.dimensions != bo.dimensions)
+  if (ao.dimensions != bo.dimensions && ao.dimensions + 1 != bo.dimensions)
     flogging(F_ERROR, "For a convolution the original Tensor and the filter "
                       "Kernel have to have to same number of dimensions!");
+  bool multiple_filters = ao.dimensions + 1 == bo.dimensions;
   if (ao.shape[ao.dimensions - 1] != bo.shape[bo.dimensions - 1])
     flogging(F_ERROR, "For a convolution the size of the last dimension of the "
                       "Tensor must match that of the kernel! " +
                           std::to_string(ao.shape[ao.dimensions - 1]) +
                           " vs. " +
                           std::to_string(bo.shape[bo.dimensions - 1]));
-  std::vector<size_t> new_shape(ao.dimensions - 1);
+  FOperation op;
+  op.dimensions = multiple_filters ? ao.dimensions : ao.dimensions - 1;
+  op.shape = safe_mal<size_t>(op.dimensions);
   for (int i = 0; i < ao.dimensions - 1; i++) {
-    size_t window_size = ao.shape[i] - kernel->operation.shape[i] + 1;
+    const size_t kernel_shape = multiple_filters ? bo.shape[i + 1] : bo.shape[i];
+    size_t window_size = ao.shape[i] - kernel_shape + 1;
     window_size = window_size % steps[i] == 0 ? window_size / steps[i]
                                               : window_size / steps[i] + 1;
-    new_shape[i] = window_size; // 1 + (ao.shape[i] - 1) / steps[i];
+    op.shape[i] = window_size;
   }
-  FOperation op;
-  op.dimensions = ao.dimensions - 1;
-  op.shape = safe_mal<size_t>(op.dimensions);
-  memcpy(op.shape, new_shape.data(), op.dimensions * sizeof(size_t));
+  if (multiple_filters)
+    op.shape[ao.dimensions - 1] = bo.shape[0];
   op.data_type = higherType(ao.data_type, bo.data_type);
   op.op_type = FCONVOLVE;
   op.additional_data = safe_mal<unsigned int>(op.dimensions);

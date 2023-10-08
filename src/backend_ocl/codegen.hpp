@@ -344,6 +344,8 @@ generateCode(FGraphNode *node,
         string par1, par2;
         push_pred = false;
         FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
+        const bool multiple_filter =
+            gnp2->operation.dimensions != gnp1->operation.dimensions;
         // we ignore the value assignment of the parameters since we have to
         // access the arrays directly parameter 1
         if (assigned_params.find(gnp1) != assigned_params.end()) {
@@ -364,50 +366,58 @@ generateCode(FGraphNode *node,
         const FOperation op = node->operation;
         const FOperation pred = gnp1->operation, kernel = gnp2->operation;
         unsigned int *steps = (unsigned int *)op.additional_data;
-        vector<size_t> acc_sizes(op.dimensions);
-        vector<size_t> acc_sizes_pred(acc_sizes.size() + 1);
-        vector<size_t> acc_sizes_kernel(acc_sizes.size() + 1);
-        acc_sizes[op.dimensions - 1] = 1;
-        for (long d = op.dimensions - 2; d >= 0; d--) {
-          acc_sizes[d] = acc_sizes[d + 1] * op.shape[d + 1];
-        }
-        acc_sizes_kernel[acc_sizes.size()] = 1;
-        acc_sizes_pred[acc_sizes.size()] = 1;
+        vector<size_t> acc_sizes = calcAccSizes(op);
+        vector<size_t> acc_sizes_pred = calcAccSizes(pred);
+        vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
         size_t kernel_num_elems = kernel.shape[acc_sizes.size()];
-        size_t pred_num_elems = pred.shape[acc_sizes.size()];
+        size_t pred_num_elems =
+            multiple_filter ? 1 : pred.shape[acc_sizes.size()];
         for (long d = acc_sizes.size() - 1; d >= 0; d--) {
           pred_num_elems *= pred.shape[d];
-          kernel_num_elems *= kernel.shape[d];
-          acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * kernel.shape[d + 1];
-          acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
+          if (d != 0 || !multiple_filter) // since kernel.shape[0] is the
+                                          // dimension of filters
+            kernel_num_elems *= kernel.shape[d];
         }
         string conv_code = type + " " + name + " = 0;\n{\nlong j = 0";
-        for (unsigned int d = 0; d < op.dimensions; d++)
+        for (unsigned int d = 0;
+             d < (multiple_filter ? op.dimensions - 1 : op.dimensions); d++)
           conv_code += " + (" +
                        (d == 0 ? string("index")
                                : "index % " + to_string(acc_sizes[d - 1])) +
                        " / " + to_string(acc_sizes[d]) + ") * " +
                        to_string(steps[d] * acc_sizes_pred[d]);
-        conv_code += ";\n" + typeString(op.data_type) +
-                     " res = 0;\n"
-                     "for(long k = 0; k < " +
-                     to_string(kernel_num_elems) +
-                     "; k++){\n"
-                     " long o = 0;\n";
-        for (unsigned int d = 0; d < acc_sizes_kernel.size(); d++) {
+        conv_code +=
+            ";\nlong kernel_offset = " +
+            (multiple_filter
+                 ? string("(index % " +
+                          to_string(acc_sizes[op.dimensions - 2]) + ") / " +
+                          to_string(acc_sizes[op.dimensions - 1]) + " * " +
+                          to_string(kernel_num_elems))
+                 : string("0")) +
+            ";\n" + typeString(op.data_type) +
+            " res = 0;\n"
+            "for(long k = 0; k < " +
+            to_string(kernel_num_elems) +
+            "; k++){\n"
+            " long o = 0;\n";
+        const unsigned int last_dim = multiple_filter
+                                          ? acc_sizes_kernel.size() - 1
+                                          : acc_sizes_kernel.size();
+        for (unsigned int d = 0; d < last_dim; d++) {
+          const unsigned int kn_d = multiple_filter ? d + 1 : d;
           conv_code +=
               "{\nconst long di = " +
-              (d == acc_sizes_kernel.size() - 1
+              (d == last_dim - 1
                    ? "0"
                    : (d == 0 ? string("index")
                              : "index % " + to_string(acc_sizes[d - 1])) +
                          " / " + to_string(acc_sizes[d])) +
               ";\n"
               "const long dk = " +
-              (d == 0 ? string("k")
-                      : "k % " + to_string(acc_sizes_kernel[d - 1])) +
-              "/ " + to_string(acc_sizes_kernel[d]) + ";\n";
-          if (d < op.dimensions) {
+              (kn_d == 0 ? string("k")
+                         : "k % " + to_string(acc_sizes_kernel[kn_d - 1])) +
+              "/ " + to_string(acc_sizes_kernel[kn_d]) + ";\n";
+          if (d < pred.dimensions - 1) {
             conv_code += "if((di * " + to_string(steps[d]) + " + dk) * " +
                          to_string(acc_sizes_pred[d]) +
                          " >= " + to_string(pred_num_elems);
@@ -419,8 +429,8 @@ generateCode(FGraphNode *node,
           }
           conv_code += "o += dk * " + to_string(acc_sizes_pred[d]) + ";\n}\n";
         }
-        conv_code += "res += " + par2 + "[k] * " + par1 + "[j + o];\n}\n" +
-                     name + " = res;\n}\n";
+        conv_code += "res += " + par2 + "[k + kernel_offset] * " + par1 +
+                     "[j + o];\n}\n" + name + " = res;\n}\n";
         code = conv_code + code;
       } break;
       case FSLIDE: {
@@ -1617,36 +1627,48 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "}";
     break;
   case FCONVOLVE:
-    code += "if(index >= num_entriesR) return;\n"
-            "long j = 0;\n"
-            "for(int d = 0; d < dimensions0 - 1; d++){\n"
-            " long di = (d == 0 ? index : index % acc_sizes[d - 1]) / "
-            "acc_sizes[d];\n"
-            " j += di * steps[d] * acc_sizes_pred[d];\n"
-            "}\n" +
-            typeString(res_type) +
-            " res = 0;\n"
-            "for(long k = 0; k < num_entries1; k++){\n"
-            " bool set_zero = false;\n"
-            " long o = 0;\n"
-            " for(int d = 0; d < dimensions0; d++){\n"
-            "  long di = d == dimensions0 - 1 ? 0 : (d == 0 ? index : index % "
-            "acc_sizes[d - 1]) / "
-            "acc_sizes[d];\n"
-            "  long dk = (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / "
-            "acc_sizes_kernel[d];\n"
-            "  if(d < dimensions0 - 1)\n"
-            "   if(((di * steps[d]) + dk) * acc_sizes_pred[d] >= num_entries0 "
-            "||\n"
-            "        (d > 0 && ((di * steps[d]) + dk) * acc_sizes_pred[d] >= \n"
-            "acc_sizes_pred[d - 1])) {\n"
-            "    set_zero = true; break;\n}\n"
-            "  o += dk * acc_sizes_pred[d];\n"
-            " }\n"
-            " if (set_zero) continue;\n"
-            " res += P1[k] * P0[j + o];\n"
-            "}\n"
-            "R[index] = res;";
+    code +=
+        "if(index >= num_entriesR) return;\n"
+        "int multi_filter = dimensions0 != dimensions1;\n"
+        "long j = 0;\n"
+        "for(int d = 0; d < dimensions0 - 1; d++){\n"
+        " long di = (d == 0 ? index : index % acc_sizes[d - 1]) / "
+        "acc_sizes[d];\n"
+        " j += di * steps[d] * acc_sizes_pred[d];\n"
+        "}\n"
+        "long kernel_offset = 0;\n"
+        "if(multi_filter){\n"
+        " long fi = (index % acc_sizes[dimensions0 - 2]) / "
+        "acc_sizes[dimensions0 - 1];\n"
+        " kernel_offset = fi * acc_sizes_kernel[0];\n"
+        "}\n" +
+        typeString(res_type) +
+        " res = 0;\n"
+        "const long kernel_num_elems = multi_filter ? acc_sizes_kernel[0] : "
+        "num_entries1;\n"
+        "for(long k = 0; k < kernel_num_elems; k++){\n"
+        " bool set_zero = false;\n"
+        " long o = 0;\n"
+        " const int last_dim = multi_filter ? dimensions1 - 1 : dimensions1;\n"
+        " for(int d = 0; d < last_dim; d++){\n"
+        "  const int kn_d = multi_filter ? d + 1 : d;\n"
+        "  long di = d == last_dim ? 0 : (d == 0 ? index : index % "
+        "acc_sizes[d - 1]) / "
+        "acc_sizes[d];\n"
+        "  long dk = (kn_d == 0 ? k : k % acc_sizes_kernel[kn_d - 1]) / "
+        "acc_sizes_kernel[kn_d];\n"
+        "  if(d < dimensions0 - 1)\n"
+        "   if(((di * steps[d]) + dk) * acc_sizes_pred[d] >= num_entries0 "
+        "||\n"
+        "        (d > 0 && ((di * steps[d]) + dk) * acc_sizes_pred[d] >= \n"
+        "acc_sizes_pred[d - 1])) {\n"
+        "    set_zero = true; break;\n}\n"
+        "  o += dk * acc_sizes_pred[d];\n"
+        " }\n"
+        " if (set_zero) continue;\n"
+        " res += P1[k + kernel_offset] * P0[j + o];\n"
+        "}\n"
+        "R[index] = res;";
     break;
   case FGEN_CONSTANT: {
     code += "if(index >= num_entriesR) return;\n"

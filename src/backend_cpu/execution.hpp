@@ -225,26 +225,40 @@ static void binaryExpression(T *__restrict__ result,
                      *gnp2 = curr->predecessors[1];
     const FOperation pred = gnp1->operation, kernel = gnp2->operation;
     const unsigned int *steps = (unsigned int *)op.additional_data;
+    const bool multiple_filter =
+        gnp2->operation.dimensions != gnp1->operation.dimensions;
     // calculate accumulated sizes for result, kernel and source (pred)
     std::vector<size_t> acc_sizes = calcAccSizes(op);
     std::vector<size_t> acc_sizes_pred = calcAccSizes(pred);
     std::vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
     size_t kernel_num_elems = kernel.shape[acc_sizes.size()];
-    size_t pred_num_elems = pred.shape[acc_sizes.size()];
+    size_t pred_num_elems = multiple_filter ? 1 : pred.shape[acc_sizes.size()];
     for (long d = acc_sizes.size() - 1; d >= 0; d--) {
       pred_num_elems *= pred.shape[d];
-      kernel_num_elems *= kernel.shape[d];
+      if (d != 0 ||
+          !multiple_filter) // since kernel.shape[0] is the dimension of filters
+        kernel_num_elems *= kernel.shape[d];
     }
     for (size_t i = from; i < from + size; i++) {
       size_t j = 0;
       // we can ignore last index of source and kernel for result since we
       // iterate over it (i.e. for the destination it is 0 since it does not
       // have that dimension)
-      for (unsigned int d = 0; d < op.dimensions; d++) {
+      for (unsigned int d = 0;
+           d < (multiple_filter ? op.dimensions - 1 : op.dimensions); d++) {
         // get dimension index
         size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
         // reproject
         j += di * steps[d] * acc_sizes_pred[d];
+      }
+      // we must offset the kernel by the filter index, which is the last
+      // dimension of the result
+      size_t kernel_offset = 0;
+      if (multiple_filter) {
+        // filter index
+        size_t fi =
+            (i % acc_sizes[op.dimensions - 2]) / acc_sizes[op.dimensions - 1];
+        kernel_offset = fi * kernel_num_elems; // since the filters are the
       }
       // now that we have the correct base index in source, convolve
       T res = 0;
@@ -252,13 +266,17 @@ static void binaryExpression(T *__restrict__ result,
         bool set_zero = false;
         size_t o = 0; // source offset
         // reproject kernel
-        for (unsigned int d = 0; d < acc_sizes_kernel.size(); d++) {
-          size_t di = d == acc_sizes_kernel.size() - 1
-                          ? 0
-                          : (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
-          size_t dk =
-              (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / acc_sizes_kernel[d];
-          if (d < op.dimensions)
+        const unsigned int last_dim = multiple_filter
+                                          ? acc_sizes_kernel.size() - 1
+                                          : acc_sizes_kernel.size();
+        for (unsigned int d = 0; d < last_dim; d++) {
+          const unsigned int kn_d = multiple_filter ? d + 1 : d;
+          size_t di = 0;
+          if (d != last_dim - 1)
+            di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
+          size_t dk = (kn_d == 0 ? k : k % acc_sizes_kernel[kn_d - 1]) /
+                      acc_sizes_kernel[kn_d];
+          if (d < pred.dimensions - 1)
             if (((di * steps[d]) + dk) * acc_sizes_pred[d] >= pred_num_elems ||
                 (d > 0 && ((di * steps[d]) + dk) * acc_sizes_pred[d] >=
                               acc_sizes_pred[d - 1])) {
@@ -269,7 +287,7 @@ static void binaryExpression(T *__restrict__ result,
         }
         if (set_zero)
           continue;
-        res += data2[k] * data1[j + o];
+        res += data2[k + kernel_offset] * data1[j + o];
       }
       result[i] = res;
     }
