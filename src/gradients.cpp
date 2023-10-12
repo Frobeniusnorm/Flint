@@ -378,8 +378,6 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     FGraphNode *a = y->predecessors[1];
     if (1 == dx_i) {
       const unsigned int *steps = (unsigned int *)y->operation.additional_data;
-      // fuck this noise, i am writing a custom function i cant take this
-      // anymore
       if (!kernel->result_data)
         fExecuteGraph(kernel);
       FGraphNode *gradient = new FGraphNode();
