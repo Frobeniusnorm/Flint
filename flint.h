@@ -840,15 +840,24 @@ FGraphNode *frepeat(FGraphNode *a, int *repititions);
  * corresponds to the former size in dimension `transpositions[i]`.
  */
 FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
-/** Convolves the `n`-dimensional input tensor `a` with a `n`-dimensional filter
- * kernel `kernel` and a per dimensional step size `steps` with size of `n-1`.
- * It is expected that `a` and `kernel` have the same size in their last
- * dimension (which will be completely reduced by the convolution). In all other
- * dimensions the size of `a` should be larger or equal to the size of `kernel`.
- * The `kernel` will be 'slid' over `a` in each dimension, multiplying all
- * values of `kernel` with the corresponding ones in `a` and summing them up to
- * a single value and moving the kernel further by the value given in `steps` in
- * that corresponding dimension.
+/** Convolves the `n`-dimensional input tensor `a` with a `n` or
+ * `n+1`-dimensional filter kernel `kernel` and a per dimensional step size
+ * `steps` with size of `n-1`. It is expected that `a` and `kernel` have the
+ * same size in their last dimension (which will be completely reduced by the
+ * convolution). In all other dimensions the size of `a` should be larger or
+ * equal to the size of `kernel`. The `kernel` will be 'slid' over `a` in each
+ * dimension, multiplying all values of `kernel` with the corresponding ones in
+ * `a` and summing them up to a single value and moving the kernel further by
+ * the value given in `steps` in that corresponding dimension.
+ *
+ * If the filter is `n+1`-dimensional the first dimension of `kernel` is viewed
+ * as an array of filters in which for each a normal convolution is executed and
+ * each filter result is added to a new last dimension, meaning the result will
+ * instead have `n`-dimensionality where the reduced last dimension is replaced
+ * by the result of each filter convolution (normal semantic for a convolution
+ * with `k` filters in machine learning. Here the semantic representation of the
+ * shape of `kernel` would be `(k, 1, kernel_size, ...)` where `1` is inserted
+ * for the batch dimension).
  *
  * The implementation does not include any padding, meaning only convolutions
  * where the complete kernel still fits into the array will be executed (the

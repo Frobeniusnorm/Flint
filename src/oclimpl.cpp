@@ -75,10 +75,12 @@ void flintInit_gpu() {
     if (clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_DEFAULT, 1, &curr_dev,
                        &num_dev) != CL_SUCCESS) {
       flogging(F_WARNING, "clGetDeviceIDS did not return CL_SUCCESS!");
+      clReleaseDevice(curr_dev);
       continue;
     }
     if (num_dev == 0) {
       flogging(F_WARNING, "Platform has no devices!");
+      clReleaseDevice(curr_dev);
       continue;
     }
     clGetDeviceInfo(curr_dev, CL_DEVICE_NAME, 128 * sizeof(char),
@@ -93,6 +95,8 @@ void flintInit_gpu() {
                     &dev_no_units, nullptr);
     if (dev_no_units > highest_no_units) {
       highest_no_units = dev_no_units;
+      if (device)
+        clReleaseDevice(device);
       device = curr_dev;
       if ((dev_type & CL_DEVICE_TYPE_CPU) == CL_DEVICE_TYPE_CPU) {
         dev_type_string = "CPU";
@@ -103,7 +107,7 @@ void flintInit_gpu() {
         dev_type_string = "Accelerator";
       } else
         dev_type_string = "Device";
-    }
+    }else clReleaseDevice(curr_dev);
   }
   if (!device) {
     flogging(F_ERROR,
@@ -672,7 +676,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   }
   {
     if (node->operation.op_type == FSTORE) {
-      node->result_data = new FResultData();
+      node->result_data = new FResultData(); // TODO mem leak
       FStore *store = (FStore *)node->operation.additional_data;
       node->result_data->num_entries = store->num_entries;
       node->result_data->mem_id = store->mem_id;
@@ -682,7 +686,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       return node;
   }
   auto start = std::chrono::high_resolution_clock::now();
-  FResultData *resultData = new FResultData();
+  FResultData *resultData = new FResultData(); // TODO mem leak
   const FOperation node_op = node->operation;
   size_t total_size_node = 1;
   for (int i = 0; i < node_op.dimensions; i++)
@@ -754,12 +758,14 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       if (op.op_type == FSTORE)
         ((FStore *)op.additional_data)->mem_id = mem_obj;
       if (op.op_type == FGEN_CONSTANT && !gn->result_data) {
-        gn->result_data = new FResultData();
+        gn->result_data = new FResultData(); // TODO mem leak
         gn->result_data->data = nullptr;
         gn->result_data->num_entries = 1;
       }
       if (gn->result_data)
         gn->result_data->mem_id = mem_obj;
+      if (!gn->result_data && op.op_type != FSTORE)
+        flogging(F_WARNING, "nowhere to store memory object!");
       do_write = true;
     }
     // actually write the buffer
@@ -784,9 +790,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       flogging(F_ERROR, "Could not load Argument to kernel!");
   }
   // link resource memory
-  if (clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&result_mem) !=
+  if ((err_code = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&result_mem)) !=
       CL_SUCCESS)
-    flogging(F_ERROR, "Could not set Kernel Argument for the result!");
+    flogging(F_ERROR, "Could not set Kernel Argument for the result! " + to_string(err_code));
   // execute kernel
   const size_t global_size = total_size_node;
 
@@ -805,7 +811,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       msg = "Out of resources!";
       break;
     default:
-      msg = "Unknown Error during kernel execution!";
+      msg = "Unknown Error during kernel execution! " + std::to_string(err_code);
       break;
     }
     flogging(F_ERROR, msg);
@@ -822,6 +828,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 void flintCleanup_gpu() {
   if (initialized) {
     flogging(F_DEBUG, "Cleaning up GPU Backend");
+    clReleaseDevice(device);
     initialized = false;
     for (auto &k : OCLCompilerThread::kernel_cache) {
       clReleaseKernel(k.second.second);
@@ -836,7 +843,6 @@ void flintCleanup_gpu() {
     OCLCompilerThread::eager_cache.clear();
     OCLCompilerThread::eager_programs.clear();
     clReleaseCommandQueue(clqueue);
-    clReleaseDevice(device);
     clReleaseContext(context);
   }
 }

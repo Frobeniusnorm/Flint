@@ -308,6 +308,7 @@ private:
       in->reference_counter--;
       auto ot = std::get<layer>(layers).forward(it);
       ot.execute();
+      fFreeGraph(in);
 #ifdef FLINT_DL_PROFILE
       std::chrono::duration<double, std::milli> elapsed =
           std::chrono::high_resolution_clock::now() - start;

@@ -275,38 +275,90 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     FGraphNode *kernel = y->predecessors[1];
     const unsigned int *steps = (unsigned int *)y->operation.additional_data;
     if (0 == dx_i) {
-      return gradient_convolve(a, kernel, prev_adj, steps);
+      if (a->operation.dimensions != kernel->operation.dimensions) {
+        // multifilter
+        std::vector<long> startk(kernel->operation.dimensions, 0);
+        std::vector<long> endk(kernel->operation.shape,
+                               kernel->operation.shape +
+                                   kernel->operation.dimensions);
+        std::vector<long> starta(prev_adj->operation.dimensions, 0);
+        std::vector<long> enda(prev_adj->operation.shape,
+                               prev_adj->operation.shape +
+                                   prev_adj->operation.dimensions);
+        FGraphNode *res =
+            fconstant_d(0.0, a->operation.shape, a->operation.dimensions);
+        for (size_t f = 0; f < kernel->operation.shape[0]; f++) {
+          startk[0] = f;
+          endk[0] = f + 1;
+          FGraphNode *filter =
+              fflatten_dimension(fslice(kernel, startk.data(), endk.data()), 1);
+          starta[prev_adj->operation.dimensions - 1] = f;
+          enda[prev_adj->operation.dimensions - 1] = f + 1;
+          FGraphNode *adj =
+              fflatten_dimension(fslice(prev_adj, starta.data(), enda.data()),
+                                 prev_adj->operation.dimensions - 1);
+          FGraphNode *grad_conv = gradient_convolve(a, filter, adj, steps);
+          res = fadd(res, fExecuteGraph(grad_conv));
+        }
+        return res;
+      } else
+        return gradient_convolve(a, kernel, prev_adj, steps);
     } else if (1 == dx_i) {
       if (y->operation.op_type == FCONVOLVE) {
+        const bool multiple_filter =
+            a->operation.dimensions != kernel->operation.dimensions;
+        // construct convolution windows from a
         unsigned int *steps = (unsigned int *)y->operation.additional_data;
-        std::vector<unsigned int> new_steps(kernel->operation.dimensions);
+        std::vector<unsigned int> new_steps(a->operation.dimensions);
         memcpy(new_steps.data(), steps,
-               (kernel->operation.dimensions - 1) * sizeof(unsigned int));
-        new_steps[kernel->operation.dimensions - 1] =
+               (a->operation.dimensions - 1) * sizeof(unsigned int));
+        new_steps[a->operation.dimensions - 1] =
             kernel->operation.shape[kernel->operation.dimensions - 1];
-        FGraphNode *na =
-            fsliding_window(a, kernel->operation.shape, new_steps.data());
-        // broadcast along first dimension
-        prev_adj = fflatten(prev_adj);
+        size_t *ws = multiple_filter ? kernel->operation.shape + 1
+                                     : kernel->operation.shape;
+        FGraphNode *na = fsliding_window(a, ws, new_steps.data());
+        // broadcast along first dimension (one element in prev_adj -> one
+        // window)
+        if (multiple_filter) {
+          // bring filters in first dimension
+          prev_adj = fexpand(prev_adj, 0, 1);
+          std::vector<int> trans(prev_adj->operation.dimensions);
+          for (int i = 0; i < trans.size(); i++)
+            trans[i] = i;
+          trans[0] = trans.size() - 1;
+          trans[trans.size() - 1] = 0;
+          prev_adj = ftranspose(prev_adj, trans.data());
+          // retransform to [filters, rest]
+          for (int i = 1; i < prev_adj->operation.dimensions; i++)
+            prev_adj = fflatten_dimension(prev_adj, 2);
+        } else
+          prev_adj = fflatten(prev_adj);
         // repeat to fit correct shape
         for (int i = 1; i < na->operation.dimensions; i++)
-          prev_adj = fexpand(prev_adj, i, na->operation.shape[i]);
+          prev_adj = fexpand(prev_adj, i + (multiple_filter ? 1 : 0),
+                             na->operation.shape[i]);
+        // correct multiplicative elements per window element
         na = fmul(na, prev_adj);
+        // all windows have to be summed up for the kernels
+        const unsigned int reduce_dim = multiple_filter ? 1 : 0;
         FGraphNode *res = nullptr;
         if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU) {
           // we check if we can subdivide the reduction task for better parallel
           // distribution
           int subdivs[] = {128, 100, 50, 10, 7, 5, 4, 3, 2};
           for (int i = 0; i < sizeof(subdivs) / sizeof(int); i++) {
-            if (na->operation.shape[0] % subdivs[i] == 0 &&
-                na->operation.shape[0] / subdivs[i] > 1) {
+            if (na->operation.shape[reduce_dim] % subdivs[i] == 0 &&
+                na->operation.shape[reduce_dim] / subdivs[i] > 1) {
               std::vector<size_t> subdiv_shape(na->operation.dimensions + 1);
               for (int i = 0; i < na->operation.dimensions; i++)
                 subdiv_shape[i + 1] = na->operation.shape[i];
-              subdiv_shape[0] = subdivs[i];
-              subdiv_shape[1] /= subdivs[i];
+              if (multiple_filter)
+                subdiv_shape[0] = subdiv_shape[1];
+              subdiv_shape[reduce_dim] = subdivs[i];
+              subdiv_shape[reduce_dim + 1] /= subdivs[i];
               res = freduce_sum(
-                  freshape(na, subdiv_shape.data(), subdiv_shape.size()), 1);
+                  freshape(na, subdiv_shape.data(), subdiv_shape.size()),
+                  reduce_dim + 1);
               break;
             }
           }
@@ -314,7 +366,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
             res = na;
         } else
           res = na;
-        res = freduce_sum(res, 0);
+        res = freduce_sum(res, reduce_dim);
         return res;
       } else
         return fslide(a, prev_adj,
@@ -328,8 +380,6 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     FGraphNode *a = y->predecessors[1];
     if (1 == dx_i) {
       const unsigned int *steps = (unsigned int *)y->operation.additional_data;
-      // fuck this noise, i am writing a custom function i cant take this
-      // anymore
       if (!kernel->result_data)
         fExecuteGraph(kernel);
       FGraphNode *gradient = new FGraphNode();
@@ -704,10 +754,10 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
         if (local_grad == adj)
           allowed_to_free = false;
       }
-     // std::chrono::duration<double, std::milli> elapsed =
-     //     std::chrono::high_resolution_clock::now() - start;
-     // std::cout << fop_to_string[curr->operation.op_type] << " took "
-     //           << elapsed.count() << std::endl;
+      std::chrono::duration<double, std::milli> elapsed =
+          std::chrono::high_resolution_clock::now() - start;
+      std::cout << fop_to_string[curr->operation.op_type] << " took "
+                << elapsed.count() << std::endl;
       fOptimizeMemory(adjoints[parent]);
     }
     if (!vars.contains(curr)) {

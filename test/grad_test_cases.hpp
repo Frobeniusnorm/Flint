@@ -501,6 +501,55 @@ TEST_SUITE("Autodiff") {
       }
     }
   }
+  TEST_CASE("Multifilter Convolve") {
+    GradientContext _;
+    Tensor<int, 3> x{{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}, {0, 0, 0}},
+                     {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}, {0, 0, 0}},
+                     {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}, {0, 0, 0}},
+                     {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {0, 0, 0}},
+                     {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}};
+    Tensor<int, 4> k{{{{1, 1, 1}, {2, 2, 2}}, {{-3, -3, -3}, {1, 1, 1}}},
+                     {{{1, 1, 1}, {2, 2, 2}}, {{-3, -3, -3}, {1, 1, 1}}}};
+    x.watch();
+    k.watch();
+    Tensor<int, 3> y = x.convolve(k, 1, 2);
+    Tensor<double, 4> dk = y.gradient(k);
+    for (int i = 0; i < 2; i++) {
+      CHECK_EQ(12, dk[i][0][0][0]);
+      CHECK_EQ(6, dk[i][0][0][1]);
+      CHECK_EQ(18, dk[i][0][0][2]);
+      CHECK_EQ(6, dk[i][0][1][0]);
+      CHECK_EQ(8, dk[i][0][1][1]);
+      CHECK_EQ(10, dk[i][0][1][2]);
+      CHECK_EQ(10, dk[i][1][0][0]);
+      CHECK_EQ(2, dk[i][1][0][1]);
+      CHECK_EQ(12, dk[i][1][0][2]);
+      CHECK_EQ(5, dk[i][1][1][0]);
+      CHECK_EQ(6, dk[i][1][1][1]);
+      CHECK_EQ(7, dk[i][1][1][2]);
+    }
+    Tensor<double, 3> dx = y.gradient(x);
+    CHECK_EQ(2 * 1, dx[0][0][0]);
+    CHECK_EQ(2 * 2, dx[0][1][0]);
+    CHECK_EQ(2 * 1, dx[0][2][0]);
+    CHECK_EQ(2 * 2, dx[0][3][0]);
+    CHECK_EQ(2 * -2, dx[1][0][0]);
+    CHECK_EQ(2 * 3, dx[1][1][0]);
+    CHECK_EQ(2 * -2, dx[1][2][0]);
+    CHECK_EQ(2 * 3, dx[1][3][0]);
+    CHECK_EQ(2 * -2, dx[2][0][0]);
+    CHECK_EQ(2 * 3, dx[2][1][0]);
+    CHECK_EQ(2 * -2, dx[2][2][0]);
+    CHECK_EQ(2 * 3, dx[2][3][0]);
+    CHECK_EQ(2 * -2, dx[3][0][0]);
+    CHECK_EQ(2 * 3, dx[3][1][0]);
+    CHECK_EQ(2 * -2, dx[3][2][0]);
+    CHECK_EQ(2 * 3, dx[3][3][0]);
+    CHECK_EQ(2 * -3, dx[4][0][0]);
+    CHECK_EQ(2 * 1, dx[4][1][0]);
+    CHECK_EQ(2 * -3, dx[4][2][0]);
+    CHECK_EQ(2 * 1, dx[4][3][0]);
+  }
   TEST_CASE("Concat, Exponential") {
     GradientContext _;
     Tensor<int, 2> a{{0, 1}, {2, 3}};

@@ -1,4 +1,4 @@
-//#define FLINT_DL_PROFILE
+#define FLINT_DL_PROFILE
 #include <cstring>
 #include <flint/flint.h>
 #include <flint/flint.hpp>

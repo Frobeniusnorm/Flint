@@ -275,11 +275,18 @@ template <typename T, unsigned int n> struct Tensor {
   }
   /**
    * Convenience Method that calls `execute` and returns the Tensor object
-   * (the same, no new node is created!).
+   * (the object is `moved`, no new node is created! Dont reuse the old object!
+   * Intended to use like this
+   * @code{
+   *  Tensor<float, 2> t = ...;
+   *  t = t();
+   * }
+   * if you don't override t and use the old value again after the `()` call, a
+   * segmentation fault will occur!).
    */
-  Tensor<T, n> &operator()() {
+  Tensor<T, n> operator()() {
     execute();
-    return *this;
+    return std::move(*this);
   }
   /**
    * Negates the elements of this Tensor.
@@ -1374,15 +1381,15 @@ template <typename T, unsigned int n> struct Tensor {
   /**
    * Same as `convolve`, but with steps as an array
    */
-  template <typename K>
-  Tensor<stronger_return<K>, n - 1>
-  convolve_array(const Tensor<K, n> &kernel,
+  template <typename K, unsigned int k>
+  Tensor<stronger_return<K>, n == k ? n - 1 : n>
+  convolve_array(const Tensor<K, k> &kernel,
                  const std::array<unsigned int, n - 1> steps) const {
 
     FGraphNode *nc = fconvolve(node, kernel.get_graph_node(), steps.data());
-    std::array<size_t, n - 1> new_shape;
-    std::copy_n(nc->operation.shape, (n - 1), new_shape.begin());
-    return Tensor<stronger_return<K>, n - 1>(nc, new_shape);
+    std::array<size_t, n == k ? n - 1 : n> new_shape;
+    std::copy_n(nc->operation.shape, new_shape.size(), new_shape.begin());
+    return Tensor<stronger_return<K>, new_shape.size()>(nc, new_shape);
   }
   /** Convolves the `n`-dimensional input tensor with a `n`-dimensional
    * filter kernel `kernel` and a per dimensional step size `steps` with size of
@@ -1416,9 +1423,9 @@ template <typename T, unsigned int n> struct Tensor {
    * //  [-17.000000, -29.000000, -11.000000]])
    * }
    */
-  template <typename K, typename... args>
-  Tensor<stronger_return<K>, n - 1> convolve(const Tensor<K, n> &kernel,
-                                             const args... steps) const {
+  template <typename K, unsigned int k, typename... args>
+  Tensor<stronger_return<K>, k == n ? n - 1 : n>
+  convolve(const Tensor<K, k> &kernel, const args... steps) const {
     constexpr size_t num_steps = sizeof...(args);
     static_assert(num_steps <= n - 1,
                   "A convolve operation may only have n-1 number of steps (one "

@@ -314,11 +314,18 @@ template <typename T> struct Tensor<T, 1> {
   }
   /**
    * Convenience Method that calls `execute` and returns the Tensor object
-   * (the same, no new node is created!).
+   * (the object is `moved`, no new node is created! Dont reuse the old object!
+   * Intended to use like this
+   * @code{
+   *  Tensor<float, 1> t = ...;
+   *  t = t();
+   * }
+   * if you don't override t and use the old value again after the `()` call, a
+   * segmentation fault will occur!).
    */
-  Tensor<T, 1> &operator()() {
+  Tensor<T, 1> operator()() {
     execute();
-    return *this;
+    return std::move(*this);
   }
   /**
    * Negates the elements of this Tensor.

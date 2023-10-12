@@ -208,7 +208,7 @@ void fFreeGraph(FGraphNode *graph) {
   while (!wq.empty()) {
     FGraphNode *gn = wq.front();
     wq.pop_front();
-    if (gn->reference_counter != 0) {
+    if (gn->reference_counter > 0) {
       continue;
     }
     for (int i = 0; i < gn->num_predecessor; i++) {
@@ -223,7 +223,7 @@ void fFreeGraph(FGraphNode *graph) {
       delete (std::unordered_set<const FGraphNode *> *)gn->gradient_data;
     }
     bool freed_res = false;
-    if (gn->result_data) {
+    if (gn->result_data != nullptr) {
       freed_res = true;
       FResultData *rd = gn->result_data;
       if (rd->data)
@@ -231,7 +231,8 @@ void fFreeGraph(FGraphNode *graph) {
       if (rd->mem_id)
         clReleaseMemObject(rd->mem_id);
       rd->mem_id = nullptr;
-      delete rd;
+      delete gn->result_data;
+      gn->result_data = nullptr;
     }
     if (gn->predecessors != NULL && gn->num_predecessor != 0)
       free(gn->predecessors);
@@ -439,6 +440,7 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
       memcpy(op.additional_data, node->operation.additional_data,
              (op.dimensions - 1) * sizeof(unsigned int));
     } break;
+    case FUNSLIDE_WINDOW:
     case FCONVOLVE: {
       op.additional_data = safe_mal<unsigned int>(op.dimensions);
       memcpy(op.additional_data, node->operation.additional_data,
@@ -547,8 +549,9 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
       // we can do this only when all operations have been finished
       OCLCompilerThread::memory_barrier();
     for (int i = 0; i < node->num_predecessor; i++) {
-      if (--node->predecessors[i]->reference_counter == 0)
+      if (--node->predecessors[i]->reference_counter == 0) {
         fFreeGraph(node->predecessors[i]);
+      }
     }
     node->num_predecessor = 0;
     free(node->predecessors);
@@ -558,7 +561,7 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
     store->mem_id = rd->mem_id;
     store->num_entries = rd->num_entries;
     node->operation.additional_data = store;
-  } else if (node->gradient_data) {
+  } else if (node->gradient_data && node->result_data) {
     // if the result data of the parent is not needed for certain gradient
     // calculation operations, it may be freed
     switch (node->operation.op_type) {
@@ -596,7 +599,6 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
           parent->result_data = nullptr;
         }
       }
-
     default:
       break;
     }
@@ -975,14 +977,12 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
   return addNode(op, {a});
 }
 
-FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b) {
-  FGraphNode *x = a;
-  FGraphNode *y = b;
+FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
   if (!x->result_data && x->operation.op_type != FSTORE) {
     x = fExecuteGraph(x);
   }
   if (!y->result_data && y->operation.op_type != FSTORE) {
-    y = fExecuteGraph(y);
+    y = fExecuteGraph(y); // TODO mem leak
   }
   const FOperation ao = x->operation;
   const FOperation bo = y->operation;
@@ -1081,8 +1081,8 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
   for (int i = 0; i < a->operation.dimensions; i++)
     if (i != dimension)
       total *= a->operation.shape[i];
-  if (total <= 128) { // small reduction size will be slow on gpu
-    fExecuteGraph(a);
+  if (total <= 128 || a->reference_counter > 1) { // small reduction size will be slow on gpu
+    a = fExecuteGraph(a);
   } else if (!a->result_data) {
     // we dont want interleaved reduction since that is slow
     std::list<FGraphNode *> todo;
@@ -1120,8 +1120,7 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
   foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
   foo->predecessors[0] = a;
-  if (a->reference_counter++ > 2 && !eager_execution)
-    fExecuteGraph(a);
+  a->reference_counter++;
   FOperation op;
   const FOperation other = a->operation;
   op.data_type = other.data_type;
@@ -1140,8 +1139,6 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
   op.additional_data = safe_mal<int>(1);
   ((int *)op.additional_data)[0] = dimension;
   foo->operation = op;
-  if (total < 128)
-    foo = fExecuteGraph(foo);
   return eager_execution && total >= 128 ? execute_eagerly(foo) : foo;
 }
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
@@ -1412,28 +1409,30 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
     fExecuteGraph(a);
   }
   if (!kernel->result_data && bo.op_type != FSTORE) {
-    fExecuteGraph(kernel);
+    fExecuteGraph(kernel); // TODO mem leak
   }
-  if (ao.dimensions != bo.dimensions)
+  if (ao.dimensions != bo.dimensions && ao.dimensions + 1 != bo.dimensions)
     flogging(F_ERROR, "For a convolution the original Tensor and the filter "
                       "Kernel have to have to same number of dimensions!");
+  bool multiple_filters = ao.dimensions + 1 == bo.dimensions;
   if (ao.shape[ao.dimensions - 1] != bo.shape[bo.dimensions - 1])
     flogging(F_ERROR, "For a convolution the size of the last dimension of the "
                       "Tensor must match that of the kernel! " +
                           std::to_string(ao.shape[ao.dimensions - 1]) +
                           " vs. " +
                           std::to_string(bo.shape[bo.dimensions - 1]));
-  std::vector<size_t> new_shape(ao.dimensions - 1);
+  FOperation op;
+  op.dimensions = multiple_filters ? ao.dimensions : ao.dimensions - 1;
+  op.shape = safe_mal<size_t>(op.dimensions);
   for (int i = 0; i < ao.dimensions - 1; i++) {
-    size_t window_size = ao.shape[i] - kernel->operation.shape[i] + 1;
+    const size_t kernel_shape = multiple_filters ? bo.shape[i + 1] : bo.shape[i];
+    size_t window_size = ao.shape[i] - kernel_shape + 1;
     window_size = window_size % steps[i] == 0 ? window_size / steps[i]
                                               : window_size / steps[i] + 1;
-    new_shape[i] = window_size; // 1 + (ao.shape[i] - 1) / steps[i];
+    op.shape[i] = window_size;
   }
-  FOperation op;
-  op.dimensions = ao.dimensions - 1;
-  op.shape = safe_mal<size_t>(op.dimensions);
-  memcpy(op.shape, new_shape.data(), op.dimensions * sizeof(size_t));
+  if (multiple_filters)
+    op.shape[ao.dimensions - 1] = bo.shape[0];
   op.data_type = higherType(ao.data_type, bo.data_type);
   op.op_type = FCONVOLVE;
   op.additional_data = safe_mal<unsigned int>(op.dimensions);
