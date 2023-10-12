@@ -150,7 +150,7 @@ static std::string printNode(FGraphNode *node, int dim, int *b) {
 }
 template <typename T> static std::string printNode(FGraphNode *node) {
   if (!node->result_data) {
-    fExecuteGraph(node);
+    fSyncMemory(fExecuteGraph(node));
   }
   int b = 0;
   return printNode<T>(node, 0, &b);
@@ -275,7 +275,32 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     FGraphNode *kernel = y->predecessors[1];
     const unsigned int *steps = (unsigned int *)y->operation.additional_data;
     if (0 == dx_i) {
-      return gradient_convolve(a, kernel, prev_adj, steps);
+      if (a->operation.dimensions != kernel->operation.dimensions) {
+        FGraphNode *res =
+            fconstant_d(0.0, a->operation.shape, a->operation.dimensions);
+        for (int i = 0; i < kernel->operation.shape[0]; i++) {
+          using namespace std;
+          vector<long> start_kernel(kernel->operation.dimensions, 0);
+          vector<long> end_kernel(kernel->operation.shape,
+                                  kernel->operation.shape +
+                                      kernel->operation.dimensions);
+          start_kernel[0] = i;
+          end_kernel[0] = i + 1;
+          FGraphNode *sk = fflatten_dimension(
+              fslice(kernel, start_kernel.data(), end_kernel.data()), 1);
+          vector<long> start_adj(prev_adj->operation.dimensions, 0);
+          vector<long> end_adj(prev_adj->operation.shape,
+                               prev_adj->operation.shape +
+                                   prev_adj->operation.dimensions);
+          FGraphNode *sa = fflatten_dimension(
+              fslice(prev_adj, start_adj.data(), end_adj.data()),
+              prev_adj->operation.dimensions - 1);
+          FGraphNode *curr = fExecuteGraph(gradient_convolve(a, sk, sa, steps));
+          res = fadd(res, curr);
+        }
+        return res;
+      } else
+        return gradient_convolve(a, kernel, prev_adj, steps);
     } else if (1 == dx_i) {
       if (y->operation.op_type == FCONVOLVE) {
         const bool multiple_filter =
@@ -287,9 +312,9 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
                (a->operation.dimensions - 1) * sizeof(unsigned int));
         new_steps[a->operation.dimensions - 1] =
             kernel->operation.shape[kernel->operation.dimensions - 1];
-        size_t* ws = multiple_filter ? kernel->operation.shape + 1 : kernel->operation.shape;
-        FGraphNode *na =
-            fsliding_window(a, ws, new_steps.data());
+        size_t *ws = multiple_filter ? kernel->operation.shape + 1
+                                     : kernel->operation.shape;
+        FGraphNode *na = fsliding_window(a, ws, new_steps.data());
         // broadcast along first dimension (one element in prev_adj -> one
         // window)
         if (multiple_filter) {

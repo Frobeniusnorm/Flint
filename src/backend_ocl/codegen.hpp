@@ -40,13 +40,6 @@ generateCode(FGraphNode *node,
   string code = "";
   // indexing logic (we save the old index in old_index$i to restore it)
   unsigned int num_indices = 0;
-  // TODO use topologial sort to generate
-  // - ... mapping from graph to var name
-  // - ... todo list
-  // create additional mapping for a node to index operations that have to be
-  // inserted before
-  // Get rid of variable_index, and todo insertions and include stuff from
-  // above.
   todo.push_front({node, "v0"});
   while (!todo.empty()) {
     // take from queue
@@ -181,8 +174,12 @@ generateCode(FGraphNode *node,
         for (int i = node->operation.dimensions - 2; i >= (int)ax; i--) {
           acc_size_last *= node->operation.shape[i + 1];
         }
+        size_t num_elems = 1;
+        for (int i = 0; i < node->operation.dimensions; i++)
+          num_elems *= node->operation.shape[i];
         index_defs += "long old_index" + to_string(old_idx) + " = index;\n";
-        std::string sx = "index / " + to_string(acc_size_last);
+        std::string sx = "(index%" + to_string(num_elems) + ") / " +
+                         to_string(acc_size_last);
         std::string sc =
             ax > 0 ? "(" + sx + ") % " + to_string(node->operation.shape[ax])
                    : sx;
@@ -261,7 +258,7 @@ generateCode(FGraphNode *node,
         }
         for (long d = op.dimensions - 3; d >= 0; d--)
           acc_sizes[d] = acc_sizes[d + 1] * a.shape[d + 1];
-
+        size_t num_elems = acc_sizes_pred[0] * op.shape[0];
         string conv_code =
             type + " " + name + " = 0;\n{\nlong k = 0;\nint in_steps=1;\n";
         for (long d = acc_sizes_pred.size() - 1; d >= 0; d--) {
@@ -270,7 +267,7 @@ generateCode(FGraphNode *node,
                                               : string("if(in_steps){")) +
               "\n"
               " long di = " +
-              (d == 0 ? string("index")
+              (d == 0 ? "(index % " + to_string(num_elems) + ")"
                       : "(index % " + to_string(acc_sizes_pred[d - 1]) + ")") +
               "/" + to_string(acc_sizes_pred[d]) +
               ";\n"
@@ -292,7 +289,7 @@ generateCode(FGraphNode *node,
         for (int d = 0; d < op.dimensions - 2; d++) {
           conv_code +=
               "+((" +
-              (d == 0 ? string("index")
+              (d == 0 ? "(index%" + to_string(num_elems) + ")"
                       : "(index%" + to_string(acc_sizes_pred[d - 1]) + ")") +
               "/" + to_string(acc_sizes_pred[d]) + " - " +
               (d == 0 ? string("k")
@@ -312,7 +309,7 @@ generateCode(FGraphNode *node,
                                               : string("if(continue_loop){")) +
               "\n"
               "  long di = " +
-              (d == 0 ? string("index")
+              (d == 0 ? "(index % " + to_string(num_elems) + ")"
                       : "(index % " + to_string(acc_sizes_pred[d - 1]) + ")") +
               "/" + to_string(acc_sizes_pred[d]) +
               ";\n"
@@ -378,11 +375,12 @@ generateCode(FGraphNode *node,
                                           // dimension of filters
             kernel_num_elems *= kernel.shape[d];
         }
+        size_t num_elems = acc_sizes[0] * op.shape[0];
         string conv_code = type + " " + name + " = 0;\n{\nlong j = 0";
         for (unsigned int d = 0;
              d < (multiple_filter ? op.dimensions - 1 : op.dimensions); d++)
           conv_code += " + (" +
-                       (d == 0 ? string("index")
+                       (d == 0 ? "index % " + to_string(num_elems)
                                : "index % " + to_string(acc_sizes[d - 1])) +
                        " / " + to_string(acc_sizes[d]) + ") * " +
                        to_string(steps[d] * acc_sizes_pred[d]);
@@ -409,7 +407,7 @@ generateCode(FGraphNode *node,
               "{\nconst long di = " +
               (d == last_dim - 1
                    ? "0"
-                   : (d == 0 ? string("index")
+                   : (d == 0 ? "index % " + to_string(num_elems)
                              : "index % " + to_string(acc_sizes[d - 1])) +
                          " / " + to_string(acc_sizes[d])) +
               ";\n"
@@ -530,13 +528,15 @@ generateCode(FGraphNode *node,
                             : window_size / slidewin->step[i + 1] + 1;
           acc_sizes_win[i] = acc_sizes_win[i + 1] * window_size;
         }
+        size_t total_size = acc_size * node->operation.shape[0];
         unsigned int old_idx = num_indices++;
         std::string i = "old_index" + to_string(old_idx);
         index_defs += "long " + i +
                       " = index;\n"
                       "index = 0;\n{\n"
-                      "long wi = " +
-                      i + "/" + to_string(acc_size) +
+                      "long wi = (" +
+                      i + " % " + to_string(total_size) + ") /" +
+                      to_string(acc_size) +
                       ";\n"
                       "long rest = " +
                       i + "%" + to_string(acc_size) + ";\n";
@@ -588,20 +588,26 @@ generateCode(FGraphNode *node,
         }
         const std::vector<size_t> acc_no_windows =
             calcAccSizes(pred.dimensions - 1, no_windows);
+        size_t num_elems = 1;
+        for (int d = 0; d < node->operation.dimensions; d++)
+          num_elems *= node->operation.shape[d];
+
         string local_code = type + " " + name +
                             " = 0;\n"
                             "{\n"
                             "const long first_w = 0";
         for (int d = node->operation.dimensions - 1; d >= 0; d--) {
-          local_code += " + max(0l, ((index / " + to_string(acc_sizes[d]) +
-                        ") % " + to_string(node->operation.shape[d]) + ") - " +
+          local_code += " + max(0l, (((index%" + to_string(num_elems) + ") / " +
+                        to_string(acc_sizes[d]) + ") % " +
+                        to_string(node->operation.shape[d]) + ") - " +
                         to_string(pred.shape[d + 1]) + " + 1) / " +
                         to_string(steps[d]) + " * " +
                         to_string(acc_no_windows[d]);
         }
         local_code += ";\nconst long last_w = 0";
         for (int d = node->operation.dimensions - 1; d >= 0; d--) {
-          local_code += " + ((index / " + to_string(acc_sizes[d]) + ") % " +
+          local_code += " + (((index%" + to_string(num_elems) + ") / " +
+                        to_string(acc_sizes[d]) + ") % " +
                         to_string(node->operation.shape[d]) + ") / " +
                         to_string(steps[d]) + " * " +
                         to_string(acc_no_windows[d]);
@@ -616,9 +622,9 @@ generateCode(FGraphNode *node,
                         to_string(acc_no_windows[d]) + ")%" +
                         to_string(no_windows[d]) + ")*" + to_string(steps[d]) +
                         ";\n"
-                        "  const long id=(index/" +
-                        to_string(acc_sizes[d]) + ")%" +
-                        to_string(node->operation.shape[d]) +
+                        "  const long id=((index%" +
+                        to_string(num_elems) + ")/" + to_string(acc_sizes[d]) +
+                        ")%" + to_string(node->operation.shape[d]) +
                         ";\n"
                         "  if(id>=w_start && id<w_start+" +
                         to_string(pred.shape[d + 1]) +
@@ -666,6 +672,9 @@ generateCode(FGraphNode *node,
           assigned_params.insert({gnp2, par2});
           parameters.push_back({gnp2, par2});
         }
+        size_t num_elems = 1;
+        for (int d = 0; d < node->operation.dimensions; d++)
+          num_elems *= node->operation.shape[d];
         size_t l = gnp1->operation.shape[gnp1->operation.dimensions - 2];
         size_t m = gnp1->operation.shape[gnp1->operation.dimensions - 1];
         size_t n = gnp2->operation.shape[gnp2->operation.dimensions - 1];
@@ -677,13 +686,15 @@ generateCode(FGraphNode *node,
         string base_p1 = "";
         if (gnp1->operation.dimensions > 2) {
           // get matrix number of index and then reproject
-          base_p1 = "(index / " + to_string(l * n) + ") * " + to_string(l * m);
+          base_p1 = "((index%" + to_string(num_elems) + ") / " +
+                    to_string(l * n) + ") * " + to_string(l * m);
         } else
           base_p1 = "0";
         string base_p2 = "";
         if (gnp2->operation.dimensions > 2) {
           // get matrix number of index and then reproject
-          base_p2 = "(index / " + to_string(l * n) + ") * " + to_string(m * n);
+          base_p2 = "((index%" + to_string(num_elems) + ") / " +
+                    to_string(l * n) + ") * " + to_string(m * n);
         } else
           base_p2 = "0";
         code = "for(int i = 0; i < " + to_string(m) +
@@ -803,6 +814,9 @@ generateCode(FGraphNode *node,
         default:
           break;
         }
+        size_t num_elems = 1;
+        for (int d = 0; d < node->operation.dimensions; d++)
+          num_elems *= node->operation.shape[d];
         const std::string itv = "i" + to_string(variable_index);
         const unsigned int old_idx = num_indices++;
         index_defs += ";\nlong old_idx" + to_string(old_idx) +
@@ -811,8 +825,9 @@ generateCode(FGraphNode *node,
                       itv + " = 0; " + itv + " < " +
                       to_string(prev->operation.shape[red_dim]) + "; " + itv +
                       "++){\n"
-                      "index = ((old_idx" +
-                      to_string(old_idx) + " / " + to_string(it_dim) + ") * " +
+                      "index = (((old_idx" +
+                      to_string(old_idx) + "%" + to_string(num_elems) + ") / " +
+                      to_string(it_dim) + ") * " +
 
                       to_string(it_dim) + " * " +
                       to_string(prev->operation.shape[red_dim]) +
@@ -857,6 +872,7 @@ generateCode(FGraphNode *node,
             acc_sizes[d] = acc_sizes[d + 1] * node->operation.shape[d + 1];
           }
         }
+        size_t num_elems = acc_sizes[0] * node->operation.shape[0];
         // calculate start
         size_t start = 0;
         std::vector<long> step(node->operation.dimensions);
@@ -866,13 +882,12 @@ generateCode(FGraphNode *node,
         index_defs += "index = (" + to_string(start);
         // accumulate index
         for (long d = 0; d < node->operation.dimensions; d++) {
-          index_defs +=
-              " + (((" +
-              (d == 0 ? string("index")
-                      : string("index %" + to_string(acc_sizes[d - 1]))) +
-              ") / " + to_string(acc_sizes[d]) + ") % " +
-              to_string(node->operation.shape[d]) + ") * " +
-              to_string(slice->step[d] * (long)acc_sizes_pred[d]);
+          index_defs += " + (((" +
+                        (d == 0 ? "index % " + to_string(num_elems)
+                                : "index %" + to_string(acc_sizes[d - 1])) +
+                        ") / " + to_string(acc_sizes[d]) + ") % " +
+                        to_string(node->operation.shape[d]) + ") * " +
+                        to_string(slice->step[d] * (long)acc_sizes_pred[d]);
         }
         index_defs += ") ;\n";
         code = "index = old_index" + to_string(old_idx) + ";\n" + code;
@@ -896,6 +911,7 @@ generateCode(FGraphNode *node,
             acc_sizes[d] = acc_sizes[d + 1] * node->operation.shape[d + 1];
           }
         }
+        size_t num_elems = node->operation.shape[0] * acc_sizes[0];
         // calculate start
         index_defs += "index = 0";
         std::string set_zero_cond = "if(";
@@ -907,26 +923,25 @@ generateCode(FGraphNode *node,
             step = -step;
           std::string dim_idx =
               "((" +
-              (d == 0 ? string("index")
-                      : string("index %" + to_string(acc_sizes[d - 1]))) +
+              (d == 0 ? "index %" + to_string(num_elems)
+                      : "index %" + to_string(acc_sizes[d - 1])) +
               ") / " + to_string(acc_sizes[d]) + " - " +
               to_string(extend->start[d]) + ") / " + to_string(step);
           if (d != 0)
             set_zero_cond += " || ";
           // if di < start
-          set_zero_cond +=
-              "(" +
-              (d == 0 ? string("index")
-                      : string("index %" + to_string(acc_sizes[d - 1]))) +
-              ") / " + to_string(acc_sizes[d]) + " < " +
-              to_string(extend->start[d]);
+          set_zero_cond += "(" +
+                           (d == 0 ? "index %" + to_string(num_elems)
+                                   : "index %" + to_string(acc_sizes[d - 1])) +
+                           ") / " + to_string(acc_sizes[d]) + " < " +
+                           to_string(extend->start[d]);
           // if di % step != 0
-          set_zero_cond +=
-              " || ((" +
-              (d == 0 ? string("index")
-                      : string("index %" + to_string(acc_sizes[d - 1]))) +
-              ") / " + to_string(acc_sizes[d]) + " - " +
-              to_string(extend->start[d]) + ") % " + to_string(step) + " != 0";
+          set_zero_cond += " || ((" +
+                           (d == 0 ? "index %" + to_string(num_elems)
+                                   : "index %" + to_string(acc_sizes[d - 1])) +
+                           ") / " + to_string(acc_sizes[d]) + " - " +
+                           to_string(extend->start[d]) + ") % " +
+                           to_string(step) + " != 0";
           // if di >= shape
           set_zero_cond += " || " + dim_idx + " >= " + to_string(pred.shape[d]);
 
@@ -961,7 +976,9 @@ generateCode(FGraphNode *node,
         }
         // to get the index in the source array we first calculate the indices
         // and reproject
-        index_defs += "{\nint working_index = index;\nindex = 0;\n";
+        index_defs += "{\nint working_index = index%" +
+                      to_string(acc_sizes_d[0] * op.shape[0]) +
+                      ";\nindex = 0;\n";
         for (int dim = 0; dim < op.dimensions; dim++) {
           index_defs += "index += ((working_index /" +
                         to_string(acc_sizes_d[dim]) + ") % " +
@@ -995,7 +1012,9 @@ generateCode(FGraphNode *node,
         }
         // to get the index in the source array we first calculate the indices
         // and reproject
-        index_defs += "{\nint working_index = index;\nindex = 0;\n";
+        index_defs += "{\nint working_index = index%" +
+                      to_string(acc_sizes_d[0] * op.shape[0]) +
+                      ";\nindex = 0;\n";
         for (int dim = 0; dim < op.dimensions; dim++) {
           index_defs += "index += ((working_index /" +
                         to_string(acc_sizes_d[dim]) + ") % " +
@@ -1035,16 +1054,21 @@ generateCode(FGraphNode *node,
         }
         // a may be calculated lazily
         par1 = "v" + to_string(++variable_index);
+        size_t num_elems = 1;
+        for (int i = 0; i < op.dimensions; i++)
+          num_elems *= op.shape[i];
         size_t acc_sizes_ax = 1;
         for (int i = axis + 1; i < op.dimensions; i++)
           acc_sizes_ax *= op.shape[i];
-        const std::string base =
-            "index / " + to_string(acc_sizes_ax * op.shape[axis]);
+        const std::string base = "(index%" + to_string(num_elems) + ") / " +
+                                 to_string(acc_sizes_ax * op.shape[axis]);
         const std::string rest = "index % " + to_string(acc_sizes_ax);
-        const std::string axi = "(index / " + to_string(acc_sizes_ax) + ")%" +
+        const std::string axi = "((index%" + to_string(num_elems) + ") / " +
+                                to_string(acc_sizes_ax) + ")%" +
                                 to_string(op.shape[axis]);
-        const std::string ind =
-            "(long) " + par3 + "[index / " + to_string(acc_sizes_ax) + "]";
+        const std::string ind = "(long) " + par3 + "[(index%" +
+                                to_string(num_elems) + ") / " +
+                                to_string(acc_sizes_ax) + "]";
         const std::string base_ind =
             base + " * " + to_string(c->operation.shape[axis]);
         code = type + " " + name +
@@ -1091,9 +1115,11 @@ generateCode(FGraphNode *node,
         size_t acc_sizes_ax = 1;
         for (int i = axis + 1; i < op.dimensions; i++)
           acc_sizes_ax *= op.shape[i];
-
-        const std::string base =
-            "index / " + to_string(acc_sizes_ax * op.shape[axis]);
+        size_t num_elems = 1;
+        for (int i = 0; i < op.dimensions; i++)
+          num_elems *= op.shape[i];
+        const std::string base = "(index%" + to_string(num_elems) + ") / " +
+                                 to_string(acc_sizes_ax * op.shape[axis]);
         const std::string rest = "index % " + to_string(acc_sizes_ax);
         unsigned int old_idx1 = num_indices++;
         unsigned int old_idx2 = num_indices++;
@@ -1108,7 +1134,8 @@ generateCode(FGraphNode *node,
                name + " = " + par1 + ";\n" + code;
         std::string local_index_def2 = "long old_index" + to_string(old_idx2) +
                                        " = index;\n"
-                                       "index /= " +
+                                       "index = (index%" +
+                                       to_string(num_elems) + ") / " +
                                        to_string(acc_sizes_ax) + ";\n";
         // TODO look for cashed vars
         todo.push_front({nullptr, local_index_def2});
