@@ -792,16 +792,23 @@ func Permute(a GraphNode, axis uint) (GraphNode, error) {
 // Max returns the maximum value across all dimensions
 // see: https://numpy.org/doc/stable/reference/generated/numpy.max.html
 // FIXME: func Max(a GraphNode, axes Axis, scalar bool, keepDims bool) {
-func Max[Out completeNumeric](node GraphNode) Out {
+func Max(node GraphNode) GraphNode {
 	//for !node.GetShape().Equal(Shape{1}) { }
 	node = Flatten(node)
 	node = ReduceMax(node, 0)
-	return CalculateResult[Out](node).Data[0]
+	return node
 }
 
 // Min returns the minimum value across all dimensions
-func Min[Out completeNumeric](node GraphNode) Out {
+func Min(node GraphNode) GraphNode {
 	node = Flatten(node)
 	node = ReduceMin(node, 0)
-	return CalculateResult[Out](node).Data[0]
+	return node
+}
+
+// Sum sums up all values in the flattened tensor
+func Sum(node GraphNode) GraphNode {
+	node = Flatten(node)
+	node = ReduceSum(node, 0)
+	return node
 }
