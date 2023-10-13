@@ -1385,7 +1385,9 @@ template <typename T, unsigned int n> struct Tensor {
   Tensor<stronger_return<K>, n == k ? n - 1 : n>
   convolve_array(const Tensor<K, k> &kernel,
                  const std::array<unsigned int, n - 1> steps) const {
-
+    static_assert(n == k || n == k - 1,
+                  "For convolutions the kernel must have the same "
+                  "dimensionality as the tensor or one more!");
     FGraphNode *nc = fconvolve(node, kernel.get_graph_node(), steps.data());
     std::array<size_t, n == k ? n - 1 : n> new_shape;
     std::copy_n(nc->operation.shape, new_shape.size(), new_shape.begin());

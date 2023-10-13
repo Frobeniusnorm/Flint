@@ -327,7 +327,8 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
           trans[trans.size() - 1] = 0;
           prev_adj = ftranspose(prev_adj, trans.data());
           // retransform to [filters, rest]
-          for (int i = 1; i < prev_adj->operation.dimensions; i++)
+          const unsigned int dims = prev_adj->operation.dimensions;
+          for (int i = 2; i < dims; i++)
             prev_adj = fflatten_dimension(prev_adj, 2);
         } else
           prev_adj = fflatten(prev_adj);
@@ -343,7 +344,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU) {
           // we check if we can subdivide the reduction task for better parallel
           // distribution
-          int subdivs[] = {128, 100, 50, 10, 7, 5, 4, 3, 2};
+          int subdivs[] = {128, 100, 50, 10, 5, 3, 2};
           for (int i = 0; i < sizeof(subdivs) / sizeof(int); i++) {
             if (na->operation.shape[reduce_dim] % subdivs[i] == 0 &&
                 na->operation.shape[reduce_dim] / subdivs[i] > 1) {
@@ -742,7 +743,7 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
       FGraphNode *parent = curr->predecessors[i];
       if (!visited.contains(parent))
         continue;
-      auto start = std::chrono::high_resolution_clock::now();
+     // auto start = std::chrono::high_resolution_clock::now();
       FGraphNode *local_grad =
           unbroadcast(local_gradient(curr, i, adj), parent);
       if (adjoints.contains(parent)) {
@@ -752,10 +753,10 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
         if (local_grad == adj)
           allowed_to_free = false;
       }
-      std::chrono::duration<double, std::milli> elapsed =
-          std::chrono::high_resolution_clock::now() - start;
-      std::cout << fop_to_string[curr->operation.op_type] << " took "
-                << elapsed.count() << std::endl;
+     // std::chrono::duration<double, std::milli> elapsed =
+     //     std::chrono::high_resolution_clock::now() - start;
+     // std::cout << fop_to_string[curr->operation.op_type] << " took "
+     //           << elapsed.count() << std::endl;
       fOptimizeMemory(adjoints[parent]);
     }
     if (!vars.contains(curr)) {

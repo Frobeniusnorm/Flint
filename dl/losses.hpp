@@ -24,24 +24,29 @@
  * double Tensors as well).
  */
 template <typename T>
-concept GenericLoss =
-    requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
-             Tensor<double, 2> &t3, Tensor<long, 2> &t4) {
-      {
-        a.calculate_error(t1, t1)
-        } -> std::convertible_to<
-            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
-                   T::transform_dimensionality(2)>>;
-      { a.calculate_error(t2, t2) } -> std::convertible_to<
-            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
-                   T::transform_dimensionality(2)>>;
-      { a.calculate_error(t3, t3) } -> std::convertible_to<
-            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
-                   T::transform_dimensionality(2)>>;
-      { a.calculate_error(t4, t4) } -> std::convertible_to<
-            Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
-                   T::transform_dimensionality(2)>>;
-    };
+concept GenericLoss = requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
+                               Tensor<double, 2> &t3, Tensor<long, 2> &t4) {
+  {
+    a.calculate_error(t1, t1)
+  } -> std::convertible_to<
+      Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
+             T::transform_dimensionality(2)>>;
+  {
+    a.calculate_error(t2, t2)
+  } -> std::convertible_to<
+      Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
+             T::transform_dimensionality(2)>>;
+  {
+    a.calculate_error(t3, t3)
+  } -> std::convertible_to<
+      Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
+             T::transform_dimensionality(2)>>;
+  {
+    a.calculate_error(t4, t4)
+  } -> std::convertible_to<
+      Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
+             T::transform_dimensionality(2)>>;
+};
 
 /** Calculates the Categorical Cross Entropy Loss with full summation. It is
  * advised to apply a softmax as the last activation layer in the calculation of
@@ -53,15 +58,17 @@ struct CrossEntropyLoss {
   static constexpr FType transform_type(FType t) { return F_FLOAT64; }
   static constexpr unsigned int transform_dimensionality(int n) { return 1; }
   template <typename T, unsigned int n>
-  Tensor<double, transform_dimensionality(n)> calculate_error(Tensor<T, n> &in,
-                                        Tensor<T, n> &expected) {
+  Tensor<double, transform_dimensionality(n)>
+  calculate_error(Tensor<T, n> &in, Tensor<T, n> &expected) {
     // TODO sparse categorical cross entropy loss
-    auto pred = (in / in.reduce_sum(n-1).expand(n-1, in.get_shape()[n-1])).max(1e-7).min(1 - 1e-7);
+    auto pred = (in / in.reduce_sum(n - 1).expand(n - 1, in.get_shape()[n - 1]))
+                    .max(1e-7)
+                    .min(1 - 1e-7);
     auto t1 = (expected * -pred.log()).reduce_sum();
-      size_t total_size = 1;
-      for (unsigned int i = 0; i < n - 1; i++)
-        total_size *= in.get_shape()[i];
-      return (t1 / (double)total_size);
-  } 
+    size_t total_size = 1;
+    for (unsigned int i = 0; i < n - 1; i++)
+      total_size *= in.get_shape()[i];
+    return (t1 / (double)total_size);
+  }
 };
 #endif

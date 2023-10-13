@@ -240,8 +240,8 @@ template <GenericLayer... T> struct SequentialModel {
       // validate
       std::string validation_msg = "";
       if (data.vX.has_value() && data.vY.has_value()) {
-        auto output = forward(data.X);
-        auto error = loss.calculate_error(output, data.Y);
+        auto output = forward(data.vX.value());
+        auto error = loss.calculate_error(output, data.vY.value());
         validation_msg =
             " validation error: " + std::to_string(error.reduce_sum()[0]);
       }
@@ -308,7 +308,6 @@ private:
       in->reference_counter--;
       auto ot = std::get<layer>(layers).forward(it);
       ot.execute();
-      fFreeGraph(in);
 #ifdef FLINT_DL_PROFILE
       std::chrono::duration<double, std::milli> elapsed =
           std::chrono::high_resolution_clock::now() - start;

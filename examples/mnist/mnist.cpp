@@ -1,4 +1,4 @@
-#define FLINT_DL_PROFILE
+// #define FLINT_DL_PROFILE
 #include <cstring>
 #include <flint/flint.h>
 #include <flint/flint.hpp>
@@ -89,8 +89,7 @@ int main() {
       X.reshape(X.get_shape()[0], X.get_shape()[1], X.get_shape()[2], 1), 
       Y,
       vX.reshape(vX.get_shape()[0], vX.get_shape()[1], vX.get_shape()[2], 1),
-      vY
-      );
+      vY);
   std::cout << data.X.get_shape()[0] << " images à " << data.X.get_shape()[1]
             << "x" << data.X.get_shape()[1] << " (and " << data.Y.get_shape()[0]
             << " labels)" << std::endl;

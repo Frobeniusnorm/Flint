@@ -1102,13 +1102,13 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
       case FREDUCE_MIN:
       case FREDUCE_MUL:
       case FREDUCE_SUM:
-        curr = fExecuteGraph(curr);
+        a = fExecuteGraph(a);
         terminate = true;
       default:
         break;
       }
       if (terminate)
-        continue;
+        break;
       for (int i = 0; i < curr->num_predecessor; i++)
         todo.push_back(curr->predecessors[i]);
     }

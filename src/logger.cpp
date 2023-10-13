@@ -17,7 +17,7 @@
 #include <iostream>
 #include <stdexcept>
 
-static int logging_level = 5;
+static int logging_level = F_INFO;
 void flogging(FLogType type, const char *msg) {
   using namespace std;
   switch (type) {
