@@ -16,9 +16,10 @@ This module defines an interface for layers and includes implementations for the
 
 ### Activations
 
-- [ ] Softmax
+- [X] Softmax
 - [X] Relu
 - [X] Sigmoid
+- [X] LogSoftmax
 
 ### Normalization
 
