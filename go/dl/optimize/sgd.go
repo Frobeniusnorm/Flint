@@ -1,4 +1,4 @@
-package optim
+package optimize
 
 import (
 	"fmt"
@@ -30,6 +30,7 @@ func (sgd Sgd) calculateUpdate(weightTensor flint.GraphNode, gradientTensor flin
 }
 
 func (sgd Sgd) Step(loss dl.Tensor) {
+	// turn tensor array into array of graph nodes
 	paramsSimple := make([]flint.GraphNode, len(sgd.params))
 	for i, p := range sgd.params {
 		paramsSimple[i] = p.Node
@@ -42,5 +43,5 @@ func (sgd Sgd) Step(loss dl.Tensor) {
 }
 
 func (sgd Sgd) String() string {
-	return fmt.Sprintf("Sgd(learningRate: %f)", sgd.learningRate)
+	return fmt.Sprintf("Sgd(learningRate: %f, params: %d)", sgd.learningRate, len(sgd.params))
 }

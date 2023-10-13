@@ -1,4 +1,4 @@
-package optim
+package optimize
 
 import (
 	"fmt"
