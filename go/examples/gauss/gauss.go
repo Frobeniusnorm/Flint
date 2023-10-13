@@ -1,5 +1,5 @@
 // this package provides a use case a little bit more complicated.
-// To avoid linear memory growth we need calls to optimize memory as well as managing the reference counter
+// To avoid linear memory growth we need calls to flint.OptimizeMemory as well as managing the reference counter
 package main
 
 import (

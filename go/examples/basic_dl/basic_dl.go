@@ -7,7 +7,7 @@ import (
 	"github.com/Frobeniusnorm/Flint/go/datasets"
 	"github.com/Frobeniusnorm/Flint/go/dl/layers"
 	"github.com/Frobeniusnorm/Flint/go/dl/losses"
-	"github.com/Frobeniusnorm/Flint/go/dl/optimize"
+	"github.com/Frobeniusnorm/Flint/go/dl/optim"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 	"log"
 	"path"
@@ -38,8 +38,8 @@ func main() {
 	)
 	fmt.Println(model)
 
-	optim := optimize.NewSgd(model.Parameters(true), 1e-3)
-	scheduler := optimize.NewStepLR(optim, 10, 0.1) // essentially multiply learning rate by 0.1 every 10 epochs
+	optim := optim.NewSgd(model.Parameters(true), 1e-3)
+	scheduler := optim.NewStepLR(optim, 10, 0.1) // essentially multiply learning rate by 0.1 every 10 epochs
 
 	for epoch := 0; epoch < 3; epoch++ {
 		train(model, trainDataloader, optim)
@@ -53,7 +53,7 @@ func main() {
 }
 
 // train for one epoch
-func train(model layers.Layer, trainDl *dataloader.Dataloader[datasets.MnistDatasetEntry], optim optimize.Optimizer) {
+func train(model layers.Layer, trainDl *dataloader.Dataloader[datasets.MnistDatasetEntry], optim optim.Optimizer) {
 	model.EvalMode()
 	for {
 		batch, err := trainDl.Next()

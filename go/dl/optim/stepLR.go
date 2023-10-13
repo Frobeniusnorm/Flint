@@ -1,4 +1,4 @@
-package optimize
+package optim
 
 type StepLR struct {
 	optim     Optimizer

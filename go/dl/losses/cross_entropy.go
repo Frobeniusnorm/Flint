@@ -25,20 +25,17 @@ param labels should be a tensor with one of the following structures:
 */
 func CrossEntropyLossExtended(predictions dl.Tensor, labels dl.Tensor, weight dl.Tensor, reduction string, labelSmoothing float32) dl.Tensor {
 	shape := predictions.Node.GetShape()
-
 	C := shape[1] // number of classes
 	N := shape[0] // batch size
 
 	// find out if the labels contain class indices (discrete) or probabilities (continuous)
 
 	// TODO: take a look at flint.Equal
-
 	// FIXME: everything basically lol (see pt)
-
 	// FIXME: given one hot encoding we can also do: L(y, ŷ) = − log(ŷ_k)|y_k =1
 
 	offset := flint.CreateGraphConstant(eps, shape)
-	l := flint.Neg(flint.Mul(flint.Log(flint.Add(offset, predictions)), labels))
+	l := flint.Neg(flint.Mul(flint.Log(flint.Add(offset, predictions.Node)), labels.Node))
 	for len(l.GetShape()) > 1 {
 		l = flint.ReduceSum(l, 0)
 	}

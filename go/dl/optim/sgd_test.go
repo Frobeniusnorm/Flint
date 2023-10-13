@@ -1,4 +1,4 @@
-package optimize
+package optim
 
 import "testing"
 
