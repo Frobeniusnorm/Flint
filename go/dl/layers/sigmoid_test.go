@@ -8,6 +8,11 @@ import (
 	"testing"
 )
 
+func TestNewSigmoid(t *testing.T) {
+	l := NewSigmoid()
+	assert.Empty(t, l)
+}
+
 func TestSigmoid_Forward(t *testing.T) {
 	data := dl.NewTensor(flint.CreateGraphConstant(float32(2), flint.Shape{4}))
 	sigmoid := NewSigmoid()

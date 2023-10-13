@@ -18,6 +18,7 @@ func (l Softmax) Parameters(_ bool) []dl.Parameter {
 func (l Softmax) Forward(x dl.Tensor) dl.Tensor {
 	// shift by the maximum value to avoid exploding values
 	// thus avoiding inaccuracies when using floating point types.
+	// x.Close() // FIXME: is this needed? I mean the caller could still hold the graph node refrence ..
 	shifted := flint.Sub(x.Node, flint.Max[int32](x.Node))
 	shifted = flint.Exp(shifted)
 	div1 := shifted

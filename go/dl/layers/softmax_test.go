@@ -9,7 +9,8 @@ import (
 )
 
 func TestNewSoftmax(t *testing.T) {
-
+	l := NewSoftmax()
+	assert.Empty(t, l)
 }
 
 func TestSoftmax_Forward(t *testing.T) {

@@ -1,6 +1,6 @@
 # Documentation
 
-Currently there are two ways to view the documentation for this Go project:
+Currently, there are two ways to view the documentation for this Go project:
 
 ## Html generation
 
