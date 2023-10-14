@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/dataloader"
 	"github.com/Frobeniusnorm/Flint/go/datasets"
+	"github.com/Frobeniusnorm/Flint/go/dl"
 	"github.com/Frobeniusnorm/Flint/go/dl/layers"
 	"github.com/Frobeniusnorm/Flint/go/dl/losses"
 	"github.com/Frobeniusnorm/Flint/go/dl/optimize"
@@ -39,10 +40,10 @@ func main() {
 	fmt.Println(model)
 
 	optim := optimize.NewSgd(model.Parameters(true), 1e-3)
-	scheduler := optimize.NewStepLR(optim, 10, 0.1) // essentially multiply learning rate by 0.1 every 10 epochs
+	scheduler := optimize.NewStepLR(&optim, 10, 0.1) // essentially multiply learning rate by 0.1 every 10 epochs
 
 	for epoch := 0; epoch < 3; epoch++ {
-		train(model, trainDataloader, optim)
+		train(model, trainDataloader, &optim)
 		test(model, trainDataloader)
 		scheduler.Step()
 		trainDataloader.Reset()
@@ -67,11 +68,13 @@ func train(model layers.Layer, trainDl *dataloader.Dataloader[datasets.MnistData
 
 		flint.StartGradientContext()
 		output := model.Forward(batch.Data)
-		loss := losses.CrossEntropyLoss(output, batch.Label)
+		target := dl.NewTensor(flint.OneHot(batch.Label.Node, 10))
+		loss := losses.MSELoss(output, target)
 		flint.StopGradientContext()
 		optim.Step(loss)
 		flint.OptimizeMemory(loss.Node)
 		flint.FreeGraph(loss.Node)
+		target.Close()
 	}
 }
 
@@ -89,7 +92,9 @@ func test(model layers.Layer, testDl *dataloader.Dataloader[datasets.MnistDatase
 		}
 
 		output := model.Forward(batch.Data)
-		loss := losses.CrossEntropyLoss(output, batch.Label)
+		target := dl.NewTensor(flint.OneHot(batch.Label.Node, 10))
+		loss := losses.MSELoss(output, batch.Label)
+		target.Close()
 		log.Println("test loss:", loss)
 	}
 }

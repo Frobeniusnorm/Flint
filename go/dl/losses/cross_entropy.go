@@ -10,8 +10,8 @@ const eps float32 = 1e-10
 // CrossEntropyLoss calculates the cross entropy loss between a set of two tensors
 // predictions are the logits (thus one hot encoded). They do not have to be normalized, nor sum to one for this to work.
 // target is the expected value, NOT one hot encoded
-func CrossEntropyLoss(predictions dl.Tensor, labels dl.Tensor) dl.Tensor {
-	return CrossEntropyLossExtended(predictions, labels, dl.Tensor{}, "mean", 0.0)
+func CrossEntropyLoss(predictions dl.Tensor, target dl.Tensor) dl.Tensor {
+	return CrossEntropyLossExtended(predictions, target, dl.Tensor{}, REDUCE_MEAN, 0.0)
 }
 
 /*
@@ -23,9 +23,9 @@ The last one might being useful for higher dimension inputs, such images.
 
 param labels should be a tensor with one of the following structures:
 */
-func CrossEntropyLossExtended(predictions dl.Tensor, labels dl.Tensor, weight dl.Tensor, reduction string, labelSmoothing float32) dl.Tensor {
+func CrossEntropyLossExtended(predictions dl.Tensor, target dl.Tensor, weight dl.Tensor, reduce reduction, labelSmoothing float32) dl.Tensor {
 	shape := predictions.Node.GetShape()
-	C := shape[1] // number of classes
+	//C := shape[1] // number of classes
 	N := shape[0] // batch size
 
 	// find out if the labels contain class indices (discrete) or probabilities (continuous)
@@ -35,15 +35,15 @@ func CrossEntropyLossExtended(predictions dl.Tensor, labels dl.Tensor, weight dl
 	// FIXME: given one hot encoding we can also do: L(y, ŷ) = − log(ŷ_k)|y_k =1
 
 	offset := flint.CreateGraphConstant(eps, shape)
-	l := flint.Neg(flint.Mul(flint.Log(flint.Add(offset, predictions.Node)), labels.Node))
+	l := flint.Neg(flint.Mul(flint.Log(flint.Add(offset, predictions.Node)), target.Node))
 	for len(l.GetShape()) > 1 {
 		l = flint.ReduceSum(l, 0)
 	}
 
-	if reduction == "sum" {
-		l = flint.ReduceSum(l, 0)
+	if reduce == REDUCE_SUM {
+		l = flint.Sum(l)
 	}
-	if reduction == "mean" {
+	if reduce == REDUCE_MEAN {
 		l = flint.Divide(l, int32(N))
 	}
 	return dl.NewTensor(l)

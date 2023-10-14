@@ -11,7 +11,7 @@ For now this library purely offers functional losses.
 - [ ] PoissonNLLLoss
 - [ ] GaussianNLLLoss
 - [ ] KLDivLoss
-- [ ] MSELoss
+- [X] MSELoss
 - [ ] BCELoss
 - [ ] BCEWithLogitsLoss
 - [ ] HingeEmbeddingLoss
@@ -27,3 +27,5 @@ For now this library purely offers functional losses.
 - [ ] TripletMarginLoss
 - [ ] TripletMarginWithDistanceLoss
 - [ ] CTCLoss
+
+NOTE: This is just the list from PyTorch
