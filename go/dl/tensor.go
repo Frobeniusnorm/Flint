@@ -5,7 +5,7 @@ import "github.com/Frobeniusnorm/Flint/go/flint"
 /*
 Tensor essentially acts as a memory-safe wrapper for [flint.GraphNode].
 Since go does not have a destructor for GraphNode any references to nodes in C memory cannot be cleaned up.
-By having a [Close] method that satisfies [io.Closer] and can be deferred closed this issue is resolved.
+By having a [Close] method, the memory cleanup can be deferred.
 */
 type Tensor struct {
 	Node flint.GraphNode

@@ -5,21 +5,14 @@ import (
 	"github.com/Frobeniusnorm/Flint/go/flint"
 )
 
-type Softmax struct{}
+// TODO: add parameter dim (int) – A dimension along which Softmax will be computed (so every slice along dim will sum to 1).
 
-func NewSoftmax() Softmax {
-	return Softmax{}
-}
-
-func (l Softmax) Parameters(_ bool) []dl.Parameter {
-	return []dl.Parameter{}
-}
-
-func (l Softmax) Forward(x dl.Tensor) dl.Tensor {
+// Softmax applies the softmax function to the input [x]
+func Softmax(x dl.Tensor) dl.Tensor {
 	// shift by the maximum value to avoid exploding values
 	// thus avoiding inaccuracies when using floating point types.
-	// x.Close() // FIXME: is this needed? I mean the caller could still hold the graph node refrence ..
-	shifted := flint.Sub(x.Node, flint.Max[int32](x.Node))
+	defer x.Close() // FIXME: is this needed? I mean the caller could still hold the graph node reference...
+	shifted := flint.Sub(x.Node, flint.Max(x.Node))
 	shifted = flint.Exp(shifted)
 	div1 := shifted
 	div2 := flint.ReduceSum(flint.Exp(shifted), len(shifted.GetShape())-1)
@@ -27,10 +20,24 @@ func (l Softmax) Forward(x dl.Tensor) dl.Tensor {
 	return dl.NewTensor(res)
 }
 
-func (l Softmax) TrainMode() {}
+type SoftmaxLayer struct{}
 
-func (l Softmax) EvalMode() {}
+func NewSoftmax() SoftmaxLayer {
+	return SoftmaxLayer{}
+}
 
-func (l Softmax) String() string {
+func (l SoftmaxLayer) Parameters(_ bool) []dl.Parameter {
+	return []dl.Parameter{}
+}
+
+func (l SoftmaxLayer) Forward(x dl.Tensor) dl.Tensor {
+	return Softmax(x)
+}
+
+func (l SoftmaxLayer) TrainMode() {}
+
+func (l SoftmaxLayer) EvalMode() {}
+
+func (l SoftmaxLayer) String() string {
 	return "Softmax()"
 }
