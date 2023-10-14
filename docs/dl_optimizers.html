@@ -120,15 +120,13 @@ concept OptimizerFactory = <b>requires</b>(T fac) </pre></div>
 
       <div style="display: block; height: 2em;"></div>
       <h1 id="losses"><u>dl/losses.hpp</u></h1>
-      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T_concept_GenericLoss_=____requires_T_a__Tensor_float__2__&t1__Tensor_int__2__&t2______________Tensor_double__2__&t3__Tensor_long__2__&t4__">template &lt;typename T&gt;
-concept GenericLoss =
-    <b>requires</b>(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
-             Tensor<double, 2> &t3, Tensor<long, 2> &t4) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-CrossEntropyLoss_">struct <b>CrossEntropyLoss </b></a><br/><br/></div>
+      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T_concept_GenericLoss_=_requires_T_a__Tensor_float__2__&t1__Tensor_int__2__&t2________________________________Tensor_double__2__&t3__Tensor_long__2__&t4__">template &lt;typename T&gt;
+concept GenericLoss = <b>requires</b>(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
+                               Tensor<double, 2> &t3, Tensor<long, 2> &t4) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-CrossEntropyLoss_">struct <b>CrossEntropyLoss </b></a><br/><br/></div>
       <div style="display: block; height: 2em;"></div>
-      <div id="s-_typename_T_concept_GenericLoss_=____requires_T_a__Tensor_float__2__&t1__Tensor_int__2__&t2______________Tensor_double__2__&t3__Tensor_long__2__&t4__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt;
-concept GenericLoss =
-    <b>requires</b>(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
-             Tensor<double, 2> &t3, Tensor<long, 2> &t4) </pre></div>
+      <div id="s-_typename_T_concept_GenericLoss_=_requires_T_a__Tensor_float__2__&t1__Tensor_int__2__&t2________________________________Tensor_double__2__&t3__Tensor_long__2__&t4__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt;
+concept GenericLoss = <b>requires</b>(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
+                               Tensor<double, 2> &t3, Tensor<long, 2> &t4) </pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Defines the general concept of a Loss function.

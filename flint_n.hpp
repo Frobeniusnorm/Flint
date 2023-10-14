@@ -395,6 +395,20 @@ template <typename T, unsigned int n> struct Tensor {
     }
     return os;
   }
+  /**
+   * Calls `serialize` on this Tensor and pipes the returned data to the
+   * stream.
+   */
+  friend std::ofstream &operator<<(std::ofstream &os, Tensor<T, n> t) {
+    for (char c : t.serialize()) {
+      os.put(c);
+    }
+    return os;
+  }
+  /**
+   * Reads from a input stream one Tensor representation.
+   * The input should have been created with `serialize` or the pipe operator.
+   */
   static Tensor<T, n> read_from(std::ifstream &is) {
     // read to shape
     std::vector<char> data(4 + sizeof(FType) + sizeof(int));
@@ -428,6 +442,14 @@ template <typename T, unsigned int n> struct Tensor {
    * pipe.
    */
   friend std::ostream &operator<<(std::ostream &os, Tensor<T, n> &t) {
+    os << (std::string)t;
+    return os;
+  }
+  /**
+   * Calls `std::string()` on this Tensor and pipes the returned string to the
+   * pipe.
+   */
+  friend std::ostream &operator<<(std::ostream &os, Tensor<T, n> t) {
     os << (std::string)t;
     return os;
   }
@@ -1393,9 +1415,26 @@ template <typename T, unsigned int n> struct Tensor {
     std::copy_n(nc->operation.shape, new_shape.size(), new_shape.begin());
     return Tensor<stronger_return<K>, new_shape.size()>(nc, new_shape);
   }
-  /** Convolves the `n`-dimensional input tensor with a `n`-dimensional
+  /** Convolves the `n`-dimensional input tensor with a `n` or `n+1`-dimensional
    * filter kernel `kernel` and a per dimensional step size `steps` with size of
-   * `n-1`. It is expected that the input and `kernel` have the same size in
+   * `n-1`. This operation basically has two modi:
+   *  - one where there is exactly one filter s.t.
+   *    `kernel` has dimensionality `n`, the same size in the last dimension as
+   *    the input tensor (since that dimension will be completly reduced) and in
+   *    all other dimensions kernel should have the same or smaller size then
+   *    the input tensor.
+   *  - one where `kernel` represents an array of filters in its first
+   *    dimension, s.t. kernel has dimensionality of `n+1`. Each kernel in the
+   *    first dimension is convolved like it would be in the first modi. The
+   *    convolution results of each kernel are concatenated in the last
+   *    dimension of the result Tensor. Lets say the input tensor has a shape of
+   *    `[x, y, c]` and the kernel has `[f, a, b, c]` the shape of the result
+   *    will be
+   *    `[convolveshape(x, a, steps[0]), convolveshape(y, b, steps[1]), f]`
+   *    (for the semantic of `convolveshape()` look at the end of this
+   *    documentation).
+   *
+   * It is expected that the input and `kernel` have the same size in
    * their last dimension (which will be completly reduced by the convolution).
    * In all other dimensions the size of the input tensor should be larger or
    * equal to the size of `kernel`. The `kernel` will be 'slid' over the tensor
@@ -1410,8 +1449,9 @@ template <typename T, unsigned int n> struct Tensor {
    * behaviour (i.e. include padding) you can use `extend`, `slice` or similar.
    *
    * The resulting Tensor will therefor have a shape with dimensionality `n - 1`
-   * and size of `(shape[i] - kernel.get_shape()[i] - 1) / steps[i]`
-   * if `(shape[i] - kernel.get_shape()[i] - 1)` is divisable by `steps[i]`
+   * (or in the case of multiple kernels `n`) and size of
+   * `(shape[i] - kernel.get_shape()[i] - 1) / steps[i]`
+   *    if `(shape[i] - kernel.get_shape()[i] - 1)` is divisable by `steps[i]`
    * else `(shape[i] - kernel.get_shape()[i] - 1) / steps[i] + 1`
    *
    * @code{
@@ -1419,10 +1459,22 @@ template <typename T, unsigned int n> struct Tensor {
    *                     {{5, 6}, {7, 8}, {9, 0}},
    *                     {{-1,-2},{-3,-4},{-5,-6}}};
    * Tensor<float, 3> k1{{{1, 1}, {2, 2}}};
-   * Tensor<float, 2> r1 = t1.convolve(k1, 2, 1);
+   * std::cout << t1.convolve(k1, 2, 1)() << std::endl;
    * // Tensor<FLOAT32, shape: [2, 3]>(
    * // [[7.000000, 17.000000, 7.000000],
    * //  [-17.000000, -29.000000, -11.000000]])
+   * Tensor<float, 3> t1{{{0, 1}, {1, 2}, {2, 3}},
+   *                    {{3, 4}, {5, 6}, {7, 8}}};
+   * Tensor<float, 4> k1{
+   *     {{{1, 1}, {2, -1}}},
+   *     {{{-1, 1}, {1, 0}}},
+   *     {{{-2, 1}, {2, -1}}}};
+   * std::cout << t1.convolve(k1, 1, 1)() << std::endl;
+   * // Tensor<FLOAT32, shape: [2, 2, 3]>(
+   * // [[[1.000000, 2.000000, 1.000000],
+   * //   [4.000000, 3.000000, 1.000000]],
+   * //  [[11.000000, 6.000000, 2.000000],
+   * //   [17.000000, 8.000000, 2.000000]]])
    * }
    */
   template <typename K, unsigned int k, typename... args>
@@ -1484,6 +1536,41 @@ template <typename T, unsigned int n> struct Tensor {
     std::copy_n(nc->operation.shape, n, new_shape.begin());
     return Tensor<stronger_return<K>, n>(nc, new_shape);
   }
+  /**
+   * Selects single elements with a index-tensor (integer tensor containing
+   * indices for the selected dimension).
+   * It indexes a dimension of the input tensor and the result has
+   * the shape of the input tensor except for the indexed dimension.
+   * It is assumed that except for the last entry the shape of `indices` is a
+   * prefix of the shape of the input tensor and the indexing will occur in the
+   * matched subsets (the last dimension of the `indices` Tensor is the one
+   * indexed in the input tensor).
+   *
+   * @code{
+   * Tensor<double, 3> a = {
+   *     {{0, 1}, {2, 3}},
+   *     {{4, 5}, {6, 7}},
+   *     {{8, 9}, {10, 11}}};
+   * Tensor<int, 1> i1 = {0, 2};
+   * std::cout << a.index(i1)() << std::endl;
+   * // Tensor<FLOAT64, shape: [2, 2, 2]>(
+   * // [[[0.000000, 1.000000],
+   * //   [2.000000, 3.000000]],
+   * //  [[8.000000, 9.000000],
+   * //   [10.000000, 11.000000]]])
+   * Tensor<int, 1> i2 = {0, 1, 1, 2};
+   * std::cout << a.index(i2)() << std::endl;
+   * // Tensor<FLOAT64, shape: [4, 2, 2]>(
+   * // [[[0.000000, 1.000000],
+   * //   [2.000000, 3.000000]],
+   * //  [[4.000000, 5.000000],
+   * //   [6.000000, 7.000000]],
+   * //  [[4.000000, 5.000000],
+   * //   [6.000000, 7.000000]],
+   * //  [[8.000000, 9.000000],
+   * //   [10.000000, 11.000000]]])
+   * }
+   */
   template <typename K, unsigned int k>
   Tensor<T, n> index(const Tensor<K, k> &indices) const {
     static_assert(std::is_same<K, int>() || std::is_same<K, long>(),
@@ -1495,6 +1582,35 @@ template <typename T, unsigned int n> struct Tensor {
     std::copy_n(nc->operation.shape, n, new_shape.begin());
     return Tensor<T, n>(nc, new_shape);
   }
+  /**
+   * Assigns to each element in `b` one element in the input tensor where that
+   * element will be "send" to, i.e. the place in the input tensor the index
+   * points to will be set to the corresponding element from `b`. If multiple
+   * elements from `b` are sent to the same place in the input tensor they will
+   * be summed up. The shape of `indices` must be a prefix of the shape of `b`,
+   * meaning it can have as many dimensions as `b` or less, but the sizes of the
+   * dimensions must be the same as the first of the shape of `b`.
+   *
+   * @code{
+   * Tensor<int, 2> a3 = {{0, 1}, {2, 3}, {4, 5}, {6, 7}};
+   * Tensor<int, 2> b3 = {{4, 5}, {6, 7}, {8, 9}};
+   * Tensor<int, 1> i3 = {0, 0, 2};
+   * std::cout << a3.index_set(b3, i3)() << std::endl;
+   * // Tensor<INT32, shape: [4, 2]>(
+   * // [[10, 12],
+   * //  [2, 3],
+   * //  [8, 9],
+   * //  [6, 7]])
+   * Tensor<int, 2> i4 = {{-1, 0}, {1, 1}, {1, 0}, {1, -1}};
+   * Tensor<int, 2> b4 = {{4, 5}, {6, 7}, {8, 9}, {10, 11}};
+   * std::cout << a3.index_set(b4, i4)() << std::endl;
+   * // Tensor<INT32, shape: [4, 2]>(
+   * // [[5, 1],
+   * //  [2, 13],
+   * //  [9, 8],
+   * //  [6, 10]])
+   * }
+   */
   template <typename K, unsigned int k>
   Tensor<T, n> index_set(const Tensor<T, n> &b,
                          const Tensor<K, k> &indices) const {
@@ -1554,7 +1670,21 @@ template <typename T, unsigned int n> struct Tensor {
     return Tensor<T, n + 1>(nn, ns);
   }
   /**
-   * UNIMPLEMENTED FUTURE FUNCTION
+   * Takes an array of windows (like e.g. the result of `sliding_window`) and
+   *reconstructs the original tensor.
+   * - `result_size` the shape of the original tensor the views were taken from
+   * - `step_size` the step size in each dimension with which the view was slid
+   *    over the tensor the create the windows
+   *
+   * The shape of the window is inferred by the shape of the input tensor.
+   *
+   * Overlapping elements will be summed up.
+   * If in a dimension `step_size` was larger than the window size, the
+   * resulting tensor will have `0` elements were the "gaps" between the windows
+   * were. If in a dimension `steps` was smaller than the window size (the
+   * windows were "overlapping") the overlapping elements are summed up in the
+   * result. `result_size` and `step_size` therefore have 1 entry less then `a`
+   * has dimensions.
    */
   Tensor<T, n - 1> unslide_window(std::array<size_t, n - 1> result_size,
                                   std::array<unsigned int, n - 1> step_size = {

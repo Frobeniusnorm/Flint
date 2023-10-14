@@ -25,7 +25,8 @@
         <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
           The use of Tensors alone isn't enough to correctly use Flint. 
           Especially cleaning up the library when you are finished is important to allow the backends to deallocate resources 
-          and joining Threads. The function <pre class="inline_code">Flint::cleanup()</pre> automatically cleans up all initialized backends, or you can construct a instance of `FlintContext`.
+          and joining Threads. The function <pre class="inline_code">Flint::cleanup()</pre> automatically cleans up all initialized backends, or you can construct a instance of
+          <pre class="inline_code">FlintContext</pre>.
         </div>
         <div style="display: block; height: 2em;"></div>
         @from_code("../flint_n.hpp", s-_typename_T__unsigned_int_n__struct_Tensor_)
