@@ -812,3 +812,19 @@ func Sum(node GraphNode) GraphNode {
 	node = ReduceSum(node, 0)
 	return node
 }
+
+// TransposeFull acts like a traditional transpose where the order of all axis are reversed
+func TransposeFull(node GraphNode) GraphNode {
+	n := len(node.GetShape())
+	ax := make(Axes, n)
+	for i := 0; i < n; i++ {
+		ax[i] = uint(n - i - 1)
+	}
+	return Transpose(node, ax)
+}
+
+func OneHot(node GraphNode, numClasses uint) GraphNode {
+	id := CreateGraphIdentity(numClasses)
+	id = Index(id, node)
+	return id
+}

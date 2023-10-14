@@ -106,6 +106,16 @@ func CreateGraphArrange(shape Shape, axis int) GraphNode {
 	return GraphNode{ref: flintNode}
 }
 
+// CreateGraphIdentity creates an identity matrix.
+// The datatype will be [f_INT32]
+func CreateGraphIdentity(size uint) GraphNode {
+	data := make([]int32, size*size)
+	for i := uint(0); i < size; i++ {
+		data[i+i*size] = int32(1)
+	}
+	return CreateGraph(data, Shape{size, size})
+}
+
 // GetShape returns the shape of a graph node
 // NOTE: this will not execute the graph or change anything in memory
 func (node GraphNode) GetShape() Shape {
