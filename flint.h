@@ -845,10 +845,13 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
  * `steps` with size of `n-1`. It is expected that `a` and `kernel` have the
  * same size in their last dimension (which will be completely reduced by the
  * convolution). In all other dimensions the size of `a` should be larger or
- * equal to the size of `kernel`. The `kernel` will be 'slid' over `a` in each
- * dimension, multiplying all values of `kernel` with the corresponding ones in
- * `a` and summing them up to a single value and moving the kernel further by
- * the value given in `steps` in that corresponding dimension.
+ * equal to the size of `kernel` or - if kernel has a dimensionality of `n+1` -
+ * every `i`th dimension of `a` should be learger or equal to the dimension `i +
+ * 1` of kernel, since the first dimension contains each filter. The `kernel`
+ * will be 'slid' over `a` in each dimension, multiplying all values of `kernel`
+ * with the corresponding ones in `a` and summing them up to a single value and
+ * moving the kernel further by the value given in `steps` in that corresponding
+ * dimension.
  *
  * If the filter is `n+1`-dimensional the first dimension of `kernel` is viewed
  * as an array of filters in which for each a normal convolution is executed and
@@ -865,9 +868,13 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
  * behaviour (i.e. include padding) you can use `extend`, `slice` or similar.
  *
  * The resulting Tensor will therefor have a shape with dimensionality `n - 1`
- * and size of `(shape[i] - kernel.get_shape()[i] - 1) / steps[i]`
- * if `(shape[i] - kernel.get_shape()[i] - 1)` is divisable by `steps[i]`
- * else `(shape[i] - kernel.get_shape()[i] - 1) / steps[i] + 1`
+ * if kernel is also `n` dimensional and size of `(shape[i] -
+ * kernel.get_shape()[i] - 1) / steps[i]` if `(shape[i] - kernel.get_shape()[i]
+ * - 1)` is divisable by `steps[i]` else `(shape[i] - kernel.get_shape()[i] - 1)
+ * / steps[i] + 1`. If the kernel is `n+1` dimensional the result has
+ * dimensionality of `n` with the same shape, except for the last dimension
+ * where it will have the numbers of filters (the first dimension of kernel) as
+ * its size.
  */
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
                       const unsigned int *steps);
@@ -963,7 +970,6 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
 FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
                             const unsigned int *steps);
 /**
- * UNIMPLEMENTED FUTURE FUNCTION
  * Reprojects the windows (first dimension of `a`) to a common tensor,
  * i.e. if `a = fsliding_window(x, window_size, steps)` `shape` should be the
  * shape of `x`, while steps remain the same and the resulting tensor will have

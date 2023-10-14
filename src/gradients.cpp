@@ -150,7 +150,7 @@ static std::string printNode(FGraphNode *node, int dim, int *b) {
 }
 template <typename T> static std::string printNode(FGraphNode *node) {
   if (!node->result_data) {
-    fExecuteGraph(node);
+    fSyncMemory(fExecuteGraph(node));
   }
   int b = 0;
   return printNode<T>(node, 0, &b);
@@ -276,29 +276,27 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     const unsigned int *steps = (unsigned int *)y->operation.additional_data;
     if (0 == dx_i) {
       if (a->operation.dimensions != kernel->operation.dimensions) {
-        // multifilter
-        std::vector<long> startk(kernel->operation.dimensions, 0);
-        std::vector<long> endk(kernel->operation.shape,
-                               kernel->operation.shape +
-                                   kernel->operation.dimensions);
-        std::vector<long> starta(prev_adj->operation.dimensions, 0);
-        std::vector<long> enda(prev_adj->operation.shape,
-                               prev_adj->operation.shape +
-                                   prev_adj->operation.dimensions);
         FGraphNode *res =
             fconstant_d(0.0, a->operation.shape, a->operation.dimensions);
-        for (size_t f = 0; f < kernel->operation.shape[0]; f++) {
-          startk[0] = f;
-          endk[0] = f + 1;
-          FGraphNode *filter =
-              fflatten_dimension(fslice(kernel, startk.data(), endk.data()), 1);
-          starta[prev_adj->operation.dimensions - 1] = f;
-          enda[prev_adj->operation.dimensions - 1] = f + 1;
-          FGraphNode *adj =
-              fflatten_dimension(fslice(prev_adj, starta.data(), enda.data()),
-                                 prev_adj->operation.dimensions - 1);
-          FGraphNode *grad_conv = gradient_convolve(a, filter, adj, steps);
-          res = fadd(res, fExecuteGraph(grad_conv));
+        for (int i = 0; i < kernel->operation.shape[0]; i++) {
+          using namespace std;
+          vector<long> start_kernel(kernel->operation.dimensions, 0);
+          vector<long> end_kernel(kernel->operation.shape,
+                                  kernel->operation.shape +
+                                      kernel->operation.dimensions);
+          start_kernel[0] = i;
+          end_kernel[0] = i + 1;
+          FGraphNode *sk = fflatten_dimension(
+              fslice(kernel, start_kernel.data(), end_kernel.data()), 1);
+          vector<long> start_adj(prev_adj->operation.dimensions, 0);
+          vector<long> end_adj(prev_adj->operation.shape,
+                               prev_adj->operation.shape +
+                                   prev_adj->operation.dimensions);
+          FGraphNode *sa = fflatten_dimension(
+              fslice(prev_adj, start_adj.data(), end_adj.data()),
+              prev_adj->operation.dimensions - 1);
+          FGraphNode *curr = fExecuteGraph(gradient_convolve(a, sk, sa, steps));
+          res = fadd(res, curr);
         }
         return res;
       } else
@@ -329,7 +327,8 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
           trans[trans.size() - 1] = 0;
           prev_adj = ftranspose(prev_adj, trans.data());
           // retransform to [filters, rest]
-          for (int i = 1; i < prev_adj->operation.dimensions; i++)
+          const unsigned int dims = prev_adj->operation.dimensions;
+          for (int i = 2; i < dims; i++)
             prev_adj = fflatten_dimension(prev_adj, 2);
         } else
           prev_adj = fflatten(prev_adj);
@@ -345,7 +344,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU) {
           // we check if we can subdivide the reduction task for better parallel
           // distribution
-          int subdivs[] = {128, 100, 50, 10, 7, 5, 4, 3, 2};
+          int subdivs[] = {128, 100, 50, 10, 5, 3, 2};
           for (int i = 0; i < sizeof(subdivs) / sizeof(int); i++) {
             if (na->operation.shape[reduce_dim] % subdivs[i] == 0 &&
                 na->operation.shape[reduce_dim] / subdivs[i] > 1) {
@@ -744,7 +743,7 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
       FGraphNode *parent = curr->predecessors[i];
       if (!visited.contains(parent))
         continue;
-      auto start = std::chrono::high_resolution_clock::now();
+     // auto start = std::chrono::high_resolution_clock::now();
       FGraphNode *local_grad =
           unbroadcast(local_gradient(curr, i, adj), parent);
       if (adjoints.contains(parent)) {
@@ -754,10 +753,10 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
         if (local_grad == adj)
           allowed_to_free = false;
       }
-      std::chrono::duration<double, std::milli> elapsed =
-          std::chrono::high_resolution_clock::now() - start;
-      std::cout << fop_to_string[curr->operation.op_type] << " took "
-                << elapsed.count() << std::endl;
+     // std::chrono::duration<double, std::milli> elapsed =
+     //     std::chrono::high_resolution_clock::now() - start;
+     // std::cout << fop_to_string[curr->operation.op_type] << " took "
+     //           << elapsed.count() << std::endl;
       fOptimizeMemory(adjoints[parent]);
     }
     if (!vars.contains(curr)) {

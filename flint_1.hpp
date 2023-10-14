@@ -413,6 +413,16 @@ template <typename T> struct Tensor<T, 1> {
     return os;
   }
   /**
+   * Calls `deserialize` on this Tensor and pipes the returned data to the
+   * stream.
+   */
+  friend std::ofstream &operator<<(std::ofstream &os, Tensor<T, 1> t) {
+    for (char c : t.serialize()) {
+      os.put(c);
+    }
+    return os;
+  }
+  /**
    * Calls `std::string()` on this Tensor and pipes the returned string to the
    * pipe.
    */
@@ -798,9 +808,27 @@ template <typename T> struct Tensor<T, 1> {
    * shape is the same as the product of the old shape (the new shape represents
    * as many elements as the old).
    */
-  template <size_t k> Tensor<T, k> reshape_array(std::array<size_t, k> new_shape) {
+  template <size_t k>
+  Tensor<T, k> reshape_array(std::array<size_t, k> new_shape) {
     return Tensor<T, k>(freshape(node, new_shape.data(), k), new_shape);
   }
+  /**
+   * Selects single elements with a index-tensor (integer tensor containing
+   * indices for the selected dimension).
+   * It indexes a dimension of the input tensor and the result has
+   * the shape of the input tensor except for the indexed dimension.
+   * It is assumed that except for the last entry the shape of `indices` is a
+   * prefix of the shape of the input tensor and the indexing will occur in the
+   * matched subsets (the last dimension of the `indices` Tensor is the one
+   * indexed in the input tensor).
+   *
+   * @code{
+   * Tensor<int, 1> a3 = {0, 7, -1, 9, 4, 1, 4};
+   * Tensor<int, 1> i3 = {0, 0, 2, 4};
+   * std::cout << a3.index(i3)() << std::endl;
+   * // Tensor<INT32, shape: 4>([0, 0, -1, 4])
+   * }
+   */
   template <typename K> Tensor<T, 1> index(const Tensor<K, 1> &indices) const {
     static_assert(std::is_same<K, int>() || std::is_same<K, long>(),
                   "Indices must be integer!");
@@ -808,6 +836,22 @@ template <typename T> struct Tensor<T, 1> {
     std::array<size_t, 1> new_shape{nc->operation.shape[0]};
     return Tensor<T, 1>(nc, new_shape);
   }
+  /* Assigns to each element in `b` one element in the input tensor where that
+   * element will be "send" to, i.e. the place in the input tensor the index
+   * points to will be set to the corresponding element from `b`. If multiple
+   * elements from `b` are sent to the same place in the input tensor they will
+   * be summed up. The shape of `indices` must be a prefix of the shape of `b`,
+   * meaning it can have as many dimensions as `b` or less, but the sizes of the
+   * dimensions must be the same as the first of the shape of `b`.
+   *
+   * @code{
+   * Tensor<int, 1> a3 = {0, 1, 2, 3, 4, 5, 6};
+   * Tensor<int, 1> b3 = {4, 3, 8, -1};
+   * Tensor<int, 1> i3 = {0, 0, 2, 4};
+   * std::cout << a3.index_set(b3, i3)() << std::endl;
+   * // Tensor<INT32, shape: 7>([7, 1, 8, 3, -1, 5, 6])
+   * }
+   */
   template <typename K>
   Tensor<T, 1> index_set(const Tensor<T, 1> &b,
                          const Tensor<K, 1> &indices) const {
@@ -826,6 +870,31 @@ template <typename T> struct Tensor<T, 1> {
   template <typename K, unsigned int k>
   Tensor<double, k> gradient(const Tensor<K, k> &dx) const {
     return Tensor<double, k>(fCalculateGradient(this->node, dx.node), dx.shape);
+  }
+  /**
+   * Creates "views" in an additional dimension of a fixed size windows. The
+   * window of size `window_size` is slid  along the Tensor
+   * starting from the beginning and moving `step_size` entries. The windows are
+   * concatenated in a extra dimension, which becomes the first dimension of the
+   * result Tensor.
+   * E.g.
+   *
+   * @code{
+   * Tensor<int, 1> a = {0, 7, -1, 9, 4, 1, 4};
+   * std::cout << a.sliding_window(3, 2)() << std::endl;
+   * // Tensor<INT32, shape: [3, 3]>(
+   * // [[0, 7, -1],
+   * //  [-1, 9, 4],
+   * //  [4, 1, 4]])
+   * }
+   *
+   */
+  Tensor<T, 2> sliding_window(size_t window_size,
+                              unsigned int step_size = 1) const {
+    FGraphNode *nn = fsliding_window(node, &window_size, &step_size);
+    std::array<size_t, 2> ns;
+    std::memcpy(ns.data(), nn->operation.shape, sizeof(size_t) * 2);
+    return Tensor<T, 2>(nn, ns);
   }
   /**
    * Randomly permutates (=swaps multiple elements with each other without

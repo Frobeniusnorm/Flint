@@ -32,7 +32,7 @@
   <center>
 <div class="content" style="margin-top: -3.1em">
         <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_n__struct_Tensor_">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-:_node_nullptr__"><b>Tensor</b>() : node(nullptr) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-data__"><b>Tensor</b>(init_type data) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-data__"><b>Tensor</b>(storage_type data) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-node__std::array_size_t__n__shape_______:_node_node___shape_shape__"><b>Tensor</b>(FGraphNode *node, std::array<size_t, n> shape)
-      : node(node), shape(shape) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_&other__"><b>Tensor</b>(const Tensor &other) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__&operator=_const_Tensor_&other__">Tensor&lt;T, n&gt; <b>&operator=</b>(const Tensor &other) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&&other__"><b>Tensor</b>(Tensor &&other) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__get_shape___const_">std::array&lt;size_t, n&gt; <b>get_shape</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__&operator=_Tensor_&&other__">Tensor&lt;T, n&gt; <b>&operator=</b>(Tensor &&other) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-"><b>~Tensor</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-operator*___">storage_type <b>operator*</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-serialize___">std::vector&lt;char&gt; <b>serialize</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_T__n__deserialize_char_*data__">static Tensor&lt;T, n&gt; <b>deserialize</b>(char *data) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_T__n__deserialize_std::vector_char__data__">static Tensor&lt;T, n&gt; <b>deserialize</b>(std::vector<char> data) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-execute___">void <b>execute</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-execute_cpu___">void <b>execute_cpu</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-execute_gpu___">void <b>execute_gpu</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__&operator_____">Tensor&lt;T, n&gt; <b>&operator</b>()() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__operator-___const_">Tensor&lt;T, n&gt; <b>operator-</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__sign___const_">Tensor&lt;int, n&gt; <b>sign</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__even___const_">Tensor&lt;int, n&gt; <b>even</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__operator[]_const_size_t_index__">TensorView&lt;T, n - 1&gt; <b>operator[]</b>(const size_t index) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::string___">operator <b>std::string</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::ofstream_&operator___std::ofstream_&os__Tensor_T__n__&t__">friend std::ofstream <b>&operator&lt;&lt;</b>(std::ofstream &os, Tensor<T, n> &t) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::ostream_&operator___std::ostream_&os__Tensor_T__n__&t__">friend std::ostream <b>&operator&lt;&lt;</b>(std::ostream &os, Tensor<T, n> &t) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___k__=_n_?_k_:_n___operator+_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
+      : node(node), shape(shape) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-node__:_node_node__"><b>Tensor</b>(FGraphNode *node) : node(node) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_&other__"><b>Tensor</b>(const Tensor &other) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__&operator=_const_Tensor_&other__">Tensor&lt;T, n&gt; <b>&operator=</b>(const Tensor &other) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&&other__"><b>Tensor</b>(Tensor &&other) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__get_shape___const_">std::array&lt;size_t, n&gt; <b>get_shape</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__&operator=_Tensor_&&other__">Tensor&lt;T, n&gt; <b>&operator=</b>(Tensor &&other) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-"><b>~Tensor</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-operator*___">storage_type <b>operator*</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-serialize___">std::vector&lt;char&gt; <b>serialize</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_T__n__deserialize_char_*data__">static Tensor&lt;T, n&gt; <b>deserialize</b>(char *data) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_T__n__deserialize_std::vector_char__data__">static Tensor&lt;T, n&gt; <b>deserialize</b>(std::vector<char> data) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-execute___">void <b>execute</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-execute_cpu___">void <b>execute_cpu</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-execute_gpu___">void <b>execute_gpu</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__operator_____">Tensor&lt;T, n&gt; <b>operator</b>()() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__operator-___const_">Tensor&lt;T, n&gt; <b>operator-</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__sign___const_">Tensor&lt;int, n&gt; <b>sign</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__even___const_">Tensor&lt;int, n&gt; <b>even</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__operator[]_const_size_t_index__">TensorView&lt;T, n - 1&gt; <b>operator[]</b>(const size_t index) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::string___">operator <b>std::string</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::ofstream_&operator___std::ofstream_&os__Tensor_T__n__&t__">friend std::ofstream <b>&operator&lt;&lt;</b>(std::ofstream &os, Tensor<T, n> &t) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::ofstream_&operator___std::ofstream_&os__Tensor_T__n__t__">friend std::ofstream <b>&operator&lt;&lt;</b>(std::ofstream &os, Tensor<T, n> t) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_T__n__read_from_std::ifstream_&is__">static Tensor&lt;T, n&gt; <b>read_from</b>(std::ifstream &is) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::ostream_&operator___std::ostream_&os__Tensor_T__n__&t__">friend std::ostream <b>&operator&lt;&lt;</b>(std::ostream &os, Tensor<T, n> &t) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::ostream_&operator___std::ostream_&os__Tensor_T__n__t__">friend std::ostream <b>&operator&lt;&lt;</b>(std::ostream &os, Tensor<T, n> t) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___k__=_n_?_k_:_n___operator+_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;stronger_return&lt;K&gt;, k &gt;= n ? k : n&gt;
   <b>operator+</b>(const Tensor<K, k> &other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K___Tensor_stronger_return_K___n__operator+_const_K_other__const_">template &lt;typename K&gt;
   Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>operator+</b>(const K other) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___k__=_n_?_k_:_n___operator-_const_Tensor_K__k__&other__const_">template &lt;typename K, unsigned int k&gt;
@@ -61,21 +61,26 @@
                       std::array<size_t, n> indices) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__extend_std::array_size_t__n__new_shape_______________________std::array_size_t__n__indices_______________________std::array_long__n__steps__">Tensor&lt;T, n&gt; <b>extend</b>(std::array<size_t, n> new_shape,
                       std::array<size_t, n> indices,
                       std::array<long, n> steps) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__repeat_array_std::array_int___size_t_n__repetitions__const_">Tensor&lt;T, n&gt; <b>repeat_array</b>(std::array<int, (size_t)n> repetitions) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___Tensor_T__n__repeat_const_args____repetitions__const_">template &lt;typename... args&gt;
-  Tensor&lt;T, n&gt; <b>repeat</b>(const args... repetitions) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__transpose_std::initializer_list_int__transposition_=_">Tensor&lt;T, n&gt; <b>transpose</b>(std::initializer_list<int> transposition = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K___Tensor_stronger_return_K___n_-_1___convolve_array_const_Tensor_K__n__&kernel__________________const_std::array_unsigned_int__n_-_1__steps__const_">template &lt;typename K&gt;
-  Tensor&lt;stronger_return&lt;K&gt;, n - 1&gt;
-  <b>convolve_array</b>(const Tensor<K, n> &kernel,
-                 const std::array<unsigned int, n - 1> steps) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__typename____args___Tensor_stronger_return_K___n_-_1__convolve_const_Tensor_K__n__&kernel______________________________________________const_args____steps__const_">template &lt;typename K, typename... args&gt;
-  Tensor&lt;stronger_return&lt;K&gt;, n - 1&gt; <b>convolve</b>(const Tensor<K, n> &kernel,
-                                             const args... steps) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__typename____args___Tensor_stronger_return_K___n__slide_const_Tensor_K__n__&kernel_______________________________________const_args____steps__const_">template &lt;typename K, typename... args&gt;
+  Tensor&lt;T, n&gt; <b>repeat</b>(const args... repetitions) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__transpose_std::initializer_list_int__transposition_=_">Tensor&lt;T, n&gt; <b>transpose</b>(std::initializer_list<int> transposition = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__transpose_array_std::array_int__n__transposition__">Tensor&lt;T, n&gt; <b>transpose_array</b>(std::array<int, n> transposition) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___n_==_k_?_n_-_1_:_n___convolve_array_const_Tensor_K__k__&kernel__________________const_std::array_unsigned_int__n_-_1__steps__const_">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, n == k ? n - 1 : n&gt;
+  <b>convolve_array</b>(const Tensor<K, k> &kernel,
+                 const std::array<unsigned int, n - 1> steps) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k__typename____args___Tensor_stronger_return_K___k_==_n_?_n_-_1_:_n___convolve_const_Tensor_K__k__&kernel__const_args____steps__const_">template &lt;typename K, unsigned int k, typename... args&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k == n ? n - 1 : n&gt;
+  <b>convolve</b>(const Tensor<K, k> &kernel, const args... steps) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__typename____args___Tensor_stronger_return_K___n__slide_const_Tensor_K__n__&kernel_______________________________________const_args____steps__const_">template &lt;typename K, typename... args&gt;
   Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>slide</b>(const Tensor<K, n> &kernel,
-                                      const args... steps) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_+_1__sliding_window_std::array_size_t__n__window_size___________________________________std::array_unsigned_int__n__step_size_=_">Tensor&lt;T, n + 1&gt; <b>sliding_window</b>(std::array<size_t, n> window_size,
-                                  std::array<unsigned int, n> step_size = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__permutate_unsigned_int_ax__const_">Tensor&lt;T, n&gt; <b>permutate</b>(unsigned int ax) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_double__k__gradient_const_Tensor_K__k__&dx__const_">template &lt;typename K, unsigned int k&gt;
+                                      const args... steps) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_T__n__index_const_Tensor_K__k__&indices__const_">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;T, n&gt; <b>index</b>(const Tensor<K, k> &indices) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_T__n__index_set_const_Tensor_T__n__&b__________________________const_Tensor_K__k__&indices__const_">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;T, n&gt; <b>index_set</b>(const Tensor<T, n> &b,
+                         const Tensor<K, k> &indices) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_+_1__sliding_window_std::array_size_t__n__window_size___________________________________std::array_unsigned_int__n__step_size_=_">Tensor&lt;T, n + 1&gt; <b>sliding_window</b>(std::array<size_t, n> window_size,
+                                  std::array<unsigned int, n> step_size = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__unslide_window_std::array_size_t__n_-_1__result_size___________________________________std::array_unsigned_int__n_-_1__step_size_=_">Tensor&lt;T, n - 1&gt; <b>unslide_window</b>(std::array<size_t, n - 1> result_size,
+                                  std::array<unsigned int, n - 1> step_size = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__permutate_unsigned_int_ax__const_">Tensor&lt;T, n&gt; <b>permutate</b>(unsigned int ax) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k___Tensor_double__k__gradient_const_Tensor_K__k__&dx__const_">template &lt;typename K, unsigned int k&gt;
   Tensor&lt;double, k&gt; <b>gradient</b>(const Tensor<K, k> &dx) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-watch___">void <b>watch</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-unwatch___">void <b>unwatch</b>() </a><br/><br/></div>
         <div style="display: block; height: 2em;"></div>
         <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
           The use of Tensors alone isn't enough to correctly use Flint. 
           Especially cleaning up the library when you are finished is important to allow the backends to deallocate resources 
-          and joining Threads. The function <pre class="inline_code">Flint::cleanup()</pre> automatically cleans up all initialized backends, or you can construct a instance of `FlintContext`.
+          and joining Threads. The function <pre class="inline_code">Flint::cleanup()</pre> automatically cleans up all initialized backends, or you can construct a instance of
+          <pre class="inline_code">FlintContext</pre>.
         </div>
         <div style="display: block; height: 2em;"></div>
         <div id="s-_typename_T__unsigned_int_n__struct_Tensor_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor </b></pre></div>
@@ -114,6 +119,10 @@
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
  Constructs a Tensor directly from a <pre class="inline_code">FGraphNode</pre> and a shape
 </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-node__:_node_node__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>Tensor</b>(FGraphNode *node) : node(node) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Constructs a Tensor directly from a <pre class="inline_code">FGraphNode</pre>   </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-Tensor_&other__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>Tensor</b>(const Tensor &other) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
@@ -224,11 +233,17 @@
  does nothing).
  Uses the CPU backend and initializes it if it was not initialized.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-n__&operator_____"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>&operator</b>()() </pre></div>
+<div id="s-n__operator_____"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>operator</b>()() </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
  Convenience Method that calls <pre class="inline_code">execute</pre> and returns the Tensor object
- (the same, no new node is created!).
+ (the object is <pre class="inline_code">moved</pre>, no new node is created! Dont reuse the old object!
+ Intended to use like this
+ <pre class="card code" style="margin: 5px;">
+  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; t = ...;
+  t = t();</pre>
+ if you don't override t and use the old value again after the <pre class="inline_code">()</pre> call, a
+ segmentation fault will occur!).
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-n__operator-___const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>operator-</b>() const </pre></div>
 <br />
@@ -298,7 +313,25 @@
  Calls <pre class="inline_code">serialize</pre> on this Tensor and pipes the returned data to the
  stream.
 </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-std::ofstream_&operator___std::ofstream_&os__Tensor_T__n__t__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">friend std::ofstream <b>&operator&lt;&lt;</b>(std::ofstream &os, Tensor<T, n> t) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Calls <pre class="inline_code">serialize</pre> on this Tensor and pipes the returned data to the
+ stream.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Tensor_T__n__read_from_std::ifstream_&is__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">static Tensor&lt;T, n&gt; <b>read_from</b>(std::ifstream &is) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Reads from a input stream one Tensor representation.
+ The input should have been created with <pre class="inline_code">serialize</pre> or the pipe operator.
+</div></div><div style="display: block; height: 2em;"></div>
 <div id="s-std::ostream_&operator___std::ostream_&os__Tensor_T__n__&t__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">friend std::ostream <b>&operator&lt;&lt;</b>(std::ostream &os, Tensor<T, n> &t) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Calls <pre class="inline_code">std::string()</pre> on this Tensor and pipes the returned string to the
+ pipe.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-std::ostream_&operator___std::ostream_&os__Tensor_T__n__t__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">friend std::ostream <b>&operator&lt;&lt;</b>(std::ostream &os, Tensor<T, n> t) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
  Calls <pre class="inline_code">std::string()</pre> on this Tensor and pipes the returned string to the
@@ -987,21 +1020,42 @@
  <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">3</span>],</span>
  <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">4</span>]]])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_K___Tensor_stronger_return_K___n_-_1___convolve_array_const_Tensor_K__n__&kernel__________________const_std::array_unsigned_int__n_-_1__steps__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K&gt;
-  Tensor&lt;stronger_return&lt;K&gt;, n - 1&gt;
-  <b>convolve_array</b>(const Tensor<K, n> &kernel,
+<div id="s-n__transpose_array_std::array_int__n__transposition__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>transpose_array</b>(std::array<int, n> transposition) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Same as <pre class="inline_code">transpose</pre>, but with transpositions as array
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_K__unsigned_int_k___Tensor_stronger_return_K___n_==_k_?_n_-_1_:_n___convolve_array_const_Tensor_K__k__&kernel__________________const_std::array_unsigned_int__n_-_1__steps__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, n == k ? n - 1 : n&gt;
+  <b>convolve_array</b>(const Tensor<K, k> &kernel,
                  const std::array<unsigned int, n - 1> steps) const </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Same as convolve, but with steps as an array
+ Same as <pre class="inline_code">convolve</pre>, but with steps as an array
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_K__typename____args___Tensor_stronger_return_K___n_-_1__convolve_const_Tensor_K__n__&kernel______________________________________________const_args____steps__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, typename... args&gt;
-  Tensor&lt;stronger_return&lt;K&gt;, n - 1&gt; <b>convolve</b>(const Tensor<K, n> &kernel,
-                                             const args... steps) const </pre></div>
+<div id="s-_typename_K__unsigned_int_k__typename____args___Tensor_stronger_return_K___k_==_n_?_n_-_1_:_n___convolve_const_Tensor_K__k__&kernel__const_args____steps__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k, typename... args&gt;
+  Tensor&lt;stronger_return&lt;K&gt;, k == n ? n - 1 : n&gt;
+  <b>convolve</b>(const Tensor<K, k> &kernel, const args... steps) const </pre></div>
 <br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Convolves the <pre class="inline_code">n</pre>-dimensional input tensor with a <pre class="inline_code">n</pre>-dimensional
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Convolves the <pre class="inline_code">n</pre>-dimensional input tensor with a <pre class="inline_code">n</pre> or <pre class="inline_code">n+1</pre>-dimensional
  filter kernel <pre class="inline_code">kernel</pre> and a per dimensional step size <pre class="inline_code">steps</pre> with size of
- <pre class="inline_code">n-1</pre>. It is expected that the input and <pre class="inline_code">kernel</pre> have the same size in
+ <pre class="inline_code">n-1</pre>. This operation basically has two modi:
+  - one where there is exactly one filter s.t.
+    <pre class="inline_code">kernel</pre> has dimensionality <pre class="inline_code">n</pre>, the same size in the last dimension as
+    the input tensor (since that dimension will be completly reduced) and in
+    all other dimensions kernel should have the same or smaller size then
+    the input tensor.
+  - one where <pre class="inline_code">kernel</pre> represents an array of filters in its first
+    dimension, s.t. kernel has dimensionality of <pre class="inline_code">n+1</pre>. Each kernel in the
+    first dimension is convolved like it would be in the first modi. The
+    convolution results of each kernel are concatenated in the last
+    dimension of the result Tensor. Lets say the input tensor has a shape of
+    <pre class="inline_code">[x, y, c]</pre> and the kernel has <pre class="inline_code">[f, a, b, c]</pre> the shape of the result
+    will be
+    <pre class="inline_code">[convolveshape(x, a, steps[0]), convolveshape(y, b, steps[1]), f]</pre>
+    (for the semantic of <pre class="inline_code">convolveshape()</pre> look at the end of this
+    documentation).<div style="display:block; height: 0.5em"></div>
+ It is expected that the input and <pre class="inline_code">kernel</pre> have the same size in
  their last dimension (which will be completly reduced by the convolution).
  In all other dimensions the size of the input tensor should be larger or
  equal to the size of <pre class="inline_code">kernel</pre>. The <pre class="inline_code">kernel</pre> will be 'slid' over the tensor
@@ -1014,18 +1068,31 @@
  shape will be calculated correspondingly). If you want to modify this
  behaviour (i.e. include padding) you can use <pre class="inline_code">extend</pre>, <pre class="inline_code">slice</pre> or similar.<div style="display:block; height: 0.5em"></div>
  The resulting Tensor will therefor have a shape with dimensionality <pre class="inline_code">n - 1</pre>
- and size of <pre class="inline_code">(shape[i] - kernel.get_shape()[i] - 1) / steps[i]</pre> 
- if <pre class="inline_code">(shape[i] - kernel.get_shape()[i] - 1)</pre> is divisable by <pre class="inline_code">steps[i]</pre>
+ (or in the case of multiple kernels <pre class="inline_code">n</pre>) and size of
+ <pre class="inline_code">(shape[i] - kernel.get_shape()[i] - 1) / steps[i]</pre>
+    if <pre class="inline_code">(shape[i] - kernel.get_shape()[i] - 1)</pre> is divisable by <pre class="inline_code">steps[i]</pre>
  else <pre class="inline_code">(shape[i] - kernel.get_shape()[i] - 1) / steps[i] + 1</pre><div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">3</span>&gt; t1{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}},
                      {{<span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">6</span>}, {<span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">8</span>}, {<span style="color: #30F0FF">9</span>, <span style="color: #30F0FF">0</span>}},
                      {{-<span style="color: #30F0FF">1</span>,-<span style="color: #30F0FF">2</span>},{-<span style="color: #30F0FF">3</span>,-<span style="color: #30F0FF">4</span>},{-<span style="color: #30F0FF">5</span>,-<span style="color: #30F0FF">6</span>}}};
  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">3</span>&gt; k1{{{<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>}}};
- <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">2</span>&gt; r1 = t1.convolve(k1, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>);
+ std::cout &lt;&lt; t1.convolve(k1, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>)() &lt;&lt; std::endl;
  <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
  <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
- <span style="color: #D0D0D0">//  [-<span style="color: #30F0FF">1</span><span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">2</span><span style="color: #30F0FF">9</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">1</span><span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]])</span></pre>
+ <span style="color: #D0D0D0">//  [-<span style="color: #30F0FF">1</span><span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">2</span><span style="color: #30F0FF">9</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">1</span><span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]])</span>
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">3</span>&gt; t1{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}},
+                    {{<span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>}, {<span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">6</span>}, {<span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">8</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">float</span>, <span style="color: #30F0FF">4</span>&gt; k1{
+     {{{<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>, -<span style="color: #30F0FF">1</span>}}},
+     {{{-<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>}}},
+     {{{-<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>, -<span style="color: #30F0FF">1</span>}}}};
+ std::cout &lt;&lt; t1.convolve(k1, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">1</span>)() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">1</span><span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">6</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span><span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">8</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]]])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-_typename_K__typename____args___Tensor_stronger_return_K___n__slide_const_Tensor_K__n__&kernel_______________________________________const_args____steps__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, typename... args&gt;
   Tensor&lt;stronger_return&lt;K&gt;, n&gt; <b>slide</b>(const Tensor<K, n> &kernel,
@@ -1055,6 +1122,73 @@
  <span style="color: #D0D0D0">// Tensor&lt;FLOAT32, shape: [<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
  <span style="color: #D0D0D0">// [[[-<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
  <span style="color: #D0D0D0">//   [-<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, -<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_K__unsigned_int_k___Tensor_T__n__index_const_Tensor_K__k__&indices__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;T, n&gt; <b>index</b>(const Tensor<K, k> &indices) const </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Selects single elements with a index-tensor (integer tensor containing
+ indices for the selected dimension).
+ It indexes a dimension of the input tensor and the result has
+ the shape of the input tensor except for the indexed dimension.
+ It is assumed that except for the last entry the shape of <pre class="inline_code">indices</pre> is a
+ prefix of the shape of the input tensor and the indexing will occur in the
+ matched subsets (the last dimension of the <pre class="inline_code">indices</pre> Tensor is the one
+ indexed in the input tensor).<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt; a = {
+     {{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}},
+     {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>}},
+     {{<span style="color: #30F0FF">8</span>, <span style="color: #30F0FF">9</span>}, {<span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">1</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">1</span>&gt; i1 = {<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>};
+ std::cout &lt;&lt; a.index(i1)() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">8</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">9</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]]])</span>
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">1</span>&gt; i2 = {<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>};
+ std::cout &lt;&lt; a.index(i2)() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;FLOAT64, shape: [<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">5</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">6</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">4</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">5</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">6</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">7</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">8</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">9</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">1</span>.<span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span><span style="color: #30F0FF">0</span>]]])</span></pre>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_K__unsigned_int_k___Tensor_T__n__index_set_const_Tensor_T__n__&b__________________________const_Tensor_K__k__&indices__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+  Tensor&lt;T, n&gt; <b>index_set</b>(const Tensor<T, n> &b,
+                         const Tensor<K, k> &indices) const </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Assigns to each element in <pre class="inline_code">b</pre> one element in the input tensor where that
+ element will be "send" to, i.e. the place in the input tensor the index
+ points to will be set to the corresponding element from <pre class="inline_code">b</pre>. If multiple
+ elements from <pre class="inline_code">b</pre> are sent to the same place in the input tensor they will
+ be summed up. The shape of <pre class="inline_code">indices</pre> must be a prefix of the shape of <pre class="inline_code">b</pre>,
+ meaning it can have as many dimensions as <pre class="inline_code">b</pre> or less, but the sizes of the
+ dimensions must be the same as the first of the shape of <pre class="inline_code">b</pre>.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; a3 = {{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}, {<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; b3 = {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>}, {<span style="color: #30F0FF">8</span>, <span style="color: #30F0FF">9</span>}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">1</span>&gt; i3 = {<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span>};
+ std::cout &lt;&lt; a3.index_set(b3, i3)() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">2</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">8</span>, <span style="color: #30F0FF">9</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>]])</span>
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; i4 = {{-<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>}, {<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">0</span>}, {<span style="color: #30F0FF">1</span>, -<span style="color: #30F0FF">1</span>}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">2</span>&gt; b4 = {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>}, {<span style="color: #30F0FF">8</span>, <span style="color: #30F0FF">9</span>}, {<span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">1</span>}};
+ std::cout &lt;&lt; a3.index_set(b4, i4)() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;INT32, shape: [<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">2</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">1</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">3</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">9</span>, <span style="color: #30F0FF">8</span>],</span>
+ <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>]])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-n_+_1__sliding_window_std::array_size_t__n__window_size___________________________________std::array_unsigned_int__n__step_size_=_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, n + 1&gt; <b>sliding_window</b>(std::array<size_t, n> window_size,
                                   std::array<unsigned int, n> step_size = </pre></div>
@@ -1093,6 +1227,24 @@
  <span style="color: #D0D0D0">//    [<span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">6</span>]],</span>
  <span style="color: #D0D0D0">//   [[<span style="color: #30F0FF">2</span><span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">2</span>],</span>
  <span style="color: #D0D0D0">//    [<span style="color: #30F0FF">2</span><span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">4</span>]]]])</span></pre><div style="display:block; height: 0.5em"></div>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-n_-_1__unslide_window_std::array_size_t__n_-_1__result_size___________________________________std::array_unsigned_int__n_-_1__step_size_=_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, n - 1&gt; <b>unslide_window</b>(std::array<size_t, n - 1> result_size,
+                                  std::array<unsigned int, n - 1> step_size = </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Takes an array of windows (like e.g. the result of <pre class="inline_code">sliding_window</pre>) and
+reconstructs the original tensor.<ul><li><pre class="inline_code">result_size</pre> the shape of the original tensor the views were taken from
+</li><li><pre class="inline_code">step_size</pre> the step size in each dimension with which the view was slid
+    over the tensor the create the windows
+</li></ul>
+ The shape of the window is inferred by the shape of the input tensor.<div style="display:block; height: 0.5em"></div>
+ Overlapping elements will be summed up.
+ If in a dimension <pre class="inline_code">step_size</pre> was larger than the window size, the
+ resulting tensor will have <pre class="inline_code">0</pre> elements were the "gaps" between the windows
+ were. If in a dimension <pre class="inline_code">steps</pre> was smaller than the window size (the
+ windows were "overlapping") the overlapping elements are summed up in the
+ result. <pre class="inline_code">result_size</pre> and <pre class="inline_code">step_size</pre> therefore have 1 entry less then <pre class="inline_code">a</pre>
+ has dimensions.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-n__permutate_unsigned_int_ax__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">Tensor&lt;T, n&gt; <b>permutate</b>(unsigned int ax) const </pre></div>
 <br />

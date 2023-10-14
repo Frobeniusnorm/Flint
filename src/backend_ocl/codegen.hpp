@@ -40,13 +40,6 @@ generateCode(FGraphNode *node,
   string code = "";
   // indexing logic (we save the old index in old_index$i to restore it)
   unsigned int num_indices = 0;
-  // TODO use topologial sort to generate
-  // - ... mapping from graph to var name
-  // - ... todo list
-  // create additional mapping for a node to index operations that have to be
-  // inserted before
-  // Get rid of variable_index, and todo insertions and include stuff from
-  // above.
   todo.push_front({node, "v0"});
   while (!todo.empty()) {
     // take from queue
@@ -530,13 +523,14 @@ generateCode(FGraphNode *node,
                             : window_size / slidewin->step[i + 1] + 1;
           acc_sizes_win[i] = acc_sizes_win[i + 1] * window_size;
         }
-        unsigned int old_idx = num_indices++;
-        std::string i = "old_index" + to_string(old_idx);
+        const size_t num_elems = acc_size * node->operation.shape[0];
+        const unsigned int old_idx = num_indices++;
+        const std::string i = "old_index" + to_string(old_idx);
         index_defs += "long " + i +
                       " = index;\n"
                       "index = 0;\n{\n"
-                      "long wi = " +
-                      i + "/" + to_string(acc_size) +
+                      "long wi = (" +
+                      i + "%" + to_string(num_elems) + ")/" + to_string(acc_size) +
                       ";\n"
                       "long rest = " +
                       i + "%" + to_string(acc_size) + ";\n";

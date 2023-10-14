@@ -137,21 +137,10 @@ public:
     const unsigned int filters =
         Layer<n, 1>::template get_weight<0>().get_shape()[0];
     // actual convolve
-    Tensor<double, k> res;
-    for (unsigned int i = 0; i < filters; i++) {
-      // in has shape [batch, dim1, ..., units_in]
-      // has shape [1, kernel_size, ..., units_in]
-      Tensor<double, n> filter =
-          Layer<n, 1>::template get_weight<0>().slice(TensorRange(i, i + 1));
-      Tensor<double, n - 1> filter_res = in.convolve_array(filter, act_stride);
-      std::array<size_t, n> new_shape;
-      for (int i = 0; i < n - 1; i++)
-        new_shape[i] = filter_res.get_shape()[i];
-      new_shape[n - 1] = 1;
-      Tensor<double, k> local_res = filter_res.reshape_array(new_shape);
-      local_res.execute();
-      res = i == 0 ? local_res : Flint::concat(res, local_res, n - 1);
-    }
+    // This works but the gradient still needs improvement -> backward broadcast
+    Tensor<double, n + 1> filter =
+        Layer<n, 1>::template get_weight<0>().expand(1, 1);
+    Tensor<double, n> res = in.convolve_array(filter, act_stride);
     // repeat bias to the shape of res and add
     std::array<size_t, n - 1> bias_shape;
     bias_shape[n - 2] = filters;
@@ -164,7 +153,9 @@ public:
     for (int i = 0; i < n - 2; i++)
       bias_repeat[i] = res.get_shape()[i + 1] - 1;
     bias = bias.repeat_array(bias_repeat);
-    return res + bias;
+    res = res + bias;
+    res.execute();
+    return res;
   }
 };
 /** For inputs of images with shape `(batch_size, width, height, channels)` */
@@ -219,6 +210,7 @@ public:
         break;
       }
       windows = red.expand(i, 1);
+      windows.execute();
       size_t win = in.get_shape()[i - 1] - window_size[i - 1] + 1;
       win = win % step_size[i - 1] == 0 ? win / step_size[i - 1]
                                     : win / step_size[i - 1] + 1;
