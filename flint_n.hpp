@@ -396,16 +396,6 @@ template <typename T, unsigned int n> struct Tensor {
     return os;
   }
   /**
-   * Calls `serialize` on this Tensor and pipes the returned data to the
-   * stream.
-   */
-  friend std::ofstream &operator<<(std::ofstream &os, Tensor<T, n> t) {
-    for (char c : t.serialize()) {
-      os.put(c);
-    }
-    return os;
-  }
-  /**
    * Reads from a input stream one Tensor representation.
    * The input should have been created with `serialize` or the pipe operator.
    */
