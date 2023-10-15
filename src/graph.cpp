@@ -44,6 +44,7 @@ const char *fop_to_string[] = {
     "FINDEX",         "FSET_INDEX",  "FSLIDING_WINDOW",
     "FUNSLIDE_WINDOW"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
+static FErrorType last_error;
 // converts c++ type to flint type
 // TODO do execution of parents where necessary in parallel
 // EAGER EXECUTION WITH HELPER
@@ -53,6 +54,9 @@ int fIsEagerExecution() { return eager_execution; }
 void fStartGradientContext() { gradient_context = true; }
 void fStopGradientContext() { gradient_context = false; }
 bool fIsGradientContext() { return gradient_context; }
+FErrorType fErrorType() {
+  return last_error;
+}
 static inline FGraphNode *execute_eagerly(FGraphNode *f) {
   if (!use_cpu && !use_gpu)
     flintInit(FLINT_BACKEND_BOTH);
@@ -289,10 +293,6 @@ FGraphNode *fCopyGraph(FGraphNode *node) {
     crd->mem_id = nullptr;
     crd->num_entries = ord->num_entries;
     if (!ord->data) {
-      if (!ord->mem_id) {
-        flogging(F_ERROR, "Result Data has no result data!");
-        return nullptr; // for c compatibility
-      }
       crd->mem_id = OCLCompilerThread::copy_memory(
           ord->mem_id, ord->num_entries * typeSize(node->operation.data_type),
           CL_MEM_READ_ONLY);
@@ -932,6 +932,7 @@ FGraphNode *feven(FGraphNode *a) {
   if (a->operation.data_type != F_INT32 && a->operation.data_type != F_INT64) {
     flogging(F_ERROR,
              "Can't compute if tensor is even for floating point tensor!");
+    last_error = WRONG_TYPE;
     return nullptr; // for c compatibility
   }
   FOperation op;
@@ -962,6 +963,7 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
   if (dimension == 0) {
     flogging(F_ERROR,
              "Flattening the first dimension of a tensor is not possible!");
+    last_error = ILLEGAL_DIMENSION;
     return nullptr; // for c compatibility
   }
 
@@ -993,10 +995,13 @@ FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
   const FOperation ao = x->operation;
   const FOperation bo = y->operation;
 
-  if (ao.dimensions < 2 || bo.dimensions < 2)
+  if (ao.dimensions < 2 || bo.dimensions < 2) {
     flogging(
         F_ERROR,
         "Dimensions of operands of matrix multiplications must be at least 2!");
+    last_error = ILLEGAL_DIMENSIONALITY;
+    return nullptr;
+  }
   size_t l = ao.shape[ao.dimensions - 2];
   size_t m = ao.shape[ao.dimensions - 1];
   size_t mb = bo.shape[bo.dimensions - 2];
@@ -1008,6 +1013,7 @@ FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
                           " and " +
                           vectorString(std::vector<size_t>(
                               bo.shape, bo.shape + bo.dimensions)));
+    last_error = INCOMPATIBLE_SHAPES;
     return nullptr; // for c compatibility
   }
   FOperation res;
@@ -1046,6 +1052,7 @@ FGraphNode *freshape(FGraphNode *a, const size_t *newshape,
   if (total_size_node != total_size_new) {
     flogging(F_ERROR, "To reshape a node the product of its new shape must "
                       "match the product of its old!");
+    last_error = INCOMPATIBLE_SHAPES;
     return nullptr; // for c compatibility
   }
   FGraphNode *node = new FGraphNode();
@@ -1193,6 +1200,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
   for (size_t i = 0; i < op.dimensions; i++) {
     if (step[i] == 0) {
       flogging(F_ERROR, "Step may not be 0 for slicing!");
+      last_error = INVALID_SELECT;
       return nullptr; // for c compatibility
     }
     slice->start[i] =
@@ -1212,6 +1220,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
                             " larger then target tensor! (" +
                             std::to_string(op.shape[i]) + " > " +
                             std::to_string(a->operation.shape[i]) + ")");
+      last_error = INVALID_SELECT;
       return nullptr; // for c compatibility
     }
     if ((step[i] < 0 && (slice->end[i] > slice->start[i])) ||
@@ -1223,6 +1232,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
                    std::to_string(slice->start[i]) +
                    ", end: " + std::to_string(slice->end[i]) +
                    ", step: " + std::to_string(slice->step[i]));
+      last_error = INVALID_SELECT;
       return nullptr; // for c compatibility
     }
   }
@@ -1395,6 +1405,7 @@ FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis) {
       flogging(F_ERROR,
                "Concatenations of two nodes excpects both to have the same "
                "size along every dimension except the concatenation one!");
+      last_error = INCOMPATIBLE_SHAPES;
       return nullptr; // for c compatibility
     }
   op.data_type = a->operation.data_type;
@@ -1431,7 +1442,8 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
   }
   if (ao.dimensions != bo.dimensions && ao.dimensions + 1 != bo.dimensions) {
     flogging(F_ERROR, "For a convolution the original Tensor and the filter "
-                      "Kernel have to have to same number of dimensions!");
+                      "kernel(s) have to have to same number of dimensions!");
+    last_error = ILLEGAL_DIMENSIONALITY;
     return nullptr; // for c compatibility
   }
   bool multiple_filters = ao.dimensions + 1 == bo.dimensions;
@@ -1441,6 +1453,7 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
                           std::to_string(ao.shape[ao.dimensions - 1]) +
                           " vs. " +
                           std::to_string(bo.shape[bo.dimensions - 1]));
+    last_error = INCOMPATIBLE_SHAPES;
     return nullptr; // for c compatibility
   }
   FOperation op;
@@ -1473,6 +1486,7 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel,
     flogging(F_ERROR,
              "For the slide operation the original Tensor and the filter "
              "Kernel have to have to same number of dimensions!");
+    last_error = ILLEGAL_DIMENSIONALITY;
     return nullptr; // for c compatibility
   }
   if (ao.shape[ao.dimensions - 1] != bo.shape[bo.dimensions - 1]) {
@@ -1481,6 +1495,7 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel,
              "Tensor must match that of the kernel! " +
                  std::to_string(ao.shape[ao.dimensions - 1]) + " vs. " +
                  std::to_string(bo.shape[bo.dimensions - 1]));
+    last_error = INCOMPATIBLE_SHAPES;
     return nullptr; // for c compatibility
   }
   FOperation op;
@@ -1520,11 +1535,13 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
     flogging(
         F_ERROR,
         "Invalid index Tensor dimensionality! Larger than indexed Tensor!");
+    last_error = ILLEGAL_DIMENSIONALITY;
     return nullptr; // for c compatibility
   }
   if (indices->operation.data_type != F_INT32 &&
       indices->operation.data_type != F_INT64) {
     flogging(F_ERROR, "Only integer tensors may be used as indices!");
+    last_error = WRONG_TYPE;
     return nullptr; // for c compatibility
   }
   for (int d = 0; d < indices->operation.dimensions - 1; d++)
@@ -1532,6 +1549,7 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
       flogging(F_ERROR,
                "Invalid indices shape! Except for last dimension shape of "
                "indices Tensor has to be a prefix of the indexed Tensor!");
+      last_error = INCOMPATIBLE_SHAPES;
       return nullptr; // for c compatibility
     }
 
@@ -1555,11 +1573,13 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
     flogging(
         F_ERROR,
         "Invalid index Tensor dimensionality! Larger than indexed Tensor!");
+    last_error = ILLEGAL_DIMENSIONALITY;
     return nullptr; // for c compatibility
   }
   if (indices->operation.data_type != F_INT32 &&
       indices->operation.data_type != F_INT64) {
     flogging(F_ERROR, "Only integer tensors may be used as indices!");
+    last_error = WRONG_TYPE;
     return nullptr; // for c compatibility
   }
   for (int d = 0; d < indices->operation.dimensions - 1; d++)
@@ -1567,6 +1587,7 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
       flogging(F_ERROR,
                "Invalid indices shape! Except for last dimension shape of "
                "indices Tensor has to be a prefix of the indexed Tensor!");
+      last_error = INCOMPATIBLE_SHAPES;
       return nullptr; // for c compatibility
     }
 
@@ -1627,6 +1648,7 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
                           std::to_string(no_windows) +
                           " windows, while the provided Tensor has " +
                           std::to_string(a->operation.shape[0]));
+    last_error = INCOMPATIBLE_SHAPES;
     return nullptr; // for c compatibility
   }
   unsigned int *csteps = safe_mal<unsigned int>(op.dimensions);
