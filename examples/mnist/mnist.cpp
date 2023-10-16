@@ -106,11 +106,11 @@ int main() {
   //  SoftMax()
   //};
   auto m = SequentialModel{
-    Conv2D(1, 32, 7, std::array<unsigned int, 2>{2, 2}, NO_PADDING),
+    Conv2D(1, 32, 8, std::array<unsigned int, 2>{2, 2}, SAME_PADDING),
     Relu(),
-    Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}),
+    Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}, SAME_PADDING),
     Flatten(),
-    Connected(800, 80),
+    Connected(1152, 80),
     Relu(),
     Connected(80, 10),
     SoftMax()
