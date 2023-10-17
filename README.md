@@ -37,7 +37,7 @@ and link it against `-lflint -lOpenCL`.
 The systems it was tested on ran Arch Linux, Gentoo, Fedora and Void. It was tested on AMD GPUs (integrated and dedicated), integrated Intel CPUs and on an NVIDIA GPU. 
 There is a html documentation in the `docs/` folder: [https://frobeniusnorm.github.io/Flint/](https://frobeniusnorm.github.io/Flint/). You can also build it yourself with the Makefile in the docs folder, the prerequisite is a working version of ghc. However usually the newest version of the documentation is already built in the repository and deployed to the above mentioned site.
 
-I case you want to build the library in a C-compatible version replace the `cmake` command with `cmake .. -DC_COMPATIBILITY=ON`
+I case you want to build the library in a C-compatible version replace the `cmake` command with `cmake .. -DC_COMPATIBLE=ON`
 
 ## Dependencies ##
 - OpenCL

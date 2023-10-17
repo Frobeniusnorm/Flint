@@ -139,7 +139,7 @@ enum FLogType { F_NO_LOGGING, F_ERROR, F_WARNING, F_INFO, F_VERBOSE, F_DEBUG };
  * - 4: Logging level `F_VERBOSE` (for library developement)
  * - 5: Logging level `F_DEBUG` (when a bug in the library has been found)
  */
-void fSetLoggingLevel(FLogType);
+void fSetLoggingLevel(enum FLogType type);
 /** Supported Image formats for fstore_image */
 enum FImageFormat { F_PNG, F_JPEG, F_BMP };
 /** Logs a NULL terminated string with the given logging level.
@@ -151,22 +151,22 @@ void flogging(enum FLogType type, const char *msg);
  * which the error occurs returns NULL. Then this function yields the type of
  * error.
  */
-FErrorType fErrorType();
+enum FErrorType fErrorType();
 /**
  * Queries the message of the last error that occured in this framework.
  * Errors cause an exception or if C-compatibility is enabled the function in
  * which the error occurs returns NULL. Then this function yields the message
  * of the error. If no error occured returns an empty string.
  */
-char *fErrorMessage();
+const char *fErrorMessage();
 /** All graph nodes that represent actual operations are after this call
  * executed eagerly, i.e. they are executed during graph construction.
  *
  * This may improve performance when only using the CPU backend, in any other
- * case disabling eager execution should be prefered. */
+ * case disabling eager execution should be preferred. */
 void fEnableEagerExecution();
 /** Disable eager execution, i.e. the graph is constructed without execution of
- * the nodes until a operation makes the execution of a parent graph necessary
+ * the nodes until an operation makes the execution of a parent graph necessary
  * or the user calls `fExecuteGraph`. */
 void fDisableEagerExecution();
 /** Returns 1 if eager execution has been enabled, else 0 */
@@ -385,7 +385,7 @@ FGraphNode *frandom(const size_t *shape, const int dimensions);
 FGraphNode *farange(const size_t *shape, const int dimensions, const int ax);
 /** Decrements `FGraphNode.reference_counter` of `graph` (for reference
  * counting) and deallocates the node and its corresponding data, if the counter
- * becomes 0. If the node is deallocated, the same process is repeated with its
+ * reaches 0. If the node is deallocated, the same process is repeated with its
  * predecessors. So you can safely connect nodes multiple times and have only to
  * free the leaf nodes (i.e. the results), without caring about cross-reference,
  * since those are handled by the reference counting system.*/
@@ -397,7 +397,7 @@ void fFreeGraph(FGraphNode *graph);
  * If the graph is executed by the GPU
  * backend, a opencl kernel containing all selected operations (the nodes
  * operation and those indirect parent operations which were not yet
- * executed) are compiled and executed. The kernels are cashed, so it improves
+ * executed) are compiled and executed. The kernels are cached, so it improves
  * the performance of a program if the same graph-structures are reused (not
  * necessary the same nodes, but the same combination of nodes), since then the
  * backend can reuse already compiled kernels. The GPU backend is allowed to
@@ -412,7 +412,7 @@ void fFreeGraph(FGraphNode *graph);
  * The backend is selected by the framework if both
  * are initialized, else the one that is initialized will be chosen. If both are
  * uninitialized, both will be initialized prior to execution. If eager
- * exeuction is enabled each node will be executed eagerly upon construction or
+ * execution is enabled each node will be executed eagerly upon construction or
  * with this method.
  *
  * Also see `fEnableEagerExecution`, `fSyncMemory`*/
@@ -512,7 +512,7 @@ bool fIsGradientContext();
  * variable, to enable less memory usage and faster gradient calculation).
  */
 void fMarkGradientVariable(FGraphNode *node);
-/** Removes the gradient mark (ans subsequent memory overhead) for this node.
+/** Removes the gradient mark (and subsequent memory overhead) for this node.
  * After a call to this method no subsequent gradient calculations with this
  * node as a derivative will be possible.
  */
@@ -543,7 +543,7 @@ char *fserialize(FGraphNode *node, size_t *bytes_written);
 FGraphNode *fdeserialize(char *data);
 /** Loads an image from the given path.
  * The image will be stored in floating point data and the shape will be h, w, c
- * where w is the width, h is the height and c are the chanels.
+ * where w is the width, h is the height and c are the channels.
  * Supported formats include png, jpeg, bmp, gif, hdr ... essentially everything
  * stb_image supports
  */
@@ -710,7 +710,7 @@ FGraphNode *fequal_cd(FGraphNode *a, const double b);
  * Since for one entry of the
  * tensor multiple other previous entries are needed, the operand tensors need
  * to be executed first. Therefor the method will implicitly (or eagerly)
- * execute the two parameter nodes `a` and `b` if their data is not allready
+ * execute the two parameter nodes `a` and `b` if their data is not already
  * present. */
 FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b);
 /** Flattens the complete tensor to a tensor with one
@@ -721,7 +721,7 @@ E.g.`flattened([[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]) = [3, 1, 4, 2,
 FGraphNode *fflatten(FGraphNode *a);
 /** Flattens a tensor `a` with `n` dimensions along
 `dimension`, resulting in a tensor with `n-1` dimensions.
-Flattening a dimension will remove it from the shape of the tensor, therefor its
+Flattening a dimension will remove it from the shape of the tensor, therefor it's
 not possible to flatten the dimension 0.
 A Tensor `[[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]` flattened
 along dimension 1 will result in `[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]`.
@@ -784,16 +784,16 @@ FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
 FGraphNode *freduce_mul(FGraphNode *a, const int dimension);
 /** Reduces one dimension of the tensor by keeping the minimum e.g.
  *
- * `freduce_mul([[1,32,3], [4,5,3]], 0) = [1,5,3]`,
- * `freduce_mul([[9,2,3], [-1,5,6]], 1) = [2, -1]`
+ * `freduce_min([[1,32,3], [4,5,3]], 0) = [1,5,3]`,
+ * `freduce_min([[9,2,3], [-1,5,6]], 1) = [2, -1]`
  *
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node.*/
 FGraphNode *freduce_min(FGraphNode *a, const int dimension);
 /** Reduces one dimension of the tensor by keeping the maximum e.g.
  *
- * `freduce_mul([[1,32,3], [4,5,3]], 0) = [4,32,3]`,
- * `freduce_mul([[9,2,3], [-1,5,6]], 1) = [9, 6]`
+ * `freduce_max([[1,32,3], [4,5,3]], 0) = [4,32,3]`,
+ * `freduce_max([[9,2,3], [-1,5,6]], 1) = [9, 6]`
  *
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node.*/
@@ -1039,6 +1039,8 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
  * creating, copying or deleting new ones) one axis of the input tensor.
  */
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
+
+
 #ifdef __cplusplus
 }
 
@@ -1155,13 +1157,11 @@ inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
   return fflatten_dimension(a, dimension);
 }
 
-#ifdef __cplusplus
-// can't use C++ namespaces in legacy C!
 #include <string>
 inline void flogging(FLogType type, std::string msg) {
   flogging(type, msg.c_str());
 }
-#endif // __cplusplus
 
 #endif // __cplusplus
+
 #endif // FLINT_H
