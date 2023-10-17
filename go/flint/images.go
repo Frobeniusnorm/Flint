@@ -2,7 +2,9 @@ package flint
 
 // #include <flint/flint.h>
 import "C"
-import "unsafe"
+import (
+	"unsafe"
+)
 
 type imageFormat int
 
@@ -21,17 +23,12 @@ Supported formats include png, jpeg, bmp, gif, hdr ... essentially everything st
 NOTE for CGo: this function exemplary shows how to properly deal with errno
 */
 func LoadImage(path string) (GraphNode, error) {
-	resetErrno() // FIXME: this should not be needed, but right now the function does not return a value indicating an error.
-	// The errno should only be read once we are sure there has been an error!
-
 	unsafePath := C.CString(path)
 	defer C.free(unsafe.Pointer(unsafePath))
 
-	var flintNode *C.FGraphNode
-	var err error // has underlying syscall.Errno type
-	flintNode, err = C.fload_image(unsafePath)
-	if err != nil {
-		return GraphNode{}, err
+	flintNode, errno := C.fload_image(unsafePath)
+	if flintNode == nil {
+		return GraphNode{}, BuildError(errno)
 	}
 	return GraphNode{ref: flintNode}, nil
 }

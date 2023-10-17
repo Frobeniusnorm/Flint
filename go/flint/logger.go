@@ -17,7 +17,7 @@ const (
 
 // SetLoggingLevel sets the threshold for logging. Only message with a level higher or equal than [level] will be printed.
 func SetLoggingLevel(level loggingLevel) {
-	C.fSetLoggingLevel(C.int(level))
+	C.fSetLoggingLevel(C.enum_FLogType(level))
 }
 
 // Logging prints the [message] to the flint console in a given [loggingLevel] [level]

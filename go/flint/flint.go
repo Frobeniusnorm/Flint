@@ -18,21 +18,12 @@ package flint
 #include <stdlib.h> // needed for C.free!
 #include <errno.h>
 
-
-// simple go function for the go interface to reset the errno
-// WARNING: this MAY break in multi-threaded scenarios
-void reset_errno(void) {
-	errno = 0;
-}
-
-
 // typedef to get size of pointer using CGo
 typedef FGraphNode* graph_ref;
 */
 import "C"
 import (
 	"fmt"
-	"syscall"
 )
 
 ///////////////
@@ -138,22 +129,4 @@ type completeNumeric interface {
 // NOTE: size_t should be equivalent to ulong
 type cNumbers interface {
 	C.int | C.size_t | C.long | C.uint | C.float | C.double
-}
-
-//////////////////
-// Error handling
-//////////////////
-
-// Error offers a generic error struct in flint
-type Error struct {
-	message string
-	errno   syscall.Errno
-}
-
-func (err *Error) Error() string {
-	return err.message
-}
-
-func resetErrno() {
-	C.reset_errno()
 }
