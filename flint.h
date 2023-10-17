@@ -38,8 +38,8 @@ extern "C" {
 
   To support C++ exceptions as well as keep C-compatibility there is a flag
   C_COMPATIBILITY that - when enabled during compilation - disables exception
-  throwing and sets the errno instead (if you use C++ probably SEGFAULTS with an
-  error message most of the time instead).
+  throwing and sets the errno instead (the functions then return NULL on error).
+  You can query the error reason with `fErrorMessage` and `fErrorType`.
 */
 #define FLINT_BACKEND_ONLY_CPU 1
 #define FLINT_BACKEND_ONLY_GPU 2
@@ -75,20 +75,6 @@ void flintCleanup_cpu();
 /** Deallocates any resourced allocated by the gpu backend, if it was
  * initialized, else it does nothing. */
 void flintCleanup_gpu();
-/** Sets the logging level of the framework. Adjust this for debugging purposes,
- * or if you release software in which Flint is contained.
- * See also: `flogging`, `FLogType`
- *
- * Levels:
- * - 0: No logging
- * - 1: Only `F_ERROR`
- * - 2: Logging level `F_WARNING` (should be used for production)
- * - 3: Logging level `F_INFO` (for developement)
- * - 4: Logging level `F_VERBOSE` (for library developement)
- * - 5: Logging level `F_DEBUG` (when a bug in the library has been found)
- */
-void fSetLoggingLevel(int); // FIXME: why not use FLogType as param here?
-
 /**
  * See also: `flogging`, `FLogType`
  * - `F_DEBUG` (only internal debugging informations of the framework),
@@ -103,11 +89,60 @@ void fSetLoggingLevel(int); // FIXME: why not use FLogType as param here?
  *    by missuse of functions).
  */
 enum FLogType { F_NO_LOGGING, F_ERROR, F_WARNING, F_INFO, F_VERBOSE, F_DEBUG };
+/** Sets the logging level of the framework. Adjust this for debugging purposes,
+ * or if you release software in which Flint is contained.
+ * See also: `flogging`, `FLogType`
+ *
+ * Levels:
+ * - 0: No logging
+ * - 1: Only `F_ERROR`
+ * - 2: Logging level `F_WARNING` (should be used for production)
+ * - 3: Logging level `F_INFO` (for developement)
+ * - 4: Logging level `F_VERBOSE` (for library developement)
+ * - 5: Logging level `F_DEBUG` (when a bug in the library has been found)
+ */
+void fSetLoggingLevel(FLogType);
 /** Supported Image formats for fstore_image */
 enum FImageFormat { F_PNG, F_JPEG, F_BMP };
+/** Types of erros that can occur in the framework (also see `fErrorMessage`)
+ * Error Types:
+ * - `NO_ERROR`: no error occured up until now
+ * - `WRONG_TYPE`: Tensor has wrong data type, e.g. a floating point tensor in
+ *   `feven`
+ * - `ILLEGAL_DIMENSION`: the dimension parameter is not inside the legal range
+ *   of the function, e.g. flattening the first dimension of a tensor.
+ * - `ILLEGAL_DIMENSIONALITY`: the dimensionality of a parameter does not work
+ *   with the function, usually because it is too low (e.g. matrix
+ *   multiplication with 1 dimensional tensors).
+ * - `INCOMPATIBLE_SHAPES`: the shapes of the parameters dont fit together
+ * - `INVALID_SELECT`: a index or slicing operation received parameters which
+ *   are semantically impossible or outside of the shape of the tensor.
+ */
+enum FErrorType {
+  NO_ERROR,
+  WRONG_TYPE,
+  ILLEGAL_DIMENSION,
+  ILLEGAL_DIMENSIONALITY,
+  INCOMPATIBLE_SHAPES,
+  INVALID_SELECT
+};
 /** Logs a NULL terminated string with the given logging level.
  * See also: `fSetLoggingLevel` */
 void flogging(enum FLogType type, const char *msg);
+/**
+ * Queries the type of the last error that occured in this framework.
+ * Errors cause an exception or if C-compatibility is enabled the function in
+ * which the error occurs returns NULL. Then this function yields the type of
+ * error.
+ */
+FErrorType fErrorType();
+/**
+ * Queries the message of the last error that occured in this framework.
+ * Errors cause an exception or if C-compatibility is enabled the function in
+ * which the error occurs returns NULL. Then this function yields the message
+ * of the error. If no error occured returns an empty string.
+ */
+char *fErrorMessage();
 /** All graph nodes that represent actual operations are after this call
  * executed eagerly, i.e. they are executed during graph construction.
  *

@@ -18,6 +18,7 @@
 #include <stdexcept>
 
 static int logging_level = F_INFO;
+static std::string last_error = "";
 void flogging(FLogType type, const char *msg) {
   using namespace std;
   switch (type) {
@@ -46,6 +47,7 @@ void flogging(FLogType type, const char *msg) {
     if (logging_level >= 1)
       cout << "\033[0;33m[\033[1;31mERROR\033[0;33m]\033[0m " << msg
            << std::endl;
+    last_error = msg; 
 #ifdef C_COMPATIBILITY
     errno = EINVAL;
 #else
@@ -53,4 +55,7 @@ void flogging(FLogType type, const char *msg) {
 #endif
   }
 }
-void fSetLoggingLevel(int level) { logging_level = level; }
+void fSetLoggingLevel(FLogType level) { logging_level = level; }
+char* fErrorMessage() {
+  return last_error.data();
+}
