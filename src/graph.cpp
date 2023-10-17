@@ -14,6 +14,7 @@
 
 #include "../flint.h"
 #include "backend_ocl/comp.hpp"
+#include "errors.hpp"
 #include "utils.hpp"
 #include <cmath>
 #include <cstring>
@@ -45,7 +46,9 @@ const char *fop_to_string[] = {
     "FUNSLIDE_WINDOW"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 static FErrorType last_error;
-// converts c++ type to flint type
+void setErrorType(FErrorType error) { last_error = error; }
+// TODO adjust broadcasting s.t. a shape of 1 matches any other shape
+// (broadcasted along that shape)
 // TODO do execution of parents where necessary in parallel
 // EAGER EXECUTION WITH HELPER
 void fEnableEagerExecution() { eager_execution = true; }
@@ -54,9 +57,7 @@ int fIsEagerExecution() { return eager_execution; }
 void fStartGradientContext() { gradient_context = true; }
 void fStopGradientContext() { gradient_context = false; }
 bool fIsGradientContext() { return gradient_context; }
-FErrorType fErrorType() {
-  return last_error;
-}
+FErrorType fErrorType() { return last_error; }
 static inline FGraphNode *execute_eagerly(FGraphNode *f) {
   if (!use_cpu && !use_gpu)
     flintInit(FLINT_BACKEND_BOTH);
@@ -111,7 +112,8 @@ configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
   if (!use_cpu && !use_gpu)
-    flintInit(FLINT_BACKEND_BOTH);
+    if (flintInit(FLINT_BACKEND_BOTH) != NO_ERROR)
+      return nullptr;
   if (eager_execution)
     return execute_eagerly(node);
   if (use_gpu && use_cpu) {
@@ -130,21 +132,32 @@ FGraphNode *fCalculateResult(FGraphNode *node) {
   fSyncMemory(node);
   return node;
 }
-void flintCleanup() {
-  flintCleanup_cpu();
-  flintCleanup_gpu();
+FErrorType flintCleanup() {
+  FErrorType e1 = flintCleanup_cpu();
+  if (e1 != NO_ERROR)
+    return e1;
+  FErrorType e2 = flintCleanup_gpu();
+  if (e2 != NO_ERROR)
+    return e2;
   use_cpu = false;
   use_gpu = false;
+  return NO_ERROR;
 }
-void flintInit(int backends) {
+FErrorType flintInit(int backends) {
   flogging(F_VERBOSE, "Initializing Flint");
   std::srand((unsigned int)(std::time(nullptr)));
   use_cpu = (backends & FLINT_BACKEND_ONLY_CPU);
   use_gpu = (backends & FLINT_BACKEND_ONLY_GPU);
+  FErrorType e1 = NO_ERROR, e2 = NO_ERROR;
   if (use_cpu)
-    flintInit_cpu();
+    e1 = flintInit_cpu();
   if (use_gpu)
-    flintInit_gpu();
+    e2 = flintInit_gpu();
+  if (e1 != NO_ERROR)
+    return e1;
+  if (e2 != NO_ERROR)
+    return e2;
+  return NO_ERROR;
 }
 int flintInitializedBackends() {
   int backends = 0;
@@ -167,6 +180,8 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
   store->mem_id = nullptr;
   op.dimensions = dimensions;
   op.shape = safe_mal<size_t>(dimensions);
+  if (!op.shape)
+    return nullptr;
   std::memcpy((void *)op.shape, (void *)shape, dimensions * sizeof(size_t));
   op.additional_data = (void *)store;
   op.op_type = FSTORE;
@@ -174,18 +189,26 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
   switch (data_type) {
   case F_INT32:
     store->data = safe_mal<int>(num_entries);
+    if (!store->data)
+      return nullptr;
     byte_size *= sizeof(int);
     break;
   case F_INT64:
     store->data = safe_mal<long>(num_entries);
+    if (!store->data)
+      return nullptr;
     byte_size *= sizeof(long);
     break;
   case F_FLOAT32:
     store->data = safe_mal<float>(num_entries);
+    if (!store->data)
+      return nullptr;
     byte_size *= sizeof(float);
     break;
   case F_FLOAT64:
     store->data = safe_mal<long>(num_entries);
+    if (!store->data)
+      return nullptr;
     byte_size *= sizeof(double);
     break;
   }
@@ -273,6 +296,8 @@ static FGraphNode *addNode(FOperation op, std::vector<FGraphNode *> pre) {
   foo->num_predecessor = pre.size();
   foo->predecessors =
       pre.size() == 0 ? NULL : safe_mal<FGraphNode *>(pre.size());
+  if (pre.size() != 0 && !foo->predecessors)
+    return nullptr;
   for (size_t i = 0; i < pre.size(); i++) {
     foo->predecessors[i] = pre[i];
     if (pre[i]->reference_counter++ > 2 && !eager_execution)
@@ -478,6 +503,8 @@ static FGraphNode *addNodeWithConst(FOperation op, FGraphNode *a, const T b) {
   cop.op_type = FSTORE;
   cop.dimensions = 1;
   cop.shape = safe_mal<size_t>(1);
+  if (!cop.shape)
+    return nullptr;
   cop.shape[0] = 1;
   cop.additional_data = (void *)store;
   cop.data_type = toFlintType<T>();
@@ -495,6 +522,8 @@ static FGraphNode *addConstWithNode(FOperation op, const T b, FGraphNode *a) {
   cop.op_type = FSTORE;
   cop.dimensions = 1;
   cop.shape = safe_mal<size_t>(1);
+  if (!cop.shape)
+    return nullptr;
   cop.shape[0] = 1;
   cop.additional_data = (void *)store;
   if (typeid(T) == typeid(int))
@@ -514,10 +543,14 @@ static inline FGraphNode *constant(const T value, const size_t *shape,
   FOperation op;
   op.dimensions = dimensions;
   op.shape = safe_mal<size_t>(dimensions);
+  if (!op.shape)
+    return nullptr;
   memcpy(op.shape, shape, op.dimensions * sizeof(size_t));
   op.op_type = FGEN_CONSTANT;
   op.data_type = toFlintType<T>();
   op.additional_data = safe_mal<T>(1);
+  if (!op.additional_data)
+    return nullptr;
   ((T *)op.additional_data)[0] = value;
   return addNode(op, {});
 }
@@ -545,10 +578,14 @@ FGraphNode *farange(const size_t *shape, const int dimensions, const int ax) {
   FOperation op;
   op.dimensions = dimensions;
   op.shape = safe_mal<size_t>(dimensions);
+  if (!op.shape)
+    return nullptr;
   memcpy(op.shape, shape, op.dimensions * sizeof(size_t));
   op.op_type = FGEN_ARANGE;
   op.data_type = F_INT64;
   op.additional_data = safe_mal<int>(1);
+  if (!op.additional_data)
+    return nullptr;
   ((int *)op.additional_data)[0] = ax;
   return addNode(op, {});
 }
@@ -679,6 +716,8 @@ static inline FGraphNode *log_impl(FGraphNode *a,
   op.op_type = logtype;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions * sizeof(size_t));
+  if (!op.shape)
+    return nullptr;
   op.additional_data = nullptr;
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
   op.data_type = a->operation.data_type;
@@ -716,6 +755,8 @@ FGraphNode *fneg(FGraphNode *a) {
   op.op_type = FNEG;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape)
+    return nullptr;
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
   op.data_type = a->operation.data_type;
   return addNode(op, {a});
@@ -726,6 +767,8 @@ FGraphNode *fsign(FGraphNode *a) {
   op.op_type = FSIGN;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape)
+    return nullptr;
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
   op.data_type = F_INT32;
   FGraphNode *g = addNode(op, {a});
@@ -733,9 +776,9 @@ FGraphNode *fsign(FGraphNode *a) {
 }
 FGraphNode *feven(FGraphNode *a) {
   if (a->operation.data_type != F_INT32 && a->operation.data_type != F_INT64) {
+    last_error = WRONG_TYPE;
     flogging(F_ERROR,
              "Can't compute if tensor is even for floating point tensor!");
-    last_error = WRONG_TYPE;
     return nullptr; // for c compatibility
   }
   FOperation op;
@@ -743,6 +786,8 @@ FGraphNode *feven(FGraphNode *a) {
   op.op_type = FEVEN;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape)
+    return nullptr;
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
   op.data_type = F_INT32;
   FGraphNode *g = addNode(op, {a});
@@ -754,6 +799,8 @@ FGraphNode *fflatten(FGraphNode *a) {
   op.op_type = FLATTEN;
   op.dimensions = 1;
   op.shape = safe_mal<size_t>(1);
+  if (!op.shape)
+    return nullptr;
   const FOperation prev_op = a->operation;
   size_t total_size = 1;
   for (int i = 0; i < prev_op.dimensions; i++)
@@ -764,9 +811,9 @@ FGraphNode *fflatten(FGraphNode *a) {
 }
 FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
   if (dimension == 0) {
+    last_error = ILLEGAL_DIMENSION;
     flogging(F_ERROR,
              "Flattening the first dimension of a tensor is not possible!");
-    last_error = ILLEGAL_DIMENSION;
     return nullptr; // for c compatibility
   }
 
@@ -777,6 +824,8 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
   op.op_type = FLATTEN;
   op.dimensions = prev_op.dimensions - 1;
   op.shape = safe_mal<size_t>(prev_op.dimensions - 1);
+  if (!op.shape)
+    return nullptr;
   // copy into shape
   memcpy(op.shape, prev_op.shape, sizeof(size_t) * dimension);
   memcpy(op.shape + dimension, prev_op.shape + (dimension + 1),
@@ -799,10 +848,10 @@ FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
   const FOperation bo = y->operation;
 
   if (ao.dimensions < 2 || bo.dimensions < 2) {
+    last_error = ILLEGAL_DIMENSIONALITY;
     flogging(
         F_ERROR,
         "Dimensions of operands of matrix multiplications must be at least 2!");
-    last_error = ILLEGAL_DIMENSIONALITY;
     return nullptr;
   }
   size_t l = ao.shape[ao.dimensions - 2];
@@ -810,18 +859,20 @@ FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
   size_t mb = bo.shape[bo.dimensions - 2];
   size_t n = bo.shape[bo.dimensions - 1];
   if (m != mb) {
+    last_error = INCOMPATIBLE_SHAPES;
     flogging(F_ERROR, "Incompatible Shapes for matrix multiplications: " +
                           vectorString(std::vector<size_t>(
                               ao.shape, ao.shape + ao.dimensions)) +
                           " and " +
                           vectorString(std::vector<size_t>(
                               bo.shape, bo.shape + bo.dimensions)));
-    last_error = INCOMPATIBLE_SHAPES;
     return nullptr; // for c compatibility
   }
   FOperation res;
   res.dimensions = std::max(ao.dimensions, bo.dimensions);
   res.shape = safe_mal<size_t>(res.dimensions);
+  if (!res.shape)
+    return nullptr;
   if (res.dimensions > 2)
     memcpy(res.shape, (ao.dimensions >= bo.dimensions ? ao : bo).shape,
            sizeof(size_t) * (res.dimensions - 2));
@@ -837,6 +888,8 @@ FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
   node->result_data = nullptr;
   node->num_predecessor = 2;
   node->predecessors = safe_mal<FGraphNode *>(2);
+  if (!node->predecessors)
+    return nullptr;
   node->predecessors[0] = x;
   node->predecessors[1] = y;
   x->reference_counter++;
@@ -853,21 +906,25 @@ FGraphNode *freshape(FGraphNode *a, const size_t *newshape,
   for (int i = 0; i < dimensions; i++)
     total_size_new *= newshape[i];
   if (total_size_node != total_size_new) {
+    last_error = INCOMPATIBLE_SHAPES;
     flogging(F_ERROR, "To reshape a node the product of its new shape must "
                       "match the product of its old!");
-    last_error = INCOMPATIBLE_SHAPES;
     return nullptr; // for c compatibility
   }
   FGraphNode *node = new FGraphNode();
   configureGradientInformation(node, {a});
   node->result_data = nullptr;
   node->operation.shape = safe_mal<size_t>(dimensions);
+  if (!node->operation.shape)
+    return nullptr;
   std::memcpy(node->operation.shape, newshape, dimensions * sizeof(size_t));
   node->operation.data_type = a->operation.data_type;
   node->operation.op_type = FRESHAPE;
   node->operation.dimensions = dimensions;
   node->num_predecessor = 1;
   node->predecessors = safe_mal<FGraphNode *>(1);
+  if (!node->predecessors)
+    return nullptr;
   node->predecessors[0] = a;
   node->reference_counter = 0;
   if (a->reference_counter++ > 2 && !eager_execution)
@@ -881,12 +938,16 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
   foo->num_predecessor = 1;
   foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
+  if (!foo->predecessors)
+    return nullptr;
   foo->predecessors[0] = a;
   if (a->reference_counter++ > 2 && !eager_execution)
     fExecuteGraph(a);
   foo->operation.data_type = newtype;
   foo->operation.dimensions = a->operation.dimensions;
   foo->operation.shape = safe_mal<size_t>(a->operation.dimensions);
+  if (!foo->operation.shape)
+    return nullptr;
   memcpy(foo->operation.shape, a->operation.shape,
          sizeof(size_t) * a->operation.dimensions);
   foo->operation.op_type = FCONVERSION;
@@ -940,6 +1001,8 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
   foo->num_predecessor = 1;
   foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
+  if (!foo->predecessors)
+    return nullptr;
   foo->predecessors[0] = a;
   a->reference_counter++;
   FOperation op;
@@ -949,15 +1012,21 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
   if (other.dimensions > 1) {
     op.dimensions = other.dimensions - 1;
     op.shape = safe_mal<size_t>(op.dimensions);
+    if (!op.shape)
+      return nullptr;
     memcpy(op.shape, other.shape, sizeof(size_t) * dimension);
     memcpy(op.shape + dimension, other.shape + (dimension + 1),
            sizeof(size_t) * (other.dimensions - dimension - 1));
   } else {
     op.dimensions = 1;
     op.shape = safe_mal<size_t>(1);
+    if (!op.shape)
+      return nullptr;
     op.shape[0] = 1;
   }
   op.additional_data = safe_mal<int>(1);
+  if (!op.additional_data)
+    return nullptr;
   ((int *)op.additional_data)[0] = dimension;
   foo->operation = op;
   return eager_execution && total >= 128 ? execute_eagerly(foo) : foo;
@@ -985,6 +1054,8 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
   foo->num_predecessor = 1;
   foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
+  if (!foo->predecessors)
+    return nullptr;
   foo->predecessors[0] = a;
   foo->reference_counter = 0;
   if (a->reference_counter++ > 2 && !eager_execution)
@@ -994,16 +1065,23 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
   op.data_type = a->operation.data_type;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
-
+  if (!op.shape)
+    return nullptr;
   FSlice *slice = new FSlice();
   op.additional_data = (void *)slice;
   slice->step = safe_mal<long>(op.dimensions);
+  if (!slice->step)
+    return nullptr;
   slice->start = safe_mal<long>(op.dimensions);
+  if (!slice->start)
+    return nullptr;
   slice->end = safe_mal<long>(op.dimensions);
+  if (!slice->end)
+    return nullptr;
   for (size_t i = 0; i < op.dimensions; i++) {
     if (step[i] == 0) {
-      flogging(F_ERROR, "Step may not be 0 for slicing!");
       last_error = INVALID_SELECT;
+      flogging(F_ERROR, "Step may not be 0 for slicing!");
       return nullptr; // for c compatibility
     }
     slice->start[i] =
@@ -1019,15 +1097,16 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
     else
       op.shape[i] = op.shape[i] / step_abs + 1;
     if (op.shape[i] > a->operation.shape[i]) {
+      last_error = INVALID_SELECT;
       flogging(F_ERROR, "Invalid slice: dimension " + std::to_string(i) +
                             " larger then target tensor! (" +
                             std::to_string(op.shape[i]) + " > " +
                             std::to_string(a->operation.shape[i]) + ")");
-      last_error = INVALID_SELECT;
       return nullptr; // for c compatibility
     }
     if ((step[i] < 0 && (slice->end[i] > slice->start[i])) ||
         (step[i] > 0 && (slice->end[i] < slice->start[i]))) {
+      last_error = INVALID_SELECT;
       flogging(F_ERROR,
                "invalid slice: combination of step sign, start and end "
                "in dimension " +
@@ -1035,7 +1114,6 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
                    std::to_string(slice->start[i]) +
                    ", end: " + std::to_string(slice->end[i]) +
                    ", step: " + std::to_string(slice->step[i]));
-      last_error = INVALID_SELECT;
       return nullptr; // for c compatibility
     }
   }
@@ -1061,6 +1139,8 @@ FGraphNode *frepeat(FGraphNode *a, int *repetitions) {
   op.data_type = a->operation.data_type;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape)
+    return nullptr;
   for (int dim = 0; dim < op.dimensions; dim++) {
     op.shape[dim] = a->operation.shape[dim] * (repetitions[dim] + 1);
   }
@@ -1074,6 +1154,8 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions) {
   op.data_type = a->operation.data_type;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape)
+    return nullptr;
   for (int i = 0; i < op.dimensions; i++) {
     op.shape[i] = a->operation.shape[transpositions[i]];
     // check that transpositions is reflexive
@@ -1084,6 +1166,8 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions) {
           "be transpositions[i]. Then i = transpositions[j] must hold.");
   }
   op.additional_data = safe_mal<int>(op.dimensions);
+  if (!op.additional_data)
+    return nullptr;
   memcpy(op.additional_data, transpositions,
          sizeof(int) * a->operation.dimensions);
   op.data_type = a->operation.data_type;
@@ -1167,6 +1251,8 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
   foo->num_predecessor = 1;
   foo->result_data = nullptr;
   foo->predecessors = safe_mal<FGraphNode *>(1);
+  if (!foo->predecessors)
+    return nullptr;
   foo->predecessors[0] = a;
   foo->reference_counter = 0;
   if (a->reference_counter++ > 2 && !eager_execution)
@@ -1178,14 +1264,19 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
   op.data_type = a->operation.data_type;
   op.dimensions = dimensions;
   op.shape = safe_mal<size_t>(dimensions);
+  if (!op.shape)
+    return nullptr;
   memcpy(op.shape, new_shape, dimensions * sizeof(size_t));
   // set the parallel score
-
   op.additional_data = new FExtend();
   foo->operation = op;
   FExtend &extend = *(FExtend *)op.additional_data;
   extend.start = safe_mal<size_t>(dimensions);
+  if (!extend.start)
+    return nullptr;
   extend.step = safe_mal<long>(dimensions);
+  if (!extend.step)
+    return nullptr;
   memcpy(extend.start, insert_at, dimensions * sizeof(size_t));
   memcpy(extend.step, step_size, dimensions * sizeof(long));
   return eager_execution ? execute_eagerly(foo) : foo;
@@ -1201,18 +1292,22 @@ FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis) {
   op.op_type = FCONCAT;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(a->operation.dimensions);
+  if (!op.shape)
+    return nullptr;
   std::memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
   op.shape[axis] = a->operation.shape[axis] + b->operation.shape[axis];
   for (int i = 0; i < op.dimensions; i++)
     if (i != axis && a->operation.shape[i] != b->operation.shape[i]) {
+      last_error = INCOMPATIBLE_SHAPES;
       flogging(F_ERROR,
                "Concatenations of two nodes excpects both to have the same "
                "size along every dimension except the concatenation one!");
-      last_error = INCOMPATIBLE_SHAPES;
       return nullptr; // for c compatibility
     }
   op.data_type = a->operation.data_type;
   op.additional_data = safe_mal<unsigned int>(1);
+  if (!op.additional_data)
+    return nullptr;
   ((unsigned int *)op.additional_data)[0] = axis;
   return addNode(op, {a, b});
 }
@@ -1244,24 +1339,26 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
     fExecuteGraph(kernel); // TODO mem leak
   }
   if (ao.dimensions != bo.dimensions && ao.dimensions + 1 != bo.dimensions) {
+    last_error = ILLEGAL_DIMENSIONALITY;
     flogging(F_ERROR, "For a convolution the original Tensor and the filter "
                       "kernel(s) have to have to same number of dimensions!");
-    last_error = ILLEGAL_DIMENSIONALITY;
     return nullptr; // for c compatibility
   }
   bool multiple_filters = ao.dimensions + 1 == bo.dimensions;
   if (ao.shape[ao.dimensions - 1] != bo.shape[bo.dimensions - 1]) {
+    last_error = INCOMPATIBLE_SHAPES;
     flogging(F_ERROR, "For a convolution the size of the last dimension of the "
                       "Tensor must match that of the kernel! " +
                           std::to_string(ao.shape[ao.dimensions - 1]) +
                           " vs. " +
                           std::to_string(bo.shape[bo.dimensions - 1]));
-    last_error = INCOMPATIBLE_SHAPES;
     return nullptr; // for c compatibility
   }
   FOperation op;
   op.dimensions = multiple_filters ? ao.dimensions : ao.dimensions - 1;
   op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape)
+    return nullptr;
   for (int i = 0; i < ao.dimensions - 1; i++) {
     const size_t kernel_shape =
         multiple_filters ? bo.shape[i + 1] : bo.shape[i];
@@ -1275,6 +1372,8 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
   op.data_type = higherType(ao.data_type, bo.data_type);
   op.op_type = FCONVOLVE;
   op.additional_data = safe_mal<unsigned int>(op.dimensions);
+  if (!op.additional_data)
+    return nullptr;
   memcpy(op.additional_data, steps, op.dimensions * sizeof(unsigned int));
   return addNode(op, {a, kernel});
 }
@@ -1286,19 +1385,19 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel,
     fExecuteGraph(a);
   }
   if (ao.dimensions != bo.dimensions) {
+    last_error = ILLEGAL_DIMENSIONALITY;
     flogging(F_ERROR,
              "For the slide operation the original Tensor and the filter "
              "Kernel have to have to same number of dimensions!");
-    last_error = ILLEGAL_DIMENSIONALITY;
     return nullptr; // for c compatibility
   }
   if (ao.shape[ao.dimensions - 1] != bo.shape[bo.dimensions - 1]) {
+    last_error = INCOMPATIBLE_SHAPES;
     flogging(F_ERROR,
              "For the slide operation the size of the last dimension of the "
              "Tensor must match that of the kernel! " +
                  std::to_string(ao.shape[ao.dimensions - 1]) + " vs. " +
                  std::to_string(bo.shape[bo.dimensions - 1]));
-    last_error = INCOMPATIBLE_SHAPES;
     return nullptr; // for c compatibility
   }
   FOperation op;
@@ -1306,8 +1405,12 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel,
   op.data_type = higherType(ao.data_type, bo.data_type);
   op.dimensions = ao.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape)
+    return nullptr;
   memcpy(op.shape, bo.shape, op.dimensions * sizeof(size_t));
   op.additional_data = safe_mal<unsigned int>(op.dimensions - 1);
+  if (!op.additional_data)
+    return nullptr;
   memcpy(op.additional_data, steps, (op.dimensions - 1) * sizeof(unsigned int));
   return addNode(op, {a, kernel});
 }
@@ -1317,6 +1420,8 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
   op.op_type = FGEN_RANDOM;
   op.dimensions = dimensions;
   op.shape = safe_mal<size_t>(dimensions);
+  if (!op.shape)
+    return nullptr;
   memcpy(op.shape, shape, dimensions * sizeof(size_t));
   op.data_type = F_FLOAT64;
   // Store current time in additional data
@@ -1324,6 +1429,8 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
       std::chrono::high_resolution_clock::now().time_since_epoch();
   double t = ((unsigned long)tm.count() % 1000000) / 100.0;
   op.additional_data = safe_mal<double>(1);
+  if (!op.additional_data)
+    return nullptr;
   ((double *)op.additional_data)[0] = t;
   node->operation = op;
   node->result_data = nullptr;
@@ -1335,24 +1442,24 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
 }
 FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
   if (indices->operation.dimensions > a->operation.dimensions) {
+    last_error = ILLEGAL_DIMENSIONALITY;
     flogging(
         F_ERROR,
         "Invalid index Tensor dimensionality! Larger than indexed Tensor!");
-    last_error = ILLEGAL_DIMENSIONALITY;
     return nullptr; // for c compatibility
   }
   if (indices->operation.data_type != F_INT32 &&
       indices->operation.data_type != F_INT64) {
-    flogging(F_ERROR, "Only integer tensors may be used as indices!");
     last_error = WRONG_TYPE;
+    flogging(F_ERROR, "Only integer tensors may be used as indices!");
     return nullptr; // for c compatibility
   }
   for (int d = 0; d < indices->operation.dimensions - 1; d++)
     if (a->operation.shape[d] != indices->operation.shape[d]) {
+      last_error = INCOMPATIBLE_SHAPES;
       flogging(F_ERROR,
                "Invalid indices shape! Except for last dimension shape of "
                "indices Tensor has to be a prefix of the indexed Tensor!");
-      last_error = INCOMPATIBLE_SHAPES;
       return nullptr; // for c compatibility
     }
 
@@ -1360,6 +1467,8 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
   op.op_type = FINDEX;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape)
+    return nullptr;
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
   op.shape[indices->operation.dimensions - 1] =
       indices->operation.shape[indices->operation.dimensions - 1];
@@ -1373,24 +1482,24 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
   if (!b->result_data && b->operation.op_type != FSTORE)
     b = fExecuteGraph(b);
   if (indices->operation.dimensions > b->operation.dimensions) {
+    last_error = ILLEGAL_DIMENSIONALITY;
     flogging(
         F_ERROR,
         "Invalid index Tensor dimensionality! Larger than indexed Tensor!");
-    last_error = ILLEGAL_DIMENSIONALITY;
     return nullptr; // for c compatibility
   }
   if (indices->operation.data_type != F_INT32 &&
       indices->operation.data_type != F_INT64) {
-    flogging(F_ERROR, "Only integer tensors may be used as indices!");
     last_error = WRONG_TYPE;
+    flogging(F_ERROR, "Only integer tensors may be used as indices!");
     return nullptr; // for c compatibility
   }
   for (int d = 0; d < indices->operation.dimensions - 1; d++)
     if (b->operation.shape[d] != indices->operation.shape[d]) {
+      last_error = INCOMPATIBLE_SHAPES;
       flogging(F_ERROR,
                "Invalid indices shape! Except for last dimension shape of "
                "indices Tensor has to be a prefix of the indexed Tensor!");
-      last_error = INCOMPATIBLE_SHAPES;
       return nullptr; // for c compatibility
     }
 
@@ -1398,6 +1507,8 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
   op.op_type = FSET_INDEX;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape)
+    return nullptr;
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
   op.data_type = a->operation.data_type;
   op.additional_data = nullptr;
@@ -1410,6 +1521,8 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
   op.dimensions = a->operation.dimensions + 1;
   op.data_type = a->operation.data_type;
   op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape)
+    return nullptr;
   op.shape[0] = 1;
   for (int i = 0; i < a->operation.dimensions; i++) {
     op.shape[i + 1] = size[i];
@@ -1422,7 +1535,11 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
   }
   FSlidingWindow *slidewin = new FSlidingWindow();
   slidewin->size = safe_mal<size_t>(a->operation.dimensions);
+  if (!slidewin->size)
+    return nullptr;
   slidewin->step = safe_mal<unsigned int>(a->operation.dimensions);
+  if (!slidewin->step)
+    return nullptr;
   memcpy(slidewin->size, size, a->operation.dimensions * sizeof(size_t));
   memcpy(slidewin->step, steps, a->operation.dimensions * sizeof(unsigned int));
   op.additional_data = (void *)(slidewin);
@@ -1437,6 +1554,8 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
   op.dimensions = a->operation.dimensions - 1;
   op.data_type = a->operation.data_type;
   op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape)
+    return nullptr;
   size_t no_windows = 1;
   for (int i = 0; i < a->operation.dimensions - 1; i++) {
     size_t window_size = shape[i] - a->operation.shape[i + 1] + 1;
@@ -1446,15 +1565,17 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
     op.shape[i] = shape[i];
   }
   if (no_windows != a->operation.shape[0]) {
+    last_error = INCOMPATIBLE_SHAPES;
     flogging(F_ERROR, "Number of windows is not consistend with provided shape "
                       "and steps for unslide! Provided parameters yield " +
                           std::to_string(no_windows) +
                           " windows, while the provided Tensor has " +
                           std::to_string(a->operation.shape[0]));
-    last_error = INCOMPATIBLE_SHAPES;
     return nullptr; // for c compatibility
   }
   unsigned int *csteps = safe_mal<unsigned int>(op.dimensions);
+  if (!csteps)
+    return nullptr;
   memcpy(csteps, steps, op.dimensions * sizeof(unsigned int));
   op.additional_data = csteps;
   return addNode(op, {a});
@@ -1462,7 +1583,11 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax) {
   size_t total_size;
   const long *perms = generatePermutation(a->operation.shape, ax, &total_size);
+  if (!perms)
+    return nullptr;
   FGraphNode *ind =
       fCreateGraph(perms, total_size, F_INT64, a->operation.shape, ax + 1);
+  if (!ind)
+    return nullptr;
   return findex(a, ind);
 }

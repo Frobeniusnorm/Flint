@@ -209,7 +209,14 @@ concept GenericLayer =
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Padding of convolution operations<ul><li><pre class="inline_code">NO_PADDING</pre>: a normal convolution operation. Each filter is slid over the
    input tensor with its step size as many times as it completly fits into the
-   input tensor. The output may have a smaller size then the input.</li></ul>
+   input tensor. The output may have a smaller size then the input.
+</li><li><pre class="inline_code">SAME_PADDING</pre>: the image tensor is padded on each side as equally as
+   possible so that the output has the same size as the input if steps = 1 in
+   all dimensions (i.e. the image is padded so that the kernels fit fully into
+   the image)
+</li><li><pre class="inline_code">FULL_PADDING</pre>: the image tensor is padded on each side by the size of the
+   kernel - 1 in that dimension. This yields as many kernel multiplications as
+   possible with the given step size</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-_int_n__class_Convolution_:_public_Layer_n__1__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;int n&gt; class <b>Convolution : public Layer</b></pre></div>
 <br />

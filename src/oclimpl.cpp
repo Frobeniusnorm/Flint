@@ -19,6 +19,7 @@
 #include "backend_ocl/codegen.hpp"
 #include "backend_ocl/comp.hpp"
 #include "backend_ocl/utils.hpp"
+#include "src/errors.hpp"
 #include "utils.hpp"
 #include <CL/cl.h>
 #include <iostream>
@@ -47,15 +48,21 @@ static cl_context context;
 static cl_command_queue clqueue;
 static cl_device_id device;
 
-void flintInit_gpu() {
+FErrorType flintInit_gpu() {
   cl_platform_id platforms[10];
   cl_uint num_dev, num_plat;
-  if (clGetPlatformIDs(10, &platforms[0], &num_plat) != CL_SUCCESS)
+  if (clGetPlatformIDs(10, &platforms[0], &num_plat) != CL_SUCCESS) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR, "clGetPlatformIds");
-  if (num_plat == 0)
+    return OCL_ERROR;
+  }
+  if (num_plat == 0) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR,
              "Could not find any OpenCL Platform available! Please make "
              "sure, you have setup your OpenCL driver right!");
+    return OCL_ERROR;
+  }
   flogging(F_VERBOSE, "Found " + std::to_string(num_plat) + " platforms!");
   device = NULL;
   // find suitable device
@@ -107,12 +114,15 @@ void flintInit_gpu() {
         dev_type_string = "Accelerator";
       } else
         dev_type_string = "Device";
-    }else clReleaseDevice(curr_dev);
+    } else
+      clReleaseDevice(curr_dev);
   }
   if (!device) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR,
              "Could not find any OpenCL devices available! Please make sure, "
              "you have setup your OpenCL driver right!");
+    return OCL_ERROR;
   }
   std::string info = "Using " + dev_type_string + " '" +
                      std::string(dev_vend, dev_vend_size - 1) + "', '" +
@@ -124,6 +134,7 @@ void flintInit_gpu() {
   context = clCreateContext(NULL, 1, &device, openclCallback, NULL, &status);
   if (status != CL_SUCCESS) {
     std::string err = "Could not create OpenCL context: ";
+    setErrorType(OCL_ERROR);
     switch (status) {
     case CL_INVALID_VALUE:
       err += "invalid value";
@@ -135,19 +146,26 @@ void flintInit_gpu() {
       err += "device is not available";
       break;
     case CL_OUT_OF_RESOURCES:
+      setErrorType(OUT_OF_MEMORY);
       err += "out of resources";
       break;
     case CL_OUT_OF_HOST_MEMORY:
+      setErrorType(OUT_OF_MEMORY);
       err += "out of host memory";
       break;
     }
     flogging(F_ERROR, err);
+    return OCL_ERROR;
   }
   clqueue = clCreateCommandQueueWithProperties(context, device, NULL, &status);
-  if (status != CL_SUCCESS)
+  if (status != CL_SUCCESS) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR, "clCreateCommandQueue " + std::to_string(status));
+    return OCL_ERROR;
+  }
   initialized = true;
   flogging(F_VERBOSE, "Flint GPU backend was initialized!");
+  return NO_ERROR;
 }
 static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
                                 size_t *total_size = nullptr) {
@@ -159,10 +177,16 @@ static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
   const cl_mem result_mem =
       clCreateBuffer(context, memory_type, total_size_node * type_size_node,
                      nullptr, &err_code);
-  if (err_code == CL_OUT_OF_HOST_MEMORY)
+  if (err_code == CL_OUT_OF_HOST_MEMORY) {
+    setErrorType(OUT_OF_MEMORY);
     flogging(F_ERROR, "Not enough memory to create buffer!");
-  if (err_code != CL_SUCCESS)
+    return nullptr;
+  }
+  if (err_code != CL_SUCCESS) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR, "Unknown Error while creating gpu memory!");
+    return nullptr;
+  }
   if (total_size)
     *total_size = total_size_node;
   return result_mem;
@@ -172,10 +196,17 @@ cl_mem OCLCompilerThread::copy_memory(const cl_mem other, size_t num_bytes,
   cl_int err_code;
   cl_mem mem =
       clCreateBuffer(context, memory_flags, num_bytes, nullptr, &err_code);
-  if (err_code == CL_OUT_OF_HOST_MEMORY)
+  if (err_code == CL_OUT_OF_HOST_MEMORY) {
+    setErrorType(OUT_OF_MEMORY);
     flogging(F_ERROR, "Not enough memory to create buffer!");
-  if (err_code != CL_SUCCESS)
-    flogging(F_ERROR, "Unknown Error while creating gpu memory!");
+    return nullptr;
+  }
+  if (err_code != CL_SUCCESS) {
+    setErrorType(OCL_ERROR);
+    flogging(F_ERROR, "Unknown Error while creating gpu memory! " +
+                          std::to_string(err_code));
+    return nullptr;
+  }
   clEnqueueCopyBuffer(clqueue, other, mem, 0, 0, num_bytes, 0, nullptr,
                       nullptr);
   return mem;
@@ -361,48 +392,68 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
   const size_t code_length = code.length();
   cl_program prog = clCreateProgramWithSource(context, 1, &code_data,
                                               &code_length, &err_code);
-  if (err_code == CL_OUT_OF_RESOURCES)
+  if (err_code == CL_OUT_OF_RESOURCES) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR, "Out of resources while creating program!");
-  if (err_code == CL_OUT_OF_HOST_MEMORY)
+    return nullptr;
+  }
+  if (err_code == CL_OUT_OF_HOST_MEMORY) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR, "Not enough memory to create program!");
+    return nullptr;
+  }
   // build program
   err_code = clBuildProgram(prog, 1, &device, clCompilerOpts, nullptr, nullptr);
-  if (err_code == CL_INVALID_PROGRAM)
+  if (err_code == CL_INVALID_PROGRAM) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR,
              "Invalid Program was generated! Generated code: \"\n" + code +
                  "\"\nPlease contact a developer and/or file a bug report.");
-  else if (err_code == CL_COMPILER_NOT_AVAILABLE)
+    return nullptr;
+  } else if (err_code == CL_COMPILER_NOT_AVAILABLE) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR, "Compiler of your GPU driver is not available!");
-  else if (err_code == CL_OUT_OF_HOST_MEMORY)
+    return nullptr;
+  } else if (err_code == CL_OUT_OF_HOST_MEMORY) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR, "Not enough memory to build program!");
-  else if (err_code != CL_SUCCESS) {
+    return nullptr;
+  } else if (err_code != CL_SUCCESS) {
     char build_log[4096];
     size_t actual_size = 0;
     clGetProgramBuildInfo(prog, device, CL_PROGRAM_BUILD_LOG, 4096,
                           (void *)&build_log[0], &actual_size);
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR,
              "Unknown Error during program compilation! Generated code: \"\n" +
                  code + "\nBuild Log:\n" + std::string(&build_log[0]) +
                  "\"\nPlease contact a developer and/or file a bug report.");
+    return nullptr;
   }
   // get kernel
   for (const auto &kernel_name : all_kernels) {
     cl_kernel curr =
         clCreateKernel(prog, kernel_name.second.c_str(), &err_code);
-    if (err_code != CL_SUCCESS)
+    if (err_code != CL_SUCCESS) {
+      setErrorType(OCL_ERROR);
       flogging(F_ERROR,
                "kernel compilation failed! Kernel name: " + kernel_name.second +
                    ", error_code: " + std::to_string(err_code));
+      return nullptr;
+    }
     OCLCompilerThread::eager_cache.insert({kernel_name.first, curr});
     if (kernel_name.first == hash) {
       kernel = curr;
     }
   }
-  if (!kernel)
+  if (!kernel) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR,
              "something went horrible wrong for operation: " +
                  std::string(fop_to_string[node->operation.op_type]) +
                  " result type: " + std::to_string(node->operation.data_type));
+    return nullptr;
+  }
   OCLCompilerThread::eager_programs.push_back(prog);
   const std::chrono::duration<double, std::milli> elapsed =
       std::chrono::high_resolution_clock::now() - start;
@@ -438,9 +489,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       data = store->data;
       gpu_data = store->mem_id;
       num_elems = store->num_entries;
-    } else
-      flogging(F_ERROR, "Unknown Case: previous node does not appear to be a "
-                        "data node in eager execution!");
+    }
     FResultData *rd = new FResultData();
     rd->data = nullptr;
     rd->num_entries = num_elems;
@@ -448,8 +497,11 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     int type_size = typeSize(node->operation.data_type);
     if (data) {
       rd->data = malloc(type_size * num_elems);
-      if (!rd->data)
+      if (!rd->data) {
+        setErrorType(OUT_OF_MEMORY);
         flogging(F_ERROR, "Not enough memory to store result!");
+        return nullptr;
+      }
       memcpy(rd->data, data, type_size * num_elems);
     } else if (gpu_data) {
       rd->mem_id = OCLCompilerThread::copy_memory(
@@ -486,12 +538,18 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   std::vector<cl_event> write_events;
   int par_index = 0;
   if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&res_mem) !=
-      CL_SUCCESS)
+      CL_SUCCESS) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR, "Could not load Argument to kernel!");
+    return nullptr;
+  }
   // push operation information on demand
   if (clSetKernelArg(kernel, par_index++, sizeof(long),
-                     (void *)&total_size_node) != CL_SUCCESS)
+                     (void *)&total_size_node) != CL_SUCCESS) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR, "Could not load Argument to kernel!");
+    return nullptr;
+  }
   // process parameters i.e. predecessors
   for (int i = 0; i < node->num_predecessor; i++) {
     FGraphNode *pred = node->predecessors[i];
@@ -537,18 +595,28 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
                                       nullptr);
       if (err_code != CL_SUCCESS) {
         std::string msg = "Unknown Error while loading data to GPU! Error: ";
-        if (err_code == CL_OUT_OF_HOST_MEMORY)
+        setErrorType(OCL_ERROR);
+        if (err_code == CL_OUT_OF_HOST_MEMORY) {
           msg = "Not enough memory to load data to GPU! ";
+          setErrorType(OUT_OF_MEMORY);
+        }
         flogging(F_ERROR, msg + std::to_string(err_code));
+        return nullptr;
       }
     }
     if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&mem_obj) !=
-        CL_SUCCESS)
+        CL_SUCCESS) {
+      setErrorType(OCL_ERROR);
       flogging(F_ERROR, "Could not load Argument to kernel!");
+      return nullptr;
+    }
     // push total element size
     if (clSetKernelArg(kernel, par_index++, sizeof(long),
-                       (void *)&total_size) != CL_SUCCESS)
+                       (void *)&total_size) != CL_SUCCESS) {
+      setErrorType(OCL_ERROR);
       flogging(F_ERROR, "Could not load Argument to kernel!");
+      return nullptr;
+    }
     // push per-parameter values
     pushParameterVals(node, pred, kernel, context, par_index, to_free);
   }
@@ -561,12 +629,15 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   for (cl_event ev : write_events)
     clReleaseEvent(ev);
   if (err_code != CL_SUCCESS) {
+    setErrorType(OCL_ERROR);
     std::string msg;
     switch (err_code) {
     case CL_OUT_OF_HOST_MEMORY:
+      setErrorType(OUT_OF_MEMORY);
       msg = "Not enough memory to execute kernel!";
       break;
     case CL_OUT_OF_RESOURCES:
+      setErrorType(OUT_OF_MEMORY);
       msg = "Out of resources!";
       break;
     default:
@@ -575,6 +646,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
       break;
     }
     flogging(F_ERROR, msg);
+    return nullptr;
   }
   for (cl_mem tfn : to_free)
     clReleaseMemObject(tfn);
@@ -589,29 +661,43 @@ cl_kernel OCLCompilerThread::lazy_compile(FGraphNode *node, std::string code) {
   const size_t code_length = code.length();
   cl_program prog = clCreateProgramWithSource(context, 1, &code_data,
                                               &code_length, &err_code);
-  if (err_code == CL_OUT_OF_RESOURCES)
+  if (err_code == CL_OUT_OF_RESOURCES) {
+    setErrorType(OUT_OF_MEMORY);
     flogging(F_ERROR, "Out of resources while creating program!");
-  if (err_code == CL_OUT_OF_HOST_MEMORY)
+    return nullptr;
+  }
+  if (err_code == CL_OUT_OF_HOST_MEMORY) {
+    setErrorType(OUT_OF_MEMORY);
     flogging(F_ERROR, "Not enough memory to create program!");
+    return nullptr;
+  }
   // build program
   err_code = clBuildProgram(prog, 1, &device, clCompilerOpts, nullptr, nullptr);
-  if (err_code == CL_INVALID_PROGRAM)
+  if (err_code == CL_INVALID_PROGRAM) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR,
              "Invalid Program was generated! Generated code: \"\n" + code +
                  "\"\nPlease contact a developer and/or file a bug report.");
-  else if (err_code == CL_COMPILER_NOT_AVAILABLE)
+    return nullptr;
+  } else if (err_code == CL_COMPILER_NOT_AVAILABLE) {
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR, "Compiler of your GPU driver is not available!");
-  else if (err_code == CL_OUT_OF_HOST_MEMORY)
+    return nullptr;
+  } else if (err_code == CL_OUT_OF_HOST_MEMORY) {
+    setErrorType(OUT_OF_MEMORY);
     flogging(F_ERROR, "Not enough memory to build program!");
-  else if (err_code != CL_SUCCESS) {
+    return nullptr;
+  } else if (err_code != CL_SUCCESS) {
     char build_log[4096];
     size_t actual_size = 0;
     clGetProgramBuildInfo(prog, device, CL_PROGRAM_BUILD_LOG, 4096,
                           (void *)&build_log[0], &actual_size);
+    setErrorType(OCL_ERROR);
     flogging(F_ERROR,
              "Unknown Error during program compilation! Generated code: \"\n" +
                  code + "\nBuild Log:\n" + string(&build_log[0]) +
                  "\"\nPlease contact a developer and/or file a bug report.");
+    return nullptr;
   }
   // get kernel
   kernel = clCreateKernel(prog, "execute_graph", &err_code);
@@ -622,9 +708,12 @@ cl_kernel OCLCompilerThread::lazy_compile(FGraphNode *node, std::string code) {
       clReleaseProgram(k.second.first);
     }
     kernel = clCreateKernel(prog, "execute_graph", &err_code);
-    if (err_code != CL_SUCCESS)
+    if (err_code != CL_SUCCESS) {
+      setErrorType(OCL_ERROR);
       flogging(F_ERROR,
                "kernel compilation failed (lazy)! " + std::to_string(err_code));
+      return nullptr;
+    }
   }
   OCLCompilerThread::kernel_cache.insert({code, {prog, kernel}});
   return kernel;
@@ -654,18 +743,25 @@ FResultData *fSyncMemory(FGraphNode *node) {
     if (store_data)
       *store_data = res->data;
     res->num_entries = res->num_entries;
-    if (!node->result_data->data)
+    if (!node->result_data->data) {
+      setErrorType(OUT_OF_MEMORY);
       flogging(F_ERROR, "Not enough memory to store result!");
+      return nullptr;
+    }
     // wait for result
     cl_int err_code = clEnqueueReadBuffer(clqueue, res->mem_id, CL_TRUE, 0,
                                           res->num_entries * type_size_node,
                                           res->data, 0, nullptr, nullptr);
     if (err_code != CL_SUCCESS) {
+      setErrorType(OCL_ERROR);
       std::string msg = "Unknown Error while reading the result! Error Code: " +
                         std::to_string(err_code);
-      if (err_code == CL_OUT_OF_HOST_MEMORY)
+      if (err_code == CL_OUT_OF_HOST_MEMORY) {
+        setErrorType(OUT_OF_MEMORY);
         msg = "Not enough memory to read result!";
+      }
       flogging(F_ERROR, msg);
+      return nullptr;
     }
   }
   return res;
@@ -731,8 +827,11 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
       clCreateBuffer(context, CL_MEM_READ_WRITE,
                      total_size_node * type_size_node, nullptr, &err_code);
   resultData->mem_id = result_mem;
-  if (err_code == CL_OUT_OF_HOST_MEMORY)
+  if (err_code == CL_OUT_OF_HOST_MEMORY) {
+    setErrorType(OUT_OF_MEMORY);
     flogging(F_ERROR, "Not enough memory to create buffer!");
+    return nullptr;
+  }
   int index = 1;
   std::vector<cl_event> writeEvents;
   // upload or link parameters
@@ -753,8 +852,11 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     } else {
       mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY,
                                total_size * type_size, nullptr, &err_code);
-      if (err_code == CL_OUT_OF_HOST_MEMORY)
+      if (err_code == CL_OUT_OF_HOST_MEMORY) {
+        setErrorType(OUT_OF_MEMORY);
         flogging(F_ERROR, "Not enough memory to create buffer!");
+        return nullptr;
+      }
       if (op.op_type == FSTORE)
         ((FStore *)op.additional_data)->mem_id = mem_obj;
       if (op.op_type == FGEN_CONSTANT && !gn->result_data) {
@@ -780,19 +882,29 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
                                       &writeEvents[writeEvents.size() - 1]);
       if (err_code != CL_SUCCESS) {
         string msg = "Unknown Error while loading data to GPU!";
-        if (err_code == CL_OUT_OF_HOST_MEMORY)
-          msg = "Not enough memory to load data to GPU!";
         flogging(F_ERROR, msg);
+        setErrorType(OCL_ERROR);
+        if (err_code == CL_OUT_OF_HOST_MEMORY) {
+          msg = "Not enough memory to load data to GPU!";
+        }
+        return nullptr;
       }
     }
     if (clSetKernelArg(kernel, index++, sizeof(cl_mem), (void *)&mem_obj) !=
-        CL_SUCCESS)
+        CL_SUCCESS) {
+      setErrorType(OCL_ERROR);
       flogging(F_ERROR, "Could not load Argument to kernel!");
+      return nullptr;
+    }
   }
   // link resource memory
-  if ((err_code = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&result_mem)) !=
-      CL_SUCCESS)
-    flogging(F_ERROR, "Could not set Kernel Argument for the result! " + to_string(err_code));
+  if ((err_code = clSetKernelArg(kernel, 0, sizeof(cl_mem),
+                                 (void *)&result_mem)) != CL_SUCCESS) {
+    setErrorType(OCL_ERROR);
+    flogging(F_ERROR, "Could not set Kernel Argument for the result! " +
+                          to_string(err_code));
+    return nullptr;
+  }
   // execute kernel
   const size_t global_size = total_size_node;
 
@@ -803,18 +915,23 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
     clReleaseEvent(ev);
   if (err_code != CL_SUCCESS) {
     string msg;
+    setErrorType(OCL_ERROR);
     switch (err_code) {
     case CL_OUT_OF_HOST_MEMORY:
       msg = "Not enough memory to execute kernel!";
+      setErrorType(OUT_OF_MEMORY);
       break;
     case CL_OUT_OF_RESOURCES:
       msg = "Out of resources!";
+      setErrorType(OUT_OF_MEMORY);
       break;
     default:
-      msg = "Unknown Error during kernel execution! " + std::to_string(err_code);
+      msg =
+          "Unknown Error during kernel execution! " + std::to_string(err_code);
       break;
     }
     flogging(F_ERROR, msg);
+    return nullptr;
   }
   resultData->num_entries = total_size_node;
   OCLCompilerThread::memory_barrier();
@@ -825,7 +942,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
   node->result_data = resultData;
   return node;
 }
-void flintCleanup_gpu() {
+FErrorType flintCleanup_gpu() {
   if (initialized) {
     flogging(F_DEBUG, "Cleaning up GPU Backend");
     clReleaseDevice(device);
@@ -845,4 +962,5 @@ void flintCleanup_gpu() {
     clReleaseCommandQueue(clqueue);
     clReleaseContext(context);
   }
+  return NO_ERROR;
 }

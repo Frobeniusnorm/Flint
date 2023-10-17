@@ -17,6 +17,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../flint.h"
+#include "errors.hpp"
 #include "libs/stb_image.hpp"
 #include "libs/stb_image_write.hpp"
 #include "utils.hpp"
@@ -39,9 +40,11 @@ char *fserialize(FGraphNode *node, size_t *bytes_written) {
   // pure data
   data_size += total_size_node * typeSize(node->operation.data_type);
   // data type + dimensions + shape
-  data_size += sizeof(FType) + sizeof(int) +
-               node->operation.dimensions * sizeof(size_t);
+  data_size +=
+      sizeof(FType) + sizeof(int) + node->operation.dimensions * sizeof(size_t);
   char *data = safe_mal<char>(data_size);
+  if (!data)
+    return nullptr;
   // // conversion // //
   // magic number
   data[0] = (char)((MAGIC_NUMBER >> (3 * 8)) & 0xff);
@@ -93,6 +96,8 @@ FGraphNode *fdeserialize(char *data) {
     total_size *= shape[i];
   }
   char *res = safe_mal<char>(total_size * typeSize((FType)data_type));
+  if (!res)
+    return nullptr;
   memcpy(res, &data[index], total_size * typeSize((FType)data_type));
   FGraphNode *node = fCreateGraph((void *)res, total_size, (FType)data_type,
                                   shape.data(), shape.size());
@@ -103,10 +108,13 @@ FGraphNode *fload_image(const char *path) {
   int w, h, c;
   unsigned char *vals = stbi_load(path, &w, &h, &c, 0);
   if (!vals) {
+    setErrorType(IO_ERROR);
     flogging(F_ERROR, "Could not load image!");
-    return nullptr; // for c compatibility
+    return nullptr;
   }
   float *fvals = safe_mal<float>(w * h * c);
+  if (!fvals)
+    return nullptr;
   for (int i = 0; i < w * h * c; i++)
     fvals[i] = vals[i] / 255.f;
   size_t shape[3] = {(size_t)h, (size_t)w, (size_t)c};
@@ -115,36 +123,59 @@ FGraphNode *fload_image(const char *path) {
   free(fvals);
   return node;
 }
-void fstore_image(FGraphNode *node, const char *path, FImageFormat format) {
+FErrorType fstore_image(FGraphNode *node, const char *path,
+                        FImageFormat format) {
   FGraphNode *orig = node;
   if (node->operation.data_type != F_FLOAT32 ||
-      node->operation.dimensions != 3)
+      node->operation.dimensions != 3) {
+    FErrorType error = node->operation.data_type != F_FLOAT32
+                           ? WRONG_TYPE
+                           : ILLEGAL_DIMENSIONALITY;
+    setErrorType(error);
     flogging(F_ERROR,
              "Invalid image data for fstore_image: image nodes are expected to "
              "have 3 dimensions and to be of the float data type!");
+    return error;
+  }
   int h = node->operation.shape[0], w = node->operation.shape[1],
       c = node->operation.shape[2];
   node = fmin_ci(fmax_ci(fconvert(fmul(node, 255.0f), F_INT32), 0), 255);
+  if (!node)
+    return fErrorType();
   node = fCalculateResult(node);
+  if (!node)
+    return fErrorType();
   char *data = nullptr;
   data = safe_mal<char>(node->result_data->num_entries);
+  if (!data)
+    return OUT_OF_MEMORY;
   for (size_t i = 0; i < node->result_data->num_entries; i++)
     data[i] = (char)((int *)node->result_data->data)[i];
   switch (format) {
   case F_PNG:
-    if (!stbi_write_png(path, w, h, c, data, 0))
+    if (!stbi_write_png(path, w, h, c, data, 0)) {
+      setErrorType(IO_ERROR);
       flogging(F_ERROR, "Could not write image!");
+      return IO_ERROR;
+    }
     break;
   case F_JPEG:
-    if (!stbi_write_jpg(path, w, h, c, data, 70))
+    if (!stbi_write_jpg(path, w, h, c, data, 70)) {
+      setErrorType(IO_ERROR);
       flogging(F_ERROR, "Could not write image!");
+      return IO_ERROR;
+    }
   case F_BMP:
-    if (!stbi_write_bmp(path, w, h, c, data))
+    if (!stbi_write_bmp(path, w, h, c, data)) {
+      setErrorType(IO_ERROR);
       flogging(F_ERROR, "Could not write image!");
+      return IO_ERROR;
+    }
   }
   if (data)
     free(data);
   orig->reference_counter++;
   fFreeGraph(node);
   orig->reference_counter--;
+  return NO_ERROR;
 }

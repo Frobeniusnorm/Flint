@@ -16,6 +16,7 @@
 */
 #include "../flint.h"
 #include "backend_cpu/execution.hpp"
+#include "errors.hpp"
 #include "utils.hpp"
 #include <algorithm>
 #include <atomic>
@@ -38,7 +39,7 @@ static bool initialized = false;
 static std::vector<std::thread *> threads;
 
 static void threadRoutine();
-void flintInit_cpu() {
+FErrorType flintInit_cpu() {
   if (!initialized) {
     initialized = true;
     int cores = std::thread::hardware_concurrency();
@@ -50,13 +51,14 @@ void flintInit_cpu() {
     for (int i = 0; i < cores; i++)
       threads[i] = new std::thread(threadRoutine);
   }
+  return NO_ERROR;
 }
 static blocking_queue<
     std::tuple<FGraphNode *, std::vector<CPUResultData>, void *, size_t, size_t,
                std::counting_semaphore<MAX_PARALLELITY> *>>
     thread_queue;
 
-void flintCleanup_cpu() {
+FErrorType flintCleanup_cpu() {
   if (initialized) {
     flogging(F_DEBUG, "Sending kill signal and poisson pills");
     initialized = false;
@@ -67,6 +69,7 @@ void flintCleanup_cpu() {
       delete t;
     }
   }
+  return NO_ERROR;
 }
 
 static void threadRoutine() {
@@ -149,8 +152,9 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
         pred_data[i].data = store->data;
         pred_data[i].num_entries = store->num_entries;
       } else {
+        setErrorType(INTERNAL_ERROR);
         flogging(F_ERROR, "unexecuted node!");
-        return nullptr; // c compatibility
+        return nullptr;
       }
       pred_data[i].type = pred->operation.data_type;
       pred_data[i].shape = std::vector<size_t>(pred->operation.shape,
@@ -160,18 +164,26 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
     switch (node->operation.data_type) {
     case F_INT32:
       data = safe_mal<int>(total);
+      if (!data)
+        return nullptr;
       chooseExecutionMethod(node, pred_data, (int *)data, total);
       break;
     case F_INT64:
       data = safe_mal<long>(total);
+      if (!data)
+        return nullptr;
       chooseExecutionMethod(node, pred_data, (long *)data, total);
       break;
     case F_FLOAT32:
       data = safe_mal<float>(total);
+      if (!data)
+        return nullptr;
       chooseExecutionMethod(node, pred_data, (float *)data, total);
       break;
     case F_FLOAT64:
       data = safe_mal<double>(total);
+      if (!data)
+        return nullptr;
       chooseExecutionMethod(node, pred_data, (double *)data, total);
       break;
     }
@@ -272,6 +284,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
       switch (curr->operation.data_type) {
       case F_INT32: {
         int *result = safe_mal<int>(size);
+        if (!result)
+          return nullptr;
         chooseExecutionMethod(curr, predData, result, size);
         results.insert(
             {curr,
@@ -284,6 +298,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
       } break;
       case F_INT64: {
         long *result = safe_mal<long>(size);
+        if (!result)
+          return nullptr;
         chooseExecutionMethod(curr, predData, result, size);
         results.insert(
             {curr,
@@ -296,6 +312,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
       } break;
       case F_FLOAT32: {
         float *result = safe_mal<float>(size);
+        if (!result)
+          return nullptr;
         chooseExecutionMethod(curr, predData, result, size);
         results.insert(
             {curr,
@@ -308,6 +326,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
       } break;
       case F_FLOAT64: {
         double *result = safe_mal<double>(size);
+        if (!result)
+          return nullptr;
         chooseExecutionMethod(curr, predData, result, size);
         results.insert(
             {curr,

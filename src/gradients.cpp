@@ -19,6 +19,7 @@
 #define GRADIENTS_CPP
 #include "../flint.h"
 #include "backend_ocl/comp.hpp"
+#include "src/errors.hpp"
 #include "utils.hpp"
 #include <cmath>
 #include <cstring>
@@ -81,6 +82,8 @@ static FGraphNode *gradient_convolve(FGraphNode *a, FGraphNode *kernel,
   FGraphNode *gradient = new FGraphNode();
   gradient->num_predecessor = 2;
   gradient->predecessors = safe_mal<FGraphNode *>(2);
+  if (!gradient->predecessors)
+    return nullptr;
   gradient->predecessors[0] = kernel;
   gradient->predecessors[1] = prev_adj;
   kernel->reference_counter++;
@@ -91,9 +94,13 @@ static FGraphNode *gradient_convolve(FGraphNode *a, FGraphNode *kernel,
   op.data_type = F_FLOAT64;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape)
+    return nullptr;
   memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
   op.op_type = FGRADIENT_CONVOLVE;
   op.additional_data = safe_mal<unsigned int>(a->operation.dimensions - 1);
+  if (!op.additional_data)
+    return nullptr;
   memcpy(op.additional_data, steps,
          (a->operation.dimensions - 1) * sizeof(unsigned int));
   gradient->operation = op;
@@ -384,6 +391,8 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
       FGraphNode *gradient = new FGraphNode();
       gradient->num_predecessor = 2;
       gradient->predecessors = safe_mal<FGraphNode *>(2);
+      if (!gradient->predecessors)
+        return nullptr;
       gradient->predecessors[0] = kernel;
       gradient->predecessors[1] = prev_adj;
       kernel->reference_counter++;
@@ -394,9 +403,13 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
       op.data_type = F_FLOAT64;
       op.dimensions = a->operation.dimensions;
       op.shape = safe_mal<size_t>(op.dimensions);
+      if (!op.shape)
+        return nullptr;
       memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
       op.op_type = FGRADIENT_CONVOLVE;
       op.additional_data = safe_mal<unsigned int>(a->operation.dimensions - 1);
+      if (!op.additional_data)
+        return nullptr;
       memcpy(op.additional_data, steps,
              (a->operation.dimensions - 1) * sizeof(unsigned int));
       gradient->operation = op;
@@ -704,16 +717,19 @@ FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
   fCalculateGradients(y, &dx, 1, &res);
   return res;
 }
-void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
-                         const unsigned int num_gradients,
-                         FGraphNode **gradients) {
+FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
+                               const unsigned int num_gradients,
+                               FGraphNode **gradients) {
   using namespace std;
   unordered_set<const FGraphNode *> *gd =
       (unordered_set<const FGraphNode *> *)y->gradient_data;
-  if (!gd)
+  if (!gd) {
+    setErrorType(ILLEGAL_DERIVE);
     flogging(F_ERROR,
              "no derivatives in the operational graph! Don't forget the "
              "necessary calls to fMarkGradientVariable (or in C++ .watch())");
+    return ILLEGAL_DERIVE;
+  }
   std::unordered_set<const FGraphNode *> vars(num_gradients);
   for (int i = 0; i < num_gradients; i++) {
     vars.insert(dx[i]);
@@ -743,7 +759,7 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
       FGraphNode *parent = curr->predecessors[i];
       if (!visited.contains(parent))
         continue;
-     // auto start = std::chrono::high_resolution_clock::now();
+      // auto start = std::chrono::high_resolution_clock::now();
       FGraphNode *local_grad =
           unbroadcast(local_gradient(curr, i, adj), parent);
       if (adjoints.contains(parent)) {
@@ -753,10 +769,10 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
         if (local_grad == adj)
           allowed_to_free = false;
       }
-     // std::chrono::duration<double, std::milli> elapsed =
-     //     std::chrono::high_resolution_clock::now() - start;
-     // std::cout << fop_to_string[curr->operation.op_type] << " took "
-     //           << elapsed.count() << std::endl;
+      // std::chrono::duration<double, std::milli> elapsed =
+      //     std::chrono::high_resolution_clock::now() - start;
+      // std::cout << fop_to_string[curr->operation.op_type] << " took "
+      //           << elapsed.count() << std::endl;
       fOptimizeMemory(adjoints[parent]);
     }
     if (!vars.contains(curr)) {
@@ -778,5 +794,6 @@ void fCalculateGradients(FGraphNode *y, FGraphNode **dx,
       gradients[i] = nullptr;
     }
   }
+  return NO_ERROR;
 }
 #endif
