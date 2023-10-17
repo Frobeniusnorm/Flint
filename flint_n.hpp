@@ -99,7 +99,7 @@ template <typename T, unsigned int n> struct Tensor {
   Tensor(const Tensor &other) {
     shape = other.shape;
     total_size = other.total_size;
-    node = fCopyGraph(other.node);
+    node = other.node;
     node->reference_counter++;
   }
   /**
@@ -120,7 +120,7 @@ template <typename T, unsigned int n> struct Tensor {
     }
     shape = other.shape;
     total_size = other.total_size;
-    node = fCopyGraph(other.node);
+    node = other.node;
     node->reference_counter++;
     return *this;
   }
