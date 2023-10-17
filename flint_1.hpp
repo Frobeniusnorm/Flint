@@ -88,7 +88,7 @@ template <typename T> struct Tensor<T, 1> {
    */
   Tensor(const Tensor &other) {
     shape = other.shape;
-    node = fCopyGraph(other.node);
+    node = other.node;
     node->reference_counter++;
   }
   /**
@@ -108,7 +108,7 @@ template <typename T> struct Tensor<T, 1> {
       fFreeGraph(node);
     }
     shape = other.shape;
-    node = fCopyGraph(other.node);
+    node = other.node;
     node->reference_counter++;
   }
   /*
