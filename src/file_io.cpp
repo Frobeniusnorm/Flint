@@ -104,6 +104,7 @@ FGraphNode *fload_image(const char *path) {
   unsigned char *vals = stbi_load(path, &w, &h, &c, 0);
   if (!vals) {
     flogging(F_ERROR, "Could not load image!");
+    return nullptr; // for c compatibility
   }
   float *fvals = safe_mal<float>(w * h * c);
   for (int i = 0; i < w * h * c; i++)

@@ -56,6 +56,6 @@ void flogging(FLogType type, const char *msg) {
   }
 }
 void fSetLoggingLevel(FLogType level) { logging_level = level; }
-char* fErrorMessage() {
-  return last_error.data();
+const char* fErrorMessage() {
+  return last_error.c_str();
 }
