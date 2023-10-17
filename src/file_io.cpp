@@ -140,7 +140,11 @@ FErrorType fstore_image(FGraphNode *node, const char *path,
   int h = node->operation.shape[0], w = node->operation.shape[1],
       c = node->operation.shape[2];
   node = fmin_ci(fmax_ci(fconvert(fmul(node, 255.0f), F_INT32), 0), 255);
+  if (!node)
+    return fErrorType();
   node = fCalculateResult(node);
+  if (!node)
+    return fErrorType();
   char *data = nullptr;
   data = safe_mal<char>(node->result_data->num_entries);
   if (!data)

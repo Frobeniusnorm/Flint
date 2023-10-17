@@ -229,6 +229,8 @@ enum FOperationType {
   FSET_INDEX,
   FSLIDING_WINDOW,
   FUNSLIDE_WINDOW,
+  FPOOLING_MAX, // TODO
+  FPOOLING_SUM, // TODO
   FNUM_OPERATION_TYPES
 };
 /**
@@ -721,10 +723,10 @@ E.g.`flattened([[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]) = [3, 1, 4, 2,
 FGraphNode *fflatten(FGraphNode *a);
 /** Flattens a tensor `a` with `n` dimensions along
 `dimension`, resulting in a tensor with `n-1` dimensions.
-Flattening a dimension will remove it from the shape of the tensor, therefor it's
-not possible to flatten the dimension 0.
-A Tensor `[[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]` flattened
-along dimension 1 will result in `[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]`.
+Flattening a dimension will remove it from the shape of the tensor, therefor
+it's not possible to flatten the dimension 0. A Tensor `[[[3, 1, 4], [2, 1, 5]],
+[[0, 4, 2], [4, 7, 9]]]` flattened along dimension 1 will result in `[[3,1,4],
+[2,1,5], [0,4,2], [4,7,9]]`.
 */
 FGraphNode *fflatten_dimension(FGraphNode *a, int dimension);
 
@@ -1039,7 +1041,6 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
  * creating, copying or deleting new ones) one axis of the input tensor.
  */
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
-
 
 #ifdef __cplusplus
 }

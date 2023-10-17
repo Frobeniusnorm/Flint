@@ -47,7 +47,8 @@ const char *fop_to_string[] = {
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
-// converts c++ type to flint type
+// TODO adjust broadcasting s.t. a shape of 1 matches any other shape
+// (broadcasted along that shape)
 // TODO do execution of parents where necessary in parallel
 // EAGER EXECUTION WITH HELPER
 void fEnableEagerExecution() { eager_execution = true; }
@@ -111,7 +112,8 @@ configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
   if (!use_cpu && !use_gpu)
-    flintInit(FLINT_BACKEND_BOTH);
+    if (flintInit(FLINT_BACKEND_BOTH) != NO_ERROR)
+      return nullptr;
   if (eager_execution)
     return execute_eagerly(node);
   if (use_gpu && use_cpu) {
