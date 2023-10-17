@@ -38,15 +38,19 @@ func (err *Error) Unwrap() error {
 
 // Defines all the possible errors of flint
 var (
-	ErrNoError               = errors.New("no error")
 	ErrWrongType             = errors.New("wrong type")
 	ErrIllegalDimension      = errors.New("illegal dimension")
 	ErrIllegalDimensionality = errors.New("illegal dimensionality")
 	ErrIncompatibleShapes    = errors.New("incompatible shapes")
 	ErrInvalidSelect         = errors.New("invalid select")
+	ErrOpenCL                = errors.New("OpenCL error")
+	ErrInternal              = errors.New("internal error. probably a bug in the code")
+	ErrOOM                   = errors.New("out of memory")
+	ErrIllegalDevice         = errors.New("unsupported device")
+	ErrIO                    = errors.New("io error")
 )
 
-func BuildError(err error) error {
+func buildErrorWithType(err error, errT errType) error {
 	const (
 		NO_ERROR errType = iota
 		WRONG_TYPE
@@ -54,6 +58,11 @@ func BuildError(err error) error {
 		ILLEGAL_DIMENSIONALITY
 		INCOMPATIBLE_SHAPES
 		INVALID_SELECT
+		OCL_ERROR
+		INTERNAL_ERROR
+		OUT_OF_MEMORY
+		ILLEGAL_DERIVE
+		IO_ERROR
 	)
 
 	var errno syscall.Errno
@@ -61,16 +70,11 @@ func BuildError(err error) error {
 		panic("expected a Errno to build error from!")
 	}
 
-	errT := errorType()
 	errM := errorMessage()
 
 	switch errT {
 	case NO_ERROR:
-		return &Error{
-			Message: errM,
-			Err:     ErrNoError,
-			Errno:   errno,
-		}
+		return nil
 	case WRONG_TYPE:
 		return &Error{
 			Message: errM,
@@ -101,12 +105,47 @@ func BuildError(err error) error {
 			Err:     ErrInvalidSelect,
 			Errno:   errno,
 		}
+	case OCL_ERROR:
+		return &Error{
+			Message: errM,
+			Err:     ErrOpenCL,
+			Errno:   errno,
+		}
+	case INTERNAL_ERROR:
+		return &Error{
+			Message: errM,
+			Err:     ErrInternal,
+			Errno:   errno,
+		}
+	case OUT_OF_MEMORY:
+		return &Error{
+			Message: errM,
+			Err:     ErrOOM,
+			Errno:   errno,
+		}
+	case ILLEGAL_DERIVE:
+		return &Error{
+			Message: errM,
+			Err:     ErrIllegalDevice,
+			Errno:   errno,
+		}
+	case IO_ERROR:
+		return &Error{
+			Message: errM,
+			Err:     ErrIO,
+			Errno:   errno,
+		}
 	default:
 		panic("unhandled error type")
 	}
 }
 
-type errType uint
+func buildError(err error) error {
+	errT := errorType()
+	return buildErrorWithType(err, errT)
+}
+
+type errType int
 
 // errorType fetches the error type for the last recorded error.
 // This should only be queried when an error is certain (e.g. nullptr returned from C)

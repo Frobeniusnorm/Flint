@@ -76,6 +76,8 @@ enum FErrorType {
   ILLEGAL_DERIVE,
   IO_ERROR
 };
+typedef enum FErrorType FErrorType;
+
 /** Initializes the cpu and the gpu backends. These functions are already
  * implicitly called by the execution functions if necessary. The method allows
  * disabling of the gpu backend (by passing `FLINT_BACKEND_ONLY_CPU`), disabling
@@ -151,7 +153,7 @@ void flogging(enum FLogType type, const char *msg);
  * which the error occurs returns NULL. Then this function yields the type of
  * error.
  */
-enum FErrorType fErrorType();
+FErrorType fErrorType();
 /**
  * Queries the message of the last error that occured in this framework.
  * Errors cause an exception or if C-compatibility is enabled the function in

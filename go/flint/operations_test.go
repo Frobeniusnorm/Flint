@@ -22,7 +22,7 @@ func ExampleReduceMax() {
 
 func ExampleExpand() {
 	node1 := CreateGraph([]int{1, 2}, Shape{2})
-	node2 := CopyGraph(node1)
+	node2 := node1
 
 	node1 = Expand(node1, uint(1), 3)
 	node2 = Expand(node2, uint(0), 2)

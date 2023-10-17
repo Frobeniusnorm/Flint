@@ -28,7 +28,7 @@ func LoadImage(path string) (GraphNode, error) {
 
 	flintNode, errno := C.fload_image(unsafePath)
 	if flintNode == nil {
-		return GraphNode{}, BuildError(errno)
+		return GraphNode{}, buildError(errno)
 	}
 	return GraphNode{ref: flintNode}, nil
 }
@@ -37,8 +37,9 @@ func LoadImage(path string) (GraphNode, error) {
 StoreImage saves the result of [node] in a given [imageFormat].
 [node] has to be of type [f_FLOAT32] or [f_FLOAT64] datatype and needs to have 3 dimensions.
 */
-func StoreImage(node GraphNode, path string, format imageFormat) {
+func StoreImage(node GraphNode, path string, format imageFormat) error {
 	unsafePath := C.CString(path)
 	defer C.free(unsafe.Pointer(unsafePath))
-	C.fstore_image(node.ref, unsafePath, C.enum_FImageFormat(format))
+	errT, errno := C.fstore_image(node.ref, unsafePath, C.enum_FImageFormat(format))
+	return buildErrorWithType(errno, errType(errT))
 }

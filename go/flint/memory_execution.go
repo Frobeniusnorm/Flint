@@ -34,14 +34,6 @@ func FreeGraph(node GraphNode) {
 }
 
 /*
-CopyGraph clones the graph node, the corresponding operation and additional data and the predecessors (their "GraphNode.reference_counter" is incremented)
-*/
-func CopyGraph(node GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fCopyGraph(node.ref)
-	return GraphNode{ref: flintNode}
-}
-
-/*
 ExecuteGraph executes the graph node operations from all yet to be executed predecessors to [node] and returns a [GraphNode] with a [ResultDataOld] operation in which the resulting data is stored.
 
 If the graph is executed by the GPU backend, an OpenCL kernel containing all selected operations (the nodes operation and those indirect parent operations which were not yet executed) are compiled and executed.
