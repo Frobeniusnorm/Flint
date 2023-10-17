@@ -101,7 +101,7 @@ enum FLogType { F_NO_LOGGING, F_ERROR, F_WARNING, F_INFO, F_VERBOSE, F_DEBUG };
  * - 4: Logging level `F_VERBOSE` (for library developement)
  * - 5: Logging level `F_DEBUG` (when a bug in the library has been found)
  */
-void fSetLoggingLevel(FLogType);
+void fSetLoggingLevel(enum FLogType type);
 /** Supported Image formats for fstore_image */
 enum FImageFormat { F_PNG, F_JPEG, F_BMP };
 /** Types of erros that can occur in the framework (also see `fErrorMessage`)
@@ -135,14 +135,14 @@ void flogging(enum FLogType type, const char *msg);
  * which the error occurs returns NULL. Then this function yields the type of
  * error.
  */
-FErrorType fErrorType();
+enum FErrorType fErrorType();
 /**
  * Queries the message of the last error that occured in this framework.
  * Errors cause an exception or if C-compatibility is enabled the function in
  * which the error occurs returns NULL. Then this function yields the message
  * of the error. If no error occured returns an empty string.
  */
-char *fErrorMessage();
+const char *fErrorMessage();
 /** All graph nodes that represent actual operations are after this call
  * executed eagerly, i.e. they are executed during graph construction.
  *
@@ -1026,6 +1026,8 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
  * creating, copying or deleting new ones) one axis of the input tensor.
  */
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
+
+
 #ifdef __cplusplus
 }
 
@@ -1142,13 +1144,11 @@ inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
   return fflatten_dimension(a, dimension);
 }
 
-#ifdef __cplusplus
-// can't use C++ namespaces in legacy C!
 #include <string>
 inline void flogging(FLogType type, std::string msg) {
   flogging(type, msg.c_str());
 }
-#endif // __cplusplus
 
 #endif // __cplusplus
+
 #endif // FLINT_H
