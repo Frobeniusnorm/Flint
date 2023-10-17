@@ -15,59 +15,36 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"syscall"
 )
 
-// baseError offers a generic error struct in flint
-type baseError struct {
-	message string
-	errno   syscall.Errno
+// Error offers a generic error struct in flint
+type Error struct {
+	Message string
+	Err     error
+	Errno   syscall.Errno
 }
 
-//var (
-//	ErrWrongType = errors.New
-//	ErrIllegalDimension
-//	ErrIllegalDimenisonality
-//	ErrIncompatibleShapes
-//	ErrInvalidSelect
-//)
+// TODO: is a custom .Is and .As function needed? as seen in: https://go.dev/blog/go1.13-errors
 
-type Error baseError
-
-func (err Error) Error() string {
-	return fmt.Sprintf("Flint Error (%s) - %s", err.errno.Error(), err.message)
+func (err *Error) Error() string {
+	return fmt.Sprintf("%v (%v) - %s", err.Err, err.Errno, err.Message)
 }
 
-type WrongType baseError
-
-func (err WrongType) Error() string {
-	return fmt.Sprintf("Wrong Type (%s) - %s", err.errno.Error(), err.message)
+func (err *Error) Unwrap() error {
+	// return err.Err
+	return errors.Join(err.Err, err.Errno)
 }
 
-type IllegalDimension baseError
-
-func (err IllegalDimension) Error() string {
-	return fmt.Sprintf("Illegal Dimension (%s) - %s", err.errno.Error(), err.message)
-}
-
-type IllegalDimensionality baseError
-
-func (err IllegalDimensionality) Error() string {
-	return fmt.Sprintf("Illegal Dimensionality (%s) - %s", err.errno.Error(), err.message)
-}
-
-type IncompatibleShapes baseError
-
-func (err IncompatibleShapes) Error() string {
-	return fmt.Sprintf("Incompatible Shapes (%s) - %s", err.errno.Error(), err.message)
-}
-
-type InvalidSelect baseError
-
-func (err InvalidSelect) Error() string {
-	return fmt.Sprintf("Invalid Select (%s) - %s", err.errno.Error(), err.message)
-}
+// Defines all the possible errors of flint
+var (
+	ErrNoError               = errors.New("no error")
+	ErrWrongType             = errors.New("wrong type")
+	ErrIllegalDimension      = errors.New("illegal dimension")
+	ErrIllegalDimensionality = errors.New("illegal dimensionality")
+	ErrIncompatibleShapes    = errors.New("incompatible shapes")
+	ErrInvalidSelect         = errors.New("invalid select")
+)
 
 func BuildError(err error) error {
 	const (
@@ -79,9 +56,6 @@ func BuildError(err error) error {
 		INVALID_SELECT
 	)
 
-	errors.Is
-	fs.ErrNotExist
-
 	var errno syscall.Errno
 	if !errors.As(err, &errno) {
 		panic("expected a Errno to build error from!")
@@ -92,34 +66,40 @@ func BuildError(err error) error {
 
 	switch errT {
 	case NO_ERROR:
-		return Error{
-			message: errM,
-			errno:   errno,
+		return &Error{
+			Message: errM,
+			Err:     ErrNoError,
+			Errno:   errno,
 		}
 	case WRONG_TYPE:
-		return WrongType{
-			message: errM,
-			errno:   errno,
+		return &Error{
+			Message: errM,
+			Err:     ErrWrongType,
+			Errno:   errno,
 		}
 	case ILLEGAL_DIMENSION:
-		return IllegalDimension{
-			message: errM,
-			errno:   errno,
+		return &Error{
+			Message: errM,
+			Err:     ErrIllegalDimension,
+			Errno:   errno,
 		}
 	case ILLEGAL_DIMENSIONALITY:
-		return IllegalDimensionality{
-			message: errM,
-			errno:   errno,
+		return &Error{
+			Message: errM,
+			Err:     ErrIllegalDimensionality,
+			Errno:   errno,
 		}
 	case INCOMPATIBLE_SHAPES:
-		return IncompatibleShapes{
-			message: errM,
-			errno:   errno,
+		return &Error{
+			Message: errM,
+			Err:     ErrIncompatibleShapes,
+			Errno:   errno,
 		}
 	case INVALID_SELECT:
-		return InvalidSelect{
-			message: errM,
-			errno:   errno,
+		return &Error{
+			Message: errM,
+			Err:     ErrInvalidSelect,
+			Errno:   errno,
 		}
 	default:
 		panic("unhandled error type")

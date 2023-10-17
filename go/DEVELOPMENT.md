@@ -65,6 +65,9 @@ Further infos:
 - <https://stackoverflow.com/questions/38343414/how-do-i-set-errno-from-go>
 - <https://github.com/golang/go/issues/1360>
 - <https://github.com/golang/go/issues/23468>
+- <https://go.dev/blog/error-handling-and-go>
+- <https://go.dev/blog/errors-are-values>
+- <https://go.dev/blog/go1.13-errors>
 
 ## Memory management
 
