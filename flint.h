@@ -44,6 +44,38 @@ extern "C" {
 #define FLINT_BACKEND_ONLY_CPU 1
 #define FLINT_BACKEND_ONLY_GPU 2
 #define FLINT_BACKEND_BOTH 3
+/** Types of erros that can occur in the framework (also see `fErrorMessage`)
+ * Error Types:
+ * - `NO_ERROR`: no error occured up until now
+ * - `WRONG_TYPE`: Tensor has wrong data type, e.g. a floating point tensor in
+ *   `feven`
+ * - `ILLEGAL_DIMENSION`: the dimension parameter is not inside the legal range
+ *   of the function, e.g. flattening the first dimension of a tensor.
+ * - `ILLEGAL_DIMENSIONALITY`: the dimensionality of a parameter does not work
+ *   with the function, usually because it is too low (e.g. matrix
+ *   multiplication with 1 dimensional tensors).
+ * - `INCOMPATIBLE_SHAPES`: the shapes of the parameters dont fit together
+ * - `INVALID_SELECT`: a index or slicing operation received parameters which
+ *   are semantically impossible or outside of the shape of the tensor.
+ * - `OCL_ERROR`: OpenCL Error
+ * - `INTERNAL_ERROR`: illegal state of flint, should not happen
+ * - `OUT_OF_MEMORY`: no more cpu or gpu memory available
+ * - `ILLEGAL_DERIVE`: derivation of graph to a variable is not possible
+ * - `IO_ERROR`: file writing or reading problem
+ */
+enum FErrorType {
+  NO_ERROR,
+  WRONG_TYPE,
+  ILLEGAL_DIMENSION,
+  ILLEGAL_DIMENSIONALITY,
+  INCOMPATIBLE_SHAPES,
+  INVALID_SELECT,
+  OCL_ERROR,
+  INTERNAL_ERROR, // if this happens -> bug in code
+  OUT_OF_MEMORY,
+  ILLEGAL_DERIVE,
+  IO_ERROR
+};
 /** Initializes the cpu and the gpu backends. These functions are already
  * implicitly called by the execution functions if necessary. The method allows
  * disabling of the gpu backend (by passing `FLINT_BACKEND_ONLY_CPU`), disabling
@@ -53,28 +85,34 @@ extern "C" {
  * use those functions if you...
  * - ...want to explicitly decide where and when the initialization should take
  *      place
- * - ...want to only start one backend */
-void flintInit(int backends);
+ * - ...want to only start one backend
+ *
+ * Returns `NO_ERROR` on success or the error type
+ * */
+FErrorType flintInit(int backends);
 /** Don't call this function explicitly if you intent to use Flint normally. Use
- * `flintInit` */
-void flintInit_cpu();
+ * `flintInit`. Returns `NO_ERROR` on success or the error type */
+FErrorType flintInit_cpu();
 /** Don't call this function explicitly if you intent to use Flint normally. Use
- * `flintInit` */
-void flintInit_gpu();
+ * `flintInit`. Returns `NO_ERROR` on success or the error type */
+FErrorType flintInit_gpu();
 /** Returns an integer containing the Backend information bitwise.
  * See constants `FLINT_BACKEND_ONLY_CPU`, `FLINT_BACKEND_ONLY_GPU` and
  * `FLINT_BACKEND_BOTH`. */
 int flintInitializedBackends();
 /** Deallocates any resourced allocated by the corresponding backends.
 This method calls the other two (following) which are only executed if the
-framework was initialized, else they do nothing. */
-void flintCleanup();
+framework was initialized, else they do nothing. Returns `NO_ERROR` on success
+or the error type */
+FErrorType flintCleanup();
 /** Deallocates any resourced allocated by the cpu backend, if it was
- * initialized, else it does nothing. */
-void flintCleanup_cpu();
+ * initialized, else it does nothing. Returns `NO_ERROR` on success or the error
+ * type */
+FErrorType flintCleanup_cpu();
 /** Deallocates any resourced allocated by the gpu backend, if it was
- * initialized, else it does nothing. */
-void flintCleanup_gpu();
+ * initialized, else it does nothing. Returns `NO_ERROR` on success or the error
+ * type */
+FErrorType flintCleanup_gpu();
 /**
  * See also: `flogging`, `FLogType`
  * - `F_DEBUG` (only internal debugging informations of the framework),
@@ -104,28 +142,6 @@ enum FLogType { F_NO_LOGGING, F_ERROR, F_WARNING, F_INFO, F_VERBOSE, F_DEBUG };
 void fSetLoggingLevel(FLogType);
 /** Supported Image formats for fstore_image */
 enum FImageFormat { F_PNG, F_JPEG, F_BMP };
-/** Types of erros that can occur in the framework (also see `fErrorMessage`)
- * Error Types:
- * - `NO_ERROR`: no error occured up until now
- * - `WRONG_TYPE`: Tensor has wrong data type, e.g. a floating point tensor in
- *   `feven`
- * - `ILLEGAL_DIMENSION`: the dimension parameter is not inside the legal range
- *   of the function, e.g. flattening the first dimension of a tensor.
- * - `ILLEGAL_DIMENSIONALITY`: the dimensionality of a parameter does not work
- *   with the function, usually because it is too low (e.g. matrix
- *   multiplication with 1 dimensional tensors).
- * - `INCOMPATIBLE_SHAPES`: the shapes of the parameters dont fit together
- * - `INVALID_SELECT`: a index or slicing operation received parameters which
- *   are semantically impossible or outside of the shape of the tensor.
- */
-enum FErrorType {
-  NO_ERROR,
-  WRONG_TYPE,
-  ILLEGAL_DIMENSION,
-  ILLEGAL_DIMENSIONALITY,
-  INCOMPATIBLE_SHAPES,
-  INVALID_SELECT
-};
 /** Logs a NULL terminated string with the given logging level.
  * See also: `fSetLoggingLevel` */
 void flogging(enum FLogType type, const char *msg);
@@ -471,9 +487,9 @@ FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx);
  * - `gradients`: an array of size `num_gradients` in which the resulting
  *    gradients will be stored per variable.
  */
-void fCalculateGradients(FGraphNode *outputfct, FGraphNode **dx,
-                         const unsigned int num_gradients,
-                         FGraphNode **gradients);
+FErrorType fCalculateGradients(FGraphNode *outputfct, FGraphNode **dx,
+                               const unsigned int num_gradients,
+                               FGraphNode **gradients);
 /** Starts a gradient context, gradient information will be inherited until the
  * next call to `fStopGradientContext`. A history containing information about
  * all watched nodes in the parent graph is kept up to date within a gradient
@@ -533,7 +549,8 @@ FGraphNode *fdeserialize(char *data);
  */
 FGraphNode *fload_image(const char *path);
 
-void fstore_image(FGraphNode *node, const char *path, enum FImageFormat format);
+FErrorType fstore_image(FGraphNode *node, const char *path,
+                        enum FImageFormat format);
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
 /** Elementwise substraction of `a` and `b`, i.e. `a[i] - b[i]`. */

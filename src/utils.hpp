@@ -15,6 +15,7 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 #include "../flint.h"
+#include "src/errors.hpp"
 #include <cmath>
 #include <condition_variable>
 #include <iostream>
@@ -28,8 +29,10 @@
 template <typename T> inline T *safe_mal(unsigned int count) {
   T *data = (T *)malloc(sizeof(T) * count);
   if (!data) {
+    setErrorType(OUT_OF_MEMORY);
     flogging(F_ERROR, "Could not malloc '" + std::to_string(sizeof(T) * count) +
                           "' bytes!");
+    return nullptr;
   }
   return data;
 }
@@ -91,7 +94,7 @@ static inline int operationScore(const FGraphNode *g) {
     for (int i = 0; i < a->operation.dimensions; i++) {
       no_elems *= a->operation.shape[i];
     }
-    return std::max(1, (int) (100 - 0.001 * no_elems * no_elems));
+    return std::max(1, (int)(100 - 0.001 * no_elems * no_elems));
   }
   case FSLIDE: {
     // no multiplication with complete source, since that would artificially
@@ -109,7 +112,8 @@ static inline int operationScore(const FGraphNode *g) {
     const FGraphNode *p = g->predecessors[0];
     for (int i = 0; i < g->operation.dimensions; i++) {
       long diff = (p->operation.shape[i] - g->operation.shape[i]);
-      if (diff > 0) sliced_away *= diff;
+      if (diff > 0)
+        sliced_away *= diff;
     }
     return sliced_away;
   }
@@ -120,7 +124,7 @@ static inline int operationScore(const FGraphNode *g) {
     return g->operation.shape[0];
   case FUNSLIDE_WINDOW:
     return g->predecessors[0]->operation.shape[0];
-  default: 
+  default:
     break;
   }
   return 2;
@@ -155,7 +159,6 @@ inline std::string typeString(FType t) {
   case F_FLOAT64:
     return "double";
   }
-  flogging(F_ERROR, "Unknown Type: " + std::to_string((int)t));
   return "";
 }
 inline size_t typeSize(FType t) {
@@ -169,7 +172,6 @@ inline size_t typeSize(FType t) {
   case F_FLOAT64:
     return sizeof(double);
   }
-  flogging(F_ERROR, "Unknown Type: " + std::to_string((int)t));
   return 1;
 }
 inline FType higherType(const FType a, const FType b) {
@@ -245,7 +247,6 @@ static std::string maxForType(FType type) {
   case F_INT64:
     return "LONG_MAX";
   }
-  flogging(F_ERROR, "Unknown Type: " + std::to_string((int)type));
   return "0";
 }
 static std::string minForType(FType type) {
@@ -259,7 +260,6 @@ static std::string minForType(FType type) {
   case F_INT64:
     return "LONG_MIN";
   }
-  flogging(F_ERROR, "Unknown Type: " + std::to_string((int)type));
   return "0";
 }
 inline void freeAdditionalData(FGraphNode *gn) {
@@ -348,9 +348,11 @@ inline long *generatePermutation(size_t *shape, unsigned int ax, size_t *size) {
   for (unsigned int i = 0; i <= ax; i++)
     total_size *= shape[i];
   long *ind = safe_mal<long>(total_size);
+  if (!ind)
+    return nullptr;
   for (size_t k = 0; k < total_size / shape[ax]; k++) {
     const size_t base = k * shape[ax];
-    for (size_t i = 0; i < shape[ax]; i++) 
+    for (size_t i = 0; i < shape[ax]; i++)
       ind[base + i] = i;
     for (size_t i = 0; i < shape[ax]; i++) {
       const size_t a = base + i;
