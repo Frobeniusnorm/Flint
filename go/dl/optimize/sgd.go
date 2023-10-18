@@ -38,10 +38,11 @@ func (sgd *Sgd) Step(loss dl.Tensor) {
 
 	grads := flint.CalculateGradients(loss.Node, paramsSimple)
 	for i, w := range paramsSimple {
-		for _, g := range grads { // FIXME: it's all broken
-			sgd.params[i].Node = sgd.calculateUpdate(g, w)
+		for _, g := range grads {
+			sgd.params[i].Close()
+			update := sgd.calculateUpdate(g, w)
+			sgd.params[i] = dl.NewParameter(update)
 		}
-
 	}
 }
 

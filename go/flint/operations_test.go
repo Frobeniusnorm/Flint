@@ -35,7 +35,7 @@ func ExampleExpand() {
 
 	// Output:
 	// Data: [1 1 1 2 2 2], Shape: [2 3]
-	// Data: [1 2 1 ], Shape: [2 2]
+	// Data: [1 2 1 2], Shape: [2 2]
 }
 
 func ExampleMax() {

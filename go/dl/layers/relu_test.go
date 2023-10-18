@@ -1,7 +1,6 @@
 package layers
 
 import (
-	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/dl"
 	"github.com/Frobeniusnorm/Flint/go/flint"
 	"testing"
@@ -20,10 +19,7 @@ func TestReLU_Forward(t *testing.T) {
 
 	res := flint.CalculateResult[int64](output.Node)
 
-	fmt.Println("expected:", expected)
-	fmt.Println("output:", res.Data)
-
-	assert.Equal(t, expected, res.Data)
+	assert.EqualValues(t, expected, res.Data)
 }
 
 func TestReLU_Gradient(t *testing.T) {

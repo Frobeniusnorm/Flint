@@ -59,13 +59,13 @@ func TestMnistDataset_Get(t *testing.T) {
 	assert.Equal(t, flint.Shape{1}, label.Shape)
 
 	// assert data in [0, 256)
-	for _, x := range data.Data.([]float64) {
+	for _, x := range []float64(data.Data) {
 		assert.GreaterOrEqual(t, x, float64(0))
 		assert.Less(t, x, float64(256))
 	}
 
 	// assert label between 0 and 9 (categories)
-	for _, x := range label.Data.([]int32) {
+	for _, x := range []int32(label.Data) {
 		assert.GreaterOrEqual(t, x, int32(0))
 		assert.Less(t, x, int32(10))
 	}

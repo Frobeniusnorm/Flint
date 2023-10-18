@@ -18,7 +18,7 @@ func TestSoftmax_Forward(t *testing.T) {
 	softmax := NewSoftmax()
 	out := softmax.Forward(data)
 	res := flint.CalculateResult[float32](out.Node)
-	fmt.Println(res)
+	fmt.Println(res.Data)
 
 	var sum float32 = 0.0
 	for _, val := range res.Data {
