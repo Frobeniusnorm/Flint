@@ -1199,6 +1199,20 @@ TEST_SUITE("Index operations and broadcasting") {
           CHECK_EQ(t3[k][i][j] * t1[j][i], t4[k][i][j]);
   }
 }
+TEST_SUITE("Advanced Broadcasting") {
+  TEST_CASE("Simple Operations") {
+    Tensor<long, 3> a = Flint::arange(0, 3, 2, 4);
+    Tensor<long, 2> b = {{2, 2}, {3, 4}, {-1, 2}};
+    Tensor<long, 3> c = a + b;
+    Tensor<long, 3> d = a * b;
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 2; j++)
+        for (int k = 0; k < 4; k++) {
+          CHECK_EQ(a[i][j][k] + b[i][j], c[i][j][k]);
+          CHECK_EQ(a[i][j][k] * b[i][j], d[i][j][k]);
+        }
+  }
+}
 int main(int argc, char **argv) {
   bool doCPU = false, doGPU = false, eager = false;
   for (int i = 0; i < argc; i++) {

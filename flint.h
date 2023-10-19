@@ -1041,7 +1041,34 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
  * creating, copying or deleting new ones) one axis of the input tensor.
  */
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
-
+/**
+ * TODO not yet implemented
+ * Slides a window along the Tensor and sums up all elements inside that window,
+ * reducing it into one element and then slides the window in each dimension
+ * `step_size` times (like `fsliding_window`).
+ * - `a` the tensor to pool
+ * - `window_size` array with as many elements as `a` has dimension, each
+ *   describing the window size in that dimension for which all elements inside
+ *   each window are to be summed up
+ * - `step_size` array of number of elements the window should be moved after
+ *   each reducting for each dimension
+ */
+FGraphNode *fpooling_sum(const FGraphNode *a, const size_t *window_size,
+                         const unsigned int *step_size);
+/**
+ * TODO not yet implemented
+ * Slides a window along the Tensor and reduces all elements inside that window
+ * to their maximum element (just that one remains in the result tensor), and
+ * then slides the window in each dimension `step_size` times (like `fsliding_window`).
+ * - `a` the tensor to pool
+ * - `window_size` array with as many elements as `a` has dimension, each
+ *   describing the window size in that dimension for which for all elements inside
+ *   each window the maximum should be taken.
+ * - `step_size` array of number of elements the window should be moved after
+ *   each reducting for each dimension
+ */
+FGraphNode *fpooling_sum(const FGraphNode *a, const size_t *window_size,
+                         const unsigned int *step_size);
 #ifdef __cplusplus
 }
 

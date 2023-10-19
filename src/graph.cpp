@@ -26,24 +26,57 @@
 #include <vector>
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
-const char *fop_to_string[] = {
-    "FSTORE",         "FGEN_RANDOM", "FGEN_CONST",
-    "FGEN_ARANGE",    "FADD",        "FSUB",
-    "FMUL",           "FDIV",        "FPOW",
-    "FNEG",           "FLOG",        "FSIGN",
-    "FEVEN",          "FLOG2",       "FLOG10",
-    "FSIN",           "FCOS",        "FTAN",
-    "FASIN",          "FACOS",       "FATAN",
-    "FSQRT",          "FEXP",        "FLATTEN",
-    "FMATMUL",        "FCONVERSION", "FRESHAPE",
-    "FMIN",           "FMAX",        "FREDUCE_SUM",
-    "FREDUCE_MUL",    "FREDUCE_MIN", "FREDUCE_MAX",
-    "FSLICE",         "FABS",        "FREPEAT",
-    "FTRANSPOSE",     "FEXTEND",     "FCONCAT",
-    "FLESS",          "FEQUAL",      "FGREATER",
-    "FCONVOLVE",      "FSLIDE",      "FGRADIENT_CONVOLVE",
-    "FINDEX",         "FSET_INDEX",  "FSLIDING_WINDOW",
-    "FUNSLIDE_WINDOW"};
+const char *fop_to_string[] = {"FSTORE",
+                               "FGEN_RANDOM",
+                               "FGEN_CONST",
+                               "FGEN_ARANGE",
+                               "FADD",
+                               "FSUB",
+                               "FMUL",
+                               "FDIV",
+                               "FPOW",
+                               "FNEG",
+                               "FLOG",
+                               "FSIGN",
+                               "FEVEN",
+                               "FLOG2",
+                               "FLOG10",
+                               "FSIN",
+                               "FCOS",
+                               "FTAN",
+                               "FASIN",
+                               "FACOS",
+                               "FATAN",
+                               "FSQRT",
+                               "FEXP",
+                               "FLATTEN",
+                               "FMATMUL",
+                               "FCONVERSION",
+                               "FRESHAPE",
+                               "FMIN",
+                               "FMAX",
+                               "FREDUCE_SUM",
+                               "FREDUCE_MUL",
+                               "FREDUCE_MIN",
+                               "FREDUCE_MAX",
+                               "FSLICE",
+                               "FABS",
+                               "FREPEAT",
+                               "FTRANSPOSE",
+                               "FEXTEND",
+                               "FCONCAT",
+                               "FLESS",
+                               "FEQUAL",
+                               "FGREATER",
+                               "FCONVOLVE",
+                               "FSLIDE",
+                               "FGRADIENT_CONVOLVE",
+                               "FINDEX",
+                               "FSET_INDEX",
+                               "FSLIDING_WINDOW",
+                               "FUNSLIDE_WINDOW",
+                               "FPOOLING_MAX",
+                               "FPOOLING_SUM"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
@@ -327,12 +360,18 @@ static inline void initShape_keep(FOperation &op, const FOperation *a,
     lower = a->shape;
     lower_dim = a->dimensions;
   }
+  int broadcasting_mode = 0; // 0 no broadcasting, 1 normal, 2 inverse
   // check shape if both are defined and lower is not a constant
   if (lower && !(lower_dim == 1 && lower[0] == 1)) {
     for (int i = 0; i < lower_dim; i++) {
       const size_t s1 = src[i + (op.dimensions - lower_dim)];
       const size_t s2 = lower[i];
-      if (s1 != s2)
+      const size_t s3 = src[i];
+      if (broadcasting_mode == 0) {
+        if (s1 == s2 && s2 != s3) broadcasting_mode = 1;
+        if (s2 == s3 && s1 != s2) broadcasting_mode = 2;
+      }
+      if (broadcasting_mode == 2 ? s2 != s3 : s1 != s2)
         flogging(
             F_ERROR,
             "incompatible shapes of operands: " +
@@ -1590,4 +1629,7 @@ FGraphNode *fpermutate(FGraphNode *a, unsigned int ax) {
   if (!ind)
     return nullptr;
   return findex(a, ind);
+}
+FGraphNode *fpooling_sum(const FGraphNode *a, const size_t* window_size, const unsigned int* step_size) {
+
 }
