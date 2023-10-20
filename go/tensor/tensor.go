@@ -1,4 +1,10 @@
-package dl
+/*
+Package tensor serves as a wrapper around the specific tensor library.
+It abstracts away all technicalities like memory management and error handling.
+
+This package should be used to handle all tensor operations instead of relying on the underlying Library alone and risking memory issues.
+*/
+package tensor
 
 import "github.com/Frobeniusnorm/Flint/go/flint"
 

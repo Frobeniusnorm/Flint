@@ -2,7 +2,7 @@ package layers
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/dl"
+	"github.com/Frobeniusnorm/Flint/go/tensor"
 	"strings"
 )
 
@@ -21,8 +21,8 @@ func NewSequential(layers ...Layer) Sequential {
 	}
 }
 
-func (seq Sequential) Forward(x dl.Tensor) dl.Tensor {
-	var res dl.Tensor
+func (seq Sequential) Forward(x tensor.Tensor) tensor.Tensor {
+	var res tensor.Tensor
 	res = x
 	for _, l := range seq.layers {
 		res = l.Forward(res)
@@ -30,15 +30,15 @@ func (seq Sequential) Forward(x dl.Tensor) dl.Tensor {
 	return res
 }
 
-func (seq Sequential) Parameters(recurse bool) []dl.Parameter {
+func (seq Sequential) Parameters(recurse bool) []tensor.Parameter {
 	if recurse {
-		var res []dl.Parameter
+		var res []tensor.Parameter
 		for _, layer := range seq.layers {
 			res = append(res, layer.Parameters(recurse)...)
 		}
 		return res
 	} else {
-		return []dl.Parameter{}
+		return []tensor.Parameter{}
 	}
 }
 

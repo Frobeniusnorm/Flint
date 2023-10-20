@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/dataloader"
 	"github.com/Frobeniusnorm/Flint/go/datasets"
-	"github.com/Frobeniusnorm/Flint/go/dl"
 	"github.com/Frobeniusnorm/Flint/go/dl/layers"
 	"github.com/Frobeniusnorm/Flint/go/dl/losses"
 	"github.com/Frobeniusnorm/Flint/go/dl/optimize"
 	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/Frobeniusnorm/Flint/go/tensor"
 	"log"
 	"path"
 )
@@ -68,7 +68,7 @@ func train(model layers.Layer, trainDl *dataloader.Dataloader[datasets.MnistData
 
 		flint.StartGradientContext()
 		output := model.Forward(batch.Data)
-		target := dl.NewTensor(flint.OneHot(batch.Label.Node, 10))
+		target := tensor.NewTensor(flint.OneHot(batch.Label.Node, 10))
 		loss := losses.MSELoss(output, target)
 		flint.StopGradientContext()
 		optim.Step(loss)
@@ -92,7 +92,7 @@ func test(model layers.Layer, testDl *dataloader.Dataloader[datasets.MnistDatase
 		}
 
 		output := model.Forward(batch.Data)
-		target := dl.NewTensor(flint.OneHot(batch.Label.Node, 10))
+		target := tensor.NewTensor(flint.OneHot(batch.Label.Node, 10))
 		loss := losses.MSELoss(output, batch.Label)
 		target.Close()
 		log.Println("test loss:", loss)

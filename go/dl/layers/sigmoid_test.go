@@ -2,8 +2,8 @@ package layers
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/dl"
 	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/Frobeniusnorm/Flint/go/tensor"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -14,7 +14,7 @@ func TestNewSigmoid(t *testing.T) {
 }
 
 func TestSigmoid_Forward(t *testing.T) {
-	data := dl.NewTensor(flint.CreateGraphConstant(float32(2), flint.Shape{4}))
+	data := tensor.NewTensor(flint.CreateGraphConstant(float32(2), flint.Shape{4}))
 	sigmoid := NewSigmoid()
 	out := sigmoid.Forward(data)
 	res := flint.CalculateResult[float32](out.Node)

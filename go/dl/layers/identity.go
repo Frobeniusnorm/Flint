@@ -1,6 +1,8 @@
 package layers
 
-import "github.com/Frobeniusnorm/Flint/go/dl"
+import (
+	"github.com/Frobeniusnorm/Flint/go/tensor"
+)
 
 /*
 Identity is a layer that essentially does nothing.
@@ -15,11 +17,11 @@ func NewIdentity() Identity {
 	return Identity{}
 }
 
-func (id Identity) Parameters(_ bool) []dl.Parameter {
-	return []dl.Parameter{}
+func (id Identity) Parameters(_ bool) []tensor.Parameter {
+	return []tensor.Parameter{}
 }
 
-func (id Identity) Forward(x dl.Tensor) dl.Tensor {
+func (id Identity) Forward(x tensor.Tensor) tensor.Tensor {
 	return x
 }
 

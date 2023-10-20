@@ -2,14 +2,14 @@ package layers
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/dl"
 	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/Frobeniusnorm/Flint/go/tensor"
 )
 
 type FullyConnected struct {
 	inputSize      uint
 	outputSize     uint
-	weightsAndBias dl.Parameter
+	weightsAndBias tensor.Parameter
 }
 
 // n = input size
@@ -18,7 +18,7 @@ type FullyConnected struct {
 func NewFullyConnected(inputSize uint, outputSize uint) FullyConnected {
 	weights := flint.CreateGraphRandom(flint.Shape{inputSize, outputSize})
 	bias := flint.CreateGraphConstant(1, flint.Shape{1, outputSize})
-	weightsAndBias := dl.NewParameter(flint.Concat(weights, bias, 0))
+	weightsAndBias := tensor.NewParameter(flint.Concat(weights, bias, 0))
 
 	return FullyConnected{
 		inputSize:      inputSize,
@@ -27,21 +27,21 @@ func NewFullyConnected(inputSize uint, outputSize uint) FullyConnected {
 	}
 }
 
-func (fc FullyConnected) Forward(x dl.Tensor) dl.Tensor {
+func (fc FullyConnected) Forward(x tensor.Tensor) tensor.Tensor {
 	inputShape := x.Node.GetShape()
 	inputShape[len(inputShape)-1] = 1
 	ones := flint.CreateGraphConstant(1, inputShape)
 	combined := flint.Concat(x.Node, ones, uint(len(inputShape)-1))
 	res := flint.Matmul(combined, fc.weightsAndBias.Node)
-	return dl.NewTensor(res)
+	return tensor.NewTensor(res)
 }
 
 func (fc FullyConnected) TrainMode() {}
 
 func (fc FullyConnected) EvalMode() {}
 
-func (fc FullyConnected) Parameters(_ bool) []dl.Parameter {
-	return []dl.Parameter{fc.weightsAndBias}
+func (fc FullyConnected) Parameters(_ bool) []tensor.Parameter {
+	return []tensor.Parameter{fc.weightsAndBias}
 }
 
 func (fc FullyConnected) String() string {

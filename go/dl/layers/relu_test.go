@@ -1,8 +1,8 @@
 package layers
 
 import (
-	"github.com/Frobeniusnorm/Flint/go/dl"
 	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/Frobeniusnorm/Flint/go/tensor"
 	"testing"
 )
 import "github.com/stretchr/testify/assert"
@@ -13,7 +13,7 @@ func TestReLU_Forward(t *testing.T) {
 	input := flint.CreateGraphArrange(flint.Shape{5}, 0)
 	input = flint.Sub(input, int64(3))
 
-	output := relu.Forward(dl.NewTensor(input))
+	output := relu.Forward(tensor.NewTensor(input))
 
 	expected := []int64{0, 0, 0, 0, 1}
 

@@ -2,7 +2,7 @@ package layers
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/dl"
+	"github.com/Frobeniusnorm/Flint/go/tensor"
 )
 
 type Dropout struct {
@@ -15,11 +15,11 @@ func NewDropout(prob float32) Dropout {
 	}
 }
 
-func (d Dropout) Parameters(_ bool) []dl.Parameter {
-	return []dl.Parameter{}
+func (d Dropout) Parameters(_ bool) []tensor.Parameter {
+	return []tensor.Parameter{}
 }
 
-func (d Dropout) Forward(x dl.Tensor) dl.Tensor {
+func (d Dropout) Forward(x tensor.Tensor) tensor.Tensor {
 	return x // TODO
 }
 
