@@ -42,19 +42,11 @@ func (x Tensor) Close() {
 	flint.SetRefCounter(x.Node, 0)
 }
 
-/*
-Parameter is a container object for a trainable Tensor
-*/
-type Parameter Tensor
-
-// NewParameter initializes the node as a trainable [Tensor]
-func NewParameter(node flint.GraphNode) Parameter {
-	flint.MarkGradientVariable(node)
-	tensor := NewTensor(node)
-	return Parameter(tensor)
+func (x Tensor) Shape() Shape {
+	return Shape(x.Node.GetShape())
 }
 
-func (p Parameter) Close() {
-	flint.UnmarkGradientVariable(p.Node)
-	Tensor(p).Close()
+// Value returns the data of a tensor.
+func (x Tensor) Value() any {
+	return nil
 }
