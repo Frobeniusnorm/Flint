@@ -30,16 +30,16 @@ func NewTensor(node flint.GraphNode) Tensor {
 New sets the ref counter to 1.
 This fixes memory management issues, as the node won't be cleared on subsequent calls to [flint.OptimizeMemory]
 */
-func (t Tensor) New() {
-	flint.SetRefCounter(t.Node, 1)
+func (x Tensor) New() {
+	flint.SetRefCounter(x.Node, 1)
 }
 
 /*
 Close resets the ref counter to 0.
 This fixes memory management issues, as the node can be cleared on subsequent calls to [flint.OptimizeMemory]
 */
-func (t Tensor) Close() {
-	flint.SetRefCounter(t.Node, 0)
+func (x Tensor) Close() {
+	flint.SetRefCounter(x.Node, 0)
 }
 
 /*

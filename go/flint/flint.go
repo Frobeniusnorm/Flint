@@ -26,6 +26,8 @@ import (
 	"fmt"
 )
 
+// TODO: use go:generate with for the docs (combination with my custom doc generation script)!
+
 ///////////////
 // Types and Structs
 //////////////
