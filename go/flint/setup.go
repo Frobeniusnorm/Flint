@@ -21,8 +21,9 @@ Only use this function if you...
   - ...want to explicitly decide where and when the initialization should take place
   - ...want to only start one backend
 */
-func Init(backend Backend) {
-	C.flintInit(C.int(backend))
+func Init(backend Backend) error {
+	errCode, errno := C.flintInit(C.int(backend))
+	return buildErrorFromCode(errno, errorCode(errCode))
 }
 
 // InitializedBackend returns the initialized [Backend].
@@ -35,22 +36,25 @@ func InitializedBackend() Backend {
 Cleanup deallocates any resourced allocated by the corresponding backends.
 This method calls the other two (following) which are only executed if the framework was initialized, else they do nothing.
 */
-func Cleanup() {
-	C.flintCleanup()
+func Cleanup() error {
+	errCode, errno := C.flintCleanup()
+	return buildErrorFromCode(errno, errorCode(errCode))
 }
 
 /*
 CleanupCpu deallocates any resourced allocated by the CPU backend, if it was initialized, else it does nothing.
 */
-func CleanupCpu() {
-	C.flintCleanup_cpu()
+func CleanupCpu() error {
+	errCode, errno := C.flintCleanup_cpu()
+	return buildErrorFromCode(errno, errorCode(errCode))
 }
 
 /*
 CleanupGpu deallocates any resourced allocated by the GPU backend, if it was initialized, else it does nothing.
 */
-func CleanupGpu() {
-	C.flintCleanup_gpu()
+func CleanupGpu() error {
+	errCode, errno := C.flintCleanup_gpu()
+	return buildErrorFromCode(errno, errorCode(errCode))
 }
 
 /*

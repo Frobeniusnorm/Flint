@@ -48,6 +48,6 @@ Errors:
 func StoreImage(node GraphNode, path string, format ImageFormat) error {
 	unsafePath := C.CString(path)
 	defer C.free(unsafe.Pointer(unsafePath))
-	errT, errno := C.fstore_image(node.ref, unsafePath, C.enum_FImageFormat(format))
-	return buildErrorWithType(errno, errType(errT))
+	errCode, errno := C.fstore_image(node.ref, unsafePath, C.enum_FImageFormat(format))
+	return buildErrorFromCode(errno, errorCode(errCode))
 }

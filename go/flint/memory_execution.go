@@ -48,18 +48,24 @@ If eager execution is enabled each node will be executed eagerly upon constructi
 
 Also see [EnableEagerExecution], [SyncMemory]
 */
-func ExecuteGraph(node GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fExecuteGraph(node.ref)
-	return GraphNode{ref: flintNode}
+func ExecuteGraph(node GraphNode) (GraphNode, error) {
+	flintNode, errno := C.fExecuteGraph(node.ref)
+	if flintNode == nil {
+		return GraphNode{}, buildError(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
 }
 
 /*
 ExecuteGraphCpu executes the graph node operations from all yet to be executed predecessors to [node]
 and returns a [GraphNode] with a [ResultDataOld] operation in which the resulting data is stored.
 */
-func ExecuteGraphCpu(node GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fExecuteGraph_cpu(node.ref)
-	return GraphNode{ref: flintNode}
+func ExecuteGraphCpu(node GraphNode) (GraphNode, error) {
+	flintNode, errno := C.fExecuteGraph_cpu(node.ref)
+	if flintNode == nil {
+		return GraphNode{}, buildError(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
 }
 
 /*
@@ -69,9 +75,12 @@ For the GPU backend, an opencl kernel containing all selected operations (the no
 The kernels are cashed, so it improves the performance of a program if the same graph-structures are reused (not necessary the same nodes, but the same combination of nodes),
 since then the backend can reuse already compiled kernels.
 */
-func ExecuteGraphGpu(node GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fExecuteGraph_gpu(node.ref)
-	return GraphNode{ref: flintNode}
+func ExecuteGraphGpu(node GraphNode) (GraphNode, error) {
+	flintNode, errno := C.fExecuteGraph_gpu(node.ref)
+	if flintNode == nil {
+		return GraphNode{}, buildError(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
 }
 
 /*
@@ -80,9 +89,12 @@ Uses the CPU backend. Mainly used by helper functions of the framework, only use
 
 Also see [EnableEagerExecution], [ExecuteGraphCpu] and [ExecuteGraph].
 */
-func ExecuteGraphCpuEagerly(node GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fExecuteGraph_cpu_eagerly(node.ref)
-	return GraphNode{ref: flintNode}
+func ExecuteGraphCpuEagerly(node GraphNode) (GraphNode, error) {
+	flintNode, errno := C.fExecuteGraph_cpu_eagerly(node.ref)
+	if flintNode == nil {
+		return GraphNode{}, buildError(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
 }
 
 /*
@@ -92,9 +104,12 @@ Mainly used by helper functions of the framework, only use it if you now what yo
 
 Also see [EnableEagerExecution], [ExecuteGraphGpu] and [ExecuteGraph].
 */
-func ExecuteGraphGpuEagerly(node GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fExecuteGraph_gpu_eagerly(node.ref)
-	return GraphNode{ref: flintNode}
+func ExecuteGraphGpuEagerly(node GraphNode) (GraphNode, error) {
+	flintNode, errno := C.fExecuteGraph_gpu_eagerly(node.ref)
+	if flintNode == nil {
+		return GraphNode{}, buildError(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
 }
 
 /*
@@ -114,10 +129,13 @@ CalculateResult is a convenience method that first executes [ExecuteGraph] and t
 
 It represents execution with one of both backends and additional memory synchronizing for the gpu framework.
 
-FIXME: return [ResultDataOld] instead of tensor. Tensor should be moved to DL framework!
+TODO: is it realistically even possible for errors to occur here?
 */
-func CalculateResult[T completeNumeric](node GraphNode) Result[T] {
-	var flintNode *C.FGraphNode = C.fCalculateResult(node.ref)
+func CalculateResult[T completeNumeric](node GraphNode) (Result[T], error) {
+	flintNode, errno := C.fCalculateResult(node.ref)
+	if flintNode == nil {
+		return Result[T]{}, buildError(errno)
+	}
 
 	dataSize := int(flintNode.result_data.num_entries)
 	dataPtr := unsafe.Pointer(flintNode.result_data.data)
@@ -133,7 +151,7 @@ func CalculateResult[T completeNumeric](node GraphNode) Result[T] {
 		Data:     result,
 		Shape:    shape,
 		DataType: dataType,
-	}
+	}, nil
 }
 
 /*
@@ -148,9 +166,12 @@ Params:
   - [node]: the Node which represents the chain of functions of which the gradient is to be computed.
   - [dx]: the variable for which node is derived for
 */
-func CalculateGradient(node GraphNode, dx GraphNode) GraphNode {
-	var flintNode *C.FGraphNode = C.fCalculateGradient(node.ref, dx.ref)
-	return GraphNode{ref: flintNode}
+func CalculateGradient(node GraphNode, dx GraphNode) (GraphNode, error) {
+	flintNode, errno := C.fCalculateGradient(node.ref, dx.ref)
+	if flintNode == nil {
+		return GraphNode{}, buildError(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
 }
 
 /*
@@ -165,7 +186,7 @@ Params:
 
 Returns array with the same size as [dxs]
 */
-func CalculateGradients(node GraphNode, dxs []GraphNode) []GraphNode {
+func CalculateGradients(node GraphNode, dxs []GraphNode) ([]GraphNode, error) {
 	n := len(dxs)
 
 	partials := make([]*C.FGraphNode, n)
@@ -175,13 +196,16 @@ func CalculateGradients(node GraphNode, dxs []GraphNode) []GraphNode {
 
 	res := make([]*C.FGraphNode, n)
 
-	C.fCalculateGradients(node.ref, &(partials[0]), C.uint(n), &(res[0]))
+	errCode, errno := C.fCalculateGradients(node.ref, &(partials[0]), C.uint(n), &(res[0]))
+	if err := buildErrorFromCode(errno, errorCode(errCode)); err != nil {
+		return []GraphNode{}, err
+	}
 
 	out := make([]GraphNode, n)
 	for i, x := range res {
 		out[i] = GraphNode{ref: x}
 	}
-	return out
+	return out, nil
 }
 
 /*
@@ -242,21 +266,27 @@ func OptimizeMemory(node GraphNode) GraphNode {
 /*
 Serialize the data and shape of the node and returns an array of bytes, in which the serialized data will be written.
 */
-func Serialize(node GraphNode) []byte {
+func Serialize(node GraphNode) ([]byte, error) {
 	var size C.size_t
-	ptr := C.fserialize(node.ref, &size)
+	ptr, errno := C.fserialize(node.ref, &size)
 	defer C.free(unsafe.Pointer(ptr))
-	return C.GoBytes(unsafe.Pointer(ptr), C.int(size))
+	if ptr == nil {
+		return []byte{}, buildError(errno)
+	}
+	return C.GoBytes(unsafe.Pointer(ptr), C.int(size)), nil
 }
 
 /*
 Deserialize un-serializes data generated by [Serialize].
 The size of the data is stored in itself, therefore no extra parameters are needed.
 */
-func Deserialize(data []byte) GraphNode {
+func Deserialize(data []byte) (GraphNode, error) {
 	unsafeData := C.CBytes(data)
 	defer C.free(unsafe.Pointer(unsafeData))
 	// this cast is necessary as the binary data needs to be passed as char*.
-	var flintNode *C.FGraphNode = C.fdeserialize((*C.char)(unsafeData))
-	return GraphNode{ref: flintNode}
+	flintNode, errno := C.fdeserialize((*C.char)(unsafeData))
+	if flintNode == nil {
+		return GraphNode{}, buildError(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
 }

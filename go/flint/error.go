@@ -46,25 +46,27 @@ var (
 	ErrOpenCL                = errors.New("OpenCL error")
 	ErrInternal              = errors.New("internal error. probably a bug in the code")
 	ErrOOM                   = errors.New("out of memory")
-	ErrIllegalDevice         = errors.New("unsupported device")
+	ErrIllegalDerive         = errors.New("impossible to derive")
 	ErrIO                    = errors.New("io error")
 )
 
-func buildErrorWithType(err error, errT errType) error {
-	const (
-		NO_ERROR errType = iota
-		WRONG_TYPE
-		ILLEGAL_DIMENSION
-		ILLEGAL_DIMENSIONALITY
-		INCOMPATIBLE_SHAPES
-		INVALID_SELECT
-		OCL_ERROR
-		INTERNAL_ERROR
-		OUT_OF_MEMORY
-		ILLEGAL_DERIVE
-		IO_ERROR
-	)
+const (
+	noError errorCode = iota
+	wrongType
+	illegalDimension
+	illegalDimensionality
+	incompatibleShapes
+	invalidSelect
+	oclError
+	internalError
+	outOfMemory
+	illegalDerive
+	ioError
+)
 
+// TODO: need to assume that error message and code might not always be set correctly!
+
+func buildErrorFromCode(err error, errCode errorCode) error {
 	var errno syscall.Errno
 	if !errors.As(err, &errno) {
 		panic("expected a Errno to build error from!")
@@ -72,64 +74,64 @@ func buildErrorWithType(err error, errT errType) error {
 
 	errM := errorMessage()
 
-	switch errT {
-	case NO_ERROR:
+	switch errCode {
+	case noError:
 		return nil
-	case WRONG_TYPE:
+	case wrongType:
 		return &Error{
 			Message: errM,
 			Err:     ErrWrongType,
 			Errno:   errno,
 		}
-	case ILLEGAL_DIMENSION:
+	case illegalDimension:
 		return &Error{
 			Message: errM,
 			Err:     ErrIllegalDimension,
 			Errno:   errno,
 		}
-	case ILLEGAL_DIMENSIONALITY:
+	case illegalDimensionality:
 		return &Error{
 			Message: errM,
 			Err:     ErrIllegalDimensionality,
 			Errno:   errno,
 		}
-	case INCOMPATIBLE_SHAPES:
+	case incompatibleShapes:
 		return &Error{
 			Message: errM,
 			Err:     ErrIncompatibleShapes,
 			Errno:   errno,
 		}
-	case INVALID_SELECT:
+	case invalidSelect:
 		return &Error{
 			Message: errM,
 			Err:     ErrInvalidSelect,
 			Errno:   errno,
 		}
-	case OCL_ERROR:
+	case oclError:
 		return &Error{
 			Message: errM,
 			Err:     ErrOpenCL,
 			Errno:   errno,
 		}
-	case INTERNAL_ERROR:
+	case internalError:
 		return &Error{
 			Message: errM,
 			Err:     ErrInternal,
 			Errno:   errno,
 		}
-	case OUT_OF_MEMORY:
+	case outOfMemory:
 		return &Error{
 			Message: errM,
 			Err:     ErrOOM,
 			Errno:   errno,
 		}
-	case ILLEGAL_DERIVE:
+	case illegalDerive:
 		return &Error{
 			Message: errM,
-			Err:     ErrIllegalDevice,
+			Err:     ErrIllegalDerive,
 			Errno:   errno,
 		}
-	case IO_ERROR:
+	case ioError:
 		return &Error{
 			Message: errM,
 			Err:     ErrIO,
@@ -142,15 +144,15 @@ func buildErrorWithType(err error, errT errType) error {
 
 func buildError(err error) error {
 	errT := errorType()
-	return buildErrorWithType(err, errT)
+	return buildErrorFromCode(err, errT)
 }
 
-type errType int
+type errorCode int
 
 // errorType fetches the error type for the last recorded error.
 // This should only be queried when an error is certain (e.g. nullptr returned from C)
-func errorType() errType {
-	return errType(C.fErrorType())
+func errorType() errorCode {
+	return errorCode(C.fErrorType())
 }
 
 // errorMessage fetches the error message for the last recorded error.

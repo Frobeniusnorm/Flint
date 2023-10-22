@@ -16,16 +16,16 @@ Params:
   - [shape]: Each entry describing the size of the corresponding dimension.
   - [datatype]: Specifying a valid flint [DataType]
 */
-func CreateGraph[T completeNumeric](data []T, shape Shape) GraphNode {
+func CreateGraph[T completeNumeric](data []T, shape Shape) (GraphNode, error) {
 	if len(data) != int(shape.NumItems()) {
 		log.Panicf("data (len: %d) and shape (numItems: %d) do not match", len(data), int(shape.NumItems()))
 	}
 	datatype := closestType(data[0])
 
 	// The C function does not perform casts. The data for the void pointer must match the FType!
-
 	newShape := convertArray[uint, C.size_t](shape)
 	var newData unsafe.Pointer
+
 	switch datatype {
 	case f_INT32:
 		convertedData := convertArray[T, C.int](data)
@@ -43,12 +43,15 @@ func CreateGraph[T completeNumeric](data []T, shape Shape) GraphNode {
 		panic("invalid data type")
 	}
 
-	var flintNode *C.FGraphNode = C.fCreateGraph(newData, C.int(len(data)), C.enum_FType(datatype), &(newShape[0]), C.int(len(shape)))
-	return GraphNode{ref: flintNode}
+	flintNode, errno := C.fCreateGraph(newData, C.int(len(data)), C.enum_FType(datatype), &(newShape[0]), C.int(len(shape)))
+	if flintNode == nil {
+		return GraphNode{}, buildError(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
 }
 
 // CreateScalar creates a scalar tensors [(Shape{1})]
-func CreateScalar[T completeNumeric](value T) GraphNode {
+func CreateScalar[T completeNumeric](value T) (GraphNode, error) {
 	return CreateGraph[T]([]T{value}, Shape{1})
 }
 
@@ -60,25 +63,29 @@ Params:
   - [shape]: Each entry describing the size of the corresponding dimension.
   - [datatype]: Specifying a valid flint [DataType]
 */
-func CreateGraphConstant[T completeNumeric](value T, shape Shape) GraphNode {
+func CreateGraphConstant[T completeNumeric](value T, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
 	datatype := closestType(value)
 	dimensions := C.int(len(shape))
 
 	var flintNode *C.FGraphNode
+	var errno error
 	switch datatype {
 	case f_INT32:
-		flintNode = C.fconstant_i(C.int(value), &(newShape[0]), dimensions)
+		flintNode, errno = C.fconstant_i(C.int(value), &(newShape[0]), dimensions)
 	case f_INT64:
-		flintNode = C.fconstant_l(C.long(value), &(newShape[0]), dimensions)
+		flintNode, errno = C.fconstant_l(C.long(value), &(newShape[0]), dimensions)
 	case f_FLOAT32:
-		flintNode = C.fconstant_f(C.float(value), &(newShape[0]), dimensions)
+		flintNode, errno = C.fconstant_f(C.float(value), &(newShape[0]), dimensions)
 	case f_FLOAT64:
-		flintNode = C.fconstant_d(C.double(value), &(newShape[0]), dimensions)
+		flintNode, errno = C.fconstant_d(C.double(value), &(newShape[0]), dimensions)
 	default:
 		panic("invalid data type")
 	}
-	return GraphNode{ref: flintNode}
+	if flintNode == nil {
+		return GraphNode{}, buildError(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
 }
 
 /*
@@ -87,11 +94,14 @@ CreateGraphRandom creates a [f_FLOAT64] tensor that contains randomly distribute
 Params:
   - [shape]: Each entry describing the size of the corresponding dimension.
 */
-func CreateGraphRandom(shape Shape) GraphNode {
+func CreateGraphRandom(shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
 
-	var flintNode *C.FGraphNode = C.frandom(&(newShape[0]), C.int(len(shape)))
-	return GraphNode{ref: flintNode}
+	flintNode, errno := C.frandom(&(newShape[0]), C.int(len(shape)))
+	if flintNode == nil {
+		return GraphNode{}, buildError(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
 }
 
 /*
@@ -99,16 +109,19 @@ CreateGraphArrange creates a [f_INT64] tensor that contains the indices relative
 i.e. each entry is its index in that corresponding dimension.
 If you need to index more than one dimension, create multiple such tensors with [CreateGraphArrange].
 */
-func CreateGraphArrange(shape Shape, axis int) GraphNode {
+func CreateGraphArrange(shape Shape, axis int) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
 
-	var flintNode *C.FGraphNode = C.farange(&(newShape[0]), C.int(len(shape)), C.int(axis))
-	return GraphNode{ref: flintNode}
+	flintNode, errno := C.farange(&(newShape[0]), C.int(len(shape)), C.int(axis))
+	if flintNode == nil {
+		return GraphNode{}, buildError(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
 }
 
 // CreateGraphIdentity creates an identity matrix.
 // The datatype will be [f_INT32]
-func CreateGraphIdentity(size uint) GraphNode {
+func CreateGraphIdentity(size uint) (GraphNode, error) {
 	data := make([]int32, size*size)
 	for i := uint(0); i < size; i++ {
 		data[i+i*size] = int32(1)
@@ -118,6 +131,7 @@ func CreateGraphIdentity(size uint) GraphNode {
 
 // GetShape returns the shape of a graph node
 // NOTE: this will not execute the graph or change anything in memory
+// TODO: remove??
 func (node GraphNode) GetShape() Shape {
 	var flintNode *C.FGraphNode = node.ref
 	shapePtr := unsafe.Pointer(flintNode.operation.shape)
