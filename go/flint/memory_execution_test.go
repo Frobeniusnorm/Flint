@@ -12,8 +12,10 @@ func TestCalculateGradients(t *testing.T) {
 	shape := Shape{2, 2}
 	x1, _ := CreateGraphConstant(3, shape)
 	x2, _ := CreateGraphConstant(4, shape)
-	y1 := Mul(x1, x2)
+	y1, _ := Mul(x1, x2)
 	MarkGradientVariable(y1)
+	MarkGradientVariable(x1)
+	MarkGradientVariable(x2)
 	partials, err := CalculateGradients(y1, []GraphNode{x1, x2})
 
 	assert.NoError(t, err)

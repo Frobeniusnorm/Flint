@@ -68,7 +68,7 @@ const (
 
 func buildErrorFromCode(err error, errCode errorCode) error {
 	var errno syscall.Errno
-	if !errors.As(err, &errno) {
+	if err != nil && !errors.As(err, &errno) {
 		panic("expected a Errno to build error from!")
 	}
 

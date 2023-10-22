@@ -3,7 +3,7 @@ package flint
 // #include <flint/flint.h>
 import "C"
 import (
-	"log"
+	"fmt"
 	"unsafe"
 )
 
@@ -18,7 +18,11 @@ Params:
 */
 func CreateGraph[T completeNumeric](data []T, shape Shape) (GraphNode, error) {
 	if len(data) != int(shape.NumItems()) {
-		log.Panicf("data (len: %d) and shape (numItems: %d) do not match", len(data), int(shape.NumItems()))
+		return GraphNode{}, &Error{
+			Message: fmt.Sprintf("data (len: %d) and shape (numItems: %d) do not match", len(data), int(shape.NumItems())),
+			Err:     ErrIncompatibleShapes,
+			Errno:   0,
+		}
 	}
 	datatype := closestType(data[0])
 
@@ -40,7 +44,7 @@ func CreateGraph[T completeNumeric](data []T, shape Shape) (GraphNode, error) {
 		convertedData := convertArray[T, C.double](data)
 		newData = unsafe.Pointer(&(convertedData[0]))
 	default:
-		panic("invalid data type")
+		panic("invalid type")
 	}
 
 	flintNode, errno := C.fCreateGraph(newData, C.int(len(data)), C.enum_FType(datatype), &(newShape[0]), C.int(len(shape)))
@@ -80,7 +84,7 @@ func CreateGraphConstant[T completeNumeric](value T, shape Shape) (GraphNode, er
 	case f_FLOAT64:
 		flintNode, errno = C.fconstant_d(C.double(value), &(newShape[0]), dimensions)
 	default:
-		panic("invalid data type")
+		panic("invalid type")
 	}
 	if flintNode == nil {
 		return GraphNode{}, buildError(errno)
