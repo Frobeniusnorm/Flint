@@ -21,7 +21,6 @@ func CreateGraph[T completeNumeric](data []T, shape Shape) (GraphNode, error) {
 		return GraphNode{}, &Error{
 			Message: fmt.Sprintf("data (len: %d) and shape (numItems: %d) do not match", len(data), int(shape.NumItems())),
 			Err:     ErrIncompatibleShapes,
-			Errno:   0,
 		}
 	}
 	datatype := closestType(data[0])
@@ -114,6 +113,14 @@ i.e. each entry is its index in that corresponding dimension.
 If you need to index more than one dimension, create multiple such tensors with [CreateGraphArrange].
 */
 func CreateGraphArrange(shape Shape, axis int) (GraphNode, error) {
+	validAxis := axis
+	if validAxis < 0 || validAxis >= len(shape) {
+		return GraphNode{}, &Error{
+			Message: "invalid axis",
+			Err:     ErrIllegalDimensionality,
+		}
+	}
+
 	newShape := convertArray[uint, C.size_t](shape)
 
 	flintNode, errno := C.farange(&(newShape[0]), C.int(len(shape)), C.int(axis))

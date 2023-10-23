@@ -163,7 +163,7 @@ which can be started with [StartGradientContext].
 If you need to compute multiple gradients for one output use [CalculateGradients] since it is far more efficient.
 
 Params:
-  - [node]: the Node which represents the chain of functions of which the gradient is to be computed.
+  - [node]: the node which represents the chain of functions of which the gradient is to be computed.
   - [dx]: the variable for which node is derived for
 */
 func CalculateGradient(node GraphNode, dx GraphNode) (GraphNode, error) {
@@ -181,7 +181,7 @@ The variables must be marked as a gradient variable, see [MarkGradientVariable] 
 which can be started with [StartGradientContext].
 
 Params:
-  - [node]: the Node which represents the chain of functions of which the gradients are to be computed.
+  - [node]: the node which represents the chain of functions of which the gradients are to be computed.
   - [dxs]: array of variables for which node is derived for.
 
 Returns array with the same size as [dxs]
