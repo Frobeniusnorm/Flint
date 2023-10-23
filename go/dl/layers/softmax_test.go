@@ -17,7 +17,7 @@ func TestSoftmax_Forward(t *testing.T) {
 	data := tensor.NewTensor(flint.CreateGraphConstant(float32(2), flint.Shape{4}))
 	softmax := NewSoftmax()
 	out := softmax.Forward(data)
-	res := flint.CalculateResult[float32](out.Node)
+	res := flint.CalculateResult[float32](out.node)
 	fmt.Println(res.Data)
 
 	var sum float32 = 0.0

@@ -24,7 +24,7 @@ The last one might being useful for higher dimension inputs, such images.
 param labels should be a tensor with one of the following structures:
 */
 func CrossEntropyLossExtended(predictions tensor.Tensor, target tensor.Tensor, weight tensor.Tensor, reduce reduction, labelSmoothing float32) tensor.Tensor {
-	shape := predictions.Node.GetShape()
+	shape := predictions.node.GetShape()
 	//C := shape[1] // number of classes
 	N := shape[0] // batch size
 
@@ -35,7 +35,7 @@ func CrossEntropyLossExtended(predictions tensor.Tensor, target tensor.Tensor, w
 	// FIXME: given one hot encoding we can also do: L(y, ŷ) = − log(ŷ_k)|y_k =1
 
 	offset := flint.CreateGraphConstant(eps, shape)
-	l := flint.Neg(flint.Mul(flint.Log(flint.Add(offset, predictions.Node)), target.Node))
+	l := flint.Neg(flint.Mul(flint.Log(flint.Add(offset, predictions.node)), target.node))
 	for len(l.GetShape()) > 1 {
 		l = flint.ReduceSum(l, 0)
 	}

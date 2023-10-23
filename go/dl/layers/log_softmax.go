@@ -12,7 +12,7 @@ func LogSoftmax(x tensor.Tensor) tensor.Tensor {
 	defer x.Close()
 	res := Softmax(x)
 	defer res.Close()
-	return tensor.NewTensor(flint.Log(res.Node))
+	return tensor.NewTensor(flint.Log(res.node))
 }
 
 type LogSoftmaxLayer struct{}

@@ -12,7 +12,7 @@ func Softmax(x tensor.Tensor) tensor.Tensor {
 	// shift by the maximum value to avoid exploding values
 	// thus avoiding inaccuracies when using floating point types.
 	defer x.Close() // FIXME: is this needed? I mean the caller could still hold the graph node reference...
-	shifted := flint.Sub(x.Node, flint.Max(x.Node))
+	shifted := flint.Sub(x.node, flint.Max(x.node))
 	shifted = flint.Exp(shifted)
 	div1 := shifted
 	div2 := flint.ReduceSum(flint.Exp(shifted), len(shifted.GetShape())-1)

@@ -29,8 +29,8 @@ func TestFakeDataset_Get(t *testing.T) {
 	assert.NotNil(t, entry.Label)
 	assert.NotNil(t, entry.Data)
 
-	data := flint.CalculateResult[float64](entry.Data.Node)
-	label := flint.CalculateResult[int32](entry.Label.Node)
+	data := flint.CalculateResult[float64](entry.Data.node)
+	label := flint.CalculateResult[int32](entry.Label.node)
 
 	assert.Equal(t, flint.Shape{10, 10}, data.Shape)
 	assert.Equal(t, flint.Shape{1}, label.Shape)
@@ -56,6 +56,6 @@ func TestFakeDataset_Collate(t *testing.T) {
 	}
 
 	collated := dataset.Collate(entries)
-	assert.Equal(t, flint.Shape{32, 10, 10}, collated.Data.Node.GetShape())
-	assert.Equal(t, flint.Shape{32}, collated.Label.Node.GetShape())
+	assert.Equal(t, flint.Shape{32, 10, 10}, collated.Data.node.GetShape())
+	assert.Equal(t, flint.Shape{32}, collated.Label.node.GetShape())
 }

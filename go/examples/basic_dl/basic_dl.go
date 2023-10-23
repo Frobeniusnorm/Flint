@@ -68,12 +68,12 @@ func train(model layers.Layer, trainDl *dataloader.Dataloader[datasets.MnistData
 
 		flint.StartGradientContext()
 		output := model.Forward(batch.Data)
-		target := tensor.NewTensor(flint.OneHot(batch.Label.Node, 10))
+		target := tensor.NewTensor(flint.OneHot(batch.Label.node, 10))
 		loss := losses.MSELoss(output, target)
 		flint.StopGradientContext()
 		optim.Step(loss)
-		flint.OptimizeMemory(loss.Node)
-		flint.FreeGraph(loss.Node)
+		flint.OptimizeMemory(loss.node)
+		flint.FreeGraph(loss.node)
 		target.Close()
 	}
 }
@@ -92,7 +92,7 @@ func test(model layers.Layer, testDl *dataloader.Dataloader[datasets.MnistDatase
 		}
 
 		output := model.Forward(batch.Data)
-		target := tensor.NewTensor(flint.OneHot(batch.Label.Node, 10))
+		target := tensor.NewTensor(flint.OneHot(batch.Label.node, 10))
 		loss := losses.MSELoss(output, batch.Label)
 		target.Close()
 		log.Println("test loss:", loss)

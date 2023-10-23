@@ -21,11 +21,11 @@ func (f Flatten) Parameters(_ bool) []tensor.Parameter {
 }
 
 func (f Flatten) Forward(x tensor.Tensor) tensor.Tensor {
-	shape := x.Node.GetShape()
+	shape := x.node.GetShape()
 	if len(shape) < 2 {
 		panic("Flatten: input tensors needs to be at least 2-dimensional")
 	}
-	var res = x.Node
+	var res = x.node
 	for i := len(shape) - 1; i > 1; i-- {
 		res = flint.FlattenDim(res, i)
 	}

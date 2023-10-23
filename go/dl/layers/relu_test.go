@@ -17,7 +17,7 @@ func TestReLU_Forward(t *testing.T) {
 
 	expected := []int64{0, 0, 0, 0, 1}
 
-	res := flint.CalculateResult[int64](output.Node)
+	res := flint.CalculateResult[int64](output.node)
 
 	assert.EqualValues(t, expected, res.Data)
 }

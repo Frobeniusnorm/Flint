@@ -28,11 +28,11 @@ func NewFullyConnected(inputSize uint, outputSize uint) FullyConnected {
 }
 
 func (fc FullyConnected) Forward(x tensor.Tensor) tensor.Tensor {
-	inputShape := x.Node.GetShape()
+	inputShape := x.node.GetShape()
 	inputShape[len(inputShape)-1] = 1
 	ones := flint.CreateGraphConstant(1, inputShape)
-	combined := flint.Concat(x.Node, ones, uint(len(inputShape)-1))
-	res := flint.Matmul(combined, fc.weightsAndBias.Node)
+	combined := flint.Concat(x.node, ones, uint(len(inputShape)-1))
+	res := flint.Matmul(combined, fc.weightsAndBias.node)
 	return tensor.NewTensor(res)
 }
 

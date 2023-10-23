@@ -33,10 +33,10 @@ func (sgd *Sgd) Step(loss tensor.Tensor) {
 	// turn tensor array into array of graph nodes
 	paramsSimple := make([]flint.GraphNode, len(sgd.params))
 	for i, p := range sgd.params {
-		paramsSimple[i] = p.Node
+		paramsSimple[i] = p.node
 	}
 
-	grads := flint.CalculateGradients(loss.Node, paramsSimple)
+	grads := flint.CalculateGradients(loss.node, paramsSimple)
 	for i, w := range paramsSimple {
 		for _, g := range grads {
 			sgd.params[i].Close()

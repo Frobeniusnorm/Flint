@@ -18,14 +18,14 @@ func MSELoss(prediction tensor.Tensor, target tensor.Tensor) tensor.Tensor {
 //
 // returns: new tensor with a single value - the loss
 func MSELossExtended(predictions tensor.Tensor, target tensor.Tensor, reduce reduction) tensor.Tensor {
-	shapePredictions := predictions.Node.GetShape()
-	shapeTarget := target.Node.GetShape()
+	shapePredictions := predictions.node.GetShape()
+	shapeTarget := target.node.GetShape()
 	if !shapePredictions.Equal(shapeTarget) {
 		log.Panicf("shapes don't match: %s vs. %s", shapePredictions, shapeTarget)
 	}
 	N := shapePredictions[0] // batch size
 
-	l := flint.Sub(predictions.Node, target.Node)
+	l := flint.Sub(predictions.node, target.node)
 	l = flint.Mul(l, l)
 
 	if reduce == REDUCE_SUM {

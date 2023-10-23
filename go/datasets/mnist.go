@@ -253,7 +253,7 @@ func (d MnistDataset) Collate(items []MnistDatasetEntry) MnistDatasetEntry {
 		Label: TrivialCollate(labels),
 		Data:  TrivialCollate(images),
 	}
-	res.Label.Node = flint.Flatten(res.Label.Node)
+	res.Label.node = flint.Flatten(res.Label.node)
 	return res
 }
 
