@@ -435,14 +435,6 @@ template <typename T, unsigned int n> struct Tensor {
     os << (std::string)t;
     return os;
   }
-  /**
-   * Calls `std::string()` on this Tensor and pipes the returned string to the
-   * pipe.
-   */
-  friend std::ostream &operator<<(std::ostream &os, Tensor<T, n> t) {
-    os << (std::string)t;
-    return os;
-  }
   // to calculate the return type of two tensors at compile time
   template <typename K>
   using stronger_return =

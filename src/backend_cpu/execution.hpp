@@ -70,29 +70,29 @@ template <typename T, typename A, typename B>
 static void binaryExpression(T *__restrict__ result,
                              const A *__restrict__ data1,
                              const B *__restrict__ data2, FOperationType op,
-                             size_t from, size_t size, int index_man_1,
-                             int index_man_2, const FGraphNode *curr) {
+                             size_t from, size_t size, size_t index_man_1, size_t inv_man_1,
+                             size_t index_man_2, size_t inv_man_2, const FGraphNode *curr) {
   switch (op) {
   case FADD:
     for (size_t i = from; i < from + size; i++) {
-      result[i] = data1[i % index_man_1] + data2[i % index_man_2];
+      result[i] = data1[(i / inv_man_1) % index_man_1] + data2[(i / inv_man_2) % index_man_2];
     }
     break;
   case FSUB:
     for (size_t i = from; i < from + size; i++)
-      result[i] = data1[i % index_man_1] - data2[i % index_man_2];
+      result[i] = data1[(i / inv_man_1) % index_man_1] - data2[(i / inv_man_2) % index_man_2];
     break;
   case FMUL:
     for (size_t i = from; i < from + size; i++)
-      result[i] = data1[i % index_man_1] * data2[i % index_man_2];
+      result[i] = data1[(i / inv_man_1) % index_man_1] * data2[(i / inv_man_2) % index_man_2];
     break;
   case FDIV:
     for (size_t i = from; i < from + size; i++)
-      result[i] = data1[i % index_man_1] / data2[i % index_man_2];
+      result[i] = data1[(i / inv_man_1) % index_man_1] / data2[(i / inv_man_2) % index_man_2];
     break;
   case FPOW:
     for (size_t i = from; i < from + size; i++)
-      result[i] = pow(data1[i % index_man_1], data2[i % index_man_2]);
+      result[i] = pow(data1[(i / inv_man_1) % index_man_1], data2[(i / inv_man_2) % index_man_2]);
     break;
   case FMATMUL: {
     FGraphNode *gnp1 = curr->predecessors[0], *gnp2 = curr->predecessors[1];
@@ -358,23 +358,23 @@ static void binaryExpression(T *__restrict__ result,
   } break;
   case FMIN:
     for (size_t i = from; i < from + size; i++)
-      result[i] = MIN_VAL(data1[i % index_man_1], data2[i % index_man_2]);
+      result[i] = MIN_VAL(data1[(i / inv_man_1) % index_man_1], data2[(i / inv_man_2) % index_man_2]);
     break;
   case FMAX:
     for (size_t i = from; i < from + size; i++)
-      result[i] = MAX_VAL(data1[i % index_man_1], data2[i % index_man_2]);
+      result[i] = MAX_VAL(data1[(i / inv_man_1) % index_man_1], data2[(i / inv_man_2) % index_man_2]);
     break;
   case FEQUAL:
     for (size_t i = from; i < from + size; i++)
-      result[i] = data1[i % index_man_1] == data2[i % index_man_2] ? 1 : 0;
+      result[i] = data1[(i / inv_man_1) % index_man_1] == data2[(i / inv_man_2) % index_man_2] ? 1 : 0;
     break;
   case FLESS:
     for (size_t i = from; i < from + size; i++)
-      result[i] = data1[i % index_man_1] < data2[i % index_man_2] ? 1 : 0;
+      result[i] = data1[(i / inv_man_1) % index_man_1] < data2[(i / inv_man_2) % index_man_2] ? 1 : 0;
     break;
   case FGREATER:
     for (size_t i = from; i < from + size; i++)
-      result[i] = data1[i % index_man_1] > data2[i % index_man_2] ? 1 : 0;
+      result[i] = data1[(i / inv_man_1) % index_man_1] > data2[(i / inv_man_2) % index_man_2] ? 1 : 0;
     break;
   default:
     break;
@@ -805,25 +805,52 @@ static void executeNode(const FGraphNode *node,
       // binary operations
       const CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];
       size_t im1 = p1.num_entries, im2 = p2.num_entries;
+      size_t iv1 = 1, iv2 = 1;
+      bool inv_manipulation = p1.shape.size() != p2.shape.size();
+      // constants -> no inverse broadcasting
+      if ((p1.shape.size() == 1 && p1.shape[0] == 1) || (p2.shape.size() == 1 && p2.shape[0] == 1))
+        inv_manipulation = false;
+      // forward broadcasting -> no inverse broadcasting
+      bool forward_broad = true;
+      {
+        std::vector<size_t> lower = p1.shape.size() > p2.shape.size() ? p2.shape : p1.shape;
+        std::vector<size_t> higher = p1.shape.size() > p2.shape.size() ? p1.shape : p2.shape;
 
+        for (int i = 0; i < lower.size(); i++) {
+          const size_t s1 = higher[i + (higher.size() - lower.size())];
+          const size_t s2 = lower[i];
+          if (s1 != s2) {
+            forward_broad = false;
+            break;
+          }
+        }
+      }
+      if (forward_broad)
+        inv_manipulation = false;
+      if (inv_manipulation) {
+        for (int i = p2.shape.size(); i < p1.shape.size(); i++)
+          iv2 *= p1.shape[i];
+        for (int i = p1.shape.size(); i < p2.shape.size(); i++)
+          iv1 *= p2.shape[i];
+      }
       switch (p1.type) {
       case F_INT32:
         switch (p2.type) {
         case F_INT32:
           binaryExpression(result, (int *)p1.data, (int *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         case F_FLOAT32:
           binaryExpression(result, (int *)p1.data, (float *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         case F_FLOAT64:
           binaryExpression(result, (int *)p1.data, (double *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         case F_INT64:
           binaryExpression(result, (int *)p1.data, (long *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         }
         break;
@@ -831,19 +858,19 @@ static void executeNode(const FGraphNode *node,
         switch (p2.type) {
         case F_INT32:
           binaryExpression(result, (float *)p1.data, (int *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         case F_FLOAT32:
           binaryExpression(result, (float *)p1.data, (float *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         case F_FLOAT64:
           binaryExpression(result, (float *)p1.data, (double *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         case F_INT64:
           binaryExpression(result, (float *)p1.data, (long *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         }
         break;
@@ -851,19 +878,19 @@ static void executeNode(const FGraphNode *node,
         switch (p2.type) {
         case F_INT32:
           binaryExpression(result, (double *)p1.data, (int *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         case F_FLOAT32:
           binaryExpression(result, (double *)p1.data, (float *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         case F_FLOAT64:
           binaryExpression(result, (double *)p1.data, (double *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         case F_INT64:
           binaryExpression(result, (double *)p1.data, (long *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         }
         break;
@@ -871,19 +898,19 @@ static void executeNode(const FGraphNode *node,
         switch (p2.type) {
         case F_INT32:
           binaryExpression(result, (long *)p1.data, (int *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         case F_FLOAT32:
           binaryExpression(result, (long *)p1.data, (float *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         case F_FLOAT64:
           binaryExpression(result, (long *)p1.data, (double *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         case F_INT64:
           binaryExpression(result, (long *)p1.data, (long *)p2.data,
-                           node->operation.op_type, from, size, im1, im2, node);
+                           node->operation.op_type, from, size, im1, iv1, im2, iv2, node);
           break;
         }
         break;
