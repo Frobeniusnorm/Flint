@@ -141,7 +141,7 @@ func CalculateResult[T completeNumeric](node GraphNode) (Result[T], error) {
 	dataPtr := unsafe.Pointer(flintNode.result_data.data)
 	shapePtr := unsafe.Pointer(flintNode.operation.shape)
 	shapeSize := int(flintNode.operation.dimensions)
-	dataType := DataType(flintNode.operation.data_type)
+	dataType := dataType(flintNode.operation.data_type)
 
 	var result = fromCToArray[T](dataPtr, dataSize, dataType)
 	var shape = Shape(fromCToArray[uint](shapePtr, shapeSize, f_INT64))

@@ -14,7 +14,7 @@ Params:
   - [data]: the flattened data array that should be loaded into the [GraphNode]
   - Type params [T]: the datatype of [data]
   - [shape]: Each entry describing the size of the corresponding dimension.
-  - [datatype]: Specifying a valid flint [DataType]
+  - [datatype]: Specifying a valid flint [dataType]
 */
 func CreateGraph[T completeNumeric](data []T, shape Shape) (GraphNode, error) {
 	if len(data) != int(shape.NumItems()) {
@@ -59,12 +59,12 @@ func CreateScalar[T completeNumeric](value T) (GraphNode, error) {
 }
 
 /*
-CreateGraphConstant creates a tensor in a specified [DataType] that contains the single given values in all entries.
+CreateGraphConstant creates a tensor in a specified [dataType] that contains the single given values in all entries.
 
 Params:
   - [value]: the value this tensor should consist of
   - [shape]: Each entry describing the size of the corresponding dimension.
-  - [datatype]: Specifying a valid flint [DataType]
+  - [datatype]: Specifying a valid flint [dataType]
 */
 func CreateGraphConstant[T completeNumeric](value T, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)

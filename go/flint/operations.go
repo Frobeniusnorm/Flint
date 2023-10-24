@@ -479,7 +479,7 @@ func FlattenDim(a GraphNode, dim int) (GraphNode, error) {
 /*
 Convert the data of [a] to the type given by [newType].
 */
-func Convert(a GraphNode, newType DataType) (GraphNode, error) {
+func Convert(a GraphNode, newType dataType) (GraphNode, error) {
 	flintNode, errno := C.fconvert(a.ref, C.enum_FType(newType))
 	if flintNode == nil {
 		return GraphNode{}, buildError(errno)

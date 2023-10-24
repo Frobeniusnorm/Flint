@@ -76,7 +76,7 @@ func describe(i any) {
 	fmt.Printf("describe (value, underlying type): (%v, %T)\n", i, i)
 }
 
-func fromCToArray[T completeNumeric](dataPtr unsafe.Pointer, length int, dataType DataType) []T {
+func fromCToArray[T completeNumeric](dataPtr unsafe.Pointer, length int, dataType dataType) []T {
 	var result = make([]T, length)
 
 	switch dataType {
@@ -123,8 +123,8 @@ func fromCToArray[T completeNumeric](dataPtr unsafe.Pointer, length int, dataTyp
 	return result
 }
 
-// closestType takes in a Go type and returns a valid [DataType] that most closely matches it.
-func closestType[T completeNumeric](x T) DataType {
+// closestType takes in a Go type and returns a valid [dataType] that most closely matches it.
+func closestType[T completeNumeric](x T) dataType {
 	switch any(x).(type) {
 	case int:
 		return f_INT64

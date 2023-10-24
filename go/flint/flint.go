@@ -48,7 +48,7 @@ type Result[T completeNumeric] struct {
 	nodeRef   *C.FGraphNode
 	Data      ResultData[T]
 	Shape     Shape
-	DataType  DataType
+	DataType  dataType
 }
 
 type ResultData[T completeNumeric] []T
@@ -102,11 +102,11 @@ func (a Shape) Equal(b Shape) bool {
 	return true
 }
 
-// DataType represents the valid datatypes for the flint backend
-type DataType uint32
+// dataType represents the valid datatypes for the flint backend
+type dataType uint32
 
 const (
-	f_INT32 DataType = iota
+	f_INT32 dataType = iota
 	f_INT64
 	f_FLOAT32
 	f_FLOAT64
