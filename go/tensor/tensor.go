@@ -10,7 +10,6 @@ import "C"
 import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/flint"
-	"reflect"
 	"runtime"
 )
 
@@ -19,9 +18,8 @@ type Shape = flint.Shape // this way we keep the functions etc.
 type Axes = flint.Axes
 
 // Numeric is a constraint union collection of valid numeric types for use in tensors
-// TODO: add uint64 and uintptr? Issues with flint!
 type Numeric interface {
-	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~float32 | ~float64
+	~int32 | ~int64 | ~float32 | ~float64
 }
 
 /*
@@ -29,37 +27,24 @@ Tensor essentially acts as a memory-safe wrapper for [flint.GraphNode].
 Since go does not have a destructor for GraphNode any references to nodes in C memory cannot be cleaned up.
 By having a [Close] method, the memory cleanup can be deferred.
 */
-type Tensor struct {
-	node     *flint.GraphNode
-	err      error
-	data     *any         // only in case the actual type doesn't matter. Else use one of the below
-	dataType reflect.Kind // FIXME: or type?
-	// This is the horrible workaround to keep this structure free of reflection and generics ...
-	data_int     *int
-	data_int8    *int8
-	data_int16   *int16
-	data_int32   *int32
-	data_int64   *int64
-	data_uint    *uint
-	data_uint8   *uint8
-	data_uint16  *uint16
-	data_uint32  *uint32
-	data_float32 *float32
-	data_float64 *float64
+type Tensor[T Numeric] struct {
+	node *flint.GraphNode
+	err  error
+	data *T // only in case the actual type doesn't matter. Else use one of the below
 }
 
 // String prints the contents of the tensor.
 // NOTE: If not a light tensor, this causes the node's graph to be executed!
 // Use carefully! (best only in debugging)
-func (x Tensor) String() string {
-	if x.node == nil {
-		return fmt.Sprintf("Tensor (1): [%v]", x.data)
+func (x Tensor[T]) String() string {
+	if x.light() {
+		return fmt.Sprintf("Tensor (1): [%v]", *x.data)
 	} else {
-		data, err := flint.CalculateResult[int](*x.node)
+		res, err := flint.CalculateResult[T](*x.node)
 		if err != nil {
 			panic(err)
 		}
-		return fmt.Sprintf("Tensor (%s): [%v]", x.node.GetShape(), data)
+		return fmt.Sprintf("Tensor (%s): [%v]", res.Shape, res.Data)
 	}
 }
 
@@ -76,13 +61,11 @@ However, this may change in the future as we have a massive [finalizer overhead]
 
 [finalizer example]: https://gist.github.com/deltamobile/6511901
 */
-func (x Tensor) init() {
-	if x.node != nil {
+func (x Tensor[T]) init() {
+	if !x.light() {
 		flint.SetRefCounter(*x.node, 1)
 	}
-
-	// FIXME: pointer or not in finalizer parameter?
-	runtime.SetFinalizer(x, func(x *Tensor) { x.Close() })
+	runtime.SetFinalizer(&x, func(x *Tensor[T]) { x.Close() }) // FIXME: or only for nodes?
 	runtime.KeepAlive(x)
 }
 
@@ -90,16 +73,16 @@ func (x Tensor) init() {
 Close resets the ref counter to 0.
 This fixes memory management issues, as the node can be cleared on subsequent calls to [flint.OptimizeMemory]
 */
-func (x Tensor) Close() {
+func (x Tensor[T]) Close() {
 	runtime.SetFinalizer(x, nil) // remove any finalizer for this tensor
-	if x.node != nil {
+	if !x.light() {
 		flint.SetRefCounter(*x.node, 0)
 	}
 	runtime.KeepAlive(x)
 }
 
-func (x Tensor) Shape() Shape {
-	if x.node == nil {
+func (x Tensor[T]) Shape() Shape {
+	if x.light() {
 		return Shape{1}
 	} else {
 		return x.node.GetShape()
@@ -107,33 +90,41 @@ func (x Tensor) Shape() Shape {
 }
 
 // Value returns the data of a tensor.
-func (x Tensor) Value() any {
-	return nil // TODO
+// FIXME
+func (x Tensor[T]) Value() (Shape, any) {
+	if x.light() {
+		return Shape{1}, *x.data
+	} else {
+		data, err := flint.CalculateResult[int](*x.node)
+		if err != nil {
+			panic(err)
+		}
+		return data.Shape, data.Data
+	}
 }
 
 // node makes sure that a node is initialized and returns it.
 // This function should be called when it is required that a data value (usually from scalar)
 // needs to be passed as a node.
-// FIXME: isn't this useless without a pointer receiver?
-func (x Tensor) readyNode() Tensor {
-	if x.node != nil {
+func (x Tensor[T]) readyNode() Tensor[T] {
+	if !x.light() {
 		return x // no changes needed
 	}
 
-	reflect.ValueOf(x.data).Elem().Type().
-		flintNode, err := flint.CreateScalar(*x.data)
+	flintNode, err := flint.CreateScalar(*x.data)
 	if err != nil {
 		panic(err)
 	}
 	x.data = nil
 	x.node = &flintNode
+	x.init()
 	return x
 }
 
 // val returns a possible value.
 // This is either the node or the value from a light tensor
-func (x Tensor) val() any {
-	if x.node != nil {
+func (x Tensor[T]) val() any {
+	if !x.light() {
 		return *x.node
 	} else if x.data != nil {
 		return *x.data
@@ -142,11 +133,11 @@ func (x Tensor) val() any {
 	}
 }
 
-func (x Tensor) light() bool {
-	return x.node != nil
+func (x Tensor[T]) light() bool {
+	return x.node == nil
 }
 
-func readyTensor(x Tensor, y Tensor) (a Tensor, b Tensor) {
+func lightLast[T Numeric](x Tensor[T], y Tensor[T]) (a Tensor[T], b Tensor[T]) {
 	if !x.light() {
 		return x, y
 	} else if !y.light() {
@@ -156,4 +147,67 @@ func readyTensor(x Tensor, y Tensor) (a Tensor, b Tensor) {
 	}
 }
 
-// TODO: can i, or should i use method decorators?
+func (x Tensor[T]) ToFloat32() Tensor[float32] {
+	var res Tensor[float32]
+	if x.light() {
+		val := float32(*x.data)
+		res.data = &val
+	} else {
+		flintNode, err := flint.Convert(*x.node, flint.F_FLOAT32)
+		if err != nil {
+			panic(err)
+		}
+		res.node = &flintNode
+	}
+	res.init()
+	return res
+}
+
+func (x Tensor[T]) ToFloat64() Tensor[float64] {
+	var res Tensor[float64]
+	if x.light() {
+		val := float64(*x.data)
+		res.data = &val
+	} else {
+		// FIXME: why is x.node nil?
+		flintNode, err := flint.Convert(*x.node, flint.F_FLOAT64)
+		if err != nil {
+			panic(err)
+		}
+		res.node = &flintNode
+	}
+	res.init()
+	return res
+}
+
+func (x Tensor[T]) ToInt32() Tensor[int32] {
+	var res Tensor[int32]
+	if x.light() {
+		val := int32(*x.data)
+		res.data = &val
+	} else {
+		flintNode, err := flint.Convert(*x.node, flint.F_INT32)
+		if err != nil {
+			panic(err)
+		}
+		res.node = &flintNode
+	}
+	res.init()
+	return res
+}
+
+func (x Tensor[T]) ToInt64() Tensor[int64] {
+	var res Tensor[int64]
+	if x.light() {
+		val := int64(*x.data)
+		res.data = &val
+	} else {
+		flintNode, err := flint.Convert(*x.node, flint.F_INT64)
+		if err != nil {
+			panic(err)
+		}
+		res.node = &flintNode
+	}
+	res.init()
+	return res
+}

@@ -5,25 +5,23 @@ import (
 )
 
 // flatten is a recursive function to flatten a slice of any type
-func flattenSlice(x any) (result []T, shape Shape, err error) {
-	shape, err = sliceShape(x)
-	if err != nil {
-		return
-	}
-
-	for _, item := range x {
-		switch s := item.(type):
-			case
-
-		result = append(result, s...)
-	}
-
-	return
+func flattenSlice(x any) (result []any, shape Shape, err error) {
+	//shape, err = sliceShape(x)
+	//if err != nil {
+	//	return
+	//}
+	//
+	//for _, item := range x {
+	//	switch s := item.(type):
+	//		case
+	//
+	//	result = append(result, s...)
+	//}
+	return nil, Shape{}, nil
 }
 
-func sliceShape[T any](x []T) (Shape, error) {
-	//var y any
-
+func sliceShape(x any) (Shape, error) {
+	return Shape{}, nil
 }
 
 // isTensor returns whether a given object is a slice or not
@@ -49,15 +47,15 @@ Create a Tensor from a wide range of data types.
 
 TODO: what if a pointer is passed?
 */
-func Create(data any) Tensor {
+func Create[T Numeric](data any) Tensor[T] {
 	if isSlice(data) {
-		return Tensor{} // CreateFromSlice(data)
+		return Tensor[T]{} // CreateFromSlice(data)
 	}
 	if isScalar(data) {
-		return Tensor{} // Scalar(data)
+		return Tensor[T]{} // Scalar(data)
 	}
 	if node, ok := data.(flint.GraphNode); ok {
-		return FromNode(node)
+		return FromNode[T](node)
 	}
 	panic("invalid data type")
 }
@@ -77,68 +75,67 @@ func Create(data any) Tensor {
 //	return tensor
 //}
 
-func CreateFromSliceAndShape[T Numeric](data []T, shape Shape) Tensor {
-	x := flatten(data)
-	tensor := Tensor{}
-	flintNode, err := flint.CreateGraph(flatten(x), shape)
-	if err != nil {
-		panic(err)
-	}
-	tensor.node = &flintNode
+//func CreateFromSliceAndShape[T Numeric](data []T, shape Shape) Tensor {
+//	x := flatten(data)
+//	tensor := Tensor{}
+//	flintNode, err := flint.CreateGraph(flatten(x), shape)
+//	if err != nil {
+//		panic(err)
+//	}
+//	tensor.node = &flintNode
+//
+//	tensor.init()
+//	return tensor
+//}
 
+func FromNode[T Numeric](node flint.GraphNode) Tensor[T] {
+	res := Tensor[T]{node: &node}
+	res.init()
+	return res
+}
+
+func Scalar[T Numeric](val T) Tensor[T] {
+	tensor := Tensor[T]{data: &val}
 	tensor.init()
 	return tensor
 }
 
-func FromNode(node flint.GraphNode) Tensor {
-	tensor := Tensor{node: &node}
-	tensor.init()
-	return tensor
-}
-
-func Scalar[T Numeric](val T) Tensor {
-	var x = any(val)
-	tensor := Tensor{data: &x}
-	tensor.init()
-	return tensor
-}
-
-func Constant[T Numeric](val T, shape Shape) Tensor {
+func Constant[T Numeric](val T, shape Shape) Tensor[T] {
 	flintNode, err := flint.CreateGraphConstant(val, shape)
 	if err != nil {
 		panic(err)
 	}
-	tensor := Tensor{node: &flintNode}
+	tensor := Tensor[T]{node: &flintNode}
 	tensor.init()
 	return tensor
 }
 
-func Random(shape Shape) Tensor {
+func Random(shape Shape) Tensor[float64] {
 	flintNode, err := flint.CreateGraphRandom(shape)
 	if err != nil {
 		panic(err)
 	}
-	tensor := Tensor{node: &flintNode}
+	tensor := Tensor[float64]{node: &flintNode}
 	tensor.init()
 	return tensor
 }
 
-func Arrange[T Numeric](shape Shape, axis T) Tensor {
-	flintNode, err := flint.CreateGraphArrange(shape, int(axis))
+func Arrange(shape Shape, axis int) Tensor[int64] {
+	flintNode, err := flint.CreateGraphArrange(shape, axis)
 	if err != nil {
 		panic(err)
 	}
-	tensor := Tensor{node: &flintNode}
+	tensor := Tensor[int64]{node: &flintNode}
 	tensor.init()
 	return tensor
 }
 
-func Identity[T Numeric](size T) Tensor {
+func Identity[T Numeric](size T) Tensor[int32] {
 	flintNode, err := flint.CreateGraphIdentity(uint(size))
 	if err != nil {
 		panic(err)
 	}
-	tensor := Tensor{node: &flintNode}
+	tensor := Tensor[int32]{node: &flintNode}
 	tensor.init()
 	return tensor
 }
