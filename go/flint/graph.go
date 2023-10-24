@@ -30,16 +30,16 @@ func CreateGraph[T completeNumeric](data []T, shape Shape) (GraphNode, error) {
 	var newData unsafe.Pointer
 
 	switch datatype {
-	case f_INT32:
+	case F_INT32:
 		convertedData := convertArray[T, C.int](data)
 		newData = unsafe.Pointer(&(convertedData[0]))
-	case f_INT64:
+	case F_INT64:
 		convertedData := convertArray[T, C.long](data)
 		newData = unsafe.Pointer(&(convertedData[0]))
-	case f_FLOAT32:
+	case F_FLOAT32:
 		convertedData := convertArray[T, C.float](data)
 		newData = unsafe.Pointer(&(convertedData[0]))
-	case f_FLOAT64:
+	case F_FLOAT64:
 		convertedData := convertArray[T, C.double](data)
 		newData = unsafe.Pointer(&(convertedData[0]))
 	default:
@@ -74,13 +74,13 @@ func CreateGraphConstant[T completeNumeric](value T, shape Shape) (GraphNode, er
 	var flintNode *C.FGraphNode
 	var errno error
 	switch datatype {
-	case f_INT32:
+	case F_INT32:
 		flintNode, errno = C.fconstant_i(C.int(value), &(newShape[0]), dimensions)
-	case f_INT64:
+	case F_INT64:
 		flintNode, errno = C.fconstant_l(C.long(value), &(newShape[0]), dimensions)
-	case f_FLOAT32:
+	case F_FLOAT32:
 		flintNode, errno = C.fconstant_f(C.float(value), &(newShape[0]), dimensions)
-	case f_FLOAT64:
+	case F_FLOAT64:
 		flintNode, errno = C.fconstant_d(C.double(value), &(newShape[0]), dimensions)
 	default:
 		panic("invalid type")
@@ -92,7 +92,7 @@ func CreateGraphConstant[T completeNumeric](value T, shape Shape) (GraphNode, er
 }
 
 /*
-CreateGraphRandom creates a [f_FLOAT64] tensor that contains randomly distributed values in the range of [0, 1)
+CreateGraphRandom creates a [F_FLOAT64] tensor that contains randomly distributed values in the range of [0, 1)
 
 Params:
   - [shape]: Each entry describing the size of the corresponding dimension.
@@ -108,7 +108,7 @@ func CreateGraphRandom(shape Shape) (GraphNode, error) {
 }
 
 /*
-CreateGraphArrange creates a [f_INT64] tensor that contains the indices relative to a given dimension [axis] for each element.
+CreateGraphArrange creates a [F_INT64] tensor that contains the indices relative to a given dimension [axis] for each element.
 i.e. each entry is its index in that corresponding dimension.
 If you need to index more than one dimension, create multiple such tensors with [CreateGraphArrange].
 */
@@ -131,7 +131,7 @@ func CreateGraphArrange(shape Shape, axis int) (GraphNode, error) {
 }
 
 // CreateGraphIdentity creates an identity matrix.
-// The datatype will be [f_INT32]
+// The datatype will be [F_INT32]
 func CreateGraphIdentity(size uint) (GraphNode, error) {
 	data := make([]int32, size*size)
 	for i := uint(0); i < size; i++ {
@@ -147,5 +147,10 @@ func (node GraphNode) GetShape() Shape {
 	var flintNode *C.FGraphNode = node.ref
 	shapePtr := unsafe.Pointer(flintNode.operation.shape)
 	shapeSize := int(flintNode.operation.dimensions)
-	return fromCToArray[uint](shapePtr, shapeSize, f_INT64)
+	return fromCToArray[uint](shapePtr, shapeSize, F_INT64)
+}
+
+func (node GraphNode) GetType() DataType {
+	var flintNode *C.FGraphNode = node.ref
+	return DataType(flintNode.operation.data_type)
 }

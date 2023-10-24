@@ -323,7 +323,7 @@ func Neg(x GraphNode) (GraphNode, error) {
 Sign applies the sign function to each element.
 i.e. x[i] = 1 if x[i] >= 0 else x[i] = -1
 The input tensor [x] must have an integer type.
-This function returns a [f_INT32] [GraphNode].
+This function returns a [F_INT32] [GraphNode].
 */
 func Sign(x GraphNode) (GraphNode, error) {
 	flintNode, errno := C.fsign(x.ref)
@@ -336,7 +336,7 @@ func Sign(x GraphNode) (GraphNode, error) {
 /*
 Even gives the result of module 2 for each element.
 i.e. x[i] = 1 if x[i] mod 2 == 0 else x[i] = 0
-This function returns a [f_INT32] [GraphNode].
+This function returns a [F_INT32] [GraphNode].
 */
 func Even(x GraphNode) (GraphNode, error) {
 	flintNode, errno := C.feven(x.ref)
@@ -347,7 +347,7 @@ func Even(x GraphNode) (GraphNode, error) {
 }
 
 /*
-Equal compares a tensor and a constant elementwise by [a] = [b] and returns a 0,1 [f_INT32] [GraphNode].
+Equal compares a tensor and a constant elementwise by [a] = [b] and returns a 0,1 [F_INT32] [GraphNode].
 */
 func Equal[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 	var flintNode *C.FGraphNode = nil
@@ -375,7 +375,7 @@ func Equal[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 }
 
 /*
-Greater compares a tensor and a constant elementwise by [a] > [b] and returns a 0,1 [f_INT32] [GraphNode].
+Greater compares a tensor and a constant elementwise by [a] > [b] and returns a 0,1 [F_INT32] [GraphNode].
 */
 func Greater[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 	var flintNode *C.FGraphNode = nil
@@ -403,7 +403,7 @@ func Greater[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 }
 
 /*
-Less compares a tensor and a constant elementwise by [a] < [b] and returns a 0,1 [f_INT32] [GraphNode].
+Less compares a tensor and a constant elementwise by [a] < [b] and returns a 0,1 [F_INT32] [GraphNode].
 */
 func Less[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 	var flintNode *C.FGraphNode = nil
@@ -479,7 +479,7 @@ func FlattenDim(a GraphNode, dim int) (GraphNode, error) {
 /*
 Convert the data of [a] to the type given by [newType].
 */
-func Convert(a GraphNode, newType dataType) (GraphNode, error) {
+func Convert(a GraphNode, newType DataType) (GraphNode, error) {
 	flintNode, errno := C.fconvert(a.ref, C.enum_FType(newType))
 	if flintNode == nil {
 		return GraphNode{}, buildError(errno)

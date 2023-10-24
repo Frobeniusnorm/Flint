@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// f_INT32 and so on has a bad relation to go types
+// F_INT32 and so on has a bad relation to go types
 // Just convert the entire input instead of trying to match types
 func TestCalculateGradients(t *testing.T) {
 	shape := Shape{2, 2}

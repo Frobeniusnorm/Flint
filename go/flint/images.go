@@ -37,11 +37,11 @@ func LoadImage(path string) (GraphNode, error) {
 
 /*
 StoreImage saves the result of node in a given ImageFormat.
-The node has to be of type [f_FLOAT32] or [f_FLOAT64] datatype and needs to have 3 dimensions.
+The node has to be of type [F_FLOAT32] or [F_FLOAT64] datatype and needs to have 3 dimensions.
 
 Errors:
 - error wrapping ErrIllegalDimensionality if node has a dimensionality other than 3.
-- error wrapping ErrWrongType is thrown if node is not of type [f_FLOAT32] or [f_FLOAT64].
+- error wrapping ErrWrongType is thrown if node is not of type [F_FLOAT32] or [F_FLOAT64].
 - error wrapping ErrOOM if out of memory
 - error wrapping ErrIO if path is invalid or not writable
 */
