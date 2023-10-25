@@ -80,6 +80,8 @@ generateCode(FGraphNode *node,
       case FSUB:
       case FDIV:
       case FMUL: {
+        size_t iv1 = 1, iv2 = 1;
+        calculateDivisorForInverseBroadcasting(node->predecessors[0], iv1, node->predecessors[1], iv2);
         // size of current variable has to be equal to the size of one opperand,
         // the other one is at least smaller but not larger
         char op = '\0';
@@ -102,6 +104,17 @@ generateCode(FGraphNode *node,
         code = "const " + type + " " + name + " = v" +
                to_string(variable_index + 1) + " " + op + " v" +
                to_string(variable_index + 2) + ";\n" + code;
+
+        // manipulate for invserse broadcasting
+        if (iv1 != 1 || iv2 != 1) {
+          push_pred = false;
+          const string old_idx = "old_idx" + to_string(num_indices++);
+          code = "index = " + old_idx + "\n;" + code;
+          todo.push_front({nullptr, "long " + old_idx + " = index;\nindex /= " + to_string(iv2) + ";\n"});
+          todo.push_front({node->predecessors[1], "v" + to_string(++variable_index)});
+          todo.push_front({nullptr, "index = " + old_idx + ";\nindex /= " + to_string(iv1) + ";\n"});
+          todo.push_front({node->predecessors[0], "v" + to_string(++variable_index)});
+        }
         break;
       }
       case FPOW: {
@@ -1114,7 +1127,7 @@ generateCode(FGraphNode *node,
         break;
       }
 #ifdef FLINT_DEBUG
-    code = "// " + opstr + " current index: " + to_string(variable_index) +
+    code = "// " + opstr + 
            "\n" + code;
 #endif
     // insert our indexing logic into the queue after the children
@@ -1123,20 +1136,7 @@ generateCode(FGraphNode *node,
     // push predecessors dfs
     if (push_pred)
       for (int i = 0; i < node->num_predecessor; i++) {
-        // auto cashed_var = calculated_vars.find(node->predecessors[i]);
         string parname = "v" + to_string(++variable_index);
-        // if (cashed_var != calculated_vars.end()) {
-        //   code = typeString(node->predecessors[i]->operation.data_type) + " "
-        //   +
-        //          parname + " = " + cashed_var->second + ";\n" + code;
-        //   for(auto it = todo.begin(); it != todo.end(); it++)
-        //     if (std::get<0>(*it) == node) {
-        //       todo.erase(it);
-        //       break;
-        //     }
-        // } else {
-        //   calculated_vars.insert({node->predecessors[i], parname});
-        //   }
         todo.push_front({node->predecessors[i], parname});
       }
   }

@@ -806,33 +806,7 @@ static void executeNode(const FGraphNode *node,
       const CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];
       size_t im1 = p1.num_entries, im2 = p2.num_entries;
       size_t iv1 = 1, iv2 = 1;
-      bool inv_manipulation = p1.shape.size() != p2.shape.size();
-      // constants -> no inverse broadcasting
-      if ((p1.shape.size() == 1 && p1.shape[0] == 1) || (p2.shape.size() == 1 && p2.shape[0] == 1))
-        inv_manipulation = false;
-      // forward broadcasting -> no inverse broadcasting
-      bool forward_broad = true;
-      {
-        std::vector<size_t> lower = p1.shape.size() > p2.shape.size() ? p2.shape : p1.shape;
-        std::vector<size_t> higher = p1.shape.size() > p2.shape.size() ? p1.shape : p2.shape;
-
-        for (int i = 0; i < lower.size(); i++) {
-          const size_t s1 = higher[i + (higher.size() - lower.size())];
-          const size_t s2 = lower[i];
-          if (s1 != s2) {
-            forward_broad = false;
-            break;
-          }
-        }
-      }
-      if (forward_broad)
-        inv_manipulation = false;
-      if (inv_manipulation) {
-        for (int i = p2.shape.size(); i < p1.shape.size(); i++)
-          iv2 *= p1.shape[i];
-        for (int i = p1.shape.size(); i < p2.shape.size(); i++)
-          iv1 *= p2.shape[i];
-      }
+      calculateDivisorForInverseBroadcasting(node->predecessors[0], iv1, node->predecessors[1], iv2);
       switch (p1.type) {
       case F_INT32:
         switch (p2.type) {
