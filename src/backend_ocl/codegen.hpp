@@ -1136,12 +1136,10 @@ generateCode(FGraphNode *node,
         int var2 = ++variable_index;
         todo.push_front({nullptr, "long " + old_idx + " = index;\nindex /= " +
                                       to_string(iv2) + ";\n"});
-        todo.push_front(
-            {node->predecessors[1], "v" + to_string(var2)});
+        todo.push_front({node->predecessors[1], "v" + to_string(var2)});
         todo.push_front({nullptr, "index = " + old_idx +
                                       ";\nindex /= " + to_string(iv1) + ";\n"});
-        todo.push_front(
-            {node->predecessors[0], "v" + to_string(var1)});
+        todo.push_front({node->predecessors[0], "v" + to_string(var1)});
       }
     }
 #ifdef FLINT_DEBUG
@@ -1314,50 +1312,53 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
               to_string(i) + ", long num_entries" + to_string(i);
     break;
   }
+  if (parameter_types.size() == 2)
+    for (int i = 0; i < parameter_types.size(); i++)
+      code += ", long inv_broad" + to_string(i);
   code += "){\nconst long index = get_global_id(0);\n";
   // generate code
   switch (operation) {
   case FADD:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             " return;\n"
-            "R[index] = P0[index%num_entries0] + P1[index%num_entries1];";
+            "R[index] = P0[(index/inv_broad0)%num_entries0] + P1[(index/inv_broad1)%num_entries1];";
     break;
   case FSUB:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             "return;\nR[index] = "
-            "P0[index%num_entries0] - P1[index%num_entries1];";
+            "P0[(index/inv_broad0)%num_entries0] - P1[(index/inv_broad1)%num_entries1];";
     break;
   case FMUL:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             "return;\nR[index] = "
-            "P0[index%num_entries0] * P1[index%num_entries1];";
+            "P0[(index/inv_broad0)%num_entries0] * P1[(index/inv_broad1)%num_entries1];";
     break;
   case FDIV:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             "return;\nR[index] = "
-            "P0[index%num_entries0] / P1[index%num_entries1];";
+            "P0[(index/inv_broad0)%num_entries0] / P1[(index/inv_broad1)%num_entries1];";
     break;
   case FPOW: {
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
     string type = typeString(res_type);
     if ((parameter_types[0] == F_FLOAT32 || parameter_types[0] == F_FLOAT64) &&
         (parameter_types[1] == F_FLOAT32 || parameter_types[1] == F_FLOAT64))
-      code += "R[index] = pow((" + type + ")P0[index%num_entries0], (" + type +
-              ")P1[index%num_entries1]);";
+      code += "R[index] = pow((" + type + ")P0[(index/inv_broad0)%num_entries0], (" + type +
+              ")P1[(index/inv_broad1)%num_entries1]);";
     else if (parameter_types[0] == F_INT64 &&
              (parameter_types[1] == F_INT32 || parameter_types[1] == F_INT64))
       code += "R[index] "
-              "= (long)pown((double)P0[index%num_entries0], "
-              "(int)P1[index%num_entries1]);";
+              "= (long)pown((double)P0[(index/inv_broad0)%num_entries0], "
+              "(int)P1[(index/inv_broad1)%num_entries1]);";
     else if (parameter_types[0] == F_INT32 &&
              (parameter_types[1] == F_INT32 || parameter_types[1] == F_INT64))
       code += "R[index] = "
-              "(int)pown((float)P0[index%num_entries0], "
-              "(int)P1[index%num_entries1]);";
+              "(int)pown((float)P0[(index/inv_broad0)%num_entries0], "
+              "(int)P1[(index/inv_broad1)%num_entries1]);";
     else
       code += "R[index] = "
-              "pow((double)P0[index%num_entries0], "
-              "(double)P1[index%num_entries1]);";
+              "pow((double)P0[(index/inv_broad0)%num_entries0], "
+              "(double)P1[(index/inv_broad1)%num_entries1]);";
   } break;
   case FNEG:
     code += "if(index >= num_entries0) return;\n"
@@ -1467,34 +1468,34 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     break;
   case FMIN:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += typeString(parameter_types[0]) + " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) + " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a < b ? a : b;";
     break;
   case FMAX:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += typeString(parameter_types[0]) + " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) + " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a > b ? a : b;";
     break;
   case FLESS:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += typeString(parameter_types[0]) + " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) + " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a < b ? 1 : 0;";
     break;
   case FEQUAL:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += typeString(parameter_types[0]) + " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) + " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a + " + epsilonForType(parameter_types[0]) +
             " >= b && a <= b + " + epsilonForType(parameter_types[1]) +
             " ? 1 : 0;";
     break;
   case FGREATER:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += typeString(parameter_types[0]) + " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) + " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a > b ? 1 : 0;";
     break;
   case FREDUCE_MIN:
@@ -1785,13 +1786,6 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "R[index] = P0[base + offset];\n";
     break;
   case FUNSLIDE_WINDOW:
-    // shape0 -> pred shape
-    // acc_sizes_pred
-    // shapeR
-    // dimensionsR -> node dimensions
-    // acc_no_windows
-    // no_windows
-    // steps
     code += "if(index >= num_entriesR) return;\n"
             "R[index] = 0;\n"
             "long first_w = 0;\n"

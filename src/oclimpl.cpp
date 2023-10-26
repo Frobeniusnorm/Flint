@@ -510,6 +510,9 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     node->result_data = rd;
     return node;
   }
+  size_t inv_broad[2];
+  if (node->num_predecessor == 2)
+    calculateDivisorForInverseBroadcasting(node->predecessors[0], inv_broad[0], node->predecessors[1], inv_broad[1]);
   std::vector<FType> params_types(node->num_predecessor);
   for (int i = 0; i < node->num_predecessor; i++)
     params_types[i] = node->predecessors[i]->operation.data_type;
@@ -543,7 +546,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
     flogging(F_ERROR, "Could not load Argument to kernel!");
     return nullptr;
   }
-  // push operation information on demand
   if (clSetKernelArg(kernel, par_index++, sizeof(long),
                      (void *)&total_size_node) != CL_SUCCESS) {
     setErrorType(OCL_ERROR);
@@ -622,6 +624,17 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
   }
   // parameters for functions that dont set them per parent
   pushAdditonalVals(node, kernel, context, par_index, to_free);
+  // broadcasting values
+  if (node->num_predecessor == 2) {
+    for (int i = 0; i < node->num_predecessor; i++) {
+      if (clSetKernelArg(kernel, par_index++, sizeof(long),
+                         (void *)&inv_broad[i]) != CL_SUCCESS) {
+        setErrorType(OCL_ERROR);
+        flogging(F_ERROR, "Could not load Argument to kernel!");
+        return nullptr;
+      }
+    }
+  }
   // execute it
   err_code = clEnqueueNDRangeKernel(
       clqueue, kernel, 1, nullptr, &total_size_node, nullptr,
