@@ -1131,15 +1131,17 @@ generateCode(FGraphNode *node,
       if (iv1 != 1 || iv2 != 1) {
         push_pred = false;
         const string old_idx = "old_idx" + to_string(num_indices++);
-        code = "index = " + old_idx + "\n;" + code;
+        code = "index = " + old_idx + ";\n" + code;
+        int var1 = ++variable_index;
+        int var2 = ++variable_index;
         todo.push_front({nullptr, "long " + old_idx + " = index;\nindex /= " +
                                       to_string(iv2) + ";\n"});
         todo.push_front(
-            {node->predecessors[1], "v" + to_string(++variable_index)});
+            {node->predecessors[1], "v" + to_string(var2)});
         todo.push_front({nullptr, "index = " + old_idx +
                                       ";\nindex /= " + to_string(iv1) + ";\n"});
         todo.push_front(
-            {node->predecessors[0], "v" + to_string(++variable_index)});
+            {node->predecessors[0], "v" + to_string(var1)});
       }
     }
 #ifdef FLINT_DEBUG
