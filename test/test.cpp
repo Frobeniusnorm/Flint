@@ -1211,6 +1211,13 @@ TEST_SUITE("Advanced Broadcasting") {
           CHECK_EQ(a[i][j][k] + b[i][j], c[i][j][k]);
           CHECK_EQ(a[i][j][k] * b[i][j], d[i][j][k]);
         }
+    Tensor<long, 2> e = Flint::arange(1, 2, 4);
+    Tensor<long, 3> f = (a + e).pow(b) - d;
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 2; j++)
+        for (int k = 0; k < 4; k++) {
+          CHECK_EQ((long)std::pow(a[i][j][k] + e[j][k], b[i][j]) - d[i][j][k], f[i][j][k]);
+        }
   }
 }
 int main(int argc, char **argv) {

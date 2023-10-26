@@ -56,6 +56,8 @@ generateCode(FGraphNode *node,
     bool push_pred = true;
     // write code
     const string opstr = string(fop_to_string[node->operation.op_type]);
+    bool inverse_broadcasting =
+        false; // adds index manipulation code for inverse broadcasting
     // need to be outside switch to include result_data
     if (node->operation.op_type == FSTORE || node->result_data ||
         node->operation.op_type == FGEN_CONSTANT) {
@@ -80,8 +82,7 @@ generateCode(FGraphNode *node,
       case FSUB:
       case FDIV:
       case FMUL: {
-        size_t iv1 = 1, iv2 = 1;
-        calculateDivisorForInverseBroadcasting(node->predecessors[0], iv1, node->predecessors[1], iv2);
+        inverse_broadcasting = true;
         // size of current variable has to be equal to the size of one opperand,
         // the other one is at least smaller but not larger
         char op = '\0';
@@ -104,20 +105,10 @@ generateCode(FGraphNode *node,
         code = "const " + type + " " + name + " = v" +
                to_string(variable_index + 1) + " " + op + " v" +
                to_string(variable_index + 2) + ";\n" + code;
-
-        // manipulate for invserse broadcasting
-        if (iv1 != 1 || iv2 != 1) {
-          push_pred = false;
-          const string old_idx = "old_idx" + to_string(num_indices++);
-          code = "index = " + old_idx + "\n;" + code;
-          todo.push_front({nullptr, "long " + old_idx + " = index;\nindex /= " + to_string(iv2) + ";\n"});
-          todo.push_front({node->predecessors[1], "v" + to_string(++variable_index)});
-          todo.push_front({nullptr, "index = " + old_idx + ";\nindex /= " + to_string(iv1) + ";\n"});
-          todo.push_front({node->predecessors[0], "v" + to_string(++variable_index)});
-        }
         break;
       }
       case FPOW: {
+        inverse_broadcasting = true;
         const FOperation x = node->predecessors[0]->operation;
         const FOperation y = node->predecessors[1]->operation;
         if ((x.data_type == F_FLOAT32 || x.data_type == F_FLOAT64) &&
@@ -141,24 +132,28 @@ generateCode(FGraphNode *node,
                  to_string(variable_index + 2) + ");\n" + code;
       } break;
       case FMIN: {
+        inverse_broadcasting = true;
         code = "const " + type + " " + name + " = min((" + type + ")v" +
                to_string(variable_index + 1) + ", (" + type + ")v" +
                to_string(variable_index + 2) + ");\n" + code;
 
       } break;
       case FMAX: {
+        inverse_broadcasting = true;
         code = "const " + type + " " + name + " = max((" + type + ")v" +
                to_string(variable_index + 1) + ", (" + type + ")v" +
                to_string(variable_index + 2) + ");\n" + code;
 
       } break;
       case FLESS: {
+        inverse_broadcasting = true;
         code = "const " + type + " " + name + " = v" +
                to_string(variable_index + 1) + " < v" +
                to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
 
       } break;
       case FEQUAL: {
+        inverse_broadcasting = true;
         const FOperation x = node->predecessors[0]->operation;
         const FOperation y = node->predecessors[1]->operation;
         code = "const " + type + " " + name + " = v" +
@@ -173,6 +168,7 @@ generateCode(FGraphNode *node,
 
       } break;
       case FGREATER: {
+        inverse_broadcasting = true;
         code = "const " + type + " " + name + " = v" +
                to_string(variable_index + 1) + " > v" +
                to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
@@ -543,7 +539,8 @@ generateCode(FGraphNode *node,
                       " = index;\n"
                       "index = 0;\n{\n"
                       "long wi = (" +
-                      i + "%" + to_string(num_elems) + ")/" + to_string(acc_size) +
+                      i + "%" + to_string(num_elems) + ")/" +
+                      to_string(acc_size) +
                       ";\n"
                       "long rest = " +
                       i + "%" + to_string(acc_size) + ";\n";
@@ -1126,9 +1123,27 @@ generateCode(FGraphNode *node,
       default:
         break;
       }
+    if (inverse_broadcasting) {
+      // manipulate for invserse broadcasting
+      size_t iv1 = 1, iv2 = 1;
+      calculateDivisorForInverseBroadcasting(node->predecessors[0], iv1,
+                                             node->predecessors[1], iv2);
+      if (iv1 != 1 || iv2 != 1) {
+        push_pred = false;
+        const string old_idx = "old_idx" + to_string(num_indices++);
+        code = "index = " + old_idx + "\n;" + code;
+        todo.push_front({nullptr, "long " + old_idx + " = index;\nindex /= " +
+                                      to_string(iv2) + ";\n"});
+        todo.push_front(
+            {node->predecessors[1], "v" + to_string(++variable_index)});
+        todo.push_front({nullptr, "index = " + old_idx +
+                                      ";\nindex /= " + to_string(iv1) + ";\n"});
+        todo.push_front(
+            {node->predecessors[0], "v" + to_string(++variable_index)});
+      }
+    }
 #ifdef FLINT_DEBUG
-    code = "// " + opstr + 
-           "\n" + code;
+    code = "// " + opstr + "\n" + code;
 #endif
     // insert our indexing logic into the queue after the children
     if (!index_defs.empty())
