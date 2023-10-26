@@ -926,9 +926,9 @@ TEST_CASE("Multifilter Convolve") {
       {{{1, 1}, {2, -1}}}, {{{-1, 1}, {1, 0}}}, {{{-2, 1}, {2, -1}}}};
   Tensor<float, 3> r1 = t1.convolve(k1, 1, 1);
   Tensor<float, 3> e1{{{1, 2, 1}, {4, 3, 1}}, {{11, 6, 2}, {17, 8, 2}}};
-  for (int i = 0; i < e1.get_shape()[0]; i++) 
-    for (int j = 0; j < e1.get_shape()[0]; j++) 
-      for (int k = 0; k < e1.get_shape()[0]; k++) 
+  for (int i = 0; i < e1.get_shape()[0]; i++)
+    for (int j = 0; j < e1.get_shape()[0]; j++)
+      for (int k = 0; k < e1.get_shape()[0]; k++)
         CHECK_EQ(r1[i][j][k], e1[i][j][k]);
 }
 TEST_CASE("Slide") {
@@ -1216,8 +1216,16 @@ TEST_SUITE("Advanced Broadcasting") {
     for (int i = 0; i < 3; i++)
       for (int j = 0; j < 2; j++)
         for (int k = 0; k < 4; k++) {
-          CHECK_EQ((long)std::pow(a[i][j][k] + e[j][k], b[i][j]) - d[i][j][k], f[i][j][k]);
+          CHECK_EQ((long)std::pow(a[i][j][k] + e[j][k], b[i][j]) - d[i][j][k],
+                   f[i][j][k]);
         }
+    Tensor<long, 2> g = {{5, 3}, {-1, 7}};
+    Tensor<long, 1> h = {-1, 2, 3, 5, 1};
+    Tensor<long, 2> l = Flint::concat(b, g, 0) - h;
+    Tensor<long, 2> exp = {{3, 3}, {1, 2}, {-4, -1}, {0, -2}, {-2, 6}};
+    for (int i = 0; i < 5; i++)
+      for (int j = 0; j < 2; j++)
+        CHECK_EQ(exp[i][j], l[i][j]);
   }
 }
 int main(int argc, char **argv) {
