@@ -42,15 +42,16 @@ extern "C" {
   You can query the error reason with `fErrorMessage` and `fErrorType`.
 
   In general all operations that take two parameters of equal shape (like e.g.
-  addition, division, minimum, equal etc.) allow normal and inverse broadcasting.
+  addition, division, minimum, equal etc.) allow normal and inverse
+  broadcasting.
   - normal broadcasting: a node with shape [4, 6, 8] can be broadcasted to a
     node with shape [2, 4, 6, 8] by repeating the first node 2 times in the
     first dimension.
   - inverse broadcasting: a node with shape [2, 4, 6] can be broadcasted to a
     node with shape [2, 4, 6, 8] by repeating the first node 8 times in the last
-    dimension. 
-
+    dimension.
   E.g.
+
   @code{
   float data_a[] = {0, 1, 2,
                     3, 4, 5};

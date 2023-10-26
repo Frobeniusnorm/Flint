@@ -27,6 +27,36 @@
   </div>
   <center>
     <div class="content" style="margin-top: -3.1em">
+        <div class="card" style="padding: 20px 15px">
+          This file contains information about the general use of Flint in its C compatibility mode. Remember to set the CMake flag, s.t. no Exceptions are thrown.
+          Instead the function will return NULL, and set the errno (see the error related functions of flint for
+          more context).
+          <div style="display: block; height: 2em;"></div>
+          In general all operations that take two parameters of equal shape (like e.g.
+          addition, division, minimum, equal etc.) allow normal and inverse broadcasting.
+          <ul>
+            <li> normal broadcasting: a node with shape [4, 6, 8] can be broadcasted to a
+            node with shape [2, 4, 6, 8] by repeating the first node 2 times in the
+            first dimension. </li>
+            <li> inverse broadcasting: a node with shape [2, 4, 6] can be broadcasted to a
+            node with shape [2, 4, 6, 8] by repeating the first node 8 times in the last
+            dimension. </li>
+          </ul>
+          E.g. <br/>
+          <pre class="card code" style="margin: 5px;">
+<span style="color: #FFF030">float</span> data_a[] = {<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">2</span>,
+                  <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>};
+<span style="color: #FFF030">double</span> shape_a[] = {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>};
+<span style="color: #FFF030">float</span> data_b[] = {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">6</span>};
+<span style="color: #FFF030">double</span> shape_b = <span style="color: #30F0FF">3</span>;
+FGraphNode* a = fCreateGraph((void*)data_a, <span style="color: #30F0FF">6</span>, F_FLOAT32, shape_a, <span style="color: #30F0FF">2</span>);
+FGraphNode* b = fCreateGraph((void*)data_b, <span style="color: #30F0FF">3</span>, F_FLOAT32, &shape_b, <span style="color: #30F0FF">1</span>);
+FGraphNode* c = fmul(a, b); <span style="color: #D0D0D0">// {{<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">8</span>}, {<span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">8</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">1</span>}}</span></pre>
+          <br/>
+          Broadcasting is implemented without repeating the data, but by directly
+          accessing it.
+        </div>
+        <div style="display: block; height: 2em;"></div>
         <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-FErrorType_">enum <b>FErrorType </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-flintInit_int_backends_">FErrorType <b>flintInit</b>(int backends)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-flintInit_cpu__">FErrorType <b>flintInit_cpu</b>()</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-flintInit_gpu__">FErrorType <b>flintInit_gpu</b>()</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-flintInitializedBackends__">int <b>flintInitializedBackends</b>()</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-flintCleanup__">FErrorType <b>flintCleanup</b>()</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-flintCleanup_cpu__">FErrorType <b>flintCleanup_cpu</b>()</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-flintCleanup_gpu__">FErrorType <b>flintCleanup_gpu</b>()</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FLogType_">enum <b>FLogType </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fSetLoggingLevel_enum_FLogType_type_">void <b>fSetLoggingLevel</b>(enum FLogType type)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FImageFormat_">enum <b>FImageFormat </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-flogging_enum_FLogType_type__const_char_*msg_">void <b>flogging</b>(enum FLogType type, const char *msg)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FErrorType_fErrorType__">enum <b>FErrorType fErrorType()</b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-char_*fErrorMessage__">const char <b>*fErrorMessage</b>()</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fEnableEagerExecution__">void <b>fEnableEagerExecution</b>()</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fDisableEagerExecution__">void <b>fDisableEagerExecution</b>()</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fIsEagerExecution__">int <b>fIsEagerExecution</b>()</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FType_">enum <b>FType </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FOperation_">struct <b>FOperation </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FResultData_">struct <b>FResultData </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FGraphNode_">struct <b>FGraphNode </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FStore_">struct <b>FStore </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fCreateGraph_const_void_*data__const_int_num_entries__________________________const_enum_FType_data_type__const_size_t_*shape__________________________const_int_dimensions_">FGraphNode <b>*fCreateGraph</b>(const void *data, const int num_entries,
                          const enum FType data_type, const size_t *shape,
                          const int dimensions)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fconstant_i_const_int_value__const_size_t_*shape_________________________const_int_dimensions_">FGraphNode <b>*fconstant_i</b>(const int value, const size_t *shape,
@@ -44,7 +74,9 @@
                       const unsigned int *steps)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fslide_FGraphNode_*a__FGraphNode_*kernel____________________const_unsigned_int_*steps_">FGraphNode <b>*fslide</b>(FGraphNode *a, FGraphNode *kernel,
                    const unsigned int *steps)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-findex_FGraphNode_*a__FGraphNode_*indices_">FGraphNode <b>*findex</b>(FGraphNode *a, FGraphNode *indices)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-findex_set_FGraphNode_*a__FGraphNode_*b__FGraphNode_*indices_">FGraphNode <b>*findex_set</b>(FGraphNode *a, FGraphNode *b, FGraphNode *indices)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fsliding_window_FGraphNode_*a__const_size_t_*size_____________________________const_unsigned_int_*steps_">FGraphNode <b>*fsliding_window</b>(FGraphNode *a, const size_t *size,
                             const unsigned int *steps)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-funslide_window_FGraphNode_*a__const_size_t_*shape_____________________________const_unsigned_int_*steps_">FGraphNode <b>*funslide_window</b>(FGraphNode *a, const size_t *shape,
-                            const unsigned int *steps)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fpermutate_FGraphNode_*a__unsigned_int_ax_">FGraphNode <b>*fpermutate</b>(FGraphNode *a, unsigned int ax)</a><br/><br/></div>
+                            const unsigned int *steps)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fpermutate_FGraphNode_*a__unsigned_int_ax_">FGraphNode <b>*fpermutate</b>(FGraphNode *a, unsigned int ax)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fpooling_sum_const_FGraphNode_*a__const_size_t_*window_size__________________________const_unsigned_int_*step_size_">FGraphNode <b>*fpooling_sum</b>(const FGraphNode *a, const size_t *window_size,
+                         const unsigned int *step_size)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-fpooling_sum_const_FGraphNode_*a__const_size_t_*window_size__________________________const_unsigned_int_*step_size_">FGraphNode <b>*fpooling_sum</b>(const FGraphNode *a, const size_t *window_size,
+                         const unsigned int *step_size)</a><br/><br/></div>
         <div style="display: block; height: 2em;"></div>
         <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
           The C-Backend has a memory management system optimized for easy usage in C++, which makes it a little bit weird in C.
@@ -1004,6 +1036,34 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Randomly permutates (=swaps multiple elements with each other without
  creating, copying or deleting new ones) one axis of the input tensor.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-fpooling_sum_const_FGraphNode_*a__const_size_t_*window_size__________________________const_unsigned_int_*step_size_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">FGraphNode <b>*fpooling_sum</b>(const FGraphNode *a, const size_t *window_size,
+                         const unsigned int *step_size)</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ TODO not yet implemented
+ Slides a window along the Tensor and sums up all elements inside that window,
+ reducing it into one element and then slides the window in each dimension
+ <pre class="inline_code">step_size</pre> times (like  <a href="#s-fsliding_window_FGraphNode_*a__const_size_t_*size_____________________________const_unsigned_int_*steps_"><pre class="inline_code">fsliding_window</pre></a>).<ul><li><pre class="inline_code">a</pre> the tensor to pool
+</li><li><pre class="inline_code">window_size</pre> array with as many elements as <pre class="inline_code">a</pre> has dimension, each
+   describing the window size in that dimension for which all elements inside
+   each window are to be summed up
+</li><li><pre class="inline_code">step_size</pre> array of number of elements the window should be moved after
+   each reducting for each dimension</li></ul>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-fpooling_sum_const_FGraphNode_*a__const_size_t_*window_size__________________________const_unsigned_int_*step_size_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">FGraphNode <b>*fpooling_sum</b>(const FGraphNode *a, const size_t *window_size,
+                         const unsigned int *step_size)</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ TODO not yet implemented
+ Slides a window along the Tensor and reduces all elements inside that window
+ to their maximum element (just that one remains in the result tensor), and
+ then slides the window in each dimension <pre class="inline_code">step_size</pre> times (like
+  <a href="#s-fsliding_window_FGraphNode_*a__const_size_t_*size_____________________________const_unsigned_int_*steps_"><pre class="inline_code">fsliding_window</pre></a>).<ul><li><pre class="inline_code">a</pre> the tensor to pool
+</li><li><pre class="inline_code">window_size</pre> array with as many elements as <pre class="inline_code">a</pre> has dimension, each
+   describing the window size in that dimension for which for all elements
+</li></ul> inside each window the maximum should be taken.<ul><li><pre class="inline_code">step_size</pre> array of number of elements the window should be moved after
+   each reducting for each dimension</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
 
     </div>

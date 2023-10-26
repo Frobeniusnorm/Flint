@@ -389,7 +389,7 @@ template <typename T, unsigned int n> struct Tensor {
    * Calls `serialize` on this Tensor and pipes the returned data to the
    * stream.
    */
-  friend std::ofstream &operator<<(std::ofstream &os, Tensor<T, n> &t) {
+  friend std::ofstream &operator<<(std::ofstream &os, Tensor<T, n> t) {
     for (char c : t.serialize()) {
       os.put(c);
     }
@@ -431,7 +431,7 @@ template <typename T, unsigned int n> struct Tensor {
    * Calls `std::string()` on this Tensor and pipes the returned string to the
    * pipe.
    */
-  friend std::ostream &operator<<(std::ostream &os, Tensor<T, n> &t) {
+  friend std::ostream &operator<<(std::ostream &os, Tensor<T, n> t) {
     os << (std::string)t;
     return os;
   }

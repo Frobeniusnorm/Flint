@@ -48,11 +48,31 @@ struct Flint {
                                                   node->operation.shape[1],
                                                   node->operation.shape[2]});
   }
+  /**
+   * Expects an image in `t` with shape width, height, channels (the number of
+   * channels will be passed to stbi). `path` is the filepath to which the image
+   * should be written, `format` denotes the file type of the output file.
+   */
   static void store_image(Tensor<float, 3> &t, std::string path,
                           FImageFormat format) {
     fstore_image(t.node, path.c_str(), format);
   }
-
+  /**
+   * Concatenates two tensors along one axis.
+   * The nodes have to have the same type and dimensions.
+   * E.g.
+   *
+   * @code{
+   * Tensor<int, 3> a = {{{0, 1}, {2, 3}}, {{4, 5}, {6, 7}}};
+   * Tensor<int, 3> b = {{{8}, {9}}, {{10}, {11}}};
+   * std::cout << Flint::concat(a, b, 2)() << std::endl;
+   * // Tensor<int32, shape: [2, 2, 3]>(
+   * // [[[0, 1, 8],
+   * //   [2, 3, 9]],
+   * //  [[4, 5, 10],
+   * //   [6, 7, 11]]])
+   * }
+   */
   template <typename K, unsigned int n>
   static Tensor<K, n> concat(const Tensor<K, n> &a, const Tensor<K, n> &b,
                              unsigned int ax) {
@@ -105,6 +125,7 @@ struct Flint {
    * Generates a Tensor containing the single given value in every entry.
    * The resulting Tensor will have a dimensionality of `n` and a
    * shape denoted by each entry in `shape`. e.g.
+   *
    * @code{
    * Tensor<double, 3> foo = Flint::constant_array(3.141592, std::array<size_t,
    * 3>(2, 2, 2)); std::cout << foo << std::endl;
@@ -125,6 +146,7 @@ struct Flint {
    * Generates a Tensor containing the single given value in every entry.
    * The resulting Tensor will have a dimensionality of `sizeof...(args)` and a
    * shape denoted by each entry in `sizes`. e.g.
+   *
    * @code{
    * Tensor<double, 3> foo = Tensor<double, 3>::constant(3.141592, 2, 2, 2);
    * std::cout << foo << std::endl;
@@ -140,16 +162,29 @@ struct Flint {
     std::array<size_t, sizeof...(args)> shape{static_cast<size_t>(sizes)...};
     return constant_array<T, sizeof...(args)>(value, shape);
   }
+
+  /**
+   * Creates a int64 tensor that contains the indices relative to a given
+   * dimension `ax` for each element, i.e. each entry is its index in that
+   * corresponding dimension. If you need to index more than one dimension,
+   * create multiple such tensors with `arange`.
+   * Uses an array instead of the variadic template.
+   */
   template <unsigned int n>
-  static Tensor<long, n>
-  arange_array(unsigned int ax, std::array<size_t, n> shape) {
+  static Tensor<long, n> arange_array(unsigned int ax,
+                                      std::array<size_t, n> shape) {
     FGraphNode *node = farange(shape.data(), (unsigned int)n, ax);
     return Tensor<long, n>(node, shape);
   }
   /**
+   * Creates a int64 tensor that contains the indices relative to a given
+   * dimension `ax` for each element, i.e. each entry is its index in that
+   * corresponding dimension. If you need to index more than one dimension,
+   * create multiple such tensors with `arange`.
    */
   template <typename... args>
-  static Tensor<long, sizeof...(args)> arange(unsigned int axis, args... sizes) {
+  static Tensor<long, sizeof...(args)> arange(unsigned int axis,
+                                              args... sizes) {
     std::array<size_t, sizeof...(args)> shape{static_cast<size_t>(sizes)...};
     return arange_array<(unsigned int)(sizeof...(args))>(axis, shape);
   }
