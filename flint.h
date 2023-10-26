@@ -40,6 +40,30 @@ extern "C" {
   C_COMPATIBILITY that - when enabled during compilation - disables exception
   throwing and sets the errno instead (the functions then return NULL on error).
   You can query the error reason with `fErrorMessage` and `fErrorType`.
+
+  In general all operations that take two parameters of equal shape (like e.g.
+  addition, division, minimum, equal etc.) allow normal and inverse broadcasting.
+  - normal broadcasting: a node with shape [4, 6, 8] can be broadcasted to a
+    node with shape [2, 4, 6, 8] by repeating the first node 2 times in the
+    first dimension.
+  - inverse broadcasting: a node with shape [2, 4, 6] can be broadcasted to a
+    node with shape [2, 4, 6, 8] by repeating the first node 8 times in the last
+    dimension. 
+
+  E.g.
+  @code{
+  float data_a[] = {0, 1, 2,
+                    3, 4, 5};
+  size_t shape_a[] = {2, 3};
+  float data_b[] = {2, 4, 6};
+  size_t shape_b = 3;
+  FGraphNode* a = fCreateGraph((void*)data_a, 6, F_FLOAT32, shape_a, 2);
+  FGraphNode* b = fCreateGraph((void*)data_b, 3, F_FLOAT32, &shape_b, 1);
+  FGraphNode* c = fmul(a, b); // {{2, 5, 8}, {5, 8, 11}}
+  }
+
+  Broadcasting is implemented without repeating the data, but by directly
+  accessing it.
 */
 #define FLINT_BACKEND_ONLY_CPU 1
 #define FLINT_BACKEND_ONLY_GPU 2
@@ -1059,11 +1083,12 @@ FGraphNode *fpooling_sum(const FGraphNode *a, const size_t *window_size,
  * TODO not yet implemented
  * Slides a window along the Tensor and reduces all elements inside that window
  * to their maximum element (just that one remains in the result tensor), and
- * then slides the window in each dimension `step_size` times (like `fsliding_window`).
+ * then slides the window in each dimension `step_size` times (like
+ * `fsliding_window`).
  * - `a` the tensor to pool
  * - `window_size` array with as many elements as `a` has dimension, each
- *   describing the window size in that dimension for which for all elements inside
- *   each window the maximum should be taken.
+ *   describing the window size in that dimension for which for all elements
+ * inside each window the maximum should be taken.
  * - `step_size` array of number of elements the window should be moved after
  *   each reducting for each dimension
  */

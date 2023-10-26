@@ -16,6 +16,37 @@
   </div>
   <center>
     <div class="content" style="margin-top: -3.1em">
+        <div class="card" style="padding: 20px 15px">
+          This file contains information about the general use of Flint in its C compatibility mode. Remember to set the CMake flag, s.t. no Exceptions are thrown.
+          Instead the function will return <div class="card" style="padding: 20px 15px">NULL</div>, and set the errno (see the error related functions of flint for
+          more context).
+          <div style="display: block; height: 2em;"></div>
+          In general all operations that take two parameters of equal shape (like e.g.
+          addition, division, minimum, equal etc.) allow normal and inverse broadcasting.
+          <ul>
+            <li> normal broadcasting: a node with shape [4, 6, 8] can be broadcasted to a
+            node with shape [2, 4, 6, 8] by repeating the first node 2 times in the
+            first dimension. </li>
+            <li> inverse broadcasting: a node with shape [2, 4, 6] can be broadcasted to a
+            node with shape [2, 4, 6, 8] by repeating the first node 8 times in the last
+            dimension. </li>
+          </ul>
+          E.g.
+          @code{
+          float data_a[] = {0, 1, 2,
+                            3, 4, 5};
+          size_t shape_a[] = {2, 3};
+          float data_b[] = {2, 4, 6};
+          size_t shape_b = 3;
+          FGraphNode* a = fCreateGraph((void*)data_a, 6, F_FLOAT32, shape_a, 2);
+          FGraphNode* b = fCreateGraph((void*)data_b, 3, F_FLOAT32, &shape_b, 1);
+          FGraphNode* c = fmul(a, b); // {{2, 5, 8}, {5, 8, 11}}
+          }
+          <br/>
+          Broadcasting is implemented without repeating the data, but by directly
+          accessing it.
+        </div>
+        <div style="display: block; height: 2em;"></div>
         @gen_toc("../flint.h")
         <div style="display: block; height: 2em;"></div>
         <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
