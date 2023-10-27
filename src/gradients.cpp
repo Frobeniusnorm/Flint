@@ -91,6 +91,7 @@ static FGraphNode *gradient_convolve(FGraphNode *a, FGraphNode *kernel,
   gradient->result_data = nullptr;
   gradient->reference_counter = 0;
   FOperation op;
+  op.broadcasting_mode = 0;
   op.data_type = F_FLOAT64;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
@@ -324,6 +325,9 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
         FGraphNode *na = fsliding_window(a, ws, new_steps.data());
         // broadcast along first dimension (one element in prev_adj -> one
         // window)
+        std::cout << printShape(prev_adj->operation.shape,
+                                prev_adj->operation.dimensions)
+                  << std::endl;
         if (multiple_filter) {
           // bring filters in first dimension
           prev_adj = fexpand(prev_adj, 0, 1);
@@ -337,13 +341,14 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
           const unsigned int dims = prev_adj->operation.dimensions;
           for (int i = 2; i < dims; i++)
             prev_adj = fflatten_dimension(prev_adj, 2);
+          // TODO does not work yet, fixable by transposing na to [window sizes
+          // ..., windows] and prev_adj to [windows, filters], then matrix
+          // multiplication yields [window sizes ..., filters], transpose
+          // filters to first and we are done
         } else
           prev_adj = fflatten(prev_adj);
-        // repeat to fit correct shape
-        for (int i = 1; i < na->operation.dimensions; i++)
-          prev_adj = fexpand(prev_adj, i + (multiple_filter ? 1 : 0),
-                             na->operation.shape[i]);
         // correct multiplicative elements per window element
+        fEnforceInverseBroadcasting(prev_adj);
         na = fmul(na, prev_adj);
         // all windows have to be summed up for the kernels
         const unsigned int reduce_dim = multiple_filter ? 1 : 0;

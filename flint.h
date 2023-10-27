@@ -266,14 +266,18 @@ enum FOperationType {
  * operation, `FOperation.data_type` the type of the underlying data,
  * `FOperation.additional_data` is operation specific.*/
 struct FOperation {
-  // shape of the data after execution
-  int dimensions;
   size_t *shape;
+  void *additional_data;
   // type of operation, to enable switch cases and avoid v-table lookups
   enum FOperationType op_type;
   // datatype of result
   enum FType data_type;
-  void *additional_data;
+  // shape of the data after execution
+  int dimensions;
+  // currently a boolean indicating if standard broadcasting (0) is to be used
+  // or inverse (1), in the future maybe an additional indicators for more
+  // advanced broadcasting methods may be implemented
+  int broadcasting_mode;
 };
 typedef struct FOperation FOperation;
 
@@ -554,6 +558,19 @@ void fUnmarkGradientVariable(FGraphNode *node);
  * The C++ framework does this automatically.
  */
 FGraphNode *fOptimizeMemory(FGraphNode *node);
+/** Sometimes there are combinations of nodes where both normal and inverse
+ * broadcasting is possible, but yields different results, e.g. multiplication
+ * for two nodes with shapes [3, 5, 3, 5] and [3, 5]. The framework chooses
+ * normal broadcasting over inverse if both are possible, this function allows
+ * you to alter this behaviour and mark a node to be inversely broadcasted.
+ * After the call to this function the given node will from then on only
+ * inversely broadcasted (in cases where only normal broadcasting is available
+ * an error will occur!). It has no effect in operations that don't use
+ * broadcasting. You can "unmark" the node with `fUnenforceInverseBroadcasting`.
+ */
+void fEnforceInverseBroadcasting(FGraphNode *node);
+/** Undos `fEnforceInverseBroadcasting` for a node.*/
+void fUnenforceInverseBroadcasting(FGraphNode *node);
 //  operations
 /** Serializes the data and shape of the node and returns an array of chars in
  * which the serialized data will be written (binary data, not a string). The

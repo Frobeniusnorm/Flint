@@ -372,10 +372,10 @@ static void calculateDivisorForInverseBroadcasting(const FGraphNode* a, size_t& 
       bool inv_manipulation = a->operation.dimensions != b->operation.dimensions;
       // constants -> no inverse broadcasting
       if ((a->operation.dimensions == 1 && a->operation.shape[0] == 1) || (b->operation.dimensions == 1 && b->operation.shape[0] == 1))
-        inv_manipulation = false;
+        return;
       // forward broadcasting -> no inverse broadcasting
-      bool forward_broad = true;
-      {
+      bool forward_broad = a->operation.broadcasting_mode == 0 && b->operation.broadcasting_mode == 0;
+      if (forward_broad) {
         size_t* const lower = a->operation.dimensions > b->operation.dimensions ? b->operation.shape : a->operation.shape;
         size_t* const higher = a->operation.dimensions > b->operation.dimensions ? a->operation.shape : b->operation.shape;
         const int lower_dim = std::min(a->operation.dimensions, b->operation.dimensions);
@@ -390,7 +390,7 @@ static void calculateDivisorForInverseBroadcasting(const FGraphNode* a, size_t& 
         }
       }
       if (forward_broad)
-        inv_manipulation = false;
+        return;
       if (inv_manipulation) {
         for (int i = b->operation.dimensions; i < a->operation.dimensions; i++)
           iv2 *= a->operation.shape[i];

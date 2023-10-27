@@ -144,6 +144,27 @@ template <typename T> struct Tensor<T, 1> {
     }
   }
   /**
+   * Sometimes there are combinations of nodes where both normal and
+   * inverse broadcasting is possible, but yields different results, e.g.
+   * multiplication for two nodes with shapes `[3, 5, 3, 5]` and `[3, 5]`. The
+   * framework chooses normal broadcasting over inverse if both are possible,
+   * this function allows you to alter this behaviour and mark a node to be
+   * inversely broadcasted. After the call to this function the given node will
+   * from then on only inversely broadcasted (in cases where only normal
+   * broadcasting is available an error will occur!). It has no effect in
+   * operations that don't use broadcasting. You can "unmark" the node with
+   * `disable_inverse_broadcasting`.
+   */
+  void inverse_broadcasting() {
+    fEnforceInverseBroadcasting(get_graph_node());
+  }
+  /**
+   * Undoes `inverse_broadcasting`
+   */
+  void disable_inverse_broadcasting() {
+    fUnenforceInverseBroadcasting(get_graph_node());
+  }
+  /**
    * Indexes the Tensor and returns the element.
    * If the underlying data is not yet computed, executes this Tensor.
    */
