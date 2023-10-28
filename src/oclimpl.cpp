@@ -337,7 +337,7 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
     }
     break;
   }
-  case FGRADIENT_CONVOLVE: {
+  case FGRADIENT_CONVOLVE1: {
     std::string kernel_name;
     for (FType param : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
       code += generateEagerCode(node->operation.op_type, F_FLOAT64,

@@ -243,7 +243,7 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
       return;
     }
   } break;
-  case FGRADIENT_CONVOLVE:
+  case FGRADIENT_CONVOLVE1:
   case FSLIDE: {
     bool is_slide = node->operation.op_type == FSLIDE;
     const FOperation op = node->operation;
@@ -366,7 +366,7 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
   case FSET_INDEX:
   case FINDEX:
   case FMATMUL:
-  case FGRADIENT_CONVOLVE:
+  case FGRADIENT_CONVOLVE1:
   case FSLIDE:
   case FCONVOLVE: {
     if (clSetKernelArg(kernel, par_index++, sizeof(int),

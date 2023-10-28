@@ -86,7 +86,7 @@ static inline int operationScore(const FGraphNode *g) {
     const FGraphNode *a = g->predecessors[0];
     return 5 * a->operation.shape[a->operation.dimensions - 1];
   }
-  case FGRADIENT_CONVOLVE:
+  case FGRADIENT_CONVOLVE1:
   case FCONVOLVE: {
     // multiply with complete kernel size
     size_t no_elems = 1;
@@ -290,7 +290,7 @@ inline void freeAdditionalData(FGraphNode *gn) {
   case FCONCAT:
   case FCONVOLVE:
   case FSLIDE:
-  case FGRADIENT_CONVOLVE:
+  case FGRADIENT_CONVOLVE1:
   case FTRANSPOSE:
   case FREDUCE_MIN:
   case FREDUCE_MAX:

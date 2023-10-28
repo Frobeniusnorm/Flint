@@ -249,7 +249,8 @@ enum FOperationType {
   FGREATER,
   FCONVOLVE,
   FSLIDE,
-  FGRADIENT_CONVOLVE, // only for internal use!
+  FGRADIENT_CONVOLVE1, // only for internal use!
+  FGRADIENT_CONVOLVE2, // only for internal use!
   FINDEX,
   FSET_INDEX,
   FSLIDING_WINDOW,

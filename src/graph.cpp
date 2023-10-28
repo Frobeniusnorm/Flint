@@ -70,7 +70,8 @@ const char *fop_to_string[] = {"FSTORE",
                                "FGREATER",
                                "FCONVOLVE",
                                "FSLIDE",
-                               "FGRADIENT_CONVOLVE",
+                               "FGRADIENT_CONVOLVE1",
+                               "FGRADIENT_CONVOLVE2",
                                "FINDEX",
                                "FSET_INDEX",
                                "FSLIDING_WINDOW",
@@ -1043,7 +1044,7 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
       case FCONVOLVE:
       case FMATMUL:
       case FSLIDE:
-      case FGRADIENT_CONVOLVE:
+      case FGRADIENT_CONVOLVE1:
       case FREDUCE_MAX:
       case FREDUCE_MIN:
       case FREDUCE_MUL:
@@ -1407,7 +1408,7 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
     fExecuteGraph(a);
   }
   if (!kernel->result_data && bo.op_type != FSTORE) {
-    fExecuteGraph(kernel); // TODO mem leak
+    fExecuteGraph(kernel);
   }
   if (ao.dimensions != bo.dimensions && ao.dimensions + 1 != bo.dimensions) {
     last_error = ILLEGAL_DIMENSIONALITY;

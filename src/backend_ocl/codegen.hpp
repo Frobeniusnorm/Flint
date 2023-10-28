@@ -224,7 +224,7 @@ generateCode(FGraphNode *node,
                to_string(acc_sizes_ax) + ")%" +
                to_string(node->operation.shape[ax]) + ";\n" + code;
       } break;
-      case FGRADIENT_CONVOLVE: {
+      case FGRADIENT_CONVOLVE1: {
         string par1, par2;
         push_pred = false;
         FGraphNode *gnp2 = node->predecessors[1];
@@ -1249,7 +1249,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "__constant long* acc_sizes_kernel";
     code += ", __constant int* steps";
   } break;
-  case FGRADIENT_CONVOLVE: {
+  case FGRADIENT_CONVOLVE1: {
     code += ", const __global " + typeString(parameter_types[0]) + "* P1";
     code += ", const long num_entries1, const int dimensions1, const __global "
             "double* P2, const long num_entries2, const int dimensions2, const "
@@ -1696,7 +1696,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "const long i = (index / acc_sizes_ax) % shape_ax\n;"
             "R[index] = i;\n";
   } break;
-  case FGRADIENT_CONVOLVE:
+  case FGRADIENT_CONVOLVE1:
     code += "if(index >= num_entriesR) return;\n"
             "long k = 0;\n"
             "int in_steps = 1;\n"
