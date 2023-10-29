@@ -435,6 +435,68 @@ generateCode(FGraphNode *node,
                      "[j + o];\n}\n" + name + " = res;\n}\n";
         code = conv_code + code;
       } break;
+      case FGRADIENT_CONVOLVE2: {
+        const FOperation op = node->operation;
+        FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
+        string par1, par2;
+        if (assigned_params.find(gnp1) != assigned_params.end()) {
+          par1 = assigned_params[gnp1];
+        } else {
+          par1 = "P" + to_string(assigned_params.size());
+          assigned_params.insert({gnp1, par1});
+          parameters.push_back({gnp1, par1});
+        }
+        if (assigned_params.find(gnp2) != assigned_params.end()) {
+          par2 = assigned_params[gnp2];
+        } else {
+          par2 = "P" + to_string(assigned_params.size());
+          assigned_params.insert({gnp2, par2});
+          parameters.push_back({gnp2, par2});
+        }
+        const FOperation pred = gnp1->operation, prev_adj = gnp2->operation;
+        const std::vector<size_t> acc_sizes_pred = calcAccSizes(pred);
+        const std::vector<size_t> acc_sizes_kernel = calcAccSizes(op);
+        const bool multifilter = op.dimensions > pred.dimensions;
+        // like accumulated sizes for prev_adj but without filter in multifilter
+        // context
+        std::vector<size_t> acc_sizes_windows(
+            multifilter ? prev_adj.dimensions - 1 : prev_adj.dimensions);
+        acc_sizes_windows[acc_sizes_windows.size() - 1] = 1;
+        for (int i = acc_sizes_windows.size() - 2; i >= 0; i--) {
+          acc_sizes_windows[i] =
+              acc_sizes_windows[i + 1] * prev_adj.shape[i + 1];
+        }
+        // total number of windows
+        size_t windows = acc_sizes_windows[0] * prev_adj.shape[0];
+        // helper variables
+        const size_t num_elems_kernel = multifilter
+                                            ? acc_sizes_kernel[0]
+                                            : acc_sizes_kernel[0] * op.shape[0];
+        const unsigned int *steps = (unsigned int *)op.additional_data;
+        const std::string f =
+            multifilter ? "index / " + to_string(num_elems_kernel) : "0";
+        std::string grad_code =
+            type + " " + name + " = 0;\n{ long a_offset = 0";
+
+        for (int j = multifilter ? 1 : 0; j < op.dimensions; j++) {
+          grad_code += "+((index/" + to_string(acc_sizes_kernel[j]) + ")%" +
+                       to_string(op.shape[j]) + ")*" +
+                       to_string(acc_sizes_pred[multifilter ? j - 1 : j]);
+        }
+        grad_code += ";\n"
+                     " for(long w = 0; w < " +
+                     to_string(windows) +
+                     "; w++){\n"
+                     "  long a = 0\n";
+        for (int j = 0; j < acc_sizes_windows.size(); j++) {
+          grad_code += "+((w/" + to_string(acc_sizes_windows[j]) + ")%" +
+                       to_string(prev_adj.shape[j]) + ")*" +
+                       to_string(acc_sizes_pred[j] * steps[j]);
+        }
+        grad_code += ";\n  " + name + "+=" + par1 + "[a + a_offset]*" + par2 +
+                     "[w + " + f + "];\n  }";
+        code = code + grad_code + "}";
+      } break;
       case FSLIDE: {
         const FOperation op = node->operation;
         string par1, par2;
@@ -1321,29 +1383,34 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   case FADD:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             " return;\n"
-            "R[index] = P0[(index/inv_broad0)%num_entries0] + P1[(index/inv_broad1)%num_entries1];";
+            "R[index] = P0[(index/inv_broad0)%num_entries0] + "
+            "P1[(index/inv_broad1)%num_entries1];";
     break;
   case FSUB:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             "return;\nR[index] = "
-            "P0[(index/inv_broad0)%num_entries0] - P1[(index/inv_broad1)%num_entries1];";
+            "P0[(index/inv_broad0)%num_entries0] - "
+            "P1[(index/inv_broad1)%num_entries1];";
     break;
   case FMUL:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             "return;\nR[index] = "
-            "P0[(index/inv_broad0)%num_entries0] * P1[(index/inv_broad1)%num_entries1];";
+            "P0[(index/inv_broad0)%num_entries0] * "
+            "P1[(index/inv_broad1)%num_entries1];";
     break;
   case FDIV:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             "return;\nR[index] = "
-            "P0[(index/inv_broad0)%num_entries0] / P1[(index/inv_broad1)%num_entries1];";
+            "P0[(index/inv_broad0)%num_entries0] / "
+            "P1[(index/inv_broad1)%num_entries1];";
     break;
   case FPOW: {
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
     string type = typeString(res_type);
     if ((parameter_types[0] == F_FLOAT32 || parameter_types[0] == F_FLOAT64) &&
         (parameter_types[1] == F_FLOAT32 || parameter_types[1] == F_FLOAT64))
-      code += "R[index] = pow((" + type + ")P0[(index/inv_broad0)%num_entries0], (" + type +
+      code += "R[index] = pow((" + type +
+              ")P0[(index/inv_broad0)%num_entries0], (" + type +
               ")P1[(index/inv_broad1)%num_entries1]);";
     else if (parameter_types[0] == F_INT64 &&
              (parameter_types[1] == F_INT32 || parameter_types[1] == F_INT64))
@@ -1468,34 +1535,44 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     break;
   case FMIN:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[(index/inv_broad0)%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[(index/inv_broad1)%num_entries1];\n";
+    code += typeString(parameter_types[0]) +
+            " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) +
+            " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a < b ? a : b;";
     break;
   case FMAX:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[(index/inv_broad0)%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[(index/inv_broad1)%num_entries1];\n";
+    code += typeString(parameter_types[0]) +
+            " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) +
+            " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a > b ? a : b;";
     break;
   case FLESS:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[(index/inv_broad0)%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[(index/inv_broad1)%num_entries1];\n";
+    code += typeString(parameter_types[0]) +
+            " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) +
+            " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a < b ? 1 : 0;";
     break;
   case FEQUAL:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[(index/inv_broad0)%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[(index/inv_broad1)%num_entries1];\n";
+    code += typeString(parameter_types[0]) +
+            " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) +
+            " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a + " + epsilonForType(parameter_types[0]) +
             " >= b && a <= b + " + epsilonForType(parameter_types[1]) +
             " ? 1 : 0;";
     break;
   case FGREATER:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[(index/inv_broad0)%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[(index/inv_broad1)%num_entries1];\n";
+    code += typeString(parameter_types[0]) +
+            " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) +
+            " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a > b ? 1 : 0;";
     break;
   case FREDUCE_MIN:

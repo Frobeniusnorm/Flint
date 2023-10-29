@@ -321,7 +321,7 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
       acc_sizes_windows[i] = acc_sizes_windows[i + 1] * prev_adj.shape[i + 1];
     }
     // total number of windows
-    size_t windows = acc_sizes_windows[0] * prev_adj.shape[0];
+    const size_t windows = acc_sizes_windows[0] * prev_adj.shape[0];
     // helper variables
     const size_t num_elems_kernel =
         multifilter ? acc_sizes_kernel[0] : acc_sizes_kernel[0] * op.shape[0];
@@ -345,7 +345,6 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
         size_t a = 0;
         for (int j = 0; j < acc_sizes_windows.size(); j++) {
           size_t wj = (w / acc_sizes_windows[j]) % prev_adj.shape[j];
-          if (j > 0) wj %= acc_sizes_windows[j - 1];
           a += wj * acc_sizes_pred[j] * steps[j];
         }
         result[i] += data1[a + a_offset] * data2[w + f];
