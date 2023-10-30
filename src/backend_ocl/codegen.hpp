@@ -1787,7 +1787,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
   case FGRADIENT_CONVOLVE2:
     code +=
         "if(index >= num_entriesR) return;\n"
-        "const bool multifilter = dimensions0 > dimensions2;\n"
+        "const bool multifilter = dimensions0 > dimensions1;\n"
         "const long windows = acc_sizes_windows[0] * prev_adj_shape[0];\n"
         "const long num_elems_kernel = multifilter ? acc_sizes_kernel[0] : "
         "acc_sizes_kernel[0] * op_shape[0];\n"

@@ -267,7 +267,7 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
     // allocate steps
     cl_mem steps_mem =
         clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                       op.dimensions * sizeof(int), steps, &err_code);
+                       (pred.dimensions - 1) * sizeof(int), steps, &err_code);
     if (!steps_mem)
       flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
                             std::to_string(err_code));
