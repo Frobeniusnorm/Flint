@@ -1312,15 +1312,26 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     code += ", __constant int* steps";
   } break;
   case FGRADIENT_CONVOLVE1: {
-    code += ", const __global " + typeString(parameter_types[0]) + "* P1";
-    code += ", const long num_entries1, const int dimensions1, const __global "
-            "double* P2, const long num_entries2, const int dimensions2, const "
-            "int "
-            "dimensions0";
-    code += ", __constant long* acc_sizes_pred, "
+    code += ", const __global " + typeString(parameter_types[0]) +
+            "* P1"
+            ", const long num_entries1, const int dimensions1, const __global "
+            "double* P2, const long num_entries2, const int dimensions2"
+            ", const int dimensions0"
+            ", __constant long* acc_sizes_pred, "
             "__constant long* acc_sizes_kernel"
-            ", __constant long* acc_sizes";
-    code += ", __constant int* steps, __constant long* shape1";
+            ", __constant long* acc_sizes"
+            ", __constant int* steps, __constant long* shape1";
+  } break;
+  case FGRADIENT_CONVOLVE2: {
+    code +=
+        ", const __global " + typeString(parameter_types[0]) +
+        "* P1"
+        ", const long num_entries1, const int dimensions1, const __global "
+        "double* P2, const long num_entries2, const int dimensions2, "
+        "const int dimensions0, "
+        "__constant long* acc_sizes_pred, __constant long* acc_sizes_kernel, "
+        "__constant long* acc_sizes_windows, __constant int* steps, "
+        "__constant long* op_shape, __constant long* prev_adj_shape";
   } break;
   case FGEN_RANDOM: {
     code += ", const double time";
@@ -1773,6 +1784,30 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "const long i = (index / acc_sizes_ax) % shape_ax\n;"
             "R[index] = i;\n";
   } break;
+  case FGRADIENT_CONVOLVE2:
+    code +=
+        "if(index >= num_entriesR) return;\n"
+        "const bool multifilter = dimensions0 > dimensions2;\n"
+        "const long windows = acc_sizes_windows[0] * prev_adj_shape[0];\n"
+        "const long num_elems_kernel = multifilter ? acc_sizes_kernel[0] : "
+        "acc_sizes_kernel[0] * op_shape[0];\n"
+        "const long f = multifilter ? index / num_elems_kernel : 0;\n"
+        "const long a_offset = 0;\n"
+        "for(int j = multifilter ? 1 : 0; j < dimensions0; j++){\n"
+        " const long ki = (i / acc_sizes_kernel[j]) % op_shape[j];\n"
+        " a_offset += ki * acc_sizes_pred[multifilter ? j - 1 : j];\n"
+        "}\n"
+        "R[index] = 0;\n"
+        "for(long w = 0; w < windows; w++){\n"
+        " const long a = 0;"
+        " for(int j = 0; j < (multifilter ? dimensions2 - 1 : dimensions2); "
+        "j++){\n"
+        "  const long wj = (w / acc_sizes_windows[j]) % prev_adj_shape[j];\n"
+        "  a += wj * acc_sizes_pred[j] * steps[j];\n"
+        " }\n"
+        " R[index] += P0[a + a_offset] * P1[w + f];\n"
+        "}\n";
+    break;
   case FGRADIENT_CONVOLVE1:
     code += "if(index >= num_entriesR) return;\n"
             "long k = 0;\n"
