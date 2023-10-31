@@ -17,6 +17,12 @@ type Shape = flint.Shape // this way we keep the functions etc.
 
 type Axes = flint.Axes
 
+type DataType = flint.DataType
+
+func greaterDataType(x DataType, y DataType) bool {
+	return x > y
+}
+
 // Numeric is a constraint union collection of valid numeric types for use in tensors
 type Numeric interface {
 	~int32 | ~int64 | ~float32 | ~float64
@@ -27,16 +33,17 @@ Tensor essentially acts as a memory-safe wrapper for [flint.GraphNode].
 Since go does not have a destructor for GraphNode any references to nodes in C memory cannot be cleaned up.
 By having a [Close] method, the memory cleanup can be deferred.
 */
-type Tensor[T Numeric] struct {
-	node *flint.GraphNode
-	err  error
-	data *T // only in case the actual type doesn't matter. Else use one of the below
+type Tensor struct {
+	node     *flint.GraphNode
+	err      error
+	data     *any // only in case the actual type doesn't matter. Else use one of the below
+	dataType DataType
 }
 
 // String prints the contents of the tensor.
 // NOTE: If not a light tensor, this causes the node's graph to be executed!
 // Use carefully! (best only in debugging)
-func (x Tensor[T]) String() string {
+func (x Tensor) String() string {
 	if x.light() {
 		return fmt.Sprintf("Tensor (1): [%v]", *x.data)
 	} else {
@@ -61,11 +68,11 @@ However, this may change in the future as we have a massive [finalizer overhead]
 
 [finalizer example]: https://gist.github.com/deltamobile/6511901
 */
-func (x Tensor[T]) init() {
+func (x Tensor) init() {
 	if !x.light() {
 		flint.SetRefCounter(*x.node, 1)
 	}
-	runtime.SetFinalizer(&x, func(x *Tensor[T]) { x.Close() }) // FIXME: or only for nodes?
+	runtime.SetFinalizer(&x, func(x *Tensor) { x.Close() }) // FIXME: or only for nodes?
 	runtime.KeepAlive(x)
 }
 
@@ -73,7 +80,7 @@ func (x Tensor[T]) init() {
 Close resets the ref counter to 0.
 This fixes memory management issues, as the node can be cleared on subsequent calls to [flint.OptimizeMemory]
 */
-func (x Tensor[T]) Close() {
+func (x Tensor) Close() {
 	runtime.SetFinalizer(x, nil) // remove any finalizer for this tensor
 	if !x.light() {
 		flint.SetRefCounter(*x.node, 0)
@@ -81,7 +88,7 @@ func (x Tensor[T]) Close() {
 	runtime.KeepAlive(x)
 }
 
-func (x Tensor[T]) Shape() Shape {
+func (x Tensor) Shape() Shape {
 	if x.light() {
 		return Shape{1}
 	} else {
@@ -91,7 +98,7 @@ func (x Tensor[T]) Shape() Shape {
 
 // Value returns the data of a tensor.
 // FIXME
-func (x Tensor[T]) Value() (Shape, any) {
+func (x Tensor) Value() (Shape, any) {
 	if x.light() {
 		return Shape{1}, *x.data
 	} else {
@@ -106,7 +113,7 @@ func (x Tensor[T]) Value() (Shape, any) {
 // node makes sure that a node is initialized and returns it.
 // This function should be called when it is required that a data value (usually from scalar)
 // needs to be passed as a node.
-func (x Tensor[T]) readyNode() Tensor[T] {
+func (x Tensor) readyNode() Tensor {
 	if !x.light() {
 		return x // no changes needed
 	}
@@ -123,7 +130,7 @@ func (x Tensor[T]) readyNode() Tensor[T] {
 
 // val returns a possible value.
 // This is either the node or the value from a light tensor
-func (x Tensor[T]) val() any {
+func (x Tensor) val() any {
 	if !x.light() {
 		return *x.node
 	} else if x.data != nil {
@@ -133,11 +140,11 @@ func (x Tensor[T]) val() any {
 	}
 }
 
-func (x Tensor[T]) light() bool {
+func (x Tensor) light() bool {
 	return x.node == nil
 }
 
-func lightLast[T Numeric](x Tensor[T], y Tensor[T]) (a Tensor[T], b Tensor[T]) {
+func lightLast[T Numeric](x Tensor, y Tensor) (a Tensor, b Tensor) {
 	if !x.light() {
 		return x, y
 	} else if !y.light() {
@@ -147,7 +154,7 @@ func lightLast[T Numeric](x Tensor[T], y Tensor[T]) (a Tensor[T], b Tensor[T]) {
 	}
 }
 
-func (x Tensor[T]) ToFloat32() Tensor[float32] {
+func (x Tensor) ToFloat32() Tensor[float32] {
 	var res Tensor[float32]
 	if x.light() {
 		val := float32(*x.data)
@@ -163,7 +170,7 @@ func (x Tensor[T]) ToFloat32() Tensor[float32] {
 	return res
 }
 
-func (x Tensor[T]) ToFloat64() Tensor[float64] {
+func (x Tensor) ToFloat64() Tensor[float64] {
 	var res Tensor[float64]
 	if x.light() {
 		val := float64(*x.data)
@@ -180,7 +187,7 @@ func (x Tensor[T]) ToFloat64() Tensor[float64] {
 	return res
 }
 
-func (x Tensor[T]) ToInt32() Tensor[int32] {
+func (x Tensor) ToInt32() Tensor[int32] {
 	var res Tensor[int32]
 	if x.light() {
 		val := int32(*x.data)
@@ -196,7 +203,7 @@ func (x Tensor[T]) ToInt32() Tensor[int32] {
 	return res
 }
 
-func (x Tensor[T]) ToInt64() Tensor[int64] {
+func (x Tensor) ToInt64() Tensor[int64] {
 	var res Tensor[int64]
 	if x.light() {
 		val := int64(*x.data)

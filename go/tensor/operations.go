@@ -5,15 +5,15 @@ import (
 )
 
 type operation[T Numeric] interface {
-	execute(x ...any) Tensor[T]
+	execute(x ...any) Tensor
 }
 
 type lightOperation[T Numeric] func(x ...any) (T, error)
 
-func (f lightOperation[T]) execute(x ...any) Tensor[T] {
+func (f lightOperation[T]) execute(x ...any) Tensor {
 	res, err := f(x...)
 	// result composition and error handling
-	var out Tensor[T]
+	var out Tensor
 	if err != nil {
 		out.err = err
 	} else {
@@ -25,10 +25,10 @@ func (f lightOperation[T]) execute(x ...any) Tensor[T] {
 
 type nodeOperation[T Numeric] func(x ...any) (flint.GraphNode, error)
 
-func (f nodeOperation[T]) execute(x ...any) Tensor[T] {
+func (f nodeOperation[T]) execute(x ...any) Tensor {
 	flintNode, err := f(x...)
 	// result composition and error handling
-	var out Tensor[T]
+	var out Tensor
 	if err != nil {
 		out.err = err
 	} else {
@@ -38,7 +38,7 @@ func (f nodeOperation[T]) execute(x ...any) Tensor[T] {
 	return out
 }
 
-func (x Tensor[T]) Add(y Tensor[T]) Tensor[T] {
+func (x Tensor) Add(y Tensor) Tensor {
 	return x
 
 	//if x.light() && y.light() {
@@ -51,7 +51,7 @@ func (x Tensor[T]) Add(y Tensor[T]) Tensor[T] {
 	//
 	//res, err := flint.Add(x.val().(flint.GraphNode), y.val().(int32)) // FIXME!!!
 	//
-	//var out Tensor[T]
+	//var out Tensor
 	//if err != nil {
 	//	out.err = err
 	//} else {
@@ -61,7 +61,7 @@ func (x Tensor[T]) Add(y Tensor[T]) Tensor[T] {
 	//return out
 }
 
-func (x Tensor[T]) Sub(y Tensor[T]) Tensor[T] {
+func (x Tensor) Sub(y Tensor) Tensor {
 	if x.light() && y.light() {
 		f := lightOperation[T](func(p ...any) (T, error) {
 			x := p[0].(T)
@@ -71,7 +71,7 @@ func (x Tensor[T]) Sub(y Tensor[T]) Tensor[T] {
 		return f.execute(x, y)
 	} else {
 		f := nodeOperation[T](func(p ...any) (flint.GraphNode, error) {
-			x, y := p[0].(Tensor[T]), p[1].(Tensor[T]) // FIXME: this caused a bug - maybe variadic functions aren't that nice ...
+			x, y := p[0].(Tensor), p[1].(Tensor) // FIXME: this caused a bug - maybe variadic functions aren't that nice ...
 			if x.light() {
 				return flint.Sub(*x.data, *y.node)
 			} else if y.light() {
@@ -84,174 +84,174 @@ func (x Tensor[T]) Sub(y Tensor[T]) Tensor[T] {
 	}
 }
 
-func (x Tensor[T]) Mul(y Tensor[T]) Tensor[T] {
+func (x Tensor) Mul(y Tensor) Tensor {
 	return x
 }
 
-func (x Tensor[T]) Div(y Tensor[T]) Tensor[T] {
+func (x Tensor) Div(y Tensor) Tensor {
 	return x
 }
 
-func (x Tensor[T]) Pow(y Tensor[T]) Tensor[T] {
+func (x Tensor) Pow(y Tensor) Tensor {
 	return x
 }
 
-func (x Tensor[T]) Log() Tensor[T] {
+func (x Tensor) Log() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Log2() Tensor[T] {
+func (x Tensor) Log2() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Log10() Tensor[T] {
+func (x Tensor) Log10() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Sqrt() Tensor[T] {
+func (x Tensor) Sqrt() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Exp() Tensor[T] {
+func (x Tensor) Exp() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Sin() Tensor[T] {
+func (x Tensor) Sin() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Cos() Tensor[T] {
+func (x Tensor) Cos() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Tan() Tensor[T] {
+func (x Tensor) Tan() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Asin() Tensor[T] {
+func (x Tensor) Asin() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Acos() Tensor[T] {
+func (x Tensor) Acos() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Atan() Tensor[T] {
+func (x Tensor) Atan() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Neg() Tensor[T] {
+func (x Tensor) Neg() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Sign() Tensor[T] {
+func (x Tensor) Sign() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Even() Tensor[T] {
+func (x Tensor) Even() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Equal(y Tensor[T]) Tensor[T] {
+func (x Tensor) Equal(y Tensor) Tensor {
 	return x
 }
 
-func (x Tensor[T]) Greater(y Tensor[T]) Tensor[T] {
+func (x Tensor) Greater(y Tensor) Tensor {
 	return x
 }
 
-func (x Tensor[T]) Less(y Tensor[T]) Tensor[T] {
+func (x Tensor) Less(y Tensor) Tensor {
 	return x
 }
 
-func (x Tensor[T]) Matmul(y Tensor[T]) Tensor[T] {
+func (x Tensor) Matmul(y Tensor) Tensor {
 	return x
 }
 
-func (x Tensor[T]) Flatten() Tensor[T] {
+func (x Tensor) Flatten() Tensor {
 	// TODO: also flatten dim?
 	return x
 }
 
-func (x Tensor[T]) Reshape() Tensor[T] {
+func (x Tensor) Reshape() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Minimum(y Tensor[T]) Tensor[T] {
+func (x Tensor) Minimum(y Tensor) Tensor {
 	return x
 }
 
-func (x Tensor[T]) Maximum(y Tensor[T]) Tensor[T] {
+func (x Tensor) Maximum(y Tensor) Tensor {
 	return x
 }
 
-func (x Tensor[T]) ReduceSum() Tensor[T] {
+func (x Tensor) ReduceSum() Tensor {
 	return x
 }
 
-func (x Tensor[T]) ReduceMul() Tensor[T] {
+func (x Tensor) ReduceMul() Tensor {
 	return x
 }
 
-func (x Tensor[T]) ReduceMin() Tensor[T] {
+func (x Tensor) ReduceMin() Tensor {
 	return x
 }
 
-func (x Tensor[T]) ReduceMax() Tensor[T] {
+func (x Tensor) ReduceMax() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Slice() Tensor[T] {
+func (x Tensor) Slice() Tensor {
 	// TODO: what the good syntax here?
 	return x
 }
 
-func (x Tensor[T]) SliceWithStride() Tensor[T] {
+func (x Tensor) SliceWithStride() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Extend() Tensor[T] {
+func (x Tensor) Extend() Tensor {
 	return x
 }
 
-func (x Tensor[T]) ExtendWithStride() Tensor[T] {
+func (x Tensor) ExtendWithStride() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Concat(y Tensor[T]) Tensor[T] {
+func (x Tensor) Concat(y Tensor) Tensor {
 	return x
 }
 
-func (x Tensor[T]) Expand() Tensor[T] {
+func (x Tensor) Expand() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Abs() Tensor[T] {
+func (x Tensor) Abs() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Repeat() Tensor[T] {
+func (x Tensor) Repeat() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Transpose(axes Axes) Tensor[T] {
+func (x Tensor) Transpose(axes Axes) Tensor {
 	return x
 }
 
-func (x Tensor[T]) Convolve() Tensor[T] {
+func (x Tensor) Convolve() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Slide() Tensor[T] {
+func (x Tensor) Slide() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Index(indices Tensor[T]) Tensor[T] {
+func (x Tensor) Index(indices Tensor) Tensor {
 	x = x.readyNode()
 	indices = indices.readyNode()
 
 	flintNode, err := flint.Index(*x.node, *indices.node)
-	var out Tensor[T]
+	var out Tensor
 	if err != nil {
 		out.err = err
 	} else {
@@ -261,30 +261,30 @@ func (x Tensor[T]) Index(indices Tensor[T]) Tensor[T] {
 	return out
 }
 
-func (x Tensor[T]) IndexFromTensor(y Tensor[T], indices Tensor[T]) Tensor[T] {
+func (x Tensor) IndexFromTensor(y Tensor, indices Tensor) Tensor {
 	return x
 }
 
-func (x Tensor[T]) SlidingWindow() Tensor[T] {
+func (x Tensor) SlidingWindow() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Permute() Tensor[T] {
+func (x Tensor) Permute() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Max() Tensor[T] {
+func (x Tensor) Max() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Min() Tensor[T] {
+func (x Tensor) Min() Tensor {
 	return x
 }
 
-func (x Tensor[T]) Sum() Tensor[T] {
+func (x Tensor) Sum() Tensor {
 	return x
 }
 
-func (x Tensor[T]) OneHot(numClasses uint) Tensor[T] {
+func (x Tensor) OneHot(numClasses uint) Tensor {
 	return x
 }

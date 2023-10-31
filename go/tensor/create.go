@@ -47,12 +47,12 @@ Create a Tensor from a wide range of data types.
 
 TODO: what if a pointer is passed?
 */
-func Create[T Numeric](data any) Tensor[T] {
+func Create[T Numeric](data any) Tensor {
 	if isSlice(data) {
-		return Tensor[T]{} // CreateFromSlice(data)
+		return Tensor{} // CreateFromSlice(data)
 	}
 	if isScalar(data) {
-		return Tensor[T]{} // Scalar(data)
+		return Tensor{} // Scalar(data)
 	}
 	if node, ok := data.(flint.GraphNode); ok {
 		return FromNode[T](node)
@@ -88,24 +88,24 @@ func Create[T Numeric](data any) Tensor[T] {
 //	return tensor
 //}
 
-func FromNode[T Numeric](node flint.GraphNode) Tensor[T] {
-	res := Tensor[T]{node: &node}
+func FromNode[T Numeric](node flint.GraphNode) Tensor {
+	res := Tensor{node: &node}
 	res.init()
 	return res
 }
 
-func Scalar[T Numeric](val T) Tensor[T] {
-	tensor := Tensor[T]{data: &val}
+func Scalar[T Numeric](val T) Tensor {
+	tensor := Tensor{data: &val}
 	tensor.init()
 	return tensor
 }
 
-func Constant[T Numeric](val T, shape Shape) Tensor[T] {
+func Constant[T Numeric](val T, shape Shape) Tensor {
 	flintNode, err := flint.CreateGraphConstant(val, shape)
 	if err != nil {
 		panic(err)
 	}
-	tensor := Tensor[T]{node: &flintNode}
+	tensor := Tensor{node: &flintNode}
 	tensor.init()
 	return tensor
 }
