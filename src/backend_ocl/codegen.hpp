@@ -457,6 +457,7 @@ generateCode(FGraphNode *node,
         const std::vector<size_t> acc_sizes_pred = calcAccSizes(pred);
         const std::vector<size_t> acc_sizes_kernel = calcAccSizes(op);
         const bool multifilter = op.dimensions > pred.dimensions;
+        const unsigned int num_filter = multifilter ? op.shape[0] : 1;
         // like accumulated sizes for prev_adj but without filter in multifilter
         // context
         std::vector<size_t> acc_sizes_windows(
@@ -467,7 +468,7 @@ generateCode(FGraphNode *node,
               acc_sizes_windows[i + 1] * prev_adj.shape[i + 1];
         }
         // total number of windows
-        size_t windows = acc_sizes_windows[0] * prev_adj.shape[0];
+        const size_t windows = acc_sizes_windows[0] * prev_adj.shape[0];
         // helper variables
         const size_t num_elems_kernel = multifilter
                                             ? acc_sizes_kernel[0]
@@ -494,7 +495,7 @@ generateCode(FGraphNode *node,
                        to_string(acc_sizes_pred[j] * steps[j]);
         }
         grad_code += ";\n  " + name + "+=" + par1 + "[a + a_offset]*" + par2 +
-                     "[w + " + f + "];\n  }";
+                     "[w * " + to_string(num_filter) + " + " + f + "];\n  }";
         code = code + grad_code + "}";
       } break;
       case FSLIDE: {
@@ -1791,6 +1792,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
         "const long windows = acc_sizes_windows[0] * prev_adj_shape[0];\n"
         "const long num_elems_kernel = multifilter ? acc_sizes_kernel[0] : "
         "acc_sizes_kernel[0] * op_shape[0];\n"
+        "const int num_filter = multifilter ? op_shape[0] : 1;\n"
         "const long f = multifilter ? index / num_elems_kernel : 0;\n"
         "long a_offset = 0;\n"
         "for(int j = multifilter ? 1 : 0; j < dimensions0; j++){\n"
@@ -1805,7 +1807,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
         "  const long wj = (w / acc_sizes_windows[j]) % prev_adj_shape[j];\n"
         "  a += wj * acc_sizes_pred[j] * steps[j];\n"
         " }\n"
-        " R[index] += P1[a + a_offset] * P2[w + f];\n"
+        " R[index] += P1[a + a_offset] * P2[w * num_filter + f];\n"
         "}\n";
     break;
   case FGRADIENT_CONVOLVE1:

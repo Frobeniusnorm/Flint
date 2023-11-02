@@ -314,10 +314,12 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
     const std::vector<size_t> acc_sizes_pred = calcAccSizes(pred);
     const std::vector<size_t> acc_sizes_kernel = calcAccSizes(op);
     const bool multifilter = op.dimensions > pred.dimensions;
-    // like accumulated sizes for prev_adj but without filter in multifilter context
-    std::vector<size_t> acc_sizes_windows(multifilter ? prev_adj.dimensions - 1 : prev_adj.dimensions);
+    // like accumulated sizes for prev_adj but without filter in multifilter
+    // context
+    std::vector<size_t> acc_sizes_windows(multifilter ? prev_adj.dimensions - 1
+                                                      : prev_adj.dimensions);
     acc_sizes_windows[acc_sizes_windows.size() - 1] = 1;
-    for (int i = acc_sizes_windows.size() - 2; i >= 0; i--) { 
+    for (int i = acc_sizes_windows.size() - 2; i >= 0; i--) {
       acc_sizes_windows[i] = acc_sizes_windows[i + 1] * prev_adj.shape[i + 1];
     }
     // total number of windows
@@ -326,6 +328,7 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
     const size_t num_elems_kernel =
         multifilter ? acc_sizes_kernel[0] : acc_sizes_kernel[0] * op.shape[0];
     const unsigned int *steps = (unsigned int *)op.additional_data;
+    const unsigned int num_filter = multifilter ? op.shape[0] : 1;
     for (size_t i = from; i < from + size; i++) {
       // filter entry of current iteration for multifilter
       size_t f = 0;
@@ -336,7 +339,7 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
       size_t a_offset = 0;
       for (int j = multifilter ? 1 : 0; j < op.dimensions; j++) {
         size_t ki = (i / acc_sizes_kernel[j]) % op.shape[j];
-        a_offset += ki * acc_sizes_pred[multifilter ? j - 1: j];
+        a_offset += ki * acc_sizes_pred[multifilter ? j - 1 : j];
       }
       result[i] = 0;
       // iterate over windows = adjoint elements in first dimensions
@@ -347,7 +350,7 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
           size_t wj = (w / acc_sizes_windows[j]) % prev_adj.shape[j];
           a += wj * acc_sizes_pred[j] * steps[j];
         }
-        result[i] += data1[a + a_offset] * data2[w + f];
+        result[i] += data1[a + a_offset] * data2[w * num_filter + f];
       }
     }
   } break;
