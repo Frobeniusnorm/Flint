@@ -1671,4 +1671,10 @@ FGraphNode *fpermutate(FGraphNode *a, unsigned int ax) {
   return findex(a, ind);
 }
 FGraphNode *fpooling_sum(const FGraphNode *a, const size_t *window_size,
-                         const unsigned int *step_size) {}
+                         const unsigned int *step_size) {
+  return nullptr;
+}
+FGraphNode *fpooling_max(const FGraphNode *a, const size_t *window_size,
+                         const unsigned int *step_size) {
+  return nullptr;
+}
