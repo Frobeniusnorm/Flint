@@ -403,6 +403,24 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     }
     return nullptr;
   } break;
+  case FGRADIENT_CONVOLVE2: {
+    FGraphNode *a = y->predecessors[0];
+    FGraphNode *b = y->predecessors[1];
+    const unsigned int* steps = (unsigned int*) y->operation.additional_data;
+    const bool multifilter = a->operation.dimensions != b->operation.dimensions;
+    if (0 == dx_i) {
+      return gradient_convolve1(a, prev_adj, b, steps);
+    } else if (1 == dx_i) {
+      FGraphNode* sliding_window = fmul(fsliding_window(a, y->operation.shape, steps), prev_adj); 
+      // now reduce each window
+      for (int d = sliding_window->operation.dimensions; d > 0; d--) {
+        sliding_window = freduce_sum(sliding_window, d);
+      }
+      return freshape(sliding_window, b->operation.shape, b->operation.dimensions);
+    } else {
+      return nullptr;
+    }
+  }
   case FPOW: {
     FGraphNode *a = y->predecessors[0];
     FGraphNode *b = y->predecessors[1];
