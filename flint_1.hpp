@@ -394,10 +394,10 @@ template <typename T> struct Tensor<T, 1> {
   operator std::string() {
     const FOperation op = node->operation;
     std::string foo = "Tensor<" +
-                      (op.data_type == F_INT32     ? std::string("INT32")
-                       : op.data_type == F_INT64   ? std::string("INT64")
-                       : op.data_type == F_FLOAT32 ? std::string("FLOAT32")
-                                                   : std::string("FLOAT64")) +
+                      (op.data_type == F_INT32     ? std::string("int")
+                       : op.data_type == F_INT64   ? std::string("long")
+                       : op.data_type == F_FLOAT32 ? std::string("float")
+                                                   : std::string("double")) +
                       ", shape: " + std::to_string(shape[0]) + ">(";
     if (op.op_type != FSTORE && !node->result_data)
       foo += "<not yet executed>";

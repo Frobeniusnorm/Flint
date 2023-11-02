@@ -930,6 +930,7 @@ TEST_CASE("Multifilter Convolve") {
     for (int j = 0; j < e1.get_shape()[0]; j++)
       for (int k = 0; k < e1.get_shape()[0]; k++)
         CHECK_EQ(r1[i][j][k], e1[i][j][k]);
+  std::cout << r1 << std::endl;
 }
 TEST_CASE("Slide") {
   Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},

@@ -409,7 +409,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
     const unsigned int* steps = (unsigned int*) y->operation.additional_data;
     const bool multifilter = a->operation.dimensions != b->operation.dimensions;
     if (0 == dx_i) {
-      return gradient_convolve1(a, prev_adj, b, steps);
+      return gradient_convolve1(a, b, prev_adj, steps);
     } else if (1 == dx_i) {
       FGraphNode* sliding_window = fmul(fsliding_window(a, y->operation.shape, steps), prev_adj); 
       // now reduce each window
