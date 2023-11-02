@@ -51,7 +51,10 @@
         </div>
         <div style="display: block; height: 2em;"></div>
         <h1 id="flint_hpp"><u>flint.hpp</u></h1>
-        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-void_setLoggingLevel_FLogType_level__">static void <b>setLoggingLevel</b>(FLogType level) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_float__3__load_image_std::string_path__">static Tensor&lt;float, 3&gt; <b>load_image</b>(std::string path) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_size_t_n___static_Tensor_double___unsigned_int_n___random_array_std::array_size_t__n__shape__">template &lt;size_t n&gt;
+        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-void_setLoggingLevel_FLogType_level__">static void <b>setLoggingLevel</b>(FLogType level) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Tensor_float__3__load_image_std::string_path__">static Tensor&lt;float, 3&gt; <b>load_image</b>(std::string path) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-void_store_image_Tensor_float__3__&t__std::string_path___________________________FImageFormat_format__">static void <b>store_image</b>(Tensor<float, 3> &t, std::string path,
+                          FImageFormat format) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n___static_Tensor_K__n__concat_const_Tensor_K__n__&a__const_Tensor_K__n__&b______________________________unsigned_int_ax__">template &lt;typename K, unsigned int n&gt;
+  static Tensor&lt;K, n&gt; <b>concat</b>(const Tensor<K, n> &a, const Tensor<K, n> &b,
+                             unsigned int ax) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_size_t_n___static_Tensor_double___unsigned_int_n___random_array_std::array_size_t__n__shape__">template &lt;size_t n&gt;
   static Tensor&lt;double, (unsigned int)n&gt;
   <b>random_array</b>(std::array<size_t, n> shape) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___static_Tensor_double__sizeof____args___random_args____sizes__">template &lt;typename... args&gt;
   static Tensor&lt;double, sizeof...(args)&gt; <b>random</b>(args... sizes) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_size_t_n___static_Tensor_double___unsigned_int_n___random_normal_std::array_size_t__n__shape__double_sigma_=_1__double_mu_=_0__">template &lt;size_t n&gt;
@@ -59,8 +62,11 @@
   <b>random_normal</b>(std::array<size_t, n> shape, double sigma = 1, double mu = 0) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__size_t_n___static_Tensor_T___unsigned_int_n___constant_array_T_value__std::array_size_t__n__shape__">template &lt;typename T, size_t n&gt;
   static Tensor&lt;T, (unsigned int)n&gt;
   <b>constant_array</b>(T value, std::array<size_t, n> shape) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__typename____args___static_Tensor_T__sizeof____args___constant_T_value__args____sizes__">template &lt;typename T, typename... args&gt;
-  static Tensor&lt;T, sizeof...(args)&gt; <b>constant</b>(T value, args... sizes) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___static_Tensor_long__sizeof____args___arange_unsigned_int_axis__args____sizes__">template &lt;typename... args&gt;
-  static Tensor&lt;long, sizeof...(args)&gt; <b>arange</b>(unsigned int axis, args... sizes) </a><br/><br/></div>
+  static Tensor&lt;T, sizeof...(args)&gt; <b>constant</b>(T value, args... sizes) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_unsigned_int_n___static_Tensor_long__n__arange_array_unsigned_int_ax_______________________________________std::array_size_t__n__shape__">template &lt;unsigned int n&gt;
+  static Tensor&lt;long, n&gt; <b>arange_array</b>(unsigned int ax,
+                                      std::array<size_t, n> shape) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args___static_Tensor_long__sizeof____args___arange_unsigned_int_axis_______________________________________________args____sizes__">template &lt;typename... args&gt;
+  static Tensor&lt;long, sizeof...(args)&gt; <b>arange</b>(unsigned int axis,
+                                              args... sizes) </a><br/><br/></div>
         <div style="display: block; height: 2em;"></div>
         <div id="s-void_setLoggingLevel_FLogType_level__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">static void <b>setLoggingLevel</b>(FLogType level) </pre></div>
 <br />
@@ -71,6 +77,32 @@
  Loads an image from the given path.
  The image will be stored in floating point data and the shape will be h, w,
  c where w is the width, h is the height and c are the chanels.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-void_store_image_Tensor_float__3__&t__std::string_path___________________________FImageFormat_format__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">static void <b>store_image</b>(Tensor<float, 3> &t, std::string path,
+                          FImageFormat format) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Expects an image in <pre class="inline_code">t</pre> with shape width, height, channels (the number of
+ channels will be passed to stbi). <pre class="inline_code">path</pre> is the filepath to which the image
+ should be written, <pre class="inline_code">format</pre> denotes the file type of the output file.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_K__unsigned_int_n___static_Tensor_K__n__concat_const_Tensor_K__n__&a__const_Tensor_K__n__&b______________________________unsigned_int_ax__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
+  static Tensor&lt;K, n&gt; <b>concat</b>(const Tensor<K, n> &a, const Tensor<K, n> &b,
+                             unsigned int ax) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Concatenates two tensors along one axis.
+ The nodes have to have the same type and dimensions.
+ E.g.<div style="display:block; height: 0.5em"></div>
+ <pre class="card code" style="margin: 5px;">
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a = {{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>}, {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}}, {{<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>}, {<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>}}};
+ <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; b = {{{<span style="color: #30F0FF">8</span>}, {<span style="color: #30F0FF">9</span>}}, {{<span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>}, {<span style="color: #30F0FF">1</span><span style="color: #30F0FF">1</span>}}};
+ std::cout &lt;&lt; Flint::concat(a, b, <span style="color: #30F0FF">2</span>)() &lt;&lt; std::endl;
+ <span style="color: #D0D0D0">// Tensor&lt;int32, shape: [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>]&gt;(</span>
+ <span style="color: #D0D0D0">// [[[<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>, <span style="color: #30F0FF">8</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>, <span style="color: #30F0FF">9</span>]],</span>
+ <span style="color: #D0D0D0">//  [[<span style="color: #30F0FF">4</span>, <span style="color: #30F0FF">5</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>],</span>
+ <span style="color: #D0D0D0">//   [<span style="color: #30F0FF">6</span>, <span style="color: #30F0FF">7</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">1</span>]]])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-_size_t_n___static_Tensor_double___unsigned_int_n___random_array_std::array_size_t__n__shape__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;size_t n&gt;
   static Tensor&lt;double, (unsigned int)n&gt;
@@ -103,7 +135,7 @@
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Generates a Tensor containing the single given value in every entry.
  The resulting Tensor will have a dimensionality of <pre class="inline_code">n</pre> and a
- shape denoted by each entry in <pre class="inline_code">shape</pre>. e.g.
+ shape denoted by each entry in <pre class="inline_code">shape</pre>. e.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt; foo = Flint::constant_array(<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, std::array&lt;<span style="color: #FFF030">double</span>,
  <span style="color: #30F0FF">3</span>&gt;(<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>)); std::cout &lt;&lt; foo &lt;&lt; std::endl;
@@ -119,7 +151,7 @@
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Generates a Tensor containing the single given value in every entry.
  The resulting Tensor will have a dimensionality of <pre class="inline_code">sizeof...(args)</pre> and a
- shape denoted by each entry in <pre class="inline_code">sizes</pre>. e.g.
+ shape denoted by each entry in <pre class="inline_code">sizes</pre>. e.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt; foo = <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">double</span>, <span style="color: #30F0FF">3</span>&gt;::constant(<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">2</span>);
  std::cout &lt;&lt; foo &lt;&lt; std::endl;
@@ -129,10 +161,26 @@
  <span style="color: #D0D0D0">// [[<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>],</span>
  <span style="color: #D0D0D0">//  [<span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>.<span style="color: #30F0FF">1</span><span style="color: #30F0FF">4</span><span style="color: #30F0FF">1</span><span style="color: #30F0FF">5</span><span style="color: #30F0FF">9</span><span style="color: #30F0FF">2</span>]]])</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename____args___static_Tensor_long__sizeof____args___arange_unsigned_int_axis__args____sizes__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename... args&gt;
-  static Tensor&lt;long, sizeof...(args)&gt; <b>arange</b>(unsigned int axis, args... sizes) </pre></div>
+<div id="s-_unsigned_int_n___static_Tensor_long__n__arange_array_unsigned_int_ax_______________________________________std::array_size_t__n__shape__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;unsigned int n&gt;
+  static Tensor&lt;long, n&gt; <b>arange_array</b>(unsigned int ax,
+                                      std::array<size_t, n> shape) </pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Creates a int64 tensor that contains the indices relative to a given
+ dimension <pre class="inline_code">ax</pre> for each element, i.e. each entry is its index in that
+ corresponding dimension. If you need to index more than one dimension,
+ create multiple such tensors with  <a href="#s-_typename____args___static_Tensor_long__sizeof____args___arange_unsigned_int_axis_______________________________________________args____sizes__"><pre class="inline_code">arange</pre></a>.
+ Uses an array instead of the variadic template.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename____args___static_Tensor_long__sizeof____args___arange_unsigned_int_axis_______________________________________________args____sizes__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename... args&gt;
+  static Tensor&lt;long, sizeof...(args)&gt; <b>arange</b>(unsigned int axis,
+                                              args... sizes) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Creates a int64 tensor that contains the indices relative to a given
+ dimension <pre class="inline_code">ax</pre> for each element, i.e. each entry is its index in that
+ corresponding dimension. If you need to index more than one dimension,
+ create multiple such tensors with  <a href="#s-_typename____args___static_Tensor_long__sizeof____args___arange_unsigned_int_axis_______________________________________________args____sizes__"><pre class="inline_code">arange</pre></a>.
 </div></div><div style="display: block; height: 2em;"></div>
 
         <div style="display: block; height: 2em;"></div>

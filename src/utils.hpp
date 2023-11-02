@@ -86,7 +86,7 @@ static inline int operationScore(const FGraphNode *g) {
     const FGraphNode *a = g->predecessors[0];
     return 5 * a->operation.shape[a->operation.dimensions - 1];
   }
-  case FGRADIENT_CONVOLVE:
+  case FGRADIENT_CONVOLVE1:
   case FCONVOLVE: {
     // multiply with complete kernel size
     size_t no_elems = 1;
@@ -290,7 +290,8 @@ inline void freeAdditionalData(FGraphNode *gn) {
   case FCONCAT:
   case FCONVOLVE:
   case FSLIDE:
-  case FGRADIENT_CONVOLVE:
+  case FGRADIENT_CONVOLVE1:
+  case FGRADIENT_CONVOLVE2:
   case FTRANSPOSE:
   case FREDUCE_MIN:
   case FREDUCE_MAX:
@@ -364,5 +365,38 @@ inline long *generatePermutation(size_t *shape, unsigned int ax, size_t *size) {
   }
   *size = total_size;
   return ind;
+}
+
+static void calculateDivisorForInverseBroadcasting(const FGraphNode* a, size_t& iv1, const FGraphNode* b, size_t& iv2) {
+      iv1 = 1;
+      iv2 = 1;
+      bool inv_manipulation = a->operation.dimensions != b->operation.dimensions;
+      // constants -> no inverse broadcasting
+      if ((a->operation.dimensions == 1 && a->operation.shape[0] == 1) || (b->operation.dimensions == 1 && b->operation.shape[0] == 1))
+        return;
+      // forward broadcasting -> no inverse broadcasting
+      bool forward_broad = a->operation.broadcasting_mode == 0 && b->operation.broadcasting_mode == 0;
+      if (forward_broad) {
+        size_t* const lower = a->operation.dimensions > b->operation.dimensions ? b->operation.shape : a->operation.shape;
+        size_t* const higher = a->operation.dimensions > b->operation.dimensions ? a->operation.shape : b->operation.shape;
+        const int lower_dim = std::min(a->operation.dimensions, b->operation.dimensions);
+        const int higher_dim = std::max(a->operation.dimensions, b->operation.dimensions);
+        for (int i = 0; i < lower_dim; i++) {
+          const size_t s1 = higher[i + (higher_dim- lower_dim)];
+          const size_t s2 = lower[i];
+          if (s1 != s2) {
+            forward_broad = false;
+            break;
+          }
+        }
+      }
+      if (forward_broad)
+        return;
+      if (inv_manipulation) {
+        for (int i = b->operation.dimensions; i < a->operation.dimensions; i++)
+          iv2 *= a->operation.shape[i];
+        for (int i = a->operation.dimensions; i < b->operation.dimensions; i++)
+          iv1 *= b->operation.shape[i];
+      }
 }
 #endif

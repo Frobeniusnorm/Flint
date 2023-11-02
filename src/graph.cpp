@@ -26,24 +26,58 @@
 #include <vector>
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
-const char *fop_to_string[] = {
-    "FSTORE",         "FGEN_RANDOM", "FGEN_CONST",
-    "FGEN_ARANGE",    "FADD",        "FSUB",
-    "FMUL",           "FDIV",        "FPOW",
-    "FNEG",           "FLOG",        "FSIGN",
-    "FEVEN",          "FLOG2",       "FLOG10",
-    "FSIN",           "FCOS",        "FTAN",
-    "FASIN",          "FACOS",       "FATAN",
-    "FSQRT",          "FEXP",        "FLATTEN",
-    "FMATMUL",        "FCONVERSION", "FRESHAPE",
-    "FMIN",           "FMAX",        "FREDUCE_SUM",
-    "FREDUCE_MUL",    "FREDUCE_MIN", "FREDUCE_MAX",
-    "FSLICE",         "FABS",        "FREPEAT",
-    "FTRANSPOSE",     "FEXTEND",     "FCONCAT",
-    "FLESS",          "FEQUAL",      "FGREATER",
-    "FCONVOLVE",      "FSLIDE",      "FGRADIENT_CONVOLVE",
-    "FINDEX",         "FSET_INDEX",  "FSLIDING_WINDOW",
-    "FUNSLIDE_WINDOW"};
+const char *fop_to_string[] = {"FSTORE",
+                               "FGEN_RANDOM",
+                               "FGEN_CONST",
+                               "FGEN_ARANGE",
+                               "FADD",
+                               "FSUB",
+                               "FMUL",
+                               "FDIV",
+                               "FPOW",
+                               "FNEG",
+                               "FLOG",
+                               "FSIGN",
+                               "FEVEN",
+                               "FLOG2",
+                               "FLOG10",
+                               "FSIN",
+                               "FCOS",
+                               "FTAN",
+                               "FASIN",
+                               "FACOS",
+                               "FATAN",
+                               "FSQRT",
+                               "FEXP",
+                               "FLATTEN",
+                               "FMATMUL",
+                               "FCONVERSION",
+                               "FRESHAPE",
+                               "FMIN",
+                               "FMAX",
+                               "FREDUCE_SUM",
+                               "FREDUCE_MUL",
+                               "FREDUCE_MIN",
+                               "FREDUCE_MAX",
+                               "FSLICE",
+                               "FABS",
+                               "FREPEAT",
+                               "FTRANSPOSE",
+                               "FEXTEND",
+                               "FCONCAT",
+                               "FLESS",
+                               "FEQUAL",
+                               "FGREATER",
+                               "FCONVOLVE",
+                               "FSLIDE",
+                               "FGRADIENT_CONVOLVE1",
+                               "FGRADIENT_CONVOLVE2",
+                               "FINDEX",
+                               "FSET_INDEX",
+                               "FSLIDING_WINDOW",
+                               "FUNSLIDE_WINDOW",
+                               "FPOOLING_MAX",
+                               "FPOOLING_SUM"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
@@ -176,6 +210,7 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
   gn->reference_counter = 0;
   gn->result_data = nullptr;
   FOperation op;
+  op.broadcasting_mode = 0;
   FStore *store = new FStore();
   store->mem_id = nullptr;
   op.dimensions = dimensions;
@@ -310,12 +345,15 @@ static inline void initShape_keep(FOperation &op, const FOperation *a,
   size_t *src = nullptr;
   size_t *lower = nullptr;
   int lower_dim = -1;
+  int broadcasting_mode = 0;
   if (!b || a->dimensions >= b->dimensions) {
     op.dimensions = a->dimensions;
     src = a->shape;
     if (b) {
       lower = b->shape;
       lower_dim = b->dimensions;
+      if (b->broadcasting_mode != 0)
+        broadcasting_mode = b->broadcasting_mode + 1;
       if (a->dimensions == b->dimensions && src[0] == 1) {
         lower = a->shape;
         src = b->shape;
@@ -326,13 +364,22 @@ static inline void initShape_keep(FOperation &op, const FOperation *a,
     src = b->shape;
     lower = a->shape;
     lower_dim = a->dimensions;
+    if (a->broadcasting_mode != 0)
+      broadcasting_mode = a->broadcasting_mode + 1;
   }
   // check shape if both are defined and lower is not a constant
   if (lower && !(lower_dim == 1 && lower[0] == 1)) {
     for (int i = 0; i < lower_dim; i++) {
       const size_t s1 = src[i + (op.dimensions - lower_dim)];
       const size_t s2 = lower[i];
-      if (s1 != s2)
+      const size_t s3 = src[i];
+      if (broadcasting_mode == 0) {
+        if (s1 == s2 && s2 != s3)
+          broadcasting_mode = 1;
+        if (s2 == s3 && s1 != s2)
+          broadcasting_mode = 2;
+      }
+      if (broadcasting_mode == 2 ? s2 != s3 : s1 != s2)
         flogging(
             F_ERROR,
             "incompatible shapes of operands: " +
@@ -342,10 +389,17 @@ static inline void initShape_keep(FOperation &op, const FOperation *a,
                 " in " + fop_to_string[op.op_type]);
     }
   }
+  op.broadcasting_mode = broadcasting_mode == 2 ? 1 : 0;
   op.shape = (size_t *)malloc(sizeof(size_t) * op.dimensions);
   memcpy((void *)op.shape, src, sizeof(size_t) * op.dimensions);
   // determine type
   op.data_type = b ? higherType(a->data_type, b->data_type) : a->data_type;
+}
+void fEnforceInverseBroadcasting(FGraphNode *node) {
+  node->operation.broadcasting_mode = 1;
+}
+void fUnenforceInverseBroadcasting(FGraphNode *node) {
+  node->operation.broadcasting_mode = 0;
 }
 void fMarkGradientVariable(FGraphNode *node) {
   std::unordered_set<const FGraphNode *> *trace =
@@ -500,6 +554,7 @@ static FGraphNode *addNodeWithConst(FOperation op, FGraphNode *a, const T b) {
   store->num_entries = 1;
   store->mem_id = nullptr;
   FOperation cop;
+  cop.broadcasting_mode = 0;
   cop.op_type = FSTORE;
   cop.dimensions = 1;
   cop.shape = safe_mal<size_t>(1);
@@ -519,6 +574,7 @@ static FGraphNode *addConstWithNode(FOperation op, const T b, FGraphNode *a) {
   store->num_entries = 1;
   store->mem_id = nullptr;
   FOperation cop;
+  cop.broadcasting_mode = 0;
   cop.op_type = FSTORE;
   cop.dimensions = 1;
   cop.shape = safe_mal<size_t>(1);
@@ -541,6 +597,7 @@ template <typename T>
 static inline FGraphNode *constant(const T value, const size_t *shape,
                                    const int dimensions) {
   FOperation op;
+  op.broadcasting_mode = 0;
   op.dimensions = dimensions;
   op.shape = safe_mal<size_t>(dimensions);
   if (!op.shape)
@@ -576,6 +633,7 @@ FGraphNode *fconstant_d(const double value, const size_t *shape,
 
 FGraphNode *farange(const size_t *shape, const int dimensions, const int ax) {
   FOperation op;
+  op.broadcasting_mode = 0;
   op.dimensions = dimensions;
   op.shape = safe_mal<size_t>(dimensions);
   if (!op.shape)
@@ -713,6 +771,7 @@ FGraphNode *fmax_cd(FGraphNode *a, const double b) { return max(a, b); }
 static inline FGraphNode *log_impl(FGraphNode *a,
                                    const FOperationType logtype) {
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = logtype;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions * sizeof(size_t));
@@ -751,6 +810,7 @@ FGraphNode *fexp(FGraphNode *a) { return log_impl(a, FEXP); }
 /** Negates the elements of the tensor */
 FGraphNode *fneg(FGraphNode *a) {
   FOperation op;
+  op.broadcasting_mode = 0;
   op.additional_data = nullptr;
   op.op_type = FNEG;
   op.dimensions = a->operation.dimensions;
@@ -763,6 +823,7 @@ FGraphNode *fneg(FGraphNode *a) {
 }
 FGraphNode *fsign(FGraphNode *a) {
   FOperation op;
+  op.broadcasting_mode = 0;
   op.additional_data = nullptr;
   op.op_type = FSIGN;
   op.dimensions = a->operation.dimensions;
@@ -782,6 +843,7 @@ FGraphNode *feven(FGraphNode *a) {
     return nullptr; // for c compatibility
   }
   FOperation op;
+  op.broadcasting_mode = 0;
   op.additional_data = nullptr;
   op.op_type = FEVEN;
   op.dimensions = a->operation.dimensions;
@@ -795,6 +857,7 @@ FGraphNode *feven(FGraphNode *a) {
 }
 FGraphNode *fflatten(FGraphNode *a) {
   FOperation op;
+  op.broadcasting_mode = 0;
   op.additional_data = nullptr;
   op.op_type = FLATTEN;
   op.dimensions = 1;
@@ -821,6 +884,7 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
   size_t new_prevdim_size =
       prev_op.shape[dimension - 1] * prev_op.shape[dimension];
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FLATTEN;
   op.dimensions = prev_op.dimensions - 1;
   op.shape = safe_mal<size_t>(prev_op.dimensions - 1);
@@ -869,6 +933,7 @@ FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
     return nullptr; // for c compatibility
   }
   FOperation res;
+  res.broadcasting_mode = 0;
   res.dimensions = std::max(ao.dimensions, bo.dimensions);
   res.shape = safe_mal<size_t>(res.dimensions);
   if (!res.shape)
@@ -979,7 +1044,7 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
       case FCONVOLVE:
       case FMATMUL:
       case FSLIDE:
-      case FGRADIENT_CONVOLVE:
+      case FGRADIENT_CONVOLVE1:
       case FREDUCE_MAX:
       case FREDUCE_MIN:
       case FREDUCE_MUL:
@@ -1007,6 +1072,7 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
   a->reference_counter++;
   FOperation op;
   const FOperation other = a->operation;
+  op.broadcasting_mode = 0;
   op.data_type = other.data_type;
   op.op_type = type;
   if (other.dimensions > 1) {
@@ -1061,6 +1127,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
   if (a->reference_counter++ > 2 && !eager_execution)
     fExecuteGraph(a);
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FSLICE;
   op.data_type = a->operation.data_type;
   op.dimensions = a->operation.dimensions;
@@ -1127,6 +1194,7 @@ FGraphNode *fslice(FGraphNode *a, const long *start, const long *end) {
 }
 FGraphNode *fabs_g(FGraphNode *a) {
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FABS;
   op.additional_data = nullptr;
   initShape_keep(op, &a->operation, nullptr);
@@ -1135,6 +1203,7 @@ FGraphNode *fabs_g(FGraphNode *a) {
 }
 FGraphNode *frepeat(FGraphNode *a, int *repetitions) {
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FREPEAT;
   op.data_type = a->operation.data_type;
   op.dimensions = a->operation.dimensions;
@@ -1150,6 +1219,7 @@ FGraphNode *frepeat(FGraphNode *a, int *repetitions) {
 }
 FGraphNode *ftranspose(FGraphNode *a, int *transpositions) {
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FTRANSPOSE;
   op.data_type = a->operation.data_type;
   op.dimensions = a->operation.dimensions;
@@ -1260,6 +1330,7 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
   // construct operation
   const int dimensions = a->operation.dimensions;
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FEXTEND;
   op.data_type = a->operation.data_type;
   op.dimensions = dimensions;
@@ -1289,6 +1360,7 @@ FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
 }
 FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis) {
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FCONCAT;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(a->operation.dimensions);
@@ -1336,7 +1408,7 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
     fExecuteGraph(a);
   }
   if (!kernel->result_data && bo.op_type != FSTORE) {
-    fExecuteGraph(kernel); // TODO mem leak
+    fExecuteGraph(kernel);
   }
   if (ao.dimensions != bo.dimensions && ao.dimensions + 1 != bo.dimensions) {
     last_error = ILLEGAL_DIMENSIONALITY;
@@ -1355,6 +1427,7 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
     return nullptr; // for c compatibility
   }
   FOperation op;
+  op.broadcasting_mode = 0;
   op.dimensions = multiple_filters ? ao.dimensions : ao.dimensions - 1;
   op.shape = safe_mal<size_t>(op.dimensions);
   if (!op.shape)
@@ -1401,6 +1474,7 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel,
     return nullptr; // for c compatibility
   }
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FSLIDE;
   op.data_type = higherType(ao.data_type, bo.data_type);
   op.dimensions = ao.dimensions;
@@ -1417,6 +1491,7 @@ FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel,
 FGraphNode *frandom(const size_t *shape, const int dimensions) {
   FGraphNode *node = new FGraphNode();
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FGEN_RANDOM;
   op.dimensions = dimensions;
   op.shape = safe_mal<size_t>(dimensions);
@@ -1464,6 +1539,7 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
     }
 
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FINDEX;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
@@ -1504,6 +1580,7 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
     }
 
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FSET_INDEX;
   op.dimensions = a->operation.dimensions;
   op.shape = safe_mal<size_t>(op.dimensions);
@@ -1517,6 +1594,7 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices) {
 FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
                             const unsigned int *steps) {
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FSLIDING_WINDOW;
   op.dimensions = a->operation.dimensions + 1;
   op.data_type = a->operation.data_type;
@@ -1550,6 +1628,7 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
   if (!a->result_data && a->operation.op_type != FSTORE)
     fExecuteGraph(a);
   FOperation op;
+  op.broadcasting_mode = 0;
   op.op_type = FUNSLIDE_WINDOW;
   op.dimensions = a->operation.dimensions - 1;
   op.data_type = a->operation.data_type;
@@ -1590,4 +1669,12 @@ FGraphNode *fpermutate(FGraphNode *a, unsigned int ax) {
   if (!ind)
     return nullptr;
   return findex(a, ind);
+}
+FGraphNode *fpooling_sum(const FGraphNode *a, const size_t *window_size,
+                         const unsigned int *step_size) {
+  return nullptr;
+}
+FGraphNode *fpooling_max(const FGraphNode *a, const size_t *window_size,
+                         const unsigned int *step_size) {
+  return nullptr;
 }

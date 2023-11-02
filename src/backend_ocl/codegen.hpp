@@ -56,6 +56,8 @@ generateCode(FGraphNode *node,
     bool push_pred = true;
     // write code
     const string opstr = string(fop_to_string[node->operation.op_type]);
+    bool inverse_broadcasting =
+        false; // adds index manipulation code for inverse broadcasting
     // need to be outside switch to include result_data
     if (node->operation.op_type == FSTORE || node->result_data ||
         node->operation.op_type == FGEN_CONSTANT) {
@@ -80,6 +82,7 @@ generateCode(FGraphNode *node,
       case FSUB:
       case FDIV:
       case FMUL: {
+        inverse_broadcasting = true;
         // size of current variable has to be equal to the size of one opperand,
         // the other one is at least smaller but not larger
         char op = '\0';
@@ -105,6 +108,7 @@ generateCode(FGraphNode *node,
         break;
       }
       case FPOW: {
+        inverse_broadcasting = true;
         const FOperation x = node->predecessors[0]->operation;
         const FOperation y = node->predecessors[1]->operation;
         if ((x.data_type == F_FLOAT32 || x.data_type == F_FLOAT64) &&
@@ -128,24 +132,28 @@ generateCode(FGraphNode *node,
                  to_string(variable_index + 2) + ");\n" + code;
       } break;
       case FMIN: {
+        inverse_broadcasting = true;
         code = "const " + type + " " + name + " = min((" + type + ")v" +
                to_string(variable_index + 1) + ", (" + type + ")v" +
                to_string(variable_index + 2) + ");\n" + code;
 
       } break;
       case FMAX: {
+        inverse_broadcasting = true;
         code = "const " + type + " " + name + " = max((" + type + ")v" +
                to_string(variable_index + 1) + ", (" + type + ")v" +
                to_string(variable_index + 2) + ");\n" + code;
 
       } break;
       case FLESS: {
+        inverse_broadcasting = true;
         code = "const " + type + " " + name + " = v" +
                to_string(variable_index + 1) + " < v" +
                to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
 
       } break;
       case FEQUAL: {
+        inverse_broadcasting = true;
         const FOperation x = node->predecessors[0]->operation;
         const FOperation y = node->predecessors[1]->operation;
         code = "const " + type + " " + name + " = v" +
@@ -160,6 +168,7 @@ generateCode(FGraphNode *node,
 
       } break;
       case FGREATER: {
+        inverse_broadcasting = true;
         code = "const " + type + " " + name + " = v" +
                to_string(variable_index + 1) + " > v" +
                to_string(variable_index + 2) + " ? 1 : 0;\n" + code;
@@ -215,7 +224,7 @@ generateCode(FGraphNode *node,
                to_string(acc_sizes_ax) + ")%" +
                to_string(node->operation.shape[ax]) + ";\n" + code;
       } break;
-      case FGRADIENT_CONVOLVE: {
+      case FGRADIENT_CONVOLVE1: {
         string par1, par2;
         push_pred = false;
         FGraphNode *gnp2 = node->predecessors[1];
@@ -426,6 +435,74 @@ generateCode(FGraphNode *node,
                      "[j + o];\n}\n" + name + " = res;\n}\n";
         code = conv_code + code;
       } break;
+      case FGRADIENT_CONVOLVE2: {
+        const FOperation op = node->operation;
+        FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
+        push_pred = false;
+        string par1, par2;
+        int vari = variable_index;
+        par1 = "v" + to_string(++variable_index);
+        if (assigned_params.find(gnp2) != assigned_params.end()) {
+          par2 = assigned_params[gnp2];
+        } else {
+          par2 = "P" + to_string(assigned_params.size());
+          assigned_params.insert({gnp2, par2});
+          parameters.push_back({gnp2, par2});
+        }
+        const FOperation pred = gnp1->operation, prev_adj = gnp2->operation;
+        const std::vector<size_t> acc_sizes_pred = calcAccSizes(pred);
+        const std::vector<size_t> acc_sizes_kernel = calcAccSizes(op);
+        const bool multifilter = op.dimensions > pred.dimensions;
+        const unsigned int num_filter = multifilter ? op.shape[0] : 1;
+        // like accumulated sizes for prev_adj but without filter in multifilter
+        // context
+        std::vector<size_t> acc_sizes_windows(
+            multifilter ? prev_adj.dimensions - 1 : prev_adj.dimensions);
+        acc_sizes_windows[acc_sizes_windows.size() - 1] = 1;
+        for (int i = acc_sizes_windows.size() - 2; i >= 0; i--) {
+          acc_sizes_windows[i] =
+              acc_sizes_windows[i + 1] * prev_adj.shape[i + 1];
+        }
+        // total number of windows
+        const size_t windows = acc_sizes_windows[0] * prev_adj.shape[0];
+        // helper variables
+        const size_t num_elems_kernel = multifilter
+                                            ? acc_sizes_kernel[0]
+                                            : acc_sizes_kernel[0] * op.shape[0];
+        const unsigned int *steps = (unsigned int *)op.additional_data;
+        const std::string a_offset = "a_offset" + to_string(vari);
+        const std::string w = "w" + to_string(vari);
+        const std::string a = "a" + to_string(vari);
+        std::string grad_code =
+            type + " " + name + " = 0;\nlong " + a_offset + " = 0";
+
+        for (int j = multifilter ? 1 : 0; j < op.dimensions; j++) {
+          grad_code += "+((index/" + to_string(acc_sizes_kernel[j]) + ")%" +
+                       to_string(op.shape[j]) + ")*" +
+                       to_string(acc_sizes_pred[multifilter ? j - 1 : j]);
+        }
+        grad_code += ";\n"
+                     "for(long " + w + " = 0; " + w + " < " +
+                     to_string(windows) +
+                     "; " + w + "++){\n"
+                     " long " + a + " = 0";
+        for (int j = 0; j < acc_sizes_windows.size(); j++) {
+          grad_code += "+((" + w + "/" + to_string(acc_sizes_windows[j]) + ")%" +
+                       to_string(prev_adj.shape[j]) + ")*" +
+                       to_string(acc_sizes_pred[j] * steps[j]);
+        }
+        grad_code += ";\n"; 
+        const std::string old_idx = "old_idx" + to_string(num_indices++);
+        grad_code += " long " + old_idx + " = index;\n"
+                     " index = " + a + " + " + a_offset + ";\n";
+        const std::string f =
+            multifilter ? old_idx + " / " + to_string(num_elems_kernel) : "0";
+        todo.push_front({nullptr, grad_code});
+        todo.push_front({gnp1, par1});
+        code = " " + name + "+=" + par1 + "*" + par2 +
+                     "[" + w + " * " + to_string(num_filter) + " + " + f + "];\n"
+                     " index = " + old_idx + ";\n}\n" + code;
+      } break;
       case FSLIDE: {
         const FOperation op = node->operation;
         string par1, par2;
@@ -530,7 +607,8 @@ generateCode(FGraphNode *node,
                       " = index;\n"
                       "index = 0;\n{\n"
                       "long wi = (" +
-                      i + "%" + to_string(num_elems) + ")/" + to_string(acc_size) +
+                      i + "%" + to_string(num_elems) + ")/" +
+                      to_string(acc_size) +
                       ";\n"
                       "long rest = " +
                       i + "%" + to_string(acc_size) + ";\n";
@@ -1113,9 +1191,27 @@ generateCode(FGraphNode *node,
       default:
         break;
       }
+    if (inverse_broadcasting) {
+      // manipulate for invserse broadcasting
+      size_t iv1 = 1, iv2 = 1;
+      calculateDivisorForInverseBroadcasting(node->predecessors[0], iv1,
+                                             node->predecessors[1], iv2);
+      if (iv1 != 1 || iv2 != 1) {
+        push_pred = false;
+        const string old_idx = "old_idx" + to_string(num_indices++);
+        code = "index = " + old_idx + ";\n" + code;
+        int var1 = ++variable_index;
+        int var2 = ++variable_index;
+        todo.push_front({nullptr, "long " + old_idx + " = index;\nindex /= " +
+                                      to_string(iv2) + ";\n"});
+        todo.push_front({node->predecessors[1], "v" + to_string(var2)});
+        todo.push_front({nullptr, "index = " + old_idx +
+                                      ";\nindex /= " + to_string(iv1) + ";\n"});
+        todo.push_front({node->predecessors[0], "v" + to_string(var1)});
+      }
+    }
 #ifdef FLINT_DEBUG
-    code = "// " + opstr + " current index: " + to_string(variable_index) +
-           "\n" + code;
+    code = "// " + opstr + "\n" + code;
 #endif
     // insert our indexing logic into the queue after the children
     if (!index_defs.empty())
@@ -1123,20 +1219,7 @@ generateCode(FGraphNode *node,
     // push predecessors dfs
     if (push_pred)
       for (int i = 0; i < node->num_predecessor; i++) {
-        // auto cashed_var = calculated_vars.find(node->predecessors[i]);
         string parname = "v" + to_string(++variable_index);
-        // if (cashed_var != calculated_vars.end()) {
-        //   code = typeString(node->predecessors[i]->operation.data_type) + " "
-        //   +
-        //          parname + " = " + cashed_var->second + ";\n" + code;
-        //   for(auto it = todo.begin(); it != todo.end(); it++)
-        //     if (std::get<0>(*it) == node) {
-        //       todo.erase(it);
-        //       break;
-        //     }
-        // } else {
-        //   calculated_vars.insert({node->predecessors[i], parname});
-        //   }
         todo.push_front({node->predecessors[i], parname});
       }
   }
@@ -1234,16 +1317,27 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "__constant long* acc_sizes_kernel";
     code += ", __constant int* steps";
   } break;
-  case FGRADIENT_CONVOLVE: {
-    code += ", const __global " + typeString(parameter_types[0]) + "* P1";
-    code += ", const long num_entries1, const int dimensions1, const __global "
-            "double* P2, const long num_entries2, const int dimensions2, const "
-            "int "
-            "dimensions0";
-    code += ", __constant long* acc_sizes_pred, "
+  case FGRADIENT_CONVOLVE1: {
+    code += ", const __global " + typeString(parameter_types[0]) +
+            "* P1"
+            ", const long num_entries1, const int dimensions1, const __global "
+            "double* P2, const long num_entries2, const int dimensions2"
+            ", const int dimensions0"
+            ", __constant long* acc_sizes_pred, "
             "__constant long* acc_sizes_kernel"
-            ", __constant long* acc_sizes";
-    code += ", __constant int* steps, __constant long* shape1";
+            ", __constant long* acc_sizes"
+            ", __constant int* steps, __constant long* shape1";
+  } break;
+  case FGRADIENT_CONVOLVE2: {
+    code +=
+        ", const __global " + typeString(parameter_types[0]) +
+        "* P1"
+        ", const long num_entries1, const int dimensions1, const __global "
+        "double* P2, const long num_entries2, const int dimensions2, "
+        "const int dimensions0, "
+        "__constant long* acc_sizes_pred, __constant long* acc_sizes_kernel, "
+        "__constant long* acc_sizes_windows, __constant int* steps, "
+        "__constant long* op_shape, __constant long* prev_adj_shape";
   } break;
   case FGEN_RANDOM: {
     code += ", const double time";
@@ -1297,50 +1391,58 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
               to_string(i) + ", long num_entries" + to_string(i);
     break;
   }
+  if (parameter_types.size() == 2)
+    for (int i = 0; i < parameter_types.size(); i++)
+      code += ", long inv_broad" + to_string(i);
   code += "){\nconst long index = get_global_id(0);\n";
   // generate code
   switch (operation) {
   case FADD:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             " return;\n"
-            "R[index] = P0[index%num_entries0] + P1[index%num_entries1];";
+            "R[index] = P0[(index/inv_broad0)%num_entries0] + "
+            "P1[(index/inv_broad1)%num_entries1];";
     break;
   case FSUB:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             "return;\nR[index] = "
-            "P0[index%num_entries0] - P1[index%num_entries1];";
+            "P0[(index/inv_broad0)%num_entries0] - "
+            "P1[(index/inv_broad1)%num_entries1];";
     break;
   case FMUL:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             "return;\nR[index] = "
-            "P0[index%num_entries0] * P1[index%num_entries1];";
+            "P0[(index/inv_broad0)%num_entries0] * "
+            "P1[(index/inv_broad1)%num_entries1];";
     break;
   case FDIV:
     code += "if(index >= num_entries0 && index >= num_entries1) "
             "return;\nR[index] = "
-            "P0[index%num_entries0] / P1[index%num_entries1];";
+            "P0[(index/inv_broad0)%num_entries0] / "
+            "P1[(index/inv_broad1)%num_entries1];";
     break;
   case FPOW: {
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
     string type = typeString(res_type);
     if ((parameter_types[0] == F_FLOAT32 || parameter_types[0] == F_FLOAT64) &&
         (parameter_types[1] == F_FLOAT32 || parameter_types[1] == F_FLOAT64))
-      code += "R[index] = pow((" + type + ")P0[index%num_entries0], (" + type +
-              ")P1[index%num_entries1]);";
+      code += "R[index] = pow((" + type +
+              ")P0[(index/inv_broad0)%num_entries0], (" + type +
+              ")P1[(index/inv_broad1)%num_entries1]);";
     else if (parameter_types[0] == F_INT64 &&
              (parameter_types[1] == F_INT32 || parameter_types[1] == F_INT64))
       code += "R[index] "
-              "= (long)pown((double)P0[index%num_entries0], "
-              "(int)P1[index%num_entries1]);";
+              "= (long)pown((double)P0[(index/inv_broad0)%num_entries0], "
+              "(int)P1[(index/inv_broad1)%num_entries1]);";
     else if (parameter_types[0] == F_INT32 &&
              (parameter_types[1] == F_INT32 || parameter_types[1] == F_INT64))
       code += "R[index] = "
-              "(int)pown((float)P0[index%num_entries0], "
-              "(int)P1[index%num_entries1]);";
+              "(int)pown((float)P0[(index/inv_broad0)%num_entries0], "
+              "(int)P1[(index/inv_broad1)%num_entries1]);";
     else
       code += "R[index] = "
-              "pow((double)P0[index%num_entries0], "
-              "(double)P1[index%num_entries1]);";
+              "pow((double)P0[(index/inv_broad0)%num_entries0], "
+              "(double)P1[(index/inv_broad1)%num_entries1]);";
   } break;
   case FNEG:
     code += "if(index >= num_entries0) return;\n"
@@ -1450,34 +1552,44 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
     break;
   case FMIN:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += typeString(parameter_types[0]) +
+            " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) +
+            " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a < b ? a : b;";
     break;
   case FMAX:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += typeString(parameter_types[0]) +
+            " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) +
+            " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a > b ? a : b;";
     break;
   case FLESS:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += typeString(parameter_types[0]) +
+            " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) +
+            " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a < b ? 1 : 0;";
     break;
   case FEQUAL:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += typeString(parameter_types[0]) +
+            " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) +
+            " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a + " + epsilonForType(parameter_types[0]) +
             " >= b && a <= b + " + epsilonForType(parameter_types[1]) +
             " ? 1 : 0;";
     break;
   case FGREATER:
     code += "if(index >= num_entries0 && index >= num_entries1) return;\n";
-    code += typeString(parameter_types[0]) + " a = P0[index%num_entries0];\n";
-    code += typeString(parameter_types[1]) + " b = P1[index%num_entries1];\n";
+    code += typeString(parameter_types[0]) +
+            " a = P0[(index/inv_broad0)%num_entries0];\n";
+    code += typeString(parameter_types[1]) +
+            " b = P1[(index/inv_broad1)%num_entries1];\n";
     code += "R[index] = a > b ? 1 : 0;";
     break;
   case FREDUCE_MIN:
@@ -1678,7 +1790,32 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "const long i = (index / acc_sizes_ax) % shape_ax\n;"
             "R[index] = i;\n";
   } break;
-  case FGRADIENT_CONVOLVE:
+  case FGRADIENT_CONVOLVE2:
+    code +=
+        "if(index >= num_entriesR) return;\n"
+        "const bool multifilter = dimensions0 > dimensions1;\n"
+        "const long windows = acc_sizes_windows[0] * prev_adj_shape[0];\n"
+        "const long num_elems_kernel = multifilter ? acc_sizes_kernel[0] : "
+        "acc_sizes_kernel[0] * op_shape[0];\n"
+        "const int num_filter = multifilter ? op_shape[0] : 1;\n"
+        "const long f = multifilter ? index / num_elems_kernel : 0;\n"
+        "long a_offset = 0;\n"
+        "for(int j = multifilter ? 1 : 0; j < dimensions0; j++){\n"
+        " const long ki = (index / acc_sizes_kernel[j]) % op_shape[j];\n"
+        " a_offset += ki * acc_sizes_pred[multifilter ? j - 1 : j];\n"
+        "}\n"
+        "R[index] = 0;\n"
+        "for(long w = 0; w < windows; w++){\n"
+        " long a = 0;"
+        " for(int j = 0; j < (multifilter ? dimensions2 - 1 : dimensions2); "
+        "j++){\n"
+        "  const long wj = (w / acc_sizes_windows[j]) % prev_adj_shape[j];\n"
+        "  a += wj * acc_sizes_pred[j] * steps[j];\n"
+        " }\n"
+        " R[index] += P1[a + a_offset] * P2[w * num_filter + f];\n"
+        "}\n";
+    break;
+  case FGRADIENT_CONVOLVE1:
     code += "if(index >= num_entriesR) return;\n"
             "long k = 0;\n"
             "int in_steps = 1;\n"
@@ -1768,13 +1905,6 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
             "R[index] = P0[base + offset];\n";
     break;
   case FUNSLIDE_WINDOW:
-    // shape0 -> pred shape
-    // acc_sizes_pred
-    // shapeR
-    // dimensionsR -> node dimensions
-    // acc_no_windows
-    // no_windows
-    // steps
     code += "if(index >= num_entriesR) return;\n"
             "R[index] = 0;\n"
             "long first_w = 0;\n"

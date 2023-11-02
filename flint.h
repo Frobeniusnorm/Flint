@@ -40,6 +40,31 @@ extern "C" {
   C_COMPATIBILITY that - when enabled during compilation - disables exception
   throwing and sets the errno instead (the functions then return NULL on error).
   You can query the error reason with `fErrorMessage` and `fErrorType`.
+
+  In general all operations that take two parameters of equal shape (like e.g.
+  addition, division, minimum, equal etc.) allow normal and inverse
+  broadcasting.
+  - normal broadcasting: a node with shape [4, 6, 8] can be broadcasted to a
+    node with shape [2, 4, 6, 8] by repeating the first node 2 times in the
+    first dimension.
+  - inverse broadcasting: a node with shape [2, 4, 6] can be broadcasted to a
+    node with shape [2, 4, 6, 8] by repeating the first node 8 times in the last
+    dimension.
+  E.g.
+
+  @code{
+  float data_a[] = {0, 1, 2,
+                    3, 4, 5};
+  size_t shape_a[] = {2, 3};
+  float data_b[] = {2, 4, 6};
+  size_t shape_b = 3;
+  FGraphNode* a = fCreateGraph((void*)data_a, 6, F_FLOAT32, shape_a, 2);
+  FGraphNode* b = fCreateGraph((void*)data_b, 3, F_FLOAT32, &shape_b, 1);
+  FGraphNode* c = fmul(a, b); // {{2, 5, 8}, {5, 8, 11}}
+  }
+
+  Broadcasting is implemented without repeating the data, but by directly
+  accessing it.
 */
 #define FLINT_BACKEND_ONLY_CPU 1
 #define FLINT_BACKEND_ONLY_GPU 2
@@ -224,7 +249,8 @@ enum FOperationType {
   FGREATER,
   FCONVOLVE,
   FSLIDE,
-  FGRADIENT_CONVOLVE, // only for internal use!
+  FGRADIENT_CONVOLVE1, // only for internal use!
+  FGRADIENT_CONVOLVE2, // only for internal use!
   FINDEX,
   FSET_INDEX,
   FSLIDING_WINDOW,
@@ -241,14 +267,18 @@ enum FOperationType {
  * operation, `FOperation.data_type` the type of the underlying data,
  * `FOperation.additional_data` is operation specific.*/
 struct FOperation {
-  // shape of the data after execution
-  int dimensions;
   size_t *shape;
+  void *additional_data;
   // type of operation, to enable switch cases and avoid v-table lookups
   enum FOperationType op_type;
   // datatype of result
   enum FType data_type;
-  void *additional_data;
+  // shape of the data after execution
+  int dimensions;
+  // currently a boolean indicating if standard broadcasting (0) is to be used
+  // or inverse (1), in the future maybe an additional indicators for more
+  // advanced broadcasting methods may be implemented
+  int broadcasting_mode;
 };
 typedef struct FOperation FOperation;
 
@@ -529,6 +559,19 @@ void fUnmarkGradientVariable(FGraphNode *node);
  * The C++ framework does this automatically.
  */
 FGraphNode *fOptimizeMemory(FGraphNode *node);
+/** Sometimes there are combinations of nodes where both normal and inverse
+ * broadcasting is possible, but yields different results, e.g. multiplication
+ * for two nodes with shapes [3, 5, 3, 5] and [3, 5]. The framework chooses
+ * normal broadcasting over inverse if both are possible, this function allows
+ * you to alter this behaviour and mark a node to be inversely broadcasted.
+ * After the call to this function the given node will from then on only
+ * inversely broadcasted (in cases where only normal broadcasting is available
+ * an error will occur!). It has no effect in operations that don't use
+ * broadcasting. You can "unmark" the node with `fUnenforceInverseBroadcasting`.
+ */
+void fEnforceInverseBroadcasting(FGraphNode *node);
+/** Undos `fEnforceInverseBroadcasting` for a node.*/
+void fUnenforceInverseBroadcasting(FGraphNode *node);
 //  operations
 /** Serializes the data and shape of the node and returns an array of chars in
  * which the serialized data will be written (binary data, not a string). The
@@ -1041,7 +1084,35 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
  * creating, copying or deleting new ones) one axis of the input tensor.
  */
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
-
+/**
+ * TODO not yet implemented
+ * Slides a window along the Tensor and sums up all elements inside that window,
+ * reducing it into one element and then slides the window in each dimension
+ * `step_size` times (like `fsliding_window`).
+ * - `a` the tensor to pool
+ * - `window_size` array with as many elements as `a` has dimension, each
+ *   describing the window size in that dimension for which all elements inside
+ *   each window are to be summed up
+ * - `step_size` array of number of elements the window should be moved after
+ *   each reducting for each dimension
+ */
+FGraphNode *fpooling_sum(const FGraphNode *a, const size_t *window_size,
+                         const unsigned int *step_size);
+/**
+ * TODO not yet implemented
+ * Slides a window along the Tensor and reduces all elements inside that window
+ * to their maximum element (just that one remains in the result tensor), and
+ * then slides the window in each dimension `step_size` times (like
+ * `fsliding_window`).
+ * - `a` the tensor to pool
+ * - `window_size` array with as many elements as `a` has dimension, each
+ *   describing the window size in that dimension for which for all elements
+ * inside each window the maximum should be taken.
+ * - `step_size` array of number of elements the window should be moved after
+ *   each reducting for each dimension
+ */
+FGraphNode *fpooling_max(const FGraphNode *a, const size_t *window_size,
+                         const unsigned int *step_size);
 #ifdef __cplusplus
 }
 

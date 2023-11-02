@@ -926,10 +926,11 @@ TEST_CASE("Multifilter Convolve") {
       {{{1, 1}, {2, -1}}}, {{{-1, 1}, {1, 0}}}, {{{-2, 1}, {2, -1}}}};
   Tensor<float, 3> r1 = t1.convolve(k1, 1, 1);
   Tensor<float, 3> e1{{{1, 2, 1}, {4, 3, 1}}, {{11, 6, 2}, {17, 8, 2}}};
-  for (int i = 0; i < e1.get_shape()[0]; i++) 
-    for (int j = 0; j < e1.get_shape()[0]; j++) 
-      for (int k = 0; k < e1.get_shape()[0]; k++) 
+  for (int i = 0; i < e1.get_shape()[0]; i++)
+    for (int j = 0; j < e1.get_shape()[0]; j++)
+      for (int k = 0; k < e1.get_shape()[0]; k++)
         CHECK_EQ(r1[i][j][k], e1[i][j][k]);
+  std::cout << r1 << std::endl;
 }
 TEST_CASE("Slide") {
   Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
@@ -1197,6 +1198,35 @@ TEST_SUITE("Index operations and broadcasting") {
       for (int i = 0; i < 4; i++)
         for (int j = 0; j < 3; j++)
           CHECK_EQ(t3[k][i][j] * t1[j][i], t4[k][i][j]);
+  }
+}
+TEST_SUITE("Advanced Broadcasting") {
+  TEST_CASE("Simple Operations") {
+    Tensor<long, 3> a = Flint::arange(0, 3, 2, 4);
+    Tensor<long, 2> b = {{2, 2}, {3, 4}, {-1, 2}};
+    Tensor<long, 3> c = a + b;
+    Tensor<long, 3> d = a * b;
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 2; j++)
+        for (int k = 0; k < 4; k++) {
+          CHECK_EQ(a[i][j][k] + b[i][j], c[i][j][k]);
+          CHECK_EQ(a[i][j][k] * b[i][j], d[i][j][k]);
+        }
+    Tensor<long, 2> e = Flint::arange(1, 2, 4);
+    Tensor<long, 3> f = (a + e).pow(b) - d;
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 2; j++)
+        for (int k = 0; k < 4; k++) {
+          CHECK_EQ((long)std::pow(a[i][j][k] + e[j][k], b[i][j]) - d[i][j][k],
+                   f[i][j][k]);
+        }
+    Tensor<long, 2> g = {{5, 3}, {-1, 7}};
+    Tensor<long, 1> h = {-1, 2, 3, 5, 1};
+    Tensor<long, 2> l = Flint::concat(b, g, 0) - h;
+    Tensor<long, 2> exp = {{3, 3}, {1, 2}, {-4, -1}, {0, -2}, {-2, 6}};
+    for (int i = 0; i < 5; i++)
+      for (int j = 0; j < 2; j++)
+        CHECK_EQ(exp[i][j], l[i][j]);
   }
 }
 int main(int argc, char **argv) {

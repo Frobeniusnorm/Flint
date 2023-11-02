@@ -144,6 +144,27 @@ template <typename T> struct Tensor<T, 1> {
     }
   }
   /**
+   * Sometimes there are combinations of nodes where both normal and
+   * inverse broadcasting is possible, but yields different results, e.g.
+   * multiplication for two nodes with shapes `[3, 5, 3, 5]` and `[3, 5]`. The
+   * framework chooses normal broadcasting over inverse if both are possible,
+   * this function allows you to alter this behaviour and mark a node to be
+   * inversely broadcasted. After the call to this function the given node will
+   * from then on only inversely broadcasted (in cases where only normal
+   * broadcasting is available an error will occur!). It has no effect in
+   * operations that don't use broadcasting. You can "unmark" the node with
+   * `disable_inverse_broadcasting`.
+   */
+  void inverse_broadcasting() {
+    fEnforceInverseBroadcasting(get_graph_node());
+  }
+  /**
+   * Undoes `inverse_broadcasting`
+   */
+  void disable_inverse_broadcasting() {
+    fUnenforceInverseBroadcasting(get_graph_node());
+  }
+  /**
    * Indexes the Tensor and returns the element.
    * If the underlying data is not yet computed, executes this Tensor.
    */
@@ -373,10 +394,10 @@ template <typename T> struct Tensor<T, 1> {
   operator std::string() {
     const FOperation op = node->operation;
     std::string foo = "Tensor<" +
-                      (op.data_type == F_INT32     ? std::string("INT32")
-                       : op.data_type == F_INT64   ? std::string("INT64")
-                       : op.data_type == F_FLOAT32 ? std::string("FLOAT32")
-                                                   : std::string("FLOAT64")) +
+                      (op.data_type == F_INT32     ? std::string("int")
+                       : op.data_type == F_INT64   ? std::string("long")
+                       : op.data_type == F_FLOAT32 ? std::string("float")
+                                                   : std::string("double")) +
                       ", shape: " + std::to_string(shape[0]) + ">(";
     if (op.op_type != FSTORE && !node->result_data)
       foo += "<not yet executed>";
@@ -403,17 +424,7 @@ template <typename T> struct Tensor<T, 1> {
     return foo;
   }
   /**
-   * Calls `deserialize` on this Tensor and pipes the returned data to the
-   * stream.
-   */
-  friend std::ofstream &operator<<(std::ofstream &os, Tensor<T, 1> &t) {
-    for (char c : t.serialize()) {
-      os.put(c);
-    }
-    return os;
-  }
-  /**
-   * Calls `deserialize` on this Tensor and pipes the returned data to the
+   * Calls `serialize` on this Tensor and pipes the returned data to the
    * stream.
    */
   friend std::ofstream &operator<<(std::ofstream &os, Tensor<T, 1> t) {
@@ -426,7 +437,7 @@ template <typename T> struct Tensor<T, 1> {
    * Calls `std::string()` on this Tensor and pipes the returned string to the
    * pipe.
    */
-  friend std::ostream &operator<<(std::ostream &os, Tensor<T, 1> &t) {
+  friend std::ostream &operator<<(std::ostream &os, Tensor<T, 1> t) {
     os << (std::string)t;
     return os;
   }
