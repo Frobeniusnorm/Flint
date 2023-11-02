@@ -438,14 +438,10 @@ generateCode(FGraphNode *node,
       case FGRADIENT_CONVOLVE2: {
         const FOperation op = node->operation;
         FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
+        push_pred = false;
         string par1, par2;
-        if (assigned_params.find(gnp1) != assigned_params.end()) {
-          par1 = assigned_params[gnp1];
-        } else {
-          par1 = "P" + to_string(assigned_params.size());
-          assigned_params.insert({gnp1, par1});
-          parameters.push_back({gnp1, par1});
-        }
+        int vari = variable_index;
+        par1 = "v" + to_string(++variable_index);
         if (assigned_params.find(gnp2) != assigned_params.end()) {
           par2 = assigned_params[gnp2];
         } else {
@@ -474,10 +470,11 @@ generateCode(FGraphNode *node,
                                             ? acc_sizes_kernel[0]
                                             : acc_sizes_kernel[0] * op.shape[0];
         const unsigned int *steps = (unsigned int *)op.additional_data;
-        const std::string f =
-            multifilter ? "index / " + to_string(num_elems_kernel) : "0";
+        const std::string a_offset = "a_offset" + to_string(vari);
+        const std::string w = "w" + to_string(vari);
+        const std::string a = "a" + to_string(vari);
         std::string grad_code =
-            type + " " + name + " = 0;\n{ long a_offset = 0";
+            type + " " + name + " = 0;\nlong " + a_offset + " = 0";
 
         for (int j = multifilter ? 1 : 0; j < op.dimensions; j++) {
           grad_code += "+((index/" + to_string(acc_sizes_kernel[j]) + ")%" +
@@ -485,18 +482,26 @@ generateCode(FGraphNode *node,
                        to_string(acc_sizes_pred[multifilter ? j - 1 : j]);
         }
         grad_code += ";\n"
-                     " for(long w = 0; w < " +
+                     "for(long " + w + " = 0; " + w + " < " +
                      to_string(windows) +
-                     "; w++){\n"
-                     "  long a = 0\n";
+                     "; " + w + "++){\n"
+                     " long " + a + " = 0";
         for (int j = 0; j < acc_sizes_windows.size(); j++) {
-          grad_code += "+((w/" + to_string(acc_sizes_windows[j]) + ")%" +
+          grad_code += "+((" + w + "/" + to_string(acc_sizes_windows[j]) + ")%" +
                        to_string(prev_adj.shape[j]) + ")*" +
                        to_string(acc_sizes_pred[j] * steps[j]);
         }
-        grad_code += ";\n  " + name + "+=" + par1 + "[a + a_offset]*" + par2 +
-                     "[w * " + to_string(num_filter) + " + " + f + "];\n  }";
-        code = code + grad_code + "}";
+        grad_code += ";\n"; 
+        const std::string old_idx = "old_idx" + to_string(num_indices++);
+        grad_code += " long " + old_idx + " = index;\n"
+                     " index = " + a + " + " + a_offset + ";\n";
+        const std::string f =
+            multifilter ? old_idx + " / " + to_string(num_elems_kernel) : "0";
+        todo.push_front({nullptr, grad_code});
+        todo.push_front({gnp1, par1});
+        code = " " + name + "+=" + par1 + "*" + par2 +
+                     "[" + w + " * " + to_string(num_filter) + " + " + f + "];\n"
+                     " index = " + old_idx + ";\n}\n" + code;
       } break;
       case FSLIDE: {
         const FOperation op = node->operation;

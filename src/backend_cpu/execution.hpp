@@ -296,7 +296,6 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
       }
       result[i] = res;
     }
-
   } break;
   case FGRADIENT_CONVOLVE2: {
     // normal convolution:
