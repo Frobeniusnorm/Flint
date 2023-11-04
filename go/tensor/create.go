@@ -55,7 +55,7 @@ func Create[T Numeric](data any) Tensor {
 		return Tensor{} // Scalar(data)
 	}
 	if node, ok := data.(flint.GraphNode); ok {
-		return FromNode[T](node)
+		return FromNode(node)
 	}
 	panic("invalid data type")
 }
@@ -88,16 +88,40 @@ func Create[T Numeric](data any) Tensor {
 //	return tensor
 //}
 
-func FromNode[T Numeric](node flint.GraphNode) Tensor {
+func FromNode(node flint.GraphNode) Tensor {
 	res := Tensor{node: &node}
 	res.init()
 	return res
 }
 
+func FromNodeWithErr(node flint.GraphNode, err error) Tensor {
+	res := FromNode(node)
+	res.err = err
+	return res
+}
+
 func Scalar[T Numeric](val T) Tensor {
-	tensor := Tensor{data: &val}
-	tensor.init()
-	return tensor
+	var res Tensor
+	switch any(val).(type) {
+	case int32:
+		var typedVal = any(val).(int32)
+		res.dataInt32 = &typedVal
+		res.dataType = flint.F_INT32
+	case int64:
+		var typedVal = any(val).(int64)
+		res.dataInt64 = &typedVal
+		res.dataType = flint.F_INT64
+	case float32:
+		var typedVal = any(val).(float32)
+		res.dataFloat32 = &typedVal
+		res.dataType = flint.F_FLOAT32
+	case float64:
+		var typedVal = any(val).(float64)
+		res.dataFloat64 = &typedVal
+		res.dataType = flint.F_FLOAT64
+	}
+	res.init()
+	return res
 }
 
 func Constant[T Numeric](val T, shape Shape) Tensor {
@@ -110,32 +134,32 @@ func Constant[T Numeric](val T, shape Shape) Tensor {
 	return tensor
 }
 
-func Random(shape Shape) Tensor[float64] {
+func Random(shape Shape) Tensor {
 	flintNode, err := flint.CreateGraphRandom(shape)
 	if err != nil {
 		panic(err)
 	}
-	tensor := Tensor[float64]{node: &flintNode}
+	tensor := Tensor{node: &flintNode, dataType: flint.F_FLOAT64}
 	tensor.init()
 	return tensor
 }
 
-func Arrange(shape Shape, axis int) Tensor[int64] {
+func Arrange(shape Shape, axis int) Tensor {
 	flintNode, err := flint.CreateGraphArrange(shape, axis)
 	if err != nil {
 		panic(err)
 	}
-	tensor := Tensor[int64]{node: &flintNode}
+	tensor := Tensor{node: &flintNode, dataType: flint.F_INT64}
 	tensor.init()
 	return tensor
 }
 
-func Identity[T Numeric](size T) Tensor[int32] {
+func Identity[T Numeric](size T) Tensor {
 	flintNode, err := flint.CreateGraphIdentity(uint(size))
 	if err != nil {
 		panic(err)
 	}
-	tensor := Tensor[int32]{node: &flintNode}
+	tensor := Tensor{node: &flintNode, dataType: flint.F_INT32}
 	tensor.init()
 	return tensor
 }

@@ -103,14 +103,30 @@ func (a Shape) Equal(b Shape) bool {
 }
 
 // DataType represents the valid datatypes for the flint backend
-type DataType uint32
+type DataType uint32 // equal type so it is comparable
 
+// the order is important as it defines the type coercion
 const (
 	F_INT32 DataType = iota
 	F_INT64
 	F_FLOAT32
 	F_FLOAT64
 )
+
+func (x DataType) String() string {
+	switch x {
+	case F_INT32:
+		return "int32"
+	case F_INT64:
+		return "int64"
+	case F_FLOAT32:
+		return "float32"
+	case F_FLOAT64:
+		return "float64"
+	default:
+		panic("invalid type")
+	}
+}
 
 //////////////////
 // Number types

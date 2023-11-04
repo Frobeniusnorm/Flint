@@ -10,18 +10,18 @@ type operation[T Numeric] interface {
 
 type lightOperation[T Numeric] func(x ...any) (T, error)
 
-func (f lightOperation[T]) execute(x ...any) Tensor {
-	res, err := f(x...)
-	// result composition and error handling
-	var out Tensor
-	if err != nil {
-		out.err = err
-	} else {
-		out.data = &res
-	}
-	out.init()
-	return out
-}
+//func (f lightOperation[T]) execute(x ...any) Tensor {
+//	res, err := f(x...)
+//	// result composition and error handling
+//	var out Tensor
+//	if err != nil {
+//		out.err = err
+//	} else {
+//		out.data = &res
+//	}
+//	out.init()
+//	return out
+//}
 
 type nodeOperation[T Numeric] func(x ...any) (flint.GraphNode, error)
 
@@ -38,50 +38,83 @@ func (f nodeOperation[T]) execute(x ...any) Tensor {
 	return out
 }
 
-func (x Tensor) Add(y Tensor) Tensor {
-	return x
+func largerType(x Tensor, y Tensor) DataType {
+	if x.dataType > y.dataType {
+		return x.dataType
+	} else {
+		return y.dataType
+	}
+}
 
-	//if x.light() && y.light() {
-	//	// FIXME!!!!
-	//	op1 := (*x.data).(int32)
-	//	op2 := (*y.data).(int64)
-	//	return Scalar(op1 + op2)
-	//}
-	//x, y = lightLast(x, y)
-	//
-	//res, err := flint.Add(x.val().(flint.GraphNode), y.val().(int32)) // FIXME!!!
-	//
-	//var out Tensor
-	//if err != nil {
-	//	out.err = err
-	//} else {
-	//	out.node = &res
-	//}
-	//out.init()
-	//return out
+func lightLast(x Tensor, y Tensor) (a Tensor, b Tensor) {
+	if !x.light() {
+		return x, y
+	} else if !y.light() {
+		return y, x
+	} else {
+		return x.readyNode(), y
+	}
+}
+
+func (x Tensor) Add(y Tensor) Tensor {
+	if x.light() && y.light() {
+		tt := largerType(x, y)
+		switch tt {
+		case flint.F_INT32:
+			return Scalar(lightVal[int32](x) - lightVal[int32](y))
+		case flint.F_INT64:
+			return Scalar(lightVal[int64](x) - lightVal[int64](y))
+		case flint.F_FLOAT32:
+			return Scalar(lightVal[float32](x) - lightVal[float32](y))
+		case flint.F_FLOAT64:
+			return Scalar(lightVal[float64](x) - lightVal[float64](y))
+		default:
+			panic("invalid type")
+		}
+	} else {
+		x, y = lightLast(x, y)
+		if y.node != nil {
+			return FromNodeWithErr(flint.Add(*x.node, *y.node))
+		}
+
+		switch y.dataType {
+		case flint.F_INT32:
+			return FromNodeWithErr(flint.Add(*x.node, *y.dataInt32))
+		case flint.F_INT64:
+			return FromNodeWithErr(flint.Add(*x.node, *y.dataInt64))
+		case flint.F_FLOAT32:
+			return FromNodeWithErr(flint.Add(*x.node, *y.dataFloat32))
+		case flint.F_FLOAT64:
+			return FromNodeWithErr(flint.Add(*x.node, *y.dataFloat64))
+		default:
+			panic("invalid type")
+		}
+	}
 }
 
 func (x Tensor) Sub(y Tensor) Tensor {
-	if x.light() && y.light() {
-		f := lightOperation[T](func(p ...any) (T, error) {
-			x := p[0].(T)
-			y := p[1].(T)
-			return x - y, nil
-		})
-		return f.execute(x, y)
-	} else {
-		f := nodeOperation[T](func(p ...any) (flint.GraphNode, error) {
-			x, y := p[0].(Tensor), p[1].(Tensor) // FIXME: this caused a bug - maybe variadic functions aren't that nice ...
-			if x.light() {
-				return flint.Sub(*x.data, *y.node)
-			} else if y.light() {
-				return flint.Sub(*x.node, *y.data)
-			} else {
-				return flint.Sub(*x.node, *y.node)
-			}
-		})
-		return f.execute(x, y)
-	}
+	return x
+
+	//if x.light() && y.light() {
+	//	f := lightOperation[T](func(p ...any) (T, error) {
+	//		x := p[0].(T)
+	//		y := p[1].(T)
+	//		return x - y, nil
+	//	})
+	//	return f.execute(x, y)
+	//} else {
+	//	f := nodeOperation[T](func(p ...any) (flint.GraphNode, error) {
+	//		x, y := p[0].(Tensor), p[1].(Tensor) // FIXME: this caused a bug - maybe variadic functions aren't that nice ...
+	//		if x.light() {
+	//			return flint.Sub(*x.data, *y.node)
+	//		} else if y.light() {
+	//			return flint.Sub(*x.node, *y.data)
+	//		} else {
+	//			return flint.Sub(*x.node, *y.node)
+	//		}
+	//	})
+	//	return f.execute(x, y)
+	//}
 }
 
 func (x Tensor) Mul(y Tensor) Tensor {

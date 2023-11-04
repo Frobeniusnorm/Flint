@@ -13,7 +13,7 @@ func Add[T baseNumeric | GraphNode](operand1 GraphNode, operand2 T) (GraphNode, 
 	var errno error
 
 	switch c := any(operand2).(type) {
-	case int32:
+	case int32: // FIXME: is the type coercion broken?
 		flintNode, errno = C.fadd_ci(operand1.ref, C.int(c))
 	case int64:
 		flintNode, errno = C.fadd_cl(operand1.ref, C.long(c))
