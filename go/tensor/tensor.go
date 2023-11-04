@@ -122,7 +122,7 @@ Close resets the ref counter to 0.
 This fixes memory management issues, as the node can be cleared on subsequent calls to [flint.OptimizeMemory]
 */
 func (x Tensor) Close() {
-	runtime.SetFinalizer(x, nil) // remove any finalizer for this tensor
+	runtime.SetFinalizer(&x, nil) // remove any finalizer for this tensor
 	if !x.light() {
 		flint.SetRefCounter(*x.node, 0)
 	}

@@ -49,10 +49,10 @@ TODO: what if a pointer is passed?
 */
 func Create[T Numeric](data any) Tensor {
 	if isSlice(data) {
-		return Tensor{} // CreateFromSlice(data)
+		return Tensor{} // FIXME: CreateFromSlice(data)
 	}
 	if isScalar(data) {
-		return Tensor{} // Scalar(data)
+		return Tensor{} // FIXME: Scalar(data)
 	}
 	if node, ok := data.(flint.GraphNode); ok {
 		return FromNode(node)
@@ -89,7 +89,7 @@ func Create[T Numeric](data any) Tensor {
 //}
 
 func FromNode(node flint.GraphNode) Tensor {
-	res := Tensor{node: &node}
+	res := Tensor{node: &node, dataType: node.GetType()}
 	res.init()
 	return res
 }
@@ -125,41 +125,17 @@ func Scalar[T Numeric](val T) Tensor {
 }
 
 func Constant[T Numeric](val T, shape Shape) Tensor {
-	flintNode, err := flint.CreateGraphConstant(val, shape)
-	if err != nil {
-		panic(err)
-	}
-	tensor := Tensor{node: &flintNode}
-	tensor.init()
-	return tensor
+	return FromNodeWithErr(flint.CreateGraphConstant(val, shape))
 }
 
 func Random(shape Shape) Tensor {
-	flintNode, err := flint.CreateGraphRandom(shape)
-	if err != nil {
-		panic(err)
-	}
-	tensor := Tensor{node: &flintNode, dataType: flint.F_FLOAT64}
-	tensor.init()
-	return tensor
+	return FromNodeWithErr(flint.CreateGraphRandom(shape))
 }
 
 func Arrange(shape Shape, axis int) Tensor {
-	flintNode, err := flint.CreateGraphArrange(shape, axis)
-	if err != nil {
-		panic(err)
-	}
-	tensor := Tensor{node: &flintNode, dataType: flint.F_INT64}
-	tensor.init()
-	return tensor
+	return FromNodeWithErr(flint.CreateGraphArrange(shape, axis))
 }
 
 func Identity[T Numeric](size T) Tensor {
-	flintNode, err := flint.CreateGraphIdentity(uint(size))
-	if err != nil {
-		panic(err)
-	}
-	tensor := Tensor{node: &flintNode, dataType: flint.F_INT32}
-	tensor.init()
-	return tensor
+	return FromNodeWithErr(flint.CreateGraphIdentity(uint(size)))
 }
