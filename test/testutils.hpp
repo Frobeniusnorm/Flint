@@ -4,7 +4,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,23 +17,23 @@
 #include <vector>
 template <typename T>
 inline std::vector<T> flattened(std::vector<std::vector<T>> vec) {
-  using namespace std;
-  vector<T> result;
-  for (const vector<T> &v : vec) {
-    result.insert(result.end(), v.begin(), v.end());
-  }
-  return result;
+	using namespace std;
+	vector<T> result;
+	for (const vector<T> &v : vec) {
+		result.insert(result.end(), v.begin(), v.end());
+	}
+	return result;
 }
 
 template <typename T>
 inline std::vector<T> flattened(std::vector<std::vector<std::vector<T>>> vec) {
-  using namespace std;
-  vector<T> result;
-  for (const vector<vector<T>> &v : vec) {
-    vector<T> rec = flattened(v);
-    result.insert(result.end(), rec.begin(), rec.end());
-  }
-  return result;
+	using namespace std;
+	vector<T> result;
+	for (const vector<vector<T>> &v : vec) {
+		vector<T> rec = flattened(v);
+		result.insert(result.end(), rec.begin(), rec.end());
+	}
+	return result;
 }
 
 #endif
