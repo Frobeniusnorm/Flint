@@ -81,8 +81,6 @@ const char *fop_to_string[] = {"FSTORE",
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
-// TODO adjust broadcasting s.t. a shape of 1 matches any other shape
-// (broadcasted along that shape)
 // TODO do execution of parents where necessary in parallel
 // EAGER EXECUTION WITH HELPER
 void fEnableEagerExecution() { eager_execution = true; }
@@ -1400,6 +1398,23 @@ FGraphNode *fexpand(FGraphNode *a, const unsigned int ax,
   FGraphNode *res = freshape(a, new_shape.data(), n + 1);
   return ax_size == 1 ? res : frepeat(res, repet.data());
 }
+/** Calculates the shape for a sliding window operation
+ *  target.shape should already be initialized */
+static void calculateShapeForWindows(FOperation &target, const FOperation &orig,
+                                     const size_t *size,
+                                     const unsigned int *steps,
+                                     bool uselastdim = false) {
+  target.shape[0] = 1;
+  for (int i = 0; i < uselastdim ? orig.dimensions : orig.dimensions - 1; i++) {
+    target.shape[i + 1] = size[i];
+    // we slide a window of size size[i] with step size steps[i] along that
+    // dimension
+    size_t window_size = orig.shape[i] - size[i] + 1;
+    window_size = window_size % steps[i] == 0 ? window_size / steps[i]
+                                              : window_size / steps[i] + 1;
+    target.shape[0] *= window_size;
+  }
+}
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
                       const unsigned int *steps) {
   const FOperation ao = a->operation;
@@ -1432,14 +1447,7 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
   op.shape = safe_mal<size_t>(op.dimensions);
   if (!op.shape)
     return nullptr;
-  for (int i = 0; i < ao.dimensions - 1; i++) {
-    const size_t kernel_shape =
-        multiple_filters ? bo.shape[i + 1] : bo.shape[i];
-    size_t window_size = ao.shape[i] - kernel_shape + 1;
-    window_size = window_size % steps[i] == 0 ? window_size / steps[i]
-                                              : window_size / steps[i] + 1;
-    op.shape[i] = window_size;
-  }
+  calculateShapeForWindows(op, ao, bo.shape, steps);
   if (multiple_filters)
     op.shape[ao.dimensions - 1] = bo.shape[0];
   op.data_type = higherType(ao.data_type, bo.data_type);
@@ -1601,16 +1609,7 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
   op.shape = safe_mal<size_t>(op.dimensions);
   if (!op.shape)
     return nullptr;
-  op.shape[0] = 1;
-  for (int i = 0; i < a->operation.dimensions; i++) {
-    op.shape[i + 1] = size[i];
-    // we slide a window of size size[i] with step size steps[i] along that
-    // dimension
-    size_t window_size = a->operation.shape[i] - size[i] + 1;
-    window_size = window_size % steps[i] == 0 ? window_size / steps[i]
-                                              : window_size / steps[i] + 1;
-    op.shape[0] *= window_size;
-  }
+  calculateShapeForWindows(op, a->operation, size, steps, true);
   FSlidingWindow *slidewin = new FSlidingWindow();
   slidewin->size = safe_mal<size_t>(a->operation.dimensions);
   if (!slidewin->size)
@@ -1670,11 +1669,29 @@ FGraphNode *fpermutate(FGraphNode *a, unsigned int ax) {
     return nullptr;
   return findex(a, ind);
 }
-FGraphNode *fpooling_sum(const FGraphNode *a, const size_t *window_size,
+FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
                          const unsigned int *step_size) {
-  return nullptr;
+  FOperation op;
+  op.dimensions = a->operation.dimensions - 1;
+  op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape) return nullptr;
+  calculateShapeForWindows(op, a->operation, window_size, step_size);
+  op.op_type = FPOOLING_SUM;
+  op.data_type = a->operation.data_type;
+  op.additional_data = nullptr;
+  op.broadcasting_mode = 0;
+  return addNode(op, {a});
 }
-FGraphNode *fpooling_max(const FGraphNode *a, const size_t *window_size,
+FGraphNode *fpooling_max(FGraphNode *a, const size_t *window_size,
                          const unsigned int *step_size) {
-  return nullptr;
+  FOperation op;
+  op.dimensions = a->operation.dimensions - 1;
+  op.shape = safe_mal<size_t>(op.dimensions);
+  if (!op.shape) return nullptr;
+  calculateShapeForWindows(op, a->operation, window_size, step_size);
+  op.op_type = FPOOLING_MAX;
+  op.data_type = a->operation.data_type;
+  op.additional_data = nullptr;
+  op.broadcasting_mode = 0;
+  return addNode(op, {a});
 }

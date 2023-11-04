@@ -1096,7 +1096,7 @@ FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
  * - `step_size` array of number of elements the window should be moved after
  *   each reducting for each dimension
  */
-FGraphNode *fpooling_sum(const FGraphNode *a, const size_t *window_size,
+FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
                          const unsigned int *step_size);
 /**
  * TODO not yet implemented
@@ -1111,7 +1111,7 @@ FGraphNode *fpooling_sum(const FGraphNode *a, const size_t *window_size,
  * - `step_size` array of number of elements the window should be moved after
  *   each reducting for each dimension
  */
-FGraphNode *fpooling_max(const FGraphNode *a, const size_t *window_size,
+FGraphNode *fpooling_max(FGraphNode *a, const size_t *window_size,
                          const unsigned int *step_size);
 #ifdef __cplusplus
 }
