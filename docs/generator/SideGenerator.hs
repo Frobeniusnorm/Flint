@@ -1,6 +1,5 @@
 import System.Directory.Internal.Prelude (getArgs)
 import System.Directory
-import Data.Graph (path)
 import Data.List
 import Control.Monad (forM)
 import HtmlParser (foldHtml)

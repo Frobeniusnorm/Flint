@@ -18,35 +18,35 @@
 enum PaddingMode { NO_PADDING, SAME_PADDING, FULL_PADDING };
 template <typename T, unsigned int n, size_t k>
 static Tensor<T, n> applyPadding(Tensor<T, n> &input,
-                                 const std::array<size_t, k> &kernel_shape,
-                                 const PaddingMode mode) {
-  switch (mode) {
-  case NO_PADDING:
-    input;
-  case SAME_PADDING: {
-    std::array<size_t, n> new_shape(input.get_shape());
-    std::array<size_t, n> insert_at{0};
-    // skip first dimension (batches)
-    for (int i = 1; i < n; i++) {
-      const size_t kernel_size = kernel_shape[i];
-      const size_t remainder = new_shape[i] % kernel_size;
-      insert_at[i] = remainder / 2;
-      new_shape[i] += remainder;
-    }
-    return input.extend(new_shape, insert_at);
-  }
-  case FULL_PADDING: {
-    std::array<size_t, n> new_shape(input.get_shape());
-    std::array<size_t, n> insert_at{0};
-    for (int i = 1; i < n; i++) {
-      const size_t kernel_size = kernel_shape[i];
-      new_shape[i] += 2 * (kernel_size - 1);
-      insert_at[i] = kernel_size - 1;
-    }
-    return input.extend(new_shape, insert_at);
-  }
-  }
-  return Tensor<T, n>();
+								 const std::array<size_t, k> &kernel_shape,
+								 const PaddingMode mode) {
+	switch (mode) {
+	case NO_PADDING:
+		input;
+	case SAME_PADDING: {
+		std::array<size_t, n> new_shape(input.get_shape());
+		std::array<size_t, n> insert_at{0};
+		// skip first dimension (batches)
+		for (int i = 1; i < n; i++) {
+			const size_t kernel_size = kernel_shape[i];
+			const size_t remainder = new_shape[i] % kernel_size;
+			insert_at[i] = remainder / 2;
+			new_shape[i] += remainder;
+		}
+		return input.extend(new_shape, insert_at);
+	}
+	case FULL_PADDING: {
+		std::array<size_t, n> new_shape(input.get_shape());
+		std::array<size_t, n> insert_at{0};
+		for (int i = 1; i < n; i++) {
+			const size_t kernel_size = kernel_shape[i];
+			new_shape[i] += 2 * (kernel_size - 1);
+			insert_at[i] = kernel_size - 1;
+		}
+		return input.extend(new_shape, insert_at);
+	}
+	}
+	return Tensor<T, n>();
 }
 /**
  * A generic Convolution layer. It creates multiple filters that are slid along
@@ -85,233 +85,249 @@ static Tensor<T, n> applyPadding(Tensor<T, n> &input,
  *   (100, 49, 49, 10)`.
  */
 template <int n> class Convolution : public Layer<n, 1> {
-  constexpr std::array<size_t, n> weight_shape(unsigned int filters,
-                                               unsigned int kernel_size,
-                                               size_t units_in) {
-    std::array<size_t, n> res;
-    res[0] = filters;
-    for (int i = 1; i < n - 1; i++) {
-      res[i] = kernel_size;
-    }
-    res[n - 1] = units_in;
-    return res;
-  }
-  std::array<unsigned int, n - 1> act_stride;
-  unsigned int kernel_size;
-  void initialize_precalc(std::array<unsigned int, n - 2> stride) {
-    act_stride[0] = 1;
-    for (int i = 0; i < n - 2; i++)
-      act_stride[i + 1] = stride[i];
-  }
+		constexpr std::array<size_t, n> weight_shape(unsigned int filters,
+													 unsigned int kernel_size,
+													 size_t units_in) {
+			std::array<size_t, n> res;
+			res[0] = filters;
+			for (int i = 1; i < n - 1; i++) {
+				res[i] = kernel_size;
+			}
+			res[n - 1] = units_in;
+			return res;
+		}
+		std::array<unsigned int, n - 1> act_stride;
+		unsigned int kernel_size;
+		void initialize_precalc(std::array<unsigned int, n - 2> stride) {
+			act_stride[0] = 1;
+			for (int i = 0; i < n - 2; i++)
+				act_stride[i + 1] = stride[i];
+		}
 
-public:
-  // static constexpr FType transform_type(FType t) { return F_FLOAT64; }
-  PaddingMode padding_mode;
-  /** Initializes the Convolution Layer.
-   * - `units_in` number of channels (size of last dimension) of input tensor
-   * - `filters` number of used filters (size of last dimension of the result
-   *    tensor)
-   * - `kernel_size` size of filters
-   * - `weight_init` Initializer for filters, has to implement the `Initializer`
-   *    concept, should generate random values close to a normal distribution
-   * - `bias_init` Initializer for the bias, has to implement the `Initializer`
-   *    concept, should generate small values, constant values like `0` are fine
-   * - `stride` step size per dimension (2 dimensions less then the input
-   *    tensor, since the convolution is broadcasted along the `batch_size` and
-   *    the channels in the last dimension are fully reduced)
-   * - `padding_mode` which type of padding to use (see `PaddingMode` for more
-   *    information)
-   */
-  template <Initializer InitWeights, Initializer InitBias>
-  Convolution(size_t units_in, unsigned int filters, unsigned int kernel_size,
-              InitWeights weight_init, InitBias bias_init,
-              std::array<unsigned int, n - 2> stride,
-              PaddingMode padding_mode = NO_PADDING)
-      : Layer<n, 1>(weight_init.template initialize<double>(
-                        weight_shape(filters, kernel_size, units_in)),
-                    bias_init.template initialize<double>(
-                        std::array<size_t, 1>{(size_t)filters})),
-        padding_mode(padding_mode), kernel_size(kernel_size) {
-    initialize_precalc(stride);
-  }
+	public:
+		// static constexpr FType transform_type(FType t) { return F_FLOAT64; }
+		PaddingMode padding_mode;
+		/** Initializes the Convolution Layer.
+		 * - `units_in` number of channels (size of last dimension) of input
+		 * tensor
+		 * - `filters` number of used filters (size of last dimension of the
+		 * result tensor)
+		 * - `kernel_size` size of filters
+		 * - `weight_init` Initializer for filters, has to implement the
+		 * `Initializer` concept, should generate random values close to a
+		 * normal distribution
+		 * - `bias_init` Initializer for the bias, has to implement the
+		 * `Initializer` concept, should generate small values, constant values
+		 * like `0` are fine
+		 * - `stride` step size per dimension (2 dimensions less then the input
+		 *    tensor, since the convolution is broadcasted along the
+		 * `batch_size` and the channels in the last dimension are fully
+		 * reduced)
+		 * - `padding_mode` which type of padding to use (see `PaddingMode` for
+		 * more information)
+		 */
+		template <Initializer InitWeights, Initializer InitBias>
+		Convolution(size_t units_in, unsigned int filters,
+					unsigned int kernel_size, InitWeights weight_init,
+					InitBias bias_init, std::array<unsigned int, n - 2> stride,
+					PaddingMode padding_mode = NO_PADDING)
+			: Layer<n, 1>(weight_init.template initialize<double>(
+							  weight_shape(filters, kernel_size, units_in)),
+						  bias_init.template initialize<double>(
+							  std::array<size_t, 1>{(size_t)filters})),
+			  padding_mode(padding_mode), kernel_size(kernel_size) {
+			initialize_precalc(stride);
+		}
 
-  /** Initializes the Convolution Layer.
-   * - `units_in` number of channels (size of last dimension) of input tensor
-   * - `filters` number of used filters (size of last dimension of the result
-   *    tensor)
-   * - `kernel_size` size of filters
-   * - `stride` step size per dimension (2 dimensions less then the input
-   *    tensor, since the convolution is broadcasted along the `batch_size` and
-   *    the channels in the last dimension are fully reduced)
-   * - `padding_mode` which type of padding to use (see `PaddingMode` for more
-   *    information)
-   *
-   * The filters are initialized with a glorot uniform distribution.
-   */
-  Convolution(size_t units_in, unsigned int filters, unsigned int kernel_size,
-              std::array<unsigned int, n - 2> stride,
-              PaddingMode padding_mode = NO_PADDING)
-      : Layer<n, 1>(GlorotUniform().template initialize<double>(
-                        weight_shape(filters, kernel_size, units_in)),
-                    ConstantInitializer().template initialize<double>(
-                        std::array<size_t, 1>{(size_t)filters})),
-        padding_mode(padding_mode), kernel_size(kernel_size) {
+		/** Initializes the Convolution Layer.
+		 * - `units_in` number of channels (size of last dimension) of input
+		 * tensor
+		 * - `filters` number of used filters (size of last dimension of the
+		 * result tensor)
+		 * - `kernel_size` size of filters
+		 * - `stride` step size per dimension (2 dimensions less then the input
+		 *    tensor, since the convolution is broadcasted along the
+		 * `batch_size` and the channels in the last dimension are fully
+		 * reduced)
+		 * - `padding_mode` which type of padding to use (see `PaddingMode` for
+		 * more information)
+		 *
+		 * The filters are initialized with a glorot uniform distribution.
+		 */
+		Convolution(size_t units_in, unsigned int filters,
+					unsigned int kernel_size,
+					std::array<unsigned int, n - 2> stride,
+					PaddingMode padding_mode = NO_PADDING)
+			: Layer<n, 1>(GlorotUniform().template initialize<double>(
+							  weight_shape(filters, kernel_size, units_in)),
+						  ConstantInitializer().template initialize<double>(
+							  std::array<size_t, 1>{(size_t)filters})),
+			  padding_mode(padding_mode), kernel_size(kernel_size) {
 
-    initialize_precalc(stride);
-  }
-  std::string name() override { return "Convolution"; }
-  std::string summary() override {
-    const unsigned int filters =
-        Layer<n, 1>::template get_weight<0>().get_shape()[0];
-    const unsigned int units_in =
-        Layer<n, 1>::template get_weight<0>().get_shape()[n - 1];
-    const unsigned int kernel_size =
-        Layer<n, 1>::template get_weight<0>().get_shape()[1];
-    return name() + ": input channels: " + std::to_string(units_in) +
-           " filters: " + std::to_string(filters) +
-           ", kernel size: " + std::to_string(kernel_size);
-  }
-  template <typename T, unsigned int k>
-  Tensor<double, k> forward(Tensor<T, k> &in) {
-    const unsigned int filters =
-        Layer<n, 1>::template get_weight<0>().get_shape()[0];
-    // actual convolve
-    // This works but the gradient still needs improvement -> backward broadcast
-    Tensor<double, n + 1> filter =
-        Layer<n, 1>::template get_weight<0>().expand(1, 1);
-    Tensor<double, n> res =
-        (padding_mode != NO_PADDING
-             ? applyPadding(in,
-                            Layer<n, 1>::template get_weight<0>().get_shape(),
-                            padding_mode)
-             : in)
-            .convolve_array(filter, act_stride);
-    // repeat bias to the shape of res and add
-    std::array<size_t, n - 1> bias_shape;
-    bias_shape[n - 2] = filters;
-    for (int i = 0; i < n - 2; i++)
-      bias_shape[i] = 1;
-    Tensor<double, n - 1> bias =
-        Layer<n, 1>::template get_weight<1>().reshape_array(bias_shape);
-    std::array<int, n - 1> bias_repeat;
-    bias_repeat[n - 2] = 0;
-    for (int i = 0; i < n - 2; i++)
-      bias_repeat[i] = res.get_shape()[i + 1] - 1;
-    bias = bias.repeat_array(bias_repeat);
-    res = res + bias;
-    res.execute();
-    return res;
-  }
+			initialize_precalc(stride);
+		}
+		std::string name() override { return "Convolution"; }
+		std::string summary() override {
+			const unsigned int filters =
+				Layer<n, 1>::template get_weight<0>().get_shape()[0];
+			const unsigned int units_in =
+				Layer<n, 1>::template get_weight<0>().get_shape()[n - 1];
+			const unsigned int kernel_size =
+				Layer<n, 1>::template get_weight<0>().get_shape()[1];
+			return name() + ": input channels: " + std::to_string(units_in) +
+				   " filters: " + std::to_string(filters) +
+				   ", kernel size: " + std::to_string(kernel_size);
+		}
+		template <typename T, unsigned int k>
+		Tensor<double, k> forward(Tensor<T, k> &in) {
+			const unsigned int filters =
+				Layer<n, 1>::template get_weight<0>().get_shape()[0];
+			// actual convolve
+			// This works but the gradient still needs improvement -> backward
+			// broadcast
+			Tensor<double, n + 1> filter =
+				Layer<n, 1>::template get_weight<0>().expand(1, 1);
+			Tensor<double, n> res =
+				(padding_mode != NO_PADDING
+					 ? applyPadding(
+						   in,
+						   Layer<n, 1>::template get_weight<0>().get_shape(),
+						   padding_mode)
+					 : in)
+					.convolve_array(filter, act_stride);
+			// repeat bias to the shape of res and add
+			std::array<size_t, n - 1> bias_shape;
+			bias_shape[n - 2] = filters;
+			for (int i = 0; i < n - 2; i++)
+				bias_shape[i] = 1;
+			Tensor<double, n - 1> bias =
+				Layer<n, 1>::template get_weight<1>().reshape_array(bias_shape);
+			std::array<int, n - 1> bias_repeat;
+			bias_repeat[n - 2] = 0;
+			for (int i = 0; i < n - 2; i++)
+				bias_repeat[i] = res.get_shape()[i + 1] - 1;
+			bias = bias.repeat_array(bias_repeat);
+			res = res + bias;
+			res.execute();
+			return res;
+		}
 };
 /** For inputs of images with shape `(batch_size, width, height, channels)` */
 typedef Convolution<4> Conv2D;
 
 enum PoolingMode { MAX_POOLING, MIN_POOLING, AVG_POOLING };
 template <int n> class Pooling : public UntrainableLayer {
-  std::array<size_t, n> window_size;
-  std::array<unsigned int, n> step_size;
-  PoolingMode mode;
-  PaddingMode padding_mode;
-  static Pooling<n>
-  pooling_helper(PoolingMode mode, std::initializer_list<size_t> window_size,
-                 std::initializer_list<unsigned int> step_size, PaddingMode padding_mode) {
-    std::array<size_t, n - 1> window_size_a;
-    std::array<unsigned int, n - 1> step_size_a;
-    window_size_a.fill(1);
-    step_size_a.fill(1);
-    int index = 0;
-    for (size_t w : window_size)
-      window_size_a[index++] = w;
-    index = 0;
-    for (unsigned int s : step_size)
-      step_size_a[index++] = s;
-    return Pooling(mode, window_size_a, step_size_a, padding_mode);
-  }
+		std::array<size_t, n> window_size;
+		std::array<unsigned int, n> step_size;
+		PoolingMode mode;
+		PaddingMode padding_mode;
+		static Pooling<n>
+		pooling_helper(PoolingMode mode,
+					   std::initializer_list<size_t> window_size,
+					   std::initializer_list<unsigned int> step_size,
+					   PaddingMode padding_mode) {
+			std::array<size_t, n - 1> window_size_a;
+			std::array<unsigned int, n - 1> step_size_a;
+			window_size_a.fill(1);
+			step_size_a.fill(1);
+			int index = 0;
+			for (size_t w : window_size)
+				window_size_a[index++] = w;
+			index = 0;
+			for (unsigned int s : step_size)
+				step_size_a[index++] = s;
+			return Pooling(mode, window_size_a, step_size_a, padding_mode);
+		}
 
-public:
-  Pooling(PoolingMode mode, std::array<size_t, n - 1> ws,
-          std::array<unsigned int, n - 1> ss,
-          PaddingMode padding_mode = NO_PADDING)
-      : mode(mode), padding_mode(padding_mode) {
-    std::memcpy(window_size.data() + 1, ws.data(), (n - 1) * sizeof(size_t));
-    std::memcpy(step_size.data() + 1, ss.data(),
-                (n - 1) * sizeof(unsigned int));
-  }
+	public:
+		Pooling(PoolingMode mode, std::array<size_t, n - 1> ws,
+				std::array<unsigned int, n - 1> ss,
+				PaddingMode padding_mode = NO_PADDING)
+			: mode(mode), padding_mode(padding_mode) {
+			std::memcpy(window_size.data() + 1, ws.data(),
+						(n - 1) * sizeof(size_t));
+			std::memcpy(step_size.data() + 1, ss.data(),
+						(n - 1) * sizeof(unsigned int));
+		}
 
-  template <typename T, unsigned int k> Tensor<T, k> forward(Tensor<T, k> &in) {
-    Tensor<T, n + 1> windows;
-    std::array<size_t, n> final_shape;
-    std::array<size_t, n> in_shape = in.get_shape();
-    window_size[0] = in_shape[0];
-    step_size[0] = in_shape[0];
-    final_shape[0] = in_shape[0];
-    if (padding_mode == NO_PADDING) {
-      windows = in.sliding_window(window_size, step_size);
-    } else {
-      Tensor<T, k> pi = applyPadding(in, window_size, padding_mode);
-      in_shape = pi.get_shape();
-      window_size[0] = in_shape[0];
-      step_size[0] = in_shape[0];
-      final_shape[0] = in_shape[0];
-      windows = pi.sliding_window(window_size, step_size);
-    }
-    std::array<int, n + 1> transpose;
-    for (int i = n; i >= 2; i--) {
-      Tensor<T, n> red;
-      switch (mode) {
-      case MAX_POOLING:
-        red = windows.reduce_max(i);
-        break;
-      case MIN_POOLING:
-        red = windows.reduce_min(i);
-        break;
-      case AVG_POOLING:
-        red = windows.reduce_sum(i) / (long)windows.get_shape()[i];
-        break;
-      }
-      windows = red.expand(i, 1);
-      windows.execute();
-      size_t win = in_shape[i - 1] - window_size[i - 1] + 1;
-      win = win % step_size[i - 1] == 0 ? win / step_size[i - 1]
-                                        : win / step_size[i - 1] + 1;
-      final_shape[i - 1] = win;
-      transpose[i] = i;
-    }
-    transpose[0] = 1;
-    transpose[1] = 0;
-    windows = windows.transpose_array(transpose);
-    // transpose so memory order is correct
-    return windows.reshape_array(final_shape);
-  }
+		template <typename T, unsigned int k>
+		Tensor<T, k> forward(Tensor<T, k> &in) {
+			Tensor<T, n + 1> windows;
+			std::array<size_t, n> final_shape;
+			std::array<size_t, n> in_shape = in.get_shape();
+			window_size[0] = in_shape[0];
+			step_size[0] = in_shape[0];
+			final_shape[0] = in_shape[0];
+			if (padding_mode == NO_PADDING) {
+				windows = in.sliding_window(window_size, step_size);
+			} else {
+				Tensor<T, k> pi = applyPadding(in, window_size, padding_mode);
+				in_shape = pi.get_shape();
+				window_size[0] = in_shape[0];
+				step_size[0] = in_shape[0];
+				final_shape[0] = in_shape[0];
+				windows = pi.sliding_window(window_size, step_size);
+			}
+			std::array<int, n + 1> transpose;
+			for (int i = n; i >= 2; i--) {
+				Tensor<T, n> red;
+				switch (mode) {
+				case MAX_POOLING:
+					red = windows.reduce_max(i);
+					break;
+				case MIN_POOLING:
+					red = windows.reduce_min(i);
+					break;
+				case AVG_POOLING:
+					red = windows.reduce_sum(i) / (long)windows.get_shape()[i];
+					break;
+				}
+				windows = red.expand(i, 1);
+				windows.execute();
+				size_t win = in_shape[i - 1] - window_size[i - 1] + 1;
+				win = win % step_size[i - 1] == 0 ? win / step_size[i - 1]
+												  : win / step_size[i - 1] + 1;
+				final_shape[i - 1] = win;
+				transpose[i] = i;
+			}
+			transpose[0] = 1;
+			transpose[1] = 0;
+			windows = windows.transpose_array(transpose);
+			// transpose so memory order is correct
+			return windows.reshape_array(final_shape);
+		}
 
-  std::string name() override {
-    std::string method;
-    switch (mode) {
-    case MAX_POOLING:
-      method = "Max";
-      break;
-    case MIN_POOLING:
-      method = "Min";
-      break;
-    case AVG_POOLING:
-      method = "Avg";
-      break;
-    }
-    return method + "Pooling";
-  }
-  static Pooling<n> max_pooling(std::initializer_list<size_t> window_size,
-                                std::initializer_list<unsigned int> step_size,
-                                PaddingMode mode) {
-    return pooling_helper(MAX_POOLING, window_size, step_size, mode);
-  }
-  static Pooling<n> min_pooling(std::initializer_list<size_t> window_size,
-                                std::initializer_list<unsigned int> step_size,
-                                PaddingMode mode) {
-    return pooling_helper(MIN_POOLING, window_size, step_size, mode);
-  }
-  static Pooling<n> avg_pooling(std::initializer_list<size_t> window_size,
-                                std::initializer_list<unsigned int> step_size,
-                                PaddingMode mode) {
-    return pooling_helper(AVG_POOLING, window_size, step_size, mode);
-  }
+		std::string name() override {
+			std::string method;
+			switch (mode) {
+			case MAX_POOLING:
+				method = "Max";
+				break;
+			case MIN_POOLING:
+				method = "Min";
+				break;
+			case AVG_POOLING:
+				method = "Avg";
+				break;
+			}
+			return method + "Pooling";
+		}
+		static Pooling<n>
+		max_pooling(std::initializer_list<size_t> window_size,
+					std::initializer_list<unsigned int> step_size,
+					PaddingMode mode) {
+			return pooling_helper(MAX_POOLING, window_size, step_size, mode);
+		}
+		static Pooling<n>
+		min_pooling(std::initializer_list<size_t> window_size,
+					std::initializer_list<unsigned int> step_size,
+					PaddingMode mode) {
+			return pooling_helper(MIN_POOLING, window_size, step_size, mode);
+		}
+		static Pooling<n>
+		avg_pooling(std::initializer_list<size_t> window_size,
+					std::initializer_list<unsigned int> step_size,
+					PaddingMode mode) {
+			return pooling_helper(AVG_POOLING, window_size, step_size, mode);
+		}
 };

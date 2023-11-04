@@ -4,7 +4,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -40,6 +40,31 @@ extern "C" {
   C_COMPATIBILITY that - when enabled during compilation - disables exception
   throwing and sets the errno instead (the functions then return NULL on error).
   You can query the error reason with `fErrorMessage` and `fErrorType`.
+
+  In general all operations that take two parameters of equal shape (like e.g.
+  addition, division, minimum, equal etc.) allow normal and inverse
+  broadcasting.
+  - normal broadcasting: a node with shape [4, 6, 8] can be broadcasted to a
+	node with shape [2, 4, 6, 8] by repeating the first node 2 times in the
+	first dimension.
+  - inverse broadcasting: a node with shape [2, 4, 6] can be broadcasted to a
+	node with shape [2, 4, 6, 8] by repeating the first node 8 times in the last
+	dimension.
+  E.g.
+
+  @code{
+  float data_a[] = {0, 1, 2,
+					3, 4, 5};
+  size_t shape_a[] = {2, 3};
+  float data_b[] = {2, 4, 6};
+  size_t shape_b = 3;
+  FGraphNode* a = fCreateGraph((void*)data_a, 6, F_FLOAT32, shape_a, 2);
+  FGraphNode* b = fCreateGraph((void*)data_b, 3, F_FLOAT32, &shape_b, 1);
+  FGraphNode* c = fmul(a, b); // {{2, 5, 8}, {5, 8, 11}}
+  }
+
+  Broadcasting is implemented without repeating the data, but by directly
+  accessing it.
 */
 #define FLINT_BACKEND_ONLY_CPU 1
 #define FLINT_BACKEND_ONLY_GPU 2
@@ -64,17 +89,17 @@ extern "C" {
  * - `IO_ERROR`: file writing or reading problem
  */
 enum FErrorType {
-  NO_ERROR,
-  WRONG_TYPE,
-  ILLEGAL_DIMENSION,
-  ILLEGAL_DIMENSIONALITY,
-  INCOMPATIBLE_SHAPES,
-  INVALID_SELECT,
-  OCL_ERROR,
-  INTERNAL_ERROR, // if this happens -> bug in code
-  OUT_OF_MEMORY,
-  ILLEGAL_DERIVE,
-  IO_ERROR
+	NO_ERROR,
+	WRONG_TYPE,
+	ILLEGAL_DIMENSION,
+	ILLEGAL_DIMENSIONALITY,
+	INCOMPATIBLE_SHAPES,
+	INVALID_SELECT,
+	OCL_ERROR,
+	INTERNAL_ERROR, // if this happens -> bug in code
+	OUT_OF_MEMORY,
+	ILLEGAL_DERIVE,
+	IO_ERROR
 };
 typedef enum FErrorType FErrorType;
 
@@ -182,58 +207,59 @@ int fIsEagerExecution();
 enum FType { F_INT32, F_INT64, F_FLOAT32, F_FLOAT64 };
 
 enum FOperationType {
-  FSTORE,
-  FGEN_RANDOM,
-  FGEN_CONSTANT,
-  FGEN_ARANGE,
-  FADD,
-  FSUB,
-  FMUL,
-  FDIV,
-  FPOW,
-  FNEG,
-  FLOG,
-  FSIGN,
-  FEVEN,
-  FLOG2,
-  FLOG10,
-  FSIN,
-  FCOS,
-  FTAN,
-  FASIN,
-  FACOS,
-  FATAN,
-  FSQRT,
-  FEXP,
-  FLATTEN,
-  FMATMUL,
-  FCONVERSION,
-  FRESHAPE,
-  FMIN,
-  FMAX,
-  FREDUCE_SUM,
-  FREDUCE_MUL,
-  FREDUCE_MIN,
-  FREDUCE_MAX,
-  FSLICE,
-  FABS,
-  FREPEAT,
-  FTRANSPOSE,
-  FEXTEND,
-  FCONCAT,
-  FLESS,
-  FEQUAL,
-  FGREATER,
-  FCONVOLVE,
-  FSLIDE,
-  FGRADIENT_CONVOLVE, // only for internal use!
-  FINDEX,
-  FSET_INDEX,
-  FSLIDING_WINDOW,
-  FUNSLIDE_WINDOW,
-  FPOOLING_MAX, // TODO
-  FPOOLING_SUM, // TODO
-  FNUM_OPERATION_TYPES
+	FSTORE,
+	FGEN_RANDOM,
+	FGEN_CONSTANT,
+	FGEN_ARANGE,
+	FADD,
+	FSUB,
+	FMUL,
+	FDIV,
+	FPOW,
+	FNEG,
+	FLOG,
+	FSIGN,
+	FEVEN,
+	FLOG2,
+	FLOG10,
+	FSIN,
+	FCOS,
+	FTAN,
+	FASIN,
+	FACOS,
+	FATAN,
+	FSQRT,
+	FEXP,
+	FLATTEN,
+	FMATMUL,
+	FCONVERSION,
+	FRESHAPE,
+	FMIN,
+	FMAX,
+	FREDUCE_SUM,
+	FREDUCE_MUL,
+	FREDUCE_MIN,
+	FREDUCE_MAX,
+	FSLICE,
+	FABS,
+	FREPEAT,
+	FTRANSPOSE,
+	FEXTEND,
+	FCONCAT,
+	FLESS,
+	FEQUAL,
+	FGREATER,
+	FCONVOLVE,
+	FSLIDE,
+	FGRADIENT_CONVOLVE1, // only for internal use!
+	FGRADIENT_CONVOLVE2, // only for internal use!
+	FINDEX,
+	FSET_INDEX,
+	FSLIDING_WINDOW,
+	FUNSLIDE_WINDOW,
+	FPOOLING_MAX, // TODO
+	FPOOLING_SUM, // TODO
+	FNUM_OPERATION_TYPES
 };
 /**
  * Describes one operation. An operation always has a shape, described by
@@ -243,14 +269,18 @@ enum FOperationType {
  * operation, `FOperation.data_type` the type of the underlying data,
  * `FOperation.additional_data` is operation specific.*/
 struct FOperation {
-  // shape of the data after execution
-  int dimensions;
-  size_t *shape;
-  // type of operation, to enable switch cases and avoid v-table lookups
-  enum FOperationType op_type;
-  // datatype of result
-  enum FType data_type;
-  void *additional_data;
+		size_t *shape;
+		void *additional_data;
+		// type of operation, to enable switch cases and avoid v-table lookups
+		enum FOperationType op_type;
+		// datatype of result
+		enum FType data_type;
+		// shape of the data after execution
+		int dimensions;
+		// currently a boolean indicating if standard broadcasting (0) is to be
+		// used or inverse (1), in the future maybe an additional indicators for
+		// more advanced broadcasting methods may be implemented
+		int broadcasting_mode;
 };
 typedef struct FOperation FOperation;
 
@@ -266,10 +296,10 @@ typedef struct FOperation FOperation;
  *        return value of `fExecuteGraph_cpu`)
  */
 struct FResultData {
-  // link to gpu data
-  cl_mem mem_id;
-  void *data;
-  size_t num_entries;
+		// link to gpu data
+		cl_mem mem_id;
+		void *data;
+		size_t num_entries;
 };
 typedef struct FResultData FResultData;
 
@@ -283,13 +313,13 @@ typedef struct FResultData FResultData;
  * members should neither be manually created, edited or freed except by the
  * corresponding flint methods. */
 struct FGraphNode {
-  int num_predecessor;
-  struct FGraphNode **predecessors;
-  FOperation operation;     // the operation represented by this graph node
-  size_t reference_counter; // for garbage collection in free graph
-  FResultData *result_data; // to store computational result
-  void *gradient_data;      // to store a list of present variables that are
-                            // currently watched in the graph
+		int num_predecessor;
+		struct FGraphNode **predecessors;
+		FOperation operation; // the operation represented by this graph node
+		size_t reference_counter; // for garbage collection in free graph
+		FResultData *result_data; // to store computational result
+		void *gradient_data; // to store a list of present variables that are
+							 // currently watched in the graph
 };
 typedef struct FGraphNode FGraphNode;
 
@@ -297,24 +327,24 @@ typedef struct FGraphNode FGraphNode;
  * Data of this Operation may not be changed manually when using a GPU Backend.
  */
 struct FStore {
-  // link to gpu data
-  cl_mem mem_id;
-  void *data;
-  size_t num_entries;
+		// link to gpu data
+		cl_mem mem_id;
+		void *data;
+		size_t num_entries;
 };
 // range instructions
 struct FSlice {
-  long *start;
-  long *end;
-  long *step;
+		long *start;
+		long *end;
+		long *step;
 };
 struct FExtend {
-  size_t *start;
-  long *step;
+		size_t *start;
+		long *step;
 };
 struct FSlidingWindow {
-  size_t *size;
-  unsigned int *step;
+		size_t *size;
+		unsigned int *step;
 };
 
 // functions
@@ -334,8 +364,8 @@ struct FSlidingWindow {
  * copied to intern memory, so after return of the function, `data` and `shape`
  * may be deleted. */
 FGraphNode *fCreateGraph(const void *data, const int num_entries,
-                         const enum FType data_type, const size_t *shape,
-                         const int dimensions);
+						 const enum FType data_type, const size_t *shape,
+						 const int dimensions);
 
 /** Creates a tensor that contains the single given values in all entries
  *
@@ -345,7 +375,7 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
  * - `dimensions`: the number of dimensions
  */
 FGraphNode *fconstant_i(const int value, const size_t *shape,
-                        const int dimensions);
+						const int dimensions);
 /** Creates a tensor that contains the single given values in all entries
  *
  * - `value`: the value this tensor should consist of
@@ -354,7 +384,7 @@ FGraphNode *fconstant_i(const int value, const size_t *shape,
  * - `dimensions`: the number of dimensions
  */
 FGraphNode *fconstant_l(const long value, const size_t *shape,
-                        const int dimensions);
+						const int dimensions);
 /** Creates a tensor that contains the single given values in all entries
  *
  * - `value`: the value this tensor should consist of
@@ -363,7 +393,7 @@ FGraphNode *fconstant_l(const long value, const size_t *shape,
  * - `dimensions`: the number of dimensions
  */
 FGraphNode *fconstant_f(const float value, const size_t *shape,
-                        const int dimensions);
+						const int dimensions);
 /** Creates a tensor that contains the single given values in all entries
  *
  * - `value`: the value this tensor should consist of
@@ -372,7 +402,7 @@ FGraphNode *fconstant_f(const float value, const size_t *shape,
  * - `dimensions`: the number of dimensions
  */
 FGraphNode *fconstant_d(const double value, const size_t *shape,
-                        const int dimensions);
+						const int dimensions);
 /** Creates a tensor that contains randomly distributed values in the range of
  * [0, 1)
  *
@@ -492,8 +522,8 @@ FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx);
  *    gradients will be stored per variable.
  */
 FErrorType fCalculateGradients(FGraphNode *outputfct, FGraphNode **dx,
-                               const unsigned int num_gradients,
-                               FGraphNode **gradients);
+							   const unsigned int num_gradients,
+							   FGraphNode **gradients);
 /** Starts a gradient context, gradient information will be inherited until the
  * next call to `fStopGradientContext`. A history containing information about
  * all watched nodes in the parent graph is kept up to date within a gradient
@@ -531,6 +561,19 @@ void fUnmarkGradientVariable(FGraphNode *node);
  * The C++ framework does this automatically.
  */
 FGraphNode *fOptimizeMemory(FGraphNode *node);
+/** Sometimes there are combinations of nodes where both normal and inverse
+ * broadcasting is possible, but yields different results, e.g. multiplication
+ * for two nodes with shapes [3, 5, 3, 5] and [3, 5]. The framework chooses
+ * normal broadcasting over inverse if both are possible, this function allows
+ * you to alter this behaviour and mark a node to be inversely broadcasted.
+ * After the call to this function the given node will from then on only
+ * inversely broadcasted (in cases where only normal broadcasting is available
+ * an error will occur!). It has no effect in operations that don't use
+ * broadcasting. You can "unmark" the node with `fUnenforceInverseBroadcasting`.
+ */
+void fEnforceInverseBroadcasting(FGraphNode *node);
+/** Undos `fEnforceInverseBroadcasting` for a node.*/
+void fUnenforceInverseBroadcasting(FGraphNode *node);
 //  operations
 /** Serializes the data and shape of the node and returns an array of chars in
  * which the serialized data will be written (binary data, not a string). The
@@ -554,7 +597,7 @@ FGraphNode *fdeserialize(char *data);
 FGraphNode *fload_image(const char *path);
 
 FErrorType fstore_image(FGraphNode *node, const char *path,
-                        enum FImageFormat format);
+						enum FImageFormat format);
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
 /** Elementwise substraction of `a` and `b`, i.e. `a[i] - b[i]`. */
@@ -739,7 +782,7 @@ FGraphNode *fconvert(FGraphNode *a, enum FType newtype);
   dimensions of the previous shape (i.e. it must describe the same number of
   entries of the tensor).*/
 FGraphNode *freshape(FGraphNode *a, const size_t *newshape,
-                     const int dimensions);
+					 const int dimensions);
 /** Takes the minimum of two tensors element wise along the last dimension of
  * each, i.e. `a[i]` if `a[i] < b[i]` else `b[i]` */
 FGraphNode *fmin_g(FGraphNode *a, FGraphNode *b);
@@ -825,7 +868,7 @@ FGraphNode *fslice(FGraphNode *a, const long *start, const long *end);
  * each dimension.
  */
 FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
-                        const long *step);
+						const long *step);
 /**
  * Creates a new tensor of zeroes with the requested shape. The original tensor
  * is embedded at the given indices.
@@ -836,7 +879,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
  *    placed in the resulting tensor
  */
 FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
-                    const size_t *insert_at);
+					const size_t *insert_at);
 /**
  * Creates a new tensor of zeroes with the requested shape. The original tensor
  * is embedded at the given indices.
@@ -849,7 +892,7 @@ FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
  *    each value of `a`. Has a value per dimension.
  */
 FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
-                         const size_t *insert_at, const long *step_size);
+						 const size_t *insert_at, const long *step_size);
 /**
  * Concats two nodes with each other along an axis.
  * The nodes have to have the same type and dimensions.
@@ -871,7 +914,7 @@ FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis);
  *    dimensions `ax_size - 1` times).
  */
 FGraphNode *fexpand(FGraphNode *a, const unsigned int axis,
-                    const unsigned int size);
+					const unsigned int size);
 /** Takes the elementwise absolute value of `a`, i.e. `|a[i]|` */
 FGraphNode *fabs_g(FGraphNode *a);
 /** Repeats dimensions of a tensor multiple times
@@ -929,7 +972,7 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
  * its size.
  */
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
-                      const unsigned int *steps);
+					  const unsigned int *steps);
 /**
  * Slides `kernel` along `a`, multiplying it with the elements of `a` it is slid
  * over. For each element all multiplied values are summed up, so that the
@@ -947,7 +990,7 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
  * dimension.
  */
 FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel,
-                   const unsigned int *steps);
+				   const unsigned int *steps);
 /**
  * Selects single elements with a index-tensor (integer tensor containing
  * indices for the selected dimension).
@@ -1020,7 +1063,7 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
  *   [[4, 5], [5, 6]]]]`
  */
 FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
-                            const unsigned int *steps);
+							const unsigned int *steps);
 /**
  * Reprojects the windows (first dimension of `a`) to a common tensor,
  * i.e. if `a = fsliding_window(x, window_size, steps)` `shape` should be the
@@ -1037,32 +1080,60 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
  * `shape` and `steps` therefore have 1 entry less then `a` has dimensions.
  */
 FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
-                            const unsigned int *steps);
+							const unsigned int *steps);
 /**
  * Randomly permutates (=swaps multiple elements with each other without
  * creating, copying or deleting new ones) one axis of the input tensor.
  */
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
-
+/**
+ * TODO not yet implemented
+ * Slides a window along the Tensor and sums up all elements inside that window,
+ * reducing it into one element and then slides the window in each dimension
+ * `step_size` times (like `fsliding_window`).
+ * - `a` the tensor to pool
+ * - `window_size` array with as many elements as `a` has dimension, each
+ *   describing the window size in that dimension for which all elements inside
+ *   each window are to be summed up
+ * - `step_size` array of number of elements the window should be moved after
+ *   each reducting for each dimension
+ */
+FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
+						 const unsigned int *step_size);
+/**
+ * TODO not yet implemented
+ * Slides a window along the Tensor and reduces all elements inside that window
+ * to their maximum element (just that one remains in the result tensor), and
+ * then slides the window in each dimension `step_size` times (like
+ * `fsliding_window`).
+ * - `a` the tensor to pool
+ * - `window_size` array with as many elements as `a` has dimension, each
+ *   describing the window size in that dimension for which for all elements
+ * inside each window the maximum should be taken.
+ * - `step_size` array of number of elements the window should be moved after
+ *   each reducting for each dimension
+ */
+FGraphNode *fpooling_max(FGraphNode *a, const size_t *window_size,
+						 const unsigned int *step_size);
 #ifdef __cplusplus
 }
 
 // no c++ bindings, but function overloading for c++ header
 inline FGraphNode *fconstant(const int value, const size_t *shape,
-                             const int dimensions) {
-  return fconstant_i(value, shape, dimensions);
+							 const int dimensions) {
+	return fconstant_i(value, shape, dimensions);
 }
 inline FGraphNode *fconstant(const long value, const size_t *shape,
-                             const int dimensions) {
-  return fconstant_l(value, shape, dimensions);
+							 const int dimensions) {
+	return fconstant_l(value, shape, dimensions);
 }
 inline FGraphNode *fconstant(const float value, const size_t *shape,
-                             const int dimensions) {
-  return fconstant_f(value, shape, dimensions);
+							 const int dimensions) {
+	return fconstant_f(value, shape, dimensions);
 }
 inline FGraphNode *fconstant(const double value, const size_t *shape,
-                             const int dimensions) {
-  return fconstant_d(value, shape, dimensions);
+							 const int dimensions) {
+	return fconstant_d(value, shape, dimensions);
 }
 
 inline FGraphNode *fadd(FGraphNode *a, FGraphNode *b) { return fadd_g(a, b); }
@@ -1093,7 +1164,7 @@ inline FGraphNode *fdiv(const int a, FGraphNode *b) { return fdiv_ici(a, b); }
 inline FGraphNode *fdiv(const long a, FGraphNode *b) { return fdiv_icl(a, b); }
 inline FGraphNode *fdiv(const float a, FGraphNode *b) { return fdiv_icf(a, b); }
 inline FGraphNode *fdiv(const double a, FGraphNode *b) {
-  return fdiv_icd(a, b);
+	return fdiv_icd(a, b);
 }
 
 inline FGraphNode *fpow(FGraphNode *a, FGraphNode *b) { return fpow_g(a, b); }
@@ -1118,51 +1189,51 @@ inline FGraphNode *fless(FGraphNode *a, FGraphNode *b) { return fless_g(a, b); }
 inline FGraphNode *fless(FGraphNode *a, const int b) { return fless_ci(a, b); }
 inline FGraphNode *fless(FGraphNode *a, const long b) { return fless_cl(a, b); }
 inline FGraphNode *fless(FGraphNode *a, const float b) {
-  return fless_cf(a, b);
+	return fless_cf(a, b);
 }
 inline FGraphNode *fless(FGraphNode *a, const double b) {
-  return fless_cd(a, b);
+	return fless_cd(a, b);
 }
 
 inline FGraphNode *fequal(FGraphNode *a, FGraphNode *b) {
-  return fequal_g(a, b);
+	return fequal_g(a, b);
 }
 inline FGraphNode *fequal(FGraphNode *a, const int b) {
-  return fequal_ci(a, b);
+	return fequal_ci(a, b);
 }
 inline FGraphNode *fequal(FGraphNode *a, const long b) {
-  return fequal_cl(a, b);
+	return fequal_cl(a, b);
 }
 inline FGraphNode *fequal(FGraphNode *a, const float b) {
-  return fequal_cf(a, b);
+	return fequal_cf(a, b);
 }
 inline FGraphNode *fequal(FGraphNode *a, const double b) {
-  return fequal_cd(a, b);
+	return fequal_cd(a, b);
 }
 
 inline FGraphNode *fgreater(FGraphNode *a, FGraphNode *b) {
-  return fgreater_g(a, b);
+	return fgreater_g(a, b);
 }
 inline FGraphNode *fgreater(FGraphNode *a, const int b) {
-  return fgreater_ci(a, b);
+	return fgreater_ci(a, b);
 }
 inline FGraphNode *fgreater(FGraphNode *a, const long b) {
-  return fgreater_cl(a, b);
+	return fgreater_cl(a, b);
 }
 inline FGraphNode *fgreater(FGraphNode *a, const float b) {
-  return fgreater_cf(a, b);
+	return fgreater_cf(a, b);
 }
 inline FGraphNode *fgreater(FGraphNode *a, const double b) {
-  return fgreater_cd(a, b);
+	return fgreater_cd(a, b);
 }
 
 inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
-  return fflatten_dimension(a, dimension);
+	return fflatten_dimension(a, dimension);
 }
 
 #include <string>
 inline void flogging(FLogType type, std::string msg) {
-  flogging(type, msg.c_str());
+	flogging(type, msg.c_str());
 }
 
 #endif // __cplusplus

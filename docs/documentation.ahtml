@@ -49,9 +49,9 @@ g2->reference_counter++;
 FGraphNode *mm = fOptimizeMemory(fExecuteGraph(fmatmul(g1, g2))); //also frees g1 but not g2
 FResultData *rd = mm->result_data;
 double* result = rd->data;
-size_t result_shape = {mm->operation->shape[0], mm->operation->shape[1]}; }
 fFreeGraph(mm); // also frees result and rd
 fFreeGraph(g2); // does not free g2, because of the reference_counter
+}
           </pre>
         </p>
       </div>
