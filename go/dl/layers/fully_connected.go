@@ -2,7 +2,6 @@ package layers
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/flint"
 	"github.com/Frobeniusnorm/Flint/go/tensor"
 )
 
@@ -16,9 +15,9 @@ type FullyConnected struct {
 // m = output_size
 
 func NewFullyConnected(inputSize uint, outputSize uint) FullyConnected {
-	weights := flint.CreateGraphRandom(flint.Shape{inputSize, outputSize})
-	bias := flint.CreateGraphConstant(1, flint.Shape{1, outputSize})
-	weightsAndBias := tensor.NewParameter(flint.Concat(weights, bias, 0))
+	weights := tensor.Random(tensor.Shape{inputSize, outputSize})
+	bias := tensor.Constant(int32(1), tensor.Shape{1, outputSize})
+	weightsAndBias := tensor.NewParameter(tensor.Concat(weights, bias, 0))
 
 	return FullyConnected{
 		inputSize:      inputSize,
@@ -28,12 +27,12 @@ func NewFullyConnected(inputSize uint, outputSize uint) FullyConnected {
 }
 
 func (fc FullyConnected) Forward(x tensor.Tensor) tensor.Tensor {
-	inputShape := x.node.GetShape()
+	inputShape := x.Shape()
 	inputShape[len(inputShape)-1] = 1
-	ones := flint.CreateGraphConstant(1, inputShape)
-	combined := flint.Concat(x.node, ones, uint(len(inputShape)-1))
-	res := flint.Matmul(combined, fc.weightsAndBias.node)
-	return tensor.NewTensor(res)
+	ones := tensor.Constant(int32(1), inputShape)
+	combined := tensor.Concat(x, ones, uint(len(inputShape)-1))
+	res := combined.Matmul(fc.weightsAndBias)
+	return res
 }
 
 func (fc FullyConnected) TrainMode() {}

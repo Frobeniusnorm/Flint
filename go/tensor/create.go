@@ -47,7 +47,7 @@ Create a Tensor from a wide range of data types.
 
 TODO: what if a pointer is passed?
 */
-func Create[T Numeric](data any) Tensor {
+func Create(data any) Tensor {
 	if isSlice(data) {
 		return Tensor{} // FIXME: CreateFromSlice(data)
 	}

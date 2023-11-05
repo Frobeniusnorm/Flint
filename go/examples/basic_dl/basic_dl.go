@@ -9,7 +9,6 @@ import (
 	"github.com/Frobeniusnorm/Flint/go/dl/losses"
 	"github.com/Frobeniusnorm/Flint/go/dl/optimize"
 	"github.com/Frobeniusnorm/Flint/go/flint"
-	"github.com/Frobeniusnorm/Flint/go/tensor"
 	"log"
 	"path"
 )
@@ -68,12 +67,12 @@ func train(model layers.Layer, trainDl *dataloader.Dataloader[datasets.MnistData
 
 		flint.StartGradientContext()
 		output := model.Forward(batch.Data)
-		target := tensor.NewTensor(flint.OneHot(batch.Label.node, 10))
+		target := batch.Label.OneHot(10)
 		loss := losses.MSELoss(output, target)
 		flint.StopGradientContext()
 		optim.Step(loss)
-		flint.OptimizeMemory(loss.node)
-		flint.FreeGraph(loss.node)
+		// flint.OptimizeMemory(loss)
+		// flint.FreeGraph(loss.node)
 		target.Close()
 	}
 }
@@ -92,7 +91,7 @@ func test(model layers.Layer, testDl *dataloader.Dataloader[datasets.MnistDatase
 		}
 
 		output := model.Forward(batch.Data)
-		target := tensor.NewTensor(flint.OneHot(batch.Label.node, 10))
+		target := batch.Label.OneHot(10)
 		loss := losses.MSELoss(output, batch.Label)
 		target.Close()
 		log.Println("test loss:", loss)

@@ -5,18 +5,18 @@ import "github.com/Frobeniusnorm/Flint/go/flint"
 /*
 Parameter is a container object for a trainable Tensor
 */
-type Parameter[T Numeric] Tensor
+type Parameter Tensor
 
 // NewParameter initializes the node as a trainable [Tensor]
-func NewParameter[T Numeric](tensor Tensor) Parameter[T] {
+func NewParameter(tensor Tensor) Parameter {
 	if tensor.node == nil {
 		// TODO: turn data into node
 	}
 	flint.MarkGradientVariable(*tensor.node)
-	return Parameter[T](tensor)
+	return Parameter(tensor)
 }
 
-func (p Parameter[T]) Close() {
+func (p Parameter) Close() {
 	flint.UnmarkGradientVariable(*p.node)
 	Tensor(p).Close()
 }
