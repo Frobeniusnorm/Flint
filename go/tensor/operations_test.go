@@ -15,4 +15,6 @@ func TestTensor_Sub(t *testing.T) {
 	//fmt.Println("new x", x)
 	z := x.Add(y)
 	fmt.Println("z", z)
+
+	// FIXME: why does it crash in fromCToArray when running normally but not in the debugger??
 }

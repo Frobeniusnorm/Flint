@@ -4,11 +4,27 @@ import (
 	"github.com/Frobeniusnorm/Flint/go/flint"
 )
 
-type operation[T Numeric] interface {
-	execute(x ...any) Tensor
+type lightOperationUnary[T1 Numeric] func(x T1) Tensor
+
+type lightOperationBinary[T1 Numeric, T2 Numeric] func(x T1, y T2) Tensor
+
+func (f lightOperationBinary[T1, T2]) executeInner(x Tensor, y Tensor) Tensor {
+	tt := largerType(x, y)
+	switch tt {
+	case flint.F_INT32:
+		return f(lightVal[T1](x), lightVal[T2](y))
+	case flint.F_INT64:
+		return f(lightVal[int64](x), lightVal[int64](y))
+	case flint.F_FLOAT32:
+		return f(lightVal[float32](x), lightVal[float32](y))
+	case flint.F_FLOAT64:
+		return f(lightVal[float64](x), lightVal[float64](y))
+	default:
+		panic("invalid type")
+	}
 }
 
-type lightOperation[T Numeric] func(x ...any) (T, error)
+type lightOperationTernary[T1 Numeric, T2 Numeric, T3 Numeric] func(x T1, y T2, z T3) Tensor
 
 //func (f lightOperation[T]) execute(x ...any) Tensor {
 //	res, err := f(x...)
@@ -61,19 +77,19 @@ func (x Tensor) Add(y Tensor) Tensor {
 		tt := largerType(x, y)
 		switch tt {
 		case flint.F_INT32:
-			return Scalar(lightVal[int32](x) - lightVal[int32](y))
+			return Scalar(lightVal[int32](x) + lightVal[int32](y))
 		case flint.F_INT64:
-			return Scalar(lightVal[int64](x) - lightVal[int64](y))
+			return Scalar(lightVal[int64](x) + lightVal[int64](y))
 		case flint.F_FLOAT32:
-			return Scalar(lightVal[float32](x) - lightVal[float32](y))
+			return Scalar(lightVal[float32](x) + lightVal[float32](y))
 		case flint.F_FLOAT64:
-			return Scalar(lightVal[float64](x) - lightVal[float64](y))
+			return Scalar(lightVal[float64](x) + lightVal[float64](y))
 		default:
 			panic("invalid type")
 		}
 	} else {
 		x, y = lightLast(x, y)
-		if y.node != nil {
+		if !y.light() {
 			return FromNodeWithErr(flint.Add(*x.node, *y.node))
 		}
 
@@ -93,36 +109,135 @@ func (x Tensor) Add(y Tensor) Tensor {
 }
 
 func (x Tensor) Sub(y Tensor) Tensor {
-	return x
-
-	//if x.light() && y.light() {
-	//	f := lightOperation[T](func(p ...any) (T, error) {
-	//		x := p[0].(T)
-	//		y := p[1].(T)
-	//		return x - y, nil
-	//	})
-	//	return f.execute(x, y)
-	//} else {
-	//	f := nodeOperation[T](func(p ...any) (flint.GraphNode, error) {
-	//		x, y := p[0].(Tensor), p[1].(Tensor) // FIXME: this caused a bug - maybe variadic functions aren't that nice ...
-	//		if x.light() {
-	//			return flint.Sub(*x.data, *y.node)
-	//		} else if y.light() {
-	//			return flint.Sub(*x.node, *y.data)
-	//		} else {
-	//			return flint.Sub(*x.node, *y.node)
-	//		}
-	//	})
-	//	return f.execute(x, y)
-	//}
+	if x.light() && y.light() {
+		tt := largerType(x, y)
+		switch tt {
+		case flint.F_INT32:
+			return Scalar(lightVal[int32](x) - lightVal[int32](y))
+		case flint.F_INT64:
+			return Scalar(lightVal[int64](x) - lightVal[int64](y))
+		case flint.F_FLOAT32:
+			return Scalar(lightVal[float32](x) - lightVal[float32](y))
+		case flint.F_FLOAT64:
+			return Scalar(lightVal[float64](x) - lightVal[float64](y))
+		default:
+			panic("invalid type")
+		}
+	} else {
+		if x.light() {
+			switch y.dataType {
+			case flint.F_INT32:
+				return FromNodeWithErr(flint.Div(*x.node, *y.dataInt32))
+			case flint.F_INT64:
+				return FromNodeWithErr(flint.Div(*x.node, *y.dataInt64))
+			case flint.F_FLOAT32:
+				return FromNodeWithErr(flint.Div(*x.node, *y.dataFloat32))
+			case flint.F_FLOAT64:
+				return FromNodeWithErr(flint.Div(*x.node, *y.dataFloat64))
+			default:
+				panic("invalid type")
+			}
+		} else if y.light() {
+			switch x.dataType {
+			case flint.F_INT32:
+				return FromNodeWithErr(flint.Div(*x.dataInt32, *y.node))
+			case flint.F_INT64:
+				return FromNodeWithErr(flint.Div(*x.dataInt64, *y.node))
+			case flint.F_FLOAT32:
+				return FromNodeWithErr(flint.Div(*x.dataFloat32, *y.node))
+			case flint.F_FLOAT64:
+				return FromNodeWithErr(flint.Div(*x.dataFloat64, *y.node))
+			default:
+				panic("invalid type")
+			}
+		} else {
+			return FromNodeWithErr(flint.Div(*x.node, *y.node))
+		}
+	}
 }
 
 func (x Tensor) Mul(y Tensor) Tensor {
-	return x
+	if x.light() && y.light() {
+		tt := largerType(x, y)
+		switch tt {
+		case flint.F_INT32:
+			return Scalar(lightVal[int32](x) * lightVal[int32](y))
+		case flint.F_INT64:
+			return Scalar(lightVal[int64](x) * lightVal[int64](y))
+		case flint.F_FLOAT32:
+			return Scalar(lightVal[float32](x) * lightVal[float32](y))
+		case flint.F_FLOAT64:
+			return Scalar(lightVal[float64](x) * lightVal[float64](y))
+		default:
+			panic("invalid type")
+		}
+	} else {
+		x, y = lightLast(x, y)
+		if !y.light() {
+			return FromNodeWithErr(flint.Mul(*x.node, *y.node))
+		}
+
+		switch y.dataType {
+		case flint.F_INT32:
+			return FromNodeWithErr(flint.Mul(*x.node, *y.dataInt32))
+		case flint.F_INT64:
+			return FromNodeWithErr(flint.Mul(*x.node, *y.dataInt64))
+		case flint.F_FLOAT32:
+			return FromNodeWithErr(flint.Mul(*x.node, *y.dataFloat32))
+		case flint.F_FLOAT64:
+			return FromNodeWithErr(flint.Mul(*x.node, *y.dataFloat64))
+		default:
+			panic("invalid type")
+		}
+	}
 }
 
 func (x Tensor) Div(y Tensor) Tensor {
-	return x
+	if x.light() && y.light() {
+		tt := largerType(x, y)
+		switch tt {
+		case flint.F_INT32:
+			return Scalar(lightVal[int32](x) / lightVal[int32](y))
+		case flint.F_INT64:
+			return Scalar(lightVal[int64](x) / lightVal[int64](y))
+		case flint.F_FLOAT32:
+			return Scalar(lightVal[float32](x) / lightVal[float32](y))
+		case flint.F_FLOAT64:
+			return Scalar(lightVal[float64](x) / lightVal[float64](y))
+		default:
+			panic("invalid type")
+		}
+	} else {
+		if x.light() {
+			switch y.dataType {
+			case flint.F_INT32:
+				return FromNodeWithErr(flint.Sub(*x.node, *y.dataInt32))
+			case flint.F_INT64:
+				return FromNodeWithErr(flint.Sub(*x.node, *y.dataInt64))
+			case flint.F_FLOAT32:
+				return FromNodeWithErr(flint.Sub(*x.node, *y.dataFloat32))
+			case flint.F_FLOAT64:
+				return FromNodeWithErr(flint.Sub(*x.node, *y.dataFloat64))
+			default:
+				panic("invalid type")
+			}
+		} else if y.light() {
+			switch x.dataType {
+			case flint.F_INT32:
+				return FromNodeWithErr(flint.Sub(*x.dataInt32, *y.node))
+			case flint.F_INT64:
+				return FromNodeWithErr(flint.Sub(*x.dataInt64, *y.node))
+			case flint.F_FLOAT32:
+				return FromNodeWithErr(flint.Sub(*x.dataFloat32, *y.node))
+			case flint.F_FLOAT64:
+				return FromNodeWithErr(flint.Sub(*x.dataFloat64, *y.node))
+			default:
+				panic("invalid type")
+			}
+		} else {
+			return FromNodeWithErr(flint.Sub(*x.node, *y.node))
+		}
+	}
 }
 
 func (x Tensor) Pow(y Tensor) Tensor {

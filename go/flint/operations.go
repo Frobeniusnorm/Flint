@@ -94,11 +94,11 @@ func Mul[T baseNumeric | GraphNode](operand1 GraphNode, operand2 T) (GraphNode, 
 }
 
 /*
-Divide [numerator] by [denominator].
+Div [numerator] by [denominator].
 At least one of the parameters HAS to be a [GraphNode]
 Division is carried out element-wise.
 */
-func Divide[T1 baseNumeric | GraphNode, T2 baseNumeric | GraphNode](numerator T1, denominator T2) (GraphNode, error) {
+func Div[T1 baseNumeric | GraphNode, T2 baseNumeric | GraphNode](numerator T1, denominator T2) (GraphNode, error) {
 	var flintNode *C.FGraphNode = nil
 	var errno error
 

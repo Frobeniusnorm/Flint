@@ -44,7 +44,7 @@ func CrossEntropyLossExtended(predictions tensor.Tensor, target tensor.Tensor, w
 		l = flint.Sum(l)
 	}
 	if reduce == REDUCE_MEAN {
-		l = flint.Divide(l, int32(N))
+		l = flint.Div(l, int32(N))
 	}
 	return tensor.NewTensor(l)
 }

@@ -26,7 +26,7 @@ func main() {
 	// fset is filled automatically by mustParse
 	fset := token.NewFileSet()
 	files := []*ast.File{
-		mustParse(fset, "flint.go"),
+		mustParse(fset, "types.go"),
 		mustParse(fset, "examples/gauss.go"),
 	}
 

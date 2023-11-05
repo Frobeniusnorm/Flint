@@ -16,7 +16,7 @@ func Softmax(x tensor.Tensor) tensor.Tensor {
 	shifted = flint.Exp(shifted)
 	div1 := shifted
 	div2 := flint.ReduceSum(flint.Exp(shifted), len(shifted.GetShape())-1)
-	res := flint.Divide(div1, div2)
+	res := flint.Div(div1, div2)
 	return tensor.NewTensor(res)
 }
 
