@@ -17,6 +17,8 @@ type Shape = flint.Shape // this way we keep the functions etc.
 
 type Axes = flint.Axes
 
+type Stride = flint.Stride
+
 type DataType = flint.DataType
 
 func greaterDataType(x DataType, y DataType) bool {

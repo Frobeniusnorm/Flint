@@ -2,57 +2,8 @@ package tensor
 
 import (
 	"github.com/Frobeniusnorm/Flint/go/flint"
+	"math"
 )
-
-type lightOperationUnary[T1 Numeric] func(x T1) Tensor
-
-type lightOperationBinary[T1 Numeric, T2 Numeric] func(x T1, y T2) Tensor
-
-func (f lightOperationBinary[T1, T2]) executeInner(x Tensor, y Tensor) Tensor {
-	tt := largerType(x, y)
-	switch tt {
-	case flint.F_INT32:
-		return f(lightVal[T1](x), lightVal[T2](y))
-	case flint.F_INT64:
-		return f(lightVal[int64](x), lightVal[int64](y))
-	case flint.F_FLOAT32:
-		return f(lightVal[float32](x), lightVal[float32](y))
-	case flint.F_FLOAT64:
-		return f(lightVal[float64](x), lightVal[float64](y))
-	default:
-		panic("invalid type")
-	}
-}
-
-type lightOperationTernary[T1 Numeric, T2 Numeric, T3 Numeric] func(x T1, y T2, z T3) Tensor
-
-//func (f lightOperation[T]) execute(x ...any) Tensor {
-//	res, err := f(x...)
-//	// result composition and error handling
-//	var out Tensor
-//	if err != nil {
-//		out.err = err
-//	} else {
-//		out.data = &res
-//	}
-//	out.init()
-//	return out
-//}
-
-type nodeOperation[T Numeric] func(x ...any) (flint.GraphNode, error)
-
-func (f nodeOperation[T]) execute(x ...any) Tensor {
-	flintNode, err := f(x...)
-	// result composition and error handling
-	var out Tensor
-	if err != nil {
-		out.err = err
-	} else {
-		out.node = &flintNode
-	}
-	out.init()
-	return out
-}
 
 func largerType(x Tensor, y Tensor) DataType {
 	if x.dataType > y.dataType {
@@ -123,36 +74,34 @@ func (x Tensor) Sub(y Tensor) Tensor {
 		default:
 			panic("invalid type")
 		}
-	} else {
-		if x.light() {
-			switch y.dataType {
-			case flint.F_INT32:
-				return FromNodeWithErr(flint.Div(*x.node, *y.dataInt32))
-			case flint.F_INT64:
-				return FromNodeWithErr(flint.Div(*x.node, *y.dataInt64))
-			case flint.F_FLOAT32:
-				return FromNodeWithErr(flint.Div(*x.node, *y.dataFloat32))
-			case flint.F_FLOAT64:
-				return FromNodeWithErr(flint.Div(*x.node, *y.dataFloat64))
-			default:
-				panic("invalid type")
-			}
-		} else if y.light() {
-			switch x.dataType {
-			case flint.F_INT32:
-				return FromNodeWithErr(flint.Div(*x.dataInt32, *y.node))
-			case flint.F_INT64:
-				return FromNodeWithErr(flint.Div(*x.dataInt64, *y.node))
-			case flint.F_FLOAT32:
-				return FromNodeWithErr(flint.Div(*x.dataFloat32, *y.node))
-			case flint.F_FLOAT64:
-				return FromNodeWithErr(flint.Div(*x.dataFloat64, *y.node))
-			default:
-				panic("invalid type")
-			}
-		} else {
-			return FromNodeWithErr(flint.Div(*x.node, *y.node))
+	} else if y.light() {
+		switch y.dataType {
+		case flint.F_INT32:
+			return FromNodeWithErr(flint.Div(*x.node, *y.dataInt32))
+		case flint.F_INT64:
+			return FromNodeWithErr(flint.Div(*x.node, *y.dataInt64))
+		case flint.F_FLOAT32:
+			return FromNodeWithErr(flint.Div(*x.node, *y.dataFloat32))
+		case flint.F_FLOAT64:
+			return FromNodeWithErr(flint.Div(*x.node, *y.dataFloat64))
+		default:
+			panic("invalid type")
 		}
+	} else if x.light() {
+		switch x.dataType {
+		case flint.F_INT32:
+			return FromNodeWithErr(flint.Div(*x.dataInt32, *y.node))
+		case flint.F_INT64:
+			return FromNodeWithErr(flint.Div(*x.dataInt64, *y.node))
+		case flint.F_FLOAT32:
+			return FromNodeWithErr(flint.Div(*x.dataFloat32, *y.node))
+		case flint.F_FLOAT64:
+			return FromNodeWithErr(flint.Div(*x.dataFloat64, *y.node))
+		default:
+			panic("invalid type")
+		}
+	} else {
+		return FromNodeWithErr(flint.Div(*x.node, *y.node))
 	}
 }
 
@@ -207,232 +156,306 @@ func (x Tensor) Div(y Tensor) Tensor {
 		default:
 			panic("invalid type")
 		}
-	} else {
-		if x.light() {
-			switch y.dataType {
-			case flint.F_INT32:
-				return FromNodeWithErr(flint.Sub(*x.node, *y.dataInt32))
-			case flint.F_INT64:
-				return FromNodeWithErr(flint.Sub(*x.node, *y.dataInt64))
-			case flint.F_FLOAT32:
-				return FromNodeWithErr(flint.Sub(*x.node, *y.dataFloat32))
-			case flint.F_FLOAT64:
-				return FromNodeWithErr(flint.Sub(*x.node, *y.dataFloat64))
-			default:
-				panic("invalid type")
-			}
-		} else if y.light() {
-			switch x.dataType {
-			case flint.F_INT32:
-				return FromNodeWithErr(flint.Sub(*x.dataInt32, *y.node))
-			case flint.F_INT64:
-				return FromNodeWithErr(flint.Sub(*x.dataInt64, *y.node))
-			case flint.F_FLOAT32:
-				return FromNodeWithErr(flint.Sub(*x.dataFloat32, *y.node))
-			case flint.F_FLOAT64:
-				return FromNodeWithErr(flint.Sub(*x.dataFloat64, *y.node))
-			default:
-				panic("invalid type")
-			}
-		} else {
-			return FromNodeWithErr(flint.Sub(*x.node, *y.node))
+	} else if y.light() {
+		switch y.dataType {
+		case flint.F_INT32:
+			return FromNodeWithErr(flint.Sub(*x.node, *y.dataInt32))
+		case flint.F_INT64:
+			return FromNodeWithErr(flint.Sub(*x.node, *y.dataInt64))
+		case flint.F_FLOAT32:
+			return FromNodeWithErr(flint.Sub(*x.node, *y.dataFloat32))
+		case flint.F_FLOAT64:
+			return FromNodeWithErr(flint.Sub(*x.node, *y.dataFloat64))
+		default:
+			panic("invalid type")
 		}
+	} else if x.light() {
+		switch x.dataType {
+		case flint.F_INT32:
+			return FromNodeWithErr(flint.Sub(*x.dataInt32, *y.node))
+		case flint.F_INT64:
+			return FromNodeWithErr(flint.Sub(*x.dataInt64, *y.node))
+		case flint.F_FLOAT32:
+			return FromNodeWithErr(flint.Sub(*x.dataFloat32, *y.node))
+		case flint.F_FLOAT64:
+			return FromNodeWithErr(flint.Sub(*x.dataFloat64, *y.node))
+		default:
+			panic("invalid type")
+		}
+	} else {
+		return FromNodeWithErr(flint.Sub(*x.node, *y.node))
 	}
 }
 
 func (x Tensor) Pow(y Tensor) Tensor {
-	return x
+	if x.light() && y.light() {
+		tt := largerType(x, y)
+		switch tt {
+		case flint.F_INT32:
+			return Scalar(int32(math.Pow(lightVal[float64](x), lightVal[float64](y))))
+		case flint.F_INT64:
+			return Scalar(int64(math.Pow(lightVal[float64](x), lightVal[float64](y))))
+		case flint.F_FLOAT32:
+			return Scalar(float32(math.Pow(lightVal[float64](x), lightVal[float64](y))))
+		case flint.F_FLOAT64:
+			return Scalar(float64(math.Pow(lightVal[float64](x), lightVal[float64](y))))
+		default:
+			panic("invalid type")
+		}
+	} else if y.light() {
+		switch y.dataType {
+		case flint.F_INT32:
+			return FromNodeWithErr(flint.Pow(*x.node, *y.dataInt32))
+		case flint.F_INT64:
+			return FromNodeWithErr(flint.Pow(*x.node, *y.dataInt64))
+		case flint.F_FLOAT32:
+			return FromNodeWithErr(flint.Pow(*x.node, *y.dataFloat32))
+		case flint.F_FLOAT64:
+			return FromNodeWithErr(flint.Pow(*x.node, *y.dataFloat64))
+		default:
+			panic("invalid type")
+		}
+	} else if x.light() {
+		x = x.readyNode()
+		return FromNodeWithErr(flint.Pow(*x.node, *y.node))
+	} else {
+		return FromNodeWithErr(flint.Pow(*x.node, *y.node))
+	}
 }
 
 func (x Tensor) Log() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Log(*x.node))
 }
 
 func (x Tensor) Log2() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Log2(*x.node))
 }
 
 func (x Tensor) Log10() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Log10(*x.node))
 }
 
 func (x Tensor) Sqrt() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Sqrt(*x.node))
 }
 
 func (x Tensor) Exp() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Exp(*x.node))
 }
 
 func (x Tensor) Sin() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Sin(*x.node))
 }
 
 func (x Tensor) Cos() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Cos(*x.node))
 }
 
 func (x Tensor) Tan() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Tan(*x.node))
 }
 
 func (x Tensor) Asin() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Asin(*x.node))
 }
 
 func (x Tensor) Acos() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Acos(*x.node))
 }
 
 func (x Tensor) Atan() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Atan(*x.node))
 }
 
 func (x Tensor) Neg() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Neg(*x.node))
 }
 
 func (x Tensor) Sign() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Sign(*x.node))
 }
 
 func (x Tensor) Even() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Even(*x.node))
 }
 
 func (x Tensor) Equal(y Tensor) Tensor {
-	return x
+	x = x.readyNode()
+	y = y.readyNode()
+	return FromNodeWithErr(flint.Equal(*x.node, *y.node))
 }
 
 func (x Tensor) Greater(y Tensor) Tensor {
-	return x
+	x = x.readyNode()
+	y = y.readyNode()
+	return FromNodeWithErr(flint.Greater(*x.node, *y.node))
 }
 
 func (x Tensor) Less(y Tensor) Tensor {
-	return x
+	x = x.readyNode()
+	y = y.readyNode()
+	return FromNodeWithErr(flint.Less(*x.node, *y.node))
 }
 
 func (x Tensor) Matmul(y Tensor) Tensor {
-	return x
+	x = x.readyNode()
+	y = y.readyNode()
+	return FromNodeWithErr(flint.Matmul(*x.node, *y.node))
 }
 
 func (x Tensor) Flatten() Tensor {
-	// TODO: also flatten dim?
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Flatten(*x.node))
 }
 
-func (x Tensor) Reshape() Tensor {
-	return x
+func (x Tensor) Reshape(shape Shape) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Reshape(*x.node, shape))
 }
 
 func (x Tensor) Minimum(y Tensor) Tensor {
-	return x
+	x = x.readyNode()
+	y = y.readyNode()
+	return FromNodeWithErr(flint.Minimum(*x.node, *y.node))
 }
 
 func (x Tensor) Maximum(y Tensor) Tensor {
-	return x
+	x = x.readyNode()
+	y = y.readyNode()
+	return FromNodeWithErr(flint.Maximum(*x.node, *y.node))
 }
 
-func (x Tensor) ReduceSum() Tensor {
-	return x
+func (x Tensor) ReduceSum(dim int) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.ReduceSum(*x.node, dim))
 }
 
-func (x Tensor) ReduceMul() Tensor {
-	return x
+func (x Tensor) ReduceMul(dim int) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.ReduceMul(*x.node, dim))
 }
 
-func (x Tensor) ReduceMin() Tensor {
-	return x
+func (x Tensor) ReduceMin(dim int) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.ReduceMin(*x.node, dim))
 }
 
-func (x Tensor) ReduceMax() Tensor {
-	return x
+func (x Tensor) ReduceMax(dim int) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.ReduceMax(*x.node, dim))
 }
 
-func (x Tensor) Slice() Tensor {
-	// TODO: what the good syntax here?
-	return x
+func (x Tensor) Slice(start Axes, end Axes) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Slice(*x.node, start, end))
 }
 
-func (x Tensor) SliceWithStride() Tensor {
-	return x
+func (x Tensor) SliceWithStride(start Axes, end Axes, stride Stride) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.SliceWithStride(*x.node, start, end, stride))
 }
 
-func (x Tensor) Extend() Tensor {
-	return x
+func (x Tensor) Extend(shape Shape, insertAt Axes) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Extend(*x.node, shape, insertAt))
 }
 
-func (x Tensor) ExtendWithStride() Tensor {
-	return x
+func (x Tensor) ExtendWithStride(shape Shape, insertAt Axes, stride Stride) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.ExtendWithStride(*x.node, shape, insertAt, stride))
 }
 
-func (x Tensor) Concat(y Tensor) Tensor {
-	return x
+func (x Tensor) Concat(y Tensor, axis uint) Tensor {
+	x = x.readyNode()
+	y = y.readyNode()
+	return FromNodeWithErr(flint.Concat(*x.node, *y.node, axis))
 }
 
-func (x Tensor) Expand() Tensor {
-	return x
+func (x Tensor) Expand(axis uint, size uint) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Expand(*x.node, axis, size))
 }
 
 func (x Tensor) Abs() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Abs(*x.node))
 }
 
-func (x Tensor) Repeat() Tensor {
-	return x
+func (x Tensor) Repeat(repetitions Axes) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Repeat(*x.node, repetitions))
 }
 
 func (x Tensor) Transpose(axes Axes) Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Transpose(*x.node, axes))
 }
 
-func (x Tensor) Convolve() Tensor {
-	return x
+func (x Tensor) Convolve(kernel Tensor, stride Stride) Tensor {
+	x = x.readyNode()
+	kernel = kernel.readyNode()
+	return FromNodeWithErr(flint.Convolve(*x.node, *kernel.node, stride))
 }
 
-func (x Tensor) Slide() Tensor {
-	return x
+func (x Tensor) Slide(kernel Tensor, stride Stride) Tensor {
+	x = x.readyNode()
+	kernel = kernel.readyNode()
+	return FromNodeWithErr(flint.Slide(*x.node, *kernel.node, stride))
 }
 
 func (x Tensor) Index(indices Tensor) Tensor {
 	x = x.readyNode()
 	indices = indices.readyNode()
-
-	flintNode, err := flint.Index(*x.node, *indices.node)
-	var out Tensor
-	if err != nil {
-		out.err = err
-	} else {
-		out.node = &flintNode
-	}
-	out.init()
-	return out
+	return FromNodeWithErr(flint.Index(*x.node, *indices.node))
 }
 
 func (x Tensor) IndexFromTensor(y Tensor, indices Tensor) Tensor {
-	return x
+	x = x.readyNode()
+	y = y.readyNode()
+	indices = indices.readyNode()
+	return FromNodeWithErr(flint.IndexSet(*x.node, *y.node, *indices.node))
 }
 
-func (x Tensor) SlidingWindow() Tensor {
-	return x
+func (x Tensor) SlidingWindow(size Shape, stride Stride) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.SlidingWindow(*x.node, size, stride))
 }
 
-func (x Tensor) Permute() Tensor {
-	return x
+func (x Tensor) Permute(axis uint) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Permute(*x.node, axis))
 }
 
 func (x Tensor) Max() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Max(*x.node))
 }
 
 func (x Tensor) Min() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Min(*x.node))
 }
 
 func (x Tensor) Sum() Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.Sum(*x.node))
 }
 
 func (x Tensor) OneHot(numClasses uint) Tensor {
-	return x
+	x = x.readyNode()
+	return FromNodeWithErr(flint.OneHot(*x.node, numClasses))
 }
