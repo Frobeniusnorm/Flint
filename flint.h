@@ -1088,7 +1088,7 @@ FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
  * TODO not yet implemented
  * Slides a window along the Tensor and reduces all elements inside that window
  * to their sum (just that one remains in the result tensor), and
- * then slides the window in each dimension `step_size` times (like
+ * then slides the window in each dimension by `step_size` forward (like
  * `fsliding_window`). The last dimension is complety pooled, and the result is
  * one dimension smaller then the original tensor
  * - `a` the tensor to pool
@@ -1105,7 +1105,7 @@ FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
  * TODO not yet implemented
  * Slides a window along the Tensor and reduces all elements inside that window
  * to their maximum element (just that one remains in the result tensor), and
- * then slides the window in each dimension `step_size` times (like
+ * then slides the window in each dimension by `step_size` forward (like
  * `fsliding_window`). The last dimension is complety pooled, and the result is
  * one dimension smaller then the original tensor
  * - `a` the tensor to pool

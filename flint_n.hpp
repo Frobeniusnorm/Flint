@@ -1763,7 +1763,41 @@ template <typename T, unsigned int n> struct Tensor {
 						sizeof(size_t) * (n - 1));
 			return Tensor<T, n - 1>(nn, ns);
 		}
-
+		/**
+		 * Slides a window along the Tensor and reduces all elements inside that
+		 * window to their maximum value (just that one remains in the result
+		 * tensor), and then slides the window in each dimension by `step_size`
+		 * forward (like `sliding_window`). The last dimension is complety
+		 * pooled, and the result is one dimension smaller then the original
+		 * tensor.
+		 */
+		Tensor<T, n - 1> pooling_max(std::array<size_t, n - 1> window_size,
+									 std::array<unsigned int, n - 1> step_size = {
+										 1}) const {
+			FGraphNode *nn =
+				fpooling_max(node, window_size.data(), step_size.data());
+			std::array<size_t, n - 1> ns;
+			std::memcpy(ns.data(), nn->operation.shape,
+						sizeof(size_t) * (n - 1));
+			return Tensor<T, n - 1>(nn, ns);
+		}
+		/**
+		 * Slides a window along the Tensor and reduces all elements inside that
+		 * window to their sum, and then slides the window in each dimension by
+		 * `step_size` forward (like `sliding_window`). The last dimension is
+		 * complety pooled, and the result is one dimension smaller then the
+		 * original tensor.
+		 */
+		Tensor<T, n - 1>
+		pooling_sum(std::array<size_t, n - 1> window_size,
+					std::array<unsigned int, n - 1> step_size = {1}) const {
+			FGraphNode *nn =
+				fpooling_sum(node, window_size.data(), step_size.data());
+			std::array<size_t, n - 1> ns;
+			std::memcpy(ns.data(), nn->operation.shape,
+						sizeof(size_t) * (n - 1));
+			return Tensor<T, n - 1>(nn, ns);
+		}
 		/**
 		 * Randomly permutates (=swaps multiple elements with each other without
 		 * creating, copying or deleting new ones) one axis of the input tensor.
