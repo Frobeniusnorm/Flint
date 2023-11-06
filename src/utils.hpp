@@ -278,6 +278,8 @@ inline void freeAdditionalData(FGraphNode *gn) {
 		free(s->step);
 		delete s;
 	} break;
+  case FPOOLING_MAX:
+  case FPOOLING_SUM:
 	case FSLIDING_WINDOW: {
 		FSlidingWindow *s = (FSlidingWindow *)gn->operation.additional_data;
 		free(s->step);

@@ -1408,7 +1408,7 @@ static void calculateShapeAggregatingWindows(FOperation &target,
 											 const FOperation &orig,
 											 const size_t *size,
 											 const unsigned int *steps) {
-	for (int i = 0; i < (orig.dimensions - 1); i++) {
+	for (int i = 0; i < orig.dimensions - 1; i++) {
 		const size_t kernel_shape = size[i];
 		size_t window_size = orig.shape[i] - kernel_shape + 1;
 		window_size = window_size % steps[i] == 0 ? window_size / steps[i]
@@ -1698,7 +1698,12 @@ FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
 	calculateShapeAggregatingWindows(op, a->operation, window_size, step_size);
 	op.op_type = FPOOLING_SUM;
 	op.data_type = a->operation.data_type;
-	op.additional_data = nullptr;
+  FSlidingWindow* window = new FSlidingWindow();
+  window->size = safe_mal<size_t>(op.dimensions);
+  window->step = safe_mal<unsigned int>(op.dimensions);
+  memcpy(window->size, window_size, sizeof(size_t) * op.dimensions);
+  memcpy(window->step, step_size, sizeof(unsigned int) * op.dimensions);
+	op.additional_data = window;
 	op.broadcasting_mode = 0;
 	return addNode(op, {a});
 }
@@ -1712,7 +1717,12 @@ FGraphNode *fpooling_max(FGraphNode *a, const size_t *window_size,
 	calculateShapeAggregatingWindows(op, a->operation, window_size, step_size);
 	op.op_type = FPOOLING_MAX;
 	op.data_type = a->operation.data_type;
-	op.additional_data = nullptr;
+  FSlidingWindow* window = new FSlidingWindow();
+  window->size = safe_mal<size_t>(op.dimensions);
+  window->step = safe_mal<unsigned int>(op.dimensions);
+  memcpy(window->size, window_size, sizeof(size_t) * op.dimensions);
+  memcpy(window->step, step_size, sizeof(unsigned int) * op.dimensions);
+	op.additional_data = window;
 	op.broadcasting_mode = 0;
 	return addNode(op, {a});
 }
