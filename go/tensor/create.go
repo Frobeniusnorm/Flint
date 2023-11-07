@@ -60,7 +60,6 @@ func Create(data any) Tensor {
 	panic("invalid data type")
 }
 
-//
 //func CreateFromSlice(data any) Tensor {
 //	x := flatten(data)
 //	shape := Shape{1, 2} // TODO
@@ -75,18 +74,13 @@ func Create(data any) Tensor {
 //	return tensor
 //}
 
-//func CreateFromSliceAndShape[T Numeric](data []T, shape Shape) Tensor {
-//	x := flatten(data)
-//	tensor := Tensor{}
-//	flintNode, err := flint.CreateGraph(flatten(x), shape)
-//	if err != nil {
-//		panic(err)
-//	}
-//	tensor.node = &flintNode
-//
-//	tensor.init()
-//	return tensor
-//}
+func CreateFromSliceAndShape[T Numeric](data []T, shape Shape) Tensor {
+	//data = flatten(data)
+	flintNode, err := flint.CreateGraph(data, shape)
+	tensor := Tensor{node: &flintNode, err: err}
+	tensor.init()
+	return tensor
+}
 
 func FromNode(node flint.GraphNode) Tensor {
 	res := Tensor{node: &node, dataType: node.GetType()}

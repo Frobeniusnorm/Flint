@@ -25,22 +25,24 @@ func NewSgd(params []tensor.Parameter, learningRate float32) Sgd {
 	}
 }
 
-func (sgd *Sgd) calculateUpdate(weightTensor flint.GraphNode, gradientTensor flint.GraphNode) flint.GraphNode {
-	return flint.Sub(weightTensor, flint.Mul(gradientTensor, sgd.learningRate))
+func (sgd *Sgd) calculateUpdate(weightTensor tensor.Tensor, gradientTensor tensor.Tensor) tensor.Tensor {
+	return weightTensor.Sub(gradientTensor.Mul(tensor.Scalar(sgd.learningRate)))
 }
 
 func (sgd *Sgd) Step(loss tensor.Tensor) {
 	// turn tensor array into array of graph nodes
 	paramsSimple := make([]flint.GraphNode, len(sgd.params))
 	for i, p := range sgd.params {
-		paramsSimple[i] = p.node
+		paramsSimple[i] = p.Node()
 	}
 
-	grads := flint.CalculateGradients(loss.node, paramsSimple)
-	for i, w := range paramsSimple {
+	grads, _ := flint.CalculateGradients(loss.Node(), paramsSimple)
+	for i, w := range sgd.params {
 		for _, g := range grads {
 			sgd.params[i].Close()
-			update := sgd.calculateUpdate(g, w)
+			gN := tensor.FromNode(g)
+			update := sgd.calculateUpdate(gN, tensor.Tensor(w))
+			gN.Close()
 			sgd.params[i] = tensor.NewParameter(update)
 		}
 	}

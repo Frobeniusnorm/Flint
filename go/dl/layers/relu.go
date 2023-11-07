@@ -1,7 +1,6 @@
 package layers
 
 import (
-	"github.com/Frobeniusnorm/Flint/go/flint"
 	"github.com/Frobeniusnorm/Flint/go/tensor"
 )
 
@@ -16,8 +15,7 @@ func (relu ReLU) Parameters(_ bool) []tensor.Parameter {
 }
 
 func (relu ReLU) Forward(x tensor.Tensor) tensor.Tensor {
-	res := flint.Maximum(x.node, int32(0))
-	return tensor.NewTensor(res)
+	return x.Maximum(tensor.Scalar(int32(0)))
 }
 
 func (relu ReLU) TrainMode() {}

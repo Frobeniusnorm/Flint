@@ -36,17 +36,17 @@ func TrivialCollate(items []tensor.Tensor) tensor.Tensor {
 	}
 
 	newShape := flint.Shape{1}
-	for _, val := range items[0].node.GetShape() {
+	for _, val := range items[0].Shape() {
 		newShape = append(newShape, val)
 	}
 
-	var res = flint.Reshape(items[0].node, newShape)
+	var res = items[0].Reshape(newShape)
 	items[0].Close()
 	for _, val := range items[1:] {
-		res = flint.Concat(res, flint.Reshape(val.node, newShape), 0)
+		res = res.Concat(val.Reshape(newShape), 0)
 		val.Close()
 	}
-	return tensor.NewTensor(res)
+	return res
 }
 
 // (debugging utility)

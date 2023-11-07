@@ -1,7 +1,6 @@
 package layers
 
 import (
-	"github.com/Frobeniusnorm/Flint/go/flint"
 	"github.com/Frobeniusnorm/Flint/go/tensor"
 )
 
@@ -21,15 +20,15 @@ func (f Flatten) Parameters(_ bool) []tensor.Parameter {
 }
 
 func (f Flatten) Forward(x tensor.Tensor) tensor.Tensor {
-	shape := x.node.GetShape()
+	shape := x.Shape()
 	if len(shape) < 2 {
 		panic("Flatten: input tensors needs to be at least 2-dimensional")
 	}
-	var res = x.node
+	var res = x
 	for i := len(shape) - 1; i > 1; i-- {
-		res = flint.FlattenDim(res, i)
+		res = res.FlattenDim(i)
 	}
-	return tensor.NewTensor(res)
+	return res
 }
 
 func (f Flatten) TrainMode() {

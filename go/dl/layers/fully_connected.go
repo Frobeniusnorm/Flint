@@ -17,7 +17,7 @@ type FullyConnected struct {
 func NewFullyConnected(inputSize uint, outputSize uint) FullyConnected {
 	weights := tensor.Random(tensor.Shape{inputSize, outputSize})
 	bias := tensor.Constant(int32(1), tensor.Shape{1, outputSize})
-	weightsAndBias := tensor.NewParameter(tensor.Concat(weights, bias, 0))
+	weightsAndBias := tensor.NewParameter(weights.Concat(bias, 0))
 
 	return FullyConnected{
 		inputSize:      inputSize,
@@ -30,8 +30,8 @@ func (fc FullyConnected) Forward(x tensor.Tensor) tensor.Tensor {
 	inputShape := x.Shape()
 	inputShape[len(inputShape)-1] = 1
 	ones := tensor.Constant(int32(1), inputShape)
-	combined := tensor.Concat(x, ones, uint(len(inputShape)-1))
-	res := combined.Matmul(fc.weightsAndBias)
+	combined := x.Concat(ones, uint(len(inputShape)-1))
+	res := combined.Matmul(tensor.Tensor(fc.weightsAndBias))
 	return res
 }
 

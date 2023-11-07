@@ -14,9 +14,9 @@ func largerType(x Tensor, y Tensor) DataType {
 }
 
 func lightLast(x Tensor, y Tensor) (a Tensor, b Tensor) {
-	if !x.light() {
+	if !x.isLight() {
 		return x, y
-	} else if !y.light() {
+	} else if !y.isLight() {
 		return y, x
 	} else {
 		return x.readyNode(), y
@@ -24,7 +24,7 @@ func lightLast(x Tensor, y Tensor) (a Tensor, b Tensor) {
 }
 
 func (x Tensor) Add(y Tensor) Tensor {
-	if x.light() && y.light() {
+	if x.isLight() && y.isLight() {
 		tt := largerType(x, y)
 		switch tt {
 		case flint.F_INT32:
@@ -40,7 +40,7 @@ func (x Tensor) Add(y Tensor) Tensor {
 		}
 	} else {
 		x, y = lightLast(x, y)
-		if !y.light() {
+		if !y.isLight() {
 			return FromNodeWithErr(flint.Add(*x.node, *y.node))
 		}
 
@@ -60,7 +60,7 @@ func (x Tensor) Add(y Tensor) Tensor {
 }
 
 func (x Tensor) Sub(y Tensor) Tensor {
-	if x.light() && y.light() {
+	if x.isLight() && y.isLight() {
 		tt := largerType(x, y)
 		switch tt {
 		case flint.F_INT32:
@@ -74,7 +74,7 @@ func (x Tensor) Sub(y Tensor) Tensor {
 		default:
 			panic("invalid type")
 		}
-	} else if y.light() {
+	} else if y.isLight() {
 		switch y.dataType {
 		case flint.F_INT32:
 			return FromNodeWithErr(flint.Div(*x.node, *y.dataInt32))
@@ -87,7 +87,7 @@ func (x Tensor) Sub(y Tensor) Tensor {
 		default:
 			panic("invalid type")
 		}
-	} else if x.light() {
+	} else if x.isLight() {
 		switch x.dataType {
 		case flint.F_INT32:
 			return FromNodeWithErr(flint.Div(*x.dataInt32, *y.node))
@@ -106,7 +106,7 @@ func (x Tensor) Sub(y Tensor) Tensor {
 }
 
 func (x Tensor) Mul(y Tensor) Tensor {
-	if x.light() && y.light() {
+	if x.isLight() && y.isLight() {
 		tt := largerType(x, y)
 		switch tt {
 		case flint.F_INT32:
@@ -122,7 +122,7 @@ func (x Tensor) Mul(y Tensor) Tensor {
 		}
 	} else {
 		x, y = lightLast(x, y)
-		if !y.light() {
+		if !y.isLight() {
 			return FromNodeWithErr(flint.Mul(*x.node, *y.node))
 		}
 
@@ -142,7 +142,7 @@ func (x Tensor) Mul(y Tensor) Tensor {
 }
 
 func (x Tensor) Div(y Tensor) Tensor {
-	if x.light() && y.light() {
+	if x.isLight() && y.isLight() {
 		tt := largerType(x, y)
 		switch tt {
 		case flint.F_INT32:
@@ -156,7 +156,7 @@ func (x Tensor) Div(y Tensor) Tensor {
 		default:
 			panic("invalid type")
 		}
-	} else if y.light() {
+	} else if y.isLight() {
 		switch y.dataType {
 		case flint.F_INT32:
 			return FromNodeWithErr(flint.Sub(*x.node, *y.dataInt32))
@@ -169,7 +169,7 @@ func (x Tensor) Div(y Tensor) Tensor {
 		default:
 			panic("invalid type")
 		}
-	} else if x.light() {
+	} else if x.isLight() {
 		switch x.dataType {
 		case flint.F_INT32:
 			return FromNodeWithErr(flint.Sub(*x.dataInt32, *y.node))
@@ -188,7 +188,7 @@ func (x Tensor) Div(y Tensor) Tensor {
 }
 
 func (x Tensor) Pow(y Tensor) Tensor {
-	if x.light() && y.light() {
+	if x.isLight() && y.isLight() {
 		tt := largerType(x, y)
 		switch tt {
 		case flint.F_INT32:
@@ -202,7 +202,7 @@ func (x Tensor) Pow(y Tensor) Tensor {
 		default:
 			panic("invalid type")
 		}
-	} else if y.light() {
+	} else if y.isLight() {
 		switch y.dataType {
 		case flint.F_INT32:
 			return FromNodeWithErr(flint.Pow(*x.node, *y.dataInt32))
@@ -215,7 +215,7 @@ func (x Tensor) Pow(y Tensor) Tensor {
 		default:
 			panic("invalid type")
 		}
-	} else if x.light() {
+	} else if x.isLight() {
 		x = x.readyNode()
 		return FromNodeWithErr(flint.Pow(*x.node, *y.node))
 	} else {
@@ -315,6 +315,11 @@ func (x Tensor) Matmul(y Tensor) Tensor {
 	x = x.readyNode()
 	y = y.readyNode()
 	return FromNodeWithErr(flint.Matmul(*x.node, *y.node))
+}
+
+func (x Tensor) FlattenDim(axis int) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(flint.FlattenDim(*x.node, axis))
 }
 
 func (x Tensor) Flatten() Tensor {

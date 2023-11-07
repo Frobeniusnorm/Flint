@@ -1,7 +1,6 @@
 package layers
 
 import (
-	"github.com/Frobeniusnorm/Flint/go/flint"
 	"github.com/Frobeniusnorm/Flint/go/tensor"
 )
 
@@ -12,7 +11,7 @@ func LogSoftmax(x tensor.Tensor) tensor.Tensor {
 	defer x.Close()
 	res := Softmax(x)
 	defer res.Close()
-	return tensor.NewTensor(flint.Log(res.node))
+	return res.Log()
 }
 
 type LogSoftmaxLayer struct{}

@@ -10,6 +10,7 @@ import "C"
 import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/flint"
+	"log"
 	"runtime"
 )
 
@@ -47,10 +48,10 @@ type Tensor struct {
 }
 
 // String prints the contents of the tensor.
-// NOTE: If not a light tensor, this causes the node's graph to be executed!
+// NOTE: If not a isLight tensor, this causes the node's graph to be executed!
 // Use carefully! (best only in debugging)
 func (x Tensor) String() string {
-	if x.light() {
+	if x.isLight() {
 		switch x.dataType {
 		case flint.F_INT32:
 			return fmt.Sprintf("Tensor (1): [%v] - type %s", *x.dataInt32, x.dataType)
@@ -112,11 +113,14 @@ However, this may change in the future as we have a massive [finalizer overhead]
 [finalizer example]: https://gist.github.com/deltamobile/6511901
 */
 func (x Tensor) init() {
-	if !x.light() {
-		flint.SetRefCounter(*x.node, 1)
+	if x.err != nil {
+		log.Panicf("cannot initialize a errornous tensor: %s", x.err)
 	}
-	runtime.SetFinalizer(&x, func(x *Tensor) { x.Close() }) // FIXME: or only for nodes?
-	runtime.KeepAlive(x)
+	if !x.isLight() {
+		flint.SetRefCounter(*x.node, 1)
+		runtime.SetFinalizer(&x, func(x *Tensor) { x.Close() })
+		runtime.KeepAlive(x)
+	}
 }
 
 /*
@@ -124,15 +128,15 @@ Close resets the ref counter to 0.
 This fixes memory management issues, as the node can be cleared on subsequent calls to [flint.OptimizeMemory]
 */
 func (x Tensor) Close() {
-	runtime.SetFinalizer(&x, nil) // remove any finalizer for this tensor
-	if !x.light() {
+	if !x.isLight() {
+		runtime.SetFinalizer(&x, nil) // remove any finalizer for this tensor
 		flint.SetRefCounter(*x.node, 0)
+		runtime.KeepAlive(x)
 	}
-	runtime.KeepAlive(x)
 }
 
 func (x Tensor) Shape() Shape {
-	if x.light() {
+	if x.isLight() {
 		return Shape{1}
 	} else {
 		return x.node.GetShape()
@@ -140,63 +144,85 @@ func (x Tensor) Shape() Shape {
 }
 
 // Value returns the data of a tensor.
-// FIXME See String()
-//func (x Tensor) Value() (Shape, any) {
-//	if x.light() {
-//		return Shape{1}, *x.data
-//	} else {
-//		data, err := flint.CalculateResult[int](*x.node)
-//		if err != nil {
-//			panic(err)
-//		}
-//		return data.Shape, data.Data
-//	}
-//}
+// WARNING: this will cause the graph to be executed and data transferred from the GPU to the CPU!
+func (x Tensor) Value() (Shape, any) {
+	if x.err != nil {
+		panic(x.err)
+	}
+	if x.isLight() {
+		switch x.dataType {
+		case flint.F_INT32:
+			return Shape{1}, *x.dataInt32
+		case flint.F_INT64:
+			return Shape{1}, *x.dataInt64
+		case flint.F_FLOAT32:
+			return Shape{1}, *x.dataFloat32
+		case flint.F_FLOAT64:
+			return Shape{1}, *x.dataFloat64
+		}
+	} else {
+		switch x.dataType {
+		case flint.F_INT32:
+			data, err := flint.CalculateResult[int32](*x.node)
+			if err != nil {
+				panic(err)
+			}
+			return data.Shape, data.Data
+		case flint.F_INT64:
+			data, err := flint.CalculateResult[int64](*x.node)
+			if err != nil {
+				panic(err)
+			}
+			return data.Shape, data.Data
+		case flint.F_FLOAT32:
+			data, err := flint.CalculateResult[float32](*x.node)
+			if err != nil {
+				panic(err)
+			}
+			return data.Shape, data.Data
+		case flint.F_FLOAT64:
+			data, err := flint.CalculateResult[float64](*x.node)
+			if err != nil {
+				panic(err)
+			}
+			return data.Shape, data.Data
+		}
+	}
+	panic("invalid type")
+}
 
 // node makes sure that a node is initialized and returns it.
 // This function should be called when it is required that a data value (usually from scalar)
 // needs to be passed as a node.
-// turns a light value into a node
+// turns a isLight value into a node
 func (x Tensor) readyNode() Tensor {
-	if !x.light() {
+	if !x.isLight() {
 		return x // no changes needed
 	}
 
 	switch x.dataType {
 	case flint.F_INT32:
-		if x.dataInt32 == nil {
-			panic("no data present???")
-		}
-		flintNode, err := flint.CreateScalar(*x.dataInt32)
-		if err != nil {
-			panic(err)
-		}
-		//x.data = nil
-		x.node = &flintNode
-		x.init()
-		return x
+		return FromNodeWithErr(flint.CreateScalar(*x.dataInt32))
+	case flint.F_INT64:
+		return FromNodeWithErr(flint.CreateScalar(*x.dataInt64))
+	case flint.F_FLOAT32:
+		return FromNodeWithErr(flint.CreateScalar(*x.dataFloat32))
+	case flint.F_FLOAT64:
+		return FromNodeWithErr(flint.CreateScalar(*x.dataFloat64))
+	default:
+		panic("invalid type")
 	}
-	return Tensor{} // TODO: complete
 }
 
-// val returns a possible value.
-// This is either the node or the value from a light tensor
-//func (x Tensor) val() any {
-//	if !x.light() {
-//		return *x.node
-//	} else if x.data != nil {
-//		return *x.data
-//	} else {
-//		panic("no value present - invalid tensor?")
-//	}
-//}
-
-func (x Tensor) light() bool {
+func (x Tensor) isLight() bool {
 	return x.node == nil
 }
 
 func lightVal[T Numeric](x Tensor) T {
-	// TODO: assert is x is light!
+	if !x.isLight() {
+		panic("can't get light value of node tensor")
+	}
+
 	switch x.dataType {
 	case flint.F_INT32:
 		return T(*x.dataInt32)
@@ -212,9 +238,8 @@ func lightVal[T Numeric](x Tensor) T {
 }
 
 // To converts the tensor's data type
-// FIXME: set err instead of panic?
 func (x Tensor) To(tt DataType) Tensor {
-	if x.light() {
+	if x.isLight() {
 		switch tt {
 		case flint.F_INT32:
 			return Scalar(lightVal[int32](x))
@@ -231,4 +256,11 @@ func (x Tensor) To(tt DataType) Tensor {
 		flintNode, err := flint.Convert(*x.node, tt)
 		return FromNodeWithErr(flintNode, err)
 	}
+}
+
+func (x Tensor) Node() flint.GraphNode {
+	if !x.isLight() {
+		x = x.readyNode()
+	}
+	return *x.node
 }

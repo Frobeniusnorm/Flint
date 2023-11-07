@@ -39,8 +39,8 @@ func (d FakeDataset) Get(index uint) FakeDatasetEntry {
 	}
 	label := rand.Intn(int(d.categories))
 	return FakeDatasetEntry{
-		Label: tensor.NewTensor(flint.CreateScalar(label)),
-		Data:  tensor.NewTensor(flint.CreateGraphRandom(d.itemShape)),
+		Label: tensor.Scalar(int32(label)),
+		Data:  tensor.Random(d.itemShape),
 	}
 }
 
@@ -58,7 +58,7 @@ func (d FakeDataset) Collate(items []FakeDatasetEntry) FakeDatasetEntry {
 		Label: TrivialCollate(labels),
 		Data:  TrivialCollate(images),
 	}
-	res.Label.node = flint.Flatten(res.Label.node)
+	res.Label = res.Label.Flatten()
 	return res
 }
 

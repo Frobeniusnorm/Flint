@@ -1,7 +1,6 @@
 package layers
 
 import (
-	"github.com/Frobeniusnorm/Flint/go/flint"
 	"github.com/Frobeniusnorm/Flint/go/tensor"
 )
 
@@ -12,12 +11,12 @@ func Softmax(x tensor.Tensor) tensor.Tensor {
 	// shift by the maximum value to avoid exploding values
 	// thus avoiding inaccuracies when using floating point types.
 	defer x.Close() // FIXME: is this needed? I mean the caller could still hold the graph node reference...
-	shifted := flint.Sub(x.node, flint.Max(x.node))
-	shifted = flint.Exp(shifted)
+	shifted := x.Sub(x.Max())
+	shifted = shifted.Exp()
 	div1 := shifted
-	div2 := flint.ReduceSum(flint.Exp(shifted), len(shifted.GetShape())-1)
-	res := flint.Div(div1, div2)
-	return tensor.NewTensor(res)
+	div2 := shifted.Exp().ReduceSum(len(shifted.Shape()) - 1)
+	res := div1.Div(div2)
+	return res
 }
 
 type SoftmaxLayer struct{}

@@ -13,7 +13,7 @@ func NLLLoss(x tensor.Tensor) tensor.Tensor {
 }
 
 func NLLLossExtended(x tensor.Tensor, weight tensor.Tensor, reduce reduction) tensor.Tensor {
-	shape := x.node.GetShape()
+	shape := x.Shape()
 	C := shape[1] // number of classes
 	fmt.Println(C)
 	return x // TODO

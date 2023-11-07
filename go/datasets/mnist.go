@@ -92,12 +92,12 @@ func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) 
 		imageOffset := i * imageByteSize
 		imageData := images.data[imageOffset : imageOffset+imageByteSize]
 
-		image := flint.CreateGraph(imageData, flint.Shape{uint(images.height), uint(images.width)})
+		image := tensor.FromNodeWithErr(flint.CreateGraph(imageData, flint.Shape{uint(images.height), uint(images.width)}))
 		class := labels.data[i]
-		label := flint.CreateScalar(class)
+		label := tensor.Scalar(int32(class))
 		data[i] = MnistDatasetEntry{
-			Label: tensor.NewTensor(label),
-			Data:  tensor.NewTensor(image),
+			Label: label,
+			Data:  image,
 		}
 	}
 
@@ -253,7 +253,7 @@ func (d MnistDataset) Collate(items []MnistDatasetEntry) MnistDatasetEntry {
 		Label: TrivialCollate(labels),
 		Data:  TrivialCollate(images),
 	}
-	res.Label.node = flint.Flatten(res.Label.node)
+	res.Label = res.Label.Flatten()
 	return res
 }
 
