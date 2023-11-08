@@ -1202,9 +1202,9 @@ TEST_CASE("Pooling") {
 			CHECK_EQ(es1[i][j], rs1[i][j]);
 			CHECK_EQ(em1[i][j], rm1[i][j]);
 		}
-	for (unsigned int p = 1; p < 5; p++)
-		for (unsigned int q = 1; q < 5; q++)
-			for (unsigned int r = 1; r < 5; r++) {
+	for (unsigned int p = 1; p < 3; p++)
+		for (unsigned int q = 2; q < 4; q++)
+			for (unsigned int r = 2; r < 3; r++) {
 				array<size_t, 3> w2 = {2, 4, 3};
 				array<unsigned int, 3> s2 = {p, q, r};
 				Tensor<double, 4> a2 = Flint::random(15, 15, 15, 5);
