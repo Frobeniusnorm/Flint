@@ -943,7 +943,6 @@ TEST_CASE("Multifilter Convolve") {
 		for (int j = 0; j < e1.get_shape()[0]; j++)
 			for (int k = 0; k < e1.get_shape()[0]; k++)
 				CHECK_EQ(r1[i][j][k], e1[i][j][k]);
-	std::cout << r1 << std::endl;
 }
 TEST_CASE("Slide") {
 	Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
@@ -1168,9 +1167,18 @@ TEST_CASE("Pooling") {
 		windows.push_back(a->operation.shape[a->operation.dimensions - 1]);
 		steps.push_back(a->operation.shape[a->operation.dimensions - 1]);
 		FGraphNode *res = fsliding_window(a, windows.data(), steps.data());
-		res = freduce_sum(res, 0);
-		res = fflatten_dimension(res, res->operation.dimensions - 1);
-		return res;
+		for (int i = 1; i < a->operation.dimensions; i++)
+			res = fflatten_dimension(res, 2);
+		res = freduce_sum(res, 1);
+		std::vector<size_t> no_windows(a->operation.dimensions - 1);
+		for (int i = 0; i < no_windows.size(); i++) {
+			size_t no_window = a->operation.shape[i] - window_size[i] + 1;
+			no_window = no_window % step_size[i] == 0
+							? no_window / step_size[i]
+							: no_window / step_size[i] + 1;
+			no_windows[i] = no_window;
+		}
+		return freshape(res, no_windows.data(), no_windows.size());
 	};
 	auto pooling_max_ref_impl = [](FGraphNode *a, size_t *window_size,
 								   unsigned int *step_size) {
@@ -1181,16 +1189,25 @@ TEST_CASE("Pooling") {
 		windows.push_back(a->operation.shape[a->operation.dimensions - 1]);
 		steps.push_back(a->operation.shape[a->operation.dimensions - 1]);
 		FGraphNode *res = fsliding_window(a, windows.data(), steps.data());
-		res = freduce_sum(res, 0);
-		res = fflatten_dimension(res, res->operation.dimensions - 1);
-		return res;
+		for (int i = 1; i < a->operation.dimensions; i++)
+			res = fflatten_dimension(res, 2);
+		res = freduce_max(res, 1);
+		std::vector<size_t> no_windows(a->operation.dimensions - 1);
+		for (int i = 0; i < no_windows.size(); i++) {
+			size_t no_window = a->operation.shape[i] - window_size[i] + 1;
+			no_window = no_window % step_size[i] == 0
+							? no_window / step_size[i]
+							: no_window / step_size[i] + 1;
+			no_windows[i] = no_window;
+		}
+		return freshape(res, no_windows.data(), no_windows.size());
 	};
 	Tensor<int, 3> a1 = {{{1, 2}, {3, 4}, {5, 6}, {7, 8}},
 						 {{9, 10}, {11, 12}, {13, 14}, {15, 16}},
 						 {{17, 18}, {19, 20}, {21, 22}, {23, 24}}};
 	using std::array;
 	array<size_t, 2> w1 = {2, 2};
-	array<unsigned int, 2> s1 = {2, 2};
+	array<unsigned int, 2> s1 = {1, 2};
 	Tensor<int, 2> rs1 = a1.pooling_sum(w1, s1);
 	Tensor<int, 2> rm1 = a1.pooling_max(w1, s1);
 	Tensor<int, 2> es1 = Tensor<int, 2>(
