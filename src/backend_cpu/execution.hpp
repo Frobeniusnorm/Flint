@@ -62,6 +62,55 @@ static void unaryExpression(T *__restrict__ result, const A *__restrict__ data,
 		for (size_t i = from; i < from + size; i++)
 			result[i] = data[i];
 	} break;
+	case FPOOLING_MAX:
+	case FPOOLING_SUM: {
+		const FOperation op = curr->operation;
+		const FGraphNode *gnp1 = curr->predecessors[0];
+		const FOperation pred = gnp1->operation;
+		const FSlidingWindow *window = (FSlidingWindow *)op.additional_data;
+		// calculate accumulated sizes for result, kernel and source (pred)
+		const std::vector<size_t> acc_sizes = calcAccSizes(op);
+		const std::vector<size_t> acc_sizes_pred = calcAccSizes(pred);
+		size_t kernel_num_elems = window->size[op.dimensions - 1];
+    std::vector<size_t> acc_sizes_kernel = std::vector<size_t>(op.dimensions);
+    acc_sizes_kernel[op.dimensions - 1] = 1;
+		for (int d = op.dimensions - 2; d >= 0; d++) {
+      acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * window->size[d + 1];
+			kernel_num_elems *= window->size[d];
+		}
+
+		for (size_t i = from; i < from + size; i++) {
+      // base index for source
+			size_t j = 0;
+			for (unsigned int d = 0; d < op.dimensions; d++) {
+				// get dimension index
+				const size_t di = (d == 0 ? i : i % op.shape[d - 1]) / acc_sizes[d];
+				// reproject
+				j += di * window->step[d] * acc_sizes_pred[d];
+			}
+			T res = 0;
+			for (size_t k = 0; k < kernel_num_elems; k++) {
+				bool set_zero = false;
+				size_t o = 0; // source offset
+        for (unsigned int d = 0; d < op.dimensions; d++) {
+          const size_t dk = (d == 0 ? k : k % window->size[d - 1]) / window->size[d];
+          o += dk * acc_sizes_pred[d];
+        }
+        // full reduction in last dimension so iterate over it too
+        for (size_t ld = 0; ld < pred.shape[pred.dimensions - 1]; ld++) {
+          switch (op.op_type) {
+            case FPOOLING_SUM:
+              res += data[o + ld];
+              break;
+            case FPOOLING_MAX:
+              res = MAX_VAL(data[o + ld], res);
+            default: break;
+          }
+        }
+			}
+			result[i] = res;
+		}
+	} break;
 	default:
 		break;
 	}
