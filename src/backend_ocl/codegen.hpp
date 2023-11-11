@@ -1473,6 +1473,16 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
 		code += ", __constant int* steps, __constant long* shape0, __constant "
 				"long* shape1";
 	} break;
+	case FPOOLING_MAX:
+	case FPOOLING_SUM: {
+		code +=
+			", const __global " + typeString(parameter_types[0]) +
+			"* P0"
+			", const long num_entries0, const int dimensions0"
+			", __constant long* acc_sizes_pred, __constant long* "
+			"acc_sizes_kernel, __constant long* acc_sizes, __constant int* "
+			"steps, const long pred_last_shape, const long kernel_num_elems";
+	} break;
 	case FSLIDING_WINDOW: {
 		code += ", const __global " + typeString(parameter_types[0]) +
 				"* P0"
@@ -2009,6 +2019,39 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
 			" if (step <= 0) break;\n"
 			" a += step;\n"
 			"}\nR[index] = res;";
+		break;
+	case FPOOLING_MAX:
+	case FPOOLING_SUM:
+		code += "if(index >= num_entriesR) return;\n"
+				"long j = 0;\n"
+				"for(int d = 0; d < dimensions0 - 1; d++){\n"
+				" const long di = (d == 0 ? index : index%acc_sizes[d - 1]) / "
+				"acc_sizes[d];\n"
+				" j += di * steps[d] * acc_sizes_pred[d];\n"
+				"}\n" +
+				typeString(res_type) + " res = ";
+		if (operation == FPOOLING_SUM)
+			code += "0";
+		else
+			code += minForType(res_type);
+		code += ";\n"
+				"for(long k = 0; k < kernel_num_elems; k++){\n"
+				" int set_zero = false;\n"
+				" long o = 0;\n"
+				" for(int d = 0; d < dimensions0 - 1; d++){"
+				"  cont long dk = (d == 0 ? k : k%acc_sizes_kernel[d - 1]) / "
+				"acc_sizes_kernel[d];\n"
+				"  o += dk * acc_sizes_pred[d];\n"
+				" }"
+				" for(long ld = 0; ld < pred_last_shape; ld++){";
+		if (operation == FPOOLING_SUM) {
+			code += "  res += P0[j + o + ld];\n";
+		} else {
+			code += "  res = max(res, P0[j + o + ld]);\n";
+		}
+		code += " }\n"
+				"}\n"
+				"R[index] = res;\n";
 		break;
 	case FSLIDING_WINDOW:
 		code += "if(index >= num_entriesR) return;\n"

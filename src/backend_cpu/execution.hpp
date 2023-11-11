@@ -18,9 +18,11 @@
 #define CPU_BACKEND_EXECUTION
 #include "../../flint.h"
 #include "../utils.hpp"
+#include <climits>
 #include <cmath>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <ostream>
 #include <vector>
 #define MIN_VAL(x, y) x < y ? x : y
@@ -91,6 +93,14 @@ static void unaryExpression(T *__restrict__ result, const A *__restrict__ data,
 				j += di * window->step[d] * acc_sizes_pred[d];
 			}
 			T res = 0;
+			if (op.op_type == FPOOLING_MAX) {
+				if (std::is_same<T, int>())
+					res = -INT_MAX - 1;
+				else if (std::is_same<T, long>())
+					res = -LONG_MAX - 1;
+				else
+					res = std::numeric_limits<T>::lowest();
+			}
 			for (size_t k = 0; k < kernel_num_elems; k++) {
 				bool set_zero = false;
 				size_t o = 0; // source offset
