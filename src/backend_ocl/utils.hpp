@@ -12,7 +12,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-  This file includes methods to pass parameters to the kernels */
+  This file includes methods to pass parameters to the eager kernels */
 #include "../../flint.h"
 #include "src/errors.hpp"
 #include <CL/cl.h>
@@ -419,6 +419,39 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
 						 std::to_string(err_code));
 		to_free.push_back(steps_mem);
 	} break;
+	case FPOOLING_SUM:
+	case FPOOLING_MAX: {
+		const FOperation op = node->operation;
+		const FOperation pred = node->predecessors[0]->operation;
+		const FSlidingWindow *slidewin =
+			(FSlidingWindow *)node->operation.additional_data;
+		size_t kernel_num_elems = slidewin->size[op.dimensions - 1];
+		for (int d = op.dimensions - 2; d >= 0; d--)
+			kernel_num_elems *= slidewin->size[d];
+		to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape,
+											 kernel, context, par_index));
+		to_free.push_back(calcAndPushAccSize(op.dimensions, slidewin->size,
+											 kernel, context, par_index));
+		to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+											 context, par_index));
+		cl_mem steps = clCreateBuffer(
+			context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			pred.dimensions * sizeof(unsigned int), slidewin->step, &err_code);
+		if (!steps)
+			flogging(F_ERROR,
+					 "Could not load Argument to kernel! Error Code: " +
+						 std::to_string(err_code));
+		if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), &steps) !=
+			CL_SUCCESS)
+			flogging(F_ERROR, "Could not load Arguments to kernel!");
+		to_free.push_back(steps);
+		if (clSetKernelArg(kernel, par_index++, sizeof(long),
+						   &pred.shape[pred.dimensions - 1]) != CL_SUCCESS)
+			flogging(F_ERROR, "Could not load Arguments to kernel!");
+		if (clSetKernelArg(kernel, par_index++, sizeof(long),
+						   &kernel_num_elems) != CL_SUCCESS)
+			flogging(F_ERROR, "Could not load Arguments to kernel!");
+	} break;
 	default:
 		break;
 	}
@@ -431,6 +464,8 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
 	cl_int err_code;
 	FOperation op = pred->operation;
 	switch (node->operation.op_type) {
+	case FPOOLING_SUM:
+	case FPOOLING_MAX:
 	case FSET_INDEX:
 	case FINDEX:
 	case FMATMUL:

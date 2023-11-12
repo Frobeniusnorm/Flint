@@ -26,6 +26,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+// TODO split this file in eager and lazy
 static std::string
 generateCode(FGraphNode *node,
 			 std::list<std::pair<FGraphNode *, std::string>> &parameters) {
@@ -2039,7 +2040,7 @@ static std::string generateEagerCode(FOperationType operation, FType res_type,
 				" int set_zero = false;\n"
 				" long o = 0;\n"
 				" for(int d = 0; d < dimensions0 - 1; d++){"
-				"  cont long dk = (d == 0 ? k : k%acc_sizes_kernel[d - 1]) / "
+				"  const long dk = (d == 0 ? k : k%acc_sizes_kernel[d - 1]) / "
 				"acc_sizes_kernel[d];\n"
 				"  o += dk * acc_sizes_pred[d];\n"
 				" }"
