@@ -635,6 +635,81 @@ generateCode(FGraphNode *node,
 							  " = res;\n}\n";
 				code = slide_code + code;
 			} break;
+			case FPOOLING_SUM:
+			case FPOOLING_MAX: {
+				const FOperation op = node->operation;
+				const FGraphNode *gnp1 = node->predecessors[0];
+				const FOperation pred = gnp1->operation;
+				const FSlidingWindow *window =
+					(FSlidingWindow *)op.additional_data;
+				// calculate accumulated sizes for result, kernel and source
+				// (pred)
+				const std::vector<size_t> acc_sizes = calcAccSizes(op);
+				const std::vector<size_t> acc_sizes_pred = calcAccSizes(pred);
+				size_t kernel_num_elems = window->size[op.dimensions - 1];
+				std::vector<size_t> acc_sizes_kernel =
+					std::vector<size_t>(op.dimensions);
+				acc_sizes_kernel[op.dimensions - 1] = 1;
+				for (int d = op.dimensions - 2; d >= 0; d--) {
+					acc_sizes_kernel[d] =
+						acc_sizes_kernel[d + 1] * window->size[d + 1];
+					kernel_num_elems *= window->size[d];
+				}
+				const std::string base_ind =
+					"base_ind" + to_string(variable_index);
+				std::string pooling_code =
+					type + " " + name + " = " +
+					(op.op_type == FPOOLING_SUM ? "0"
+												: minForType(op.data_type)) +
+					";\nlong " + base_ind + " = 0";
+				for (int d = 0; d < op.dimensions; d++) {
+					pooling_code +=
+						"+" +
+						(d == 0
+							 ? "index"
+							 : "(index%" + to_string(acc_sizes[d - 1]) + ")") +
+						"/" + to_string(acc_sizes[d]) + " * " +
+						to_string(window->step[d] * acc_sizes_pred[d]);
+				}
+				const std::string k = "k" + to_string(variable_index);
+				const std::string o = "o" + to_string(variable_index);
+				pooling_code += ";\n"
+								"for(long " +
+								k + " = 0; " + k + " < " +
+								to_string(kernel_num_elems) + "; " + k +
+								"++){\n"
+								" long " +
+								o + " = 0";
+				for (int d = 0; d < op.dimensions; d++) {
+					pooling_code +=
+						"+" +
+						(d == 0
+							 ? k
+							 : "(" + k + "%" +
+								   to_string(acc_sizes_kernel[d - 1]) + ")") +
+						"/" + to_string(acc_sizes_kernel[d]) + "*" +
+						to_string(acc_sizes_pred[d]);
+				}
+				const std::string ld = "ld" + to_string(variable_index);
+				const unsigned int old_idx = num_indices++;
+				pooling_code += ";\n for(long " + ld + " = 0; " + ld + " < " +
+								to_string(pred.shape[pred.dimensions - 1]) +
+								"; " + ld +
+								"++){\n"
+								"  long old_idx" +
+								to_string(old_idx) +
+								" = index;\n"
+								"  index = " +
+								base_ind + "+" + o + "+" + ld + ";\n";
+				index_defs += pooling_code;
+				code = "  index = old_idx" + to_string(old_idx) + ";\n  " +
+					   name +
+					   (op.op_type == FPOOLING_SUM
+							? " += v" + to_string(variable_index + 1)
+							: " = max(" + name + ", v" +
+								  to_string(variable_index + 1) + ")") +
+					   ";\n }\n}" + code;
+			} break;
 			case FSLIDING_WINDOW: {
 				const FOperation pred = node->predecessors[0]->operation;
 				const FSlidingWindow *slidewin =
