@@ -102,7 +102,6 @@ static void unaryExpression(T *__restrict__ result, const A *__restrict__ data,
 					res = std::numeric_limits<T>::lowest();
 			}
 			for (size_t k = 0; k < kernel_num_elems; k++) {
-				bool set_zero = false;
 				size_t o = 0; // source offset
 				for (unsigned int d = 0; d < op.dimensions; d++) {
 					const size_t dk =
