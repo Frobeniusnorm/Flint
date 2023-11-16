@@ -303,19 +303,16 @@ template <typename T, unsigned int n> struct Tensor {
 			}
 		}
 		/**
-		 * Convenience Method that calls `execute` and returns the Tensor object
-		 * (the object is `moved`, no new node is created! Dont reuse the old
-		 * object! Intended to use like this
+		 * Convenience Method that calls `execute` and returns a lightweight
+		 * copy of the Tensor
 		 * @code{
 		 *  Tensor<float, 2> t = ...;
-		 *  t = t();
+		 *  std::cout << t() << std::endl;
 		 * }
-		 * if you don't override t and use the old value again after the `()`
-		 * call, a segmentation fault will occur!).
 		 */
 		Tensor<T, n> operator()() {
 			execute();
-			return std::move(*this);
+			return *this;
 		}
 		/**
 		 * Negates the elements of this Tensor.
@@ -1771,9 +1768,9 @@ template <typename T, unsigned int n> struct Tensor {
 		 * pooled, and the result is one dimension smaller then the original
 		 * tensor.
 		 */
-		Tensor<T, n - 1> pooling_max(std::array<size_t, n - 1> window_size,
-									 std::array<unsigned int, n - 1> step_size = {
-										 1}) const {
+		Tensor<T, n - 1>
+		pooling_max(std::array<size_t, n - 1> window_size,
+					std::array<unsigned int, n - 1> step_size = {1}) const {
 			FGraphNode *nn =
 				fpooling_max(node, window_size.data(), step_size.data());
 			std::array<size_t, n - 1> ns;

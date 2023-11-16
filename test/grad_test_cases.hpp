@@ -773,4 +773,30 @@ TEST_SUITE("Autodiff") {
 		CHECK_EQ((t3.equal(t4) - 1).reduce_sum()[0], 0);
 		CHECK_EQ(((g3 - g4).abs() > 0.0001).reduce_sum()[0], 0);
 	}
+	TEST_CASE("Pooling") {
+		GradientContext _;
+		Tensor<int, 3> x1{{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}},
+						  {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}},
+						  {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}},
+						  {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}};
+		x1.watch();
+		Tensor<double, 2> c1{{2, -1}, {1, 3}, {3, -2}};
+		Tensor<double, 2> y1 = x1.pooling_sum({2, 2}, {1, 1}).convert<double>();
+		std::cout << y1() << std::endl;
+		y1 = y1 * c1;
+		Tensor<double, 3> dx1 = y1.gradient(x1);
+		Tensor<double, 3> ex1 = Tensor<double, 3>{
+			{{2}, {1}, {-1}},
+			{{3}, {5}, {2}},
+			{{4}, {5}, {1}},
+			{{3}, {1}, {-2}}}.repeat(0, 0, 2);
+		std::cout << dx1() << std::endl;
+		for (int i = 0; i < ex1.get_shape()[0]; i++) {
+			for (int j = 0; j < ex1.get_shape()[1]; j++) {
+				for (int k = 0; k < ex1.get_shape()[2]; k++) {
+					CHECK_EQ(ex1[i][j][k], dx1[i][j][k]);
+				}
+			}
+		}
+	}
 }

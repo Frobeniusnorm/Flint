@@ -332,6 +332,7 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 		const unsigned int *steps =
 			(unsigned int *)y->operation.additional_data;
 		if (0 == dx_i) {
+			// TODO automate this
 			if (a->operation.dimensions != kernel->operation.dimensions) {
 				FGraphNode *res = fconstant_d(0.0, a->operation.shape,
 											  a->operation.dimensions);
@@ -435,6 +436,18 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 			return nullptr;
 		}
 	}
+	case FPOOLING_SUM: {
+		FGraphNode *a = y->predecessors[0];
+		if (0 == dx_i) {
+			const FSlidingWindow window =
+				*((FSlidingWindow *)y->operation.additional_data);
+			std::vector<size_t> window_size (window.size, window.size + y->operation.dimensions);
+			window_size.push_back(a->operation.shape[a->operation.dimensions - 1]);
+			FGraphNode *constant_1 = fconstant_d(1, window_size.data(), a->operation.dimensions);
+			return gradient_convolve1(a, constant_1, prev_adj, window.step);
+		} else
+			return nullptr;
+	} break;
 	case FPOW: {
 		FGraphNode *a = y->predecessors[0];
 		FGraphNode *b = y->predecessors[1];
