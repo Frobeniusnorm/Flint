@@ -782,7 +782,6 @@ TEST_SUITE("Autodiff") {
 		x1.watch();
 		Tensor<double, 2> c1{{2, -1}, {1, 3}, {3, -2}};
 		Tensor<double, 2> y1 = x1.pooling_sum({2, 2}, {1, 1}).convert<double>();
-		std::cout << y1() << std::endl;
 		y1 = y1 * c1;
 		Tensor<double, 3> dx1 = y1.gradient(x1);
 		Tensor<double, 3> ex1 = Tensor<double, 3>{

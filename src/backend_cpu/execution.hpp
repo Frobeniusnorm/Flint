@@ -255,7 +255,7 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 			if (in_steps)
 				while (k < kernel_num_elems) {
 					size_t i_conv = 0;
-					for (int d = 0; d < op.dimensions - 2; d++) {
+					for (int d = 0; d < a.dimensions - 1; d++) {
 						const size_t dk =
 							(d == 0 ? k : k % acc_sizes_kernel[d - 1]) /
 							acc_sizes_kernel[d];

@@ -441,9 +441,18 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 		if (0 == dx_i) {
 			const FSlidingWindow window =
 				*((FSlidingWindow *)y->operation.additional_data);
-			std::vector<size_t> window_size (window.size, window.size + y->operation.dimensions);
-			window_size.push_back(a->operation.shape[a->operation.dimensions - 1]);
-			FGraphNode *constant_1 = fconstant_d(1, window_size.data(), a->operation.dimensions);
+			std::vector<size_t> window_size(
+				window.size, window.size + y->operation.dimensions);
+			std::vector<unsigned int> steps(
+				window.step, window.step + y->operation.dimensions);
+			steps.push_back(
+				a->operation.shape[a->operation.dimensions - 1]);
+			FGraphNode *constant_1 =
+				fconstant_d(1, window_size.data(), a->operation.dimensions);
+			// TODO try using unslide
+			std::cout << printShape(a->operation.shape, a->operation.dimensions) << std::endl;
+			std::cout << printShape(prev_adj->operation.shape, prev_adj->operation.dimensions) << std::endl;
+			std::cout << printShape(constant_1->operation.shape, constant_1->operation.dimensions) << std::endl;
 			return gradient_convolve1(a, constant_1, prev_adj, window.step);
 		} else
 			return nullptr;
