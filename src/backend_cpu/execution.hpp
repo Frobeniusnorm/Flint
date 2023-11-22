@@ -225,7 +225,7 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 		const unsigned int *steps = (unsigned int *)op.additional_data;
 		// calculate accumulated sizes for result (pred), kernel and a
 		// (adjacent)
-		std::vector<size_t> acc_sizes(op.dimensions - 1);
+		std::vector<size_t> acc_sizes = calcAccSizes(a);
 		std::vector<size_t> acc_sizes_pred = calcAccSizes(op);
 		std::vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
 		acc_sizes[op.dimensions - 2] = 1;
@@ -237,60 +237,29 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 			kernel_num_elems *= kernel.shape[d];
 		for (long d = op.dimensions - 3; d >= 0; d--)
 			acc_sizes[d] = acc_sizes[d + 1] * a.shape[d + 1];
+		size_t overlapping = 1;
+		for (int i = 0; i < op.dimensions - 1; i++)
+			overlapping *= MAX_VAL(1, (long)op.shape[i] - (int)steps[i]);
 		for (size_t i = from; i < from + size; i++) {
 			T res = 0;
-			long k = 0;
-			bool in_steps = true;
-			// reproject first time kernel hits i
-			for (int d = op.dimensions - 1; d >= 0; d--) {
-				size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
-							acc_sizes_pred[d];
-				size_t dk = d == op.dimensions - 1 ? di : di % steps[d];
-				if (dk >= kernel.shape[d]) {
-					in_steps = false;
-					break;
+			bool in_steps = false;
+			// get base indices
+			int adji = 0;
+			int keri = 0;
+			for (int d = 0; d < a.dimensions - 1; d++) {
+				const size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) / acc_sizes_pred[d];
+				adji += (di / steps[d]) * acc_sizes[d];
+				const size_t dk = 
+				keri += (di % steps[d]) * acc_sizes_kernel[d];
+			}	
+			// iterate over overlapping windows = elements in a
+			for (int o = 0; o < overlapping; o++) {
+				// get value from adjoint
+				int adjo = 0;
+				for (int d = 0; d < a.dimensions; d++) {
+					
 				}
-				k += dk * acc_sizes_kernel[d];
 			}
-			if (in_steps)
-				while (k < kernel_num_elems) {
-					size_t i_conv = 0;
-					for (int d = 0; d < a.dimensions - 1; d++) {
-						const size_t dk =
-							(d == 0 ? k : k % acc_sizes_kernel[d - 1]) /
-							acc_sizes_kernel[d];
-						const size_t di =
-							(d == 0 ? i : i % acc_sizes_pred[d - 1]) /
-							acc_sizes_pred[d];
-						const size_t j =
-							(di - dk) / steps[d]; // top left corner
-						i_conv += j * acc_sizes[d];
-					}
-					if (i_conv < a_num_elems)
-						res += data1[k] * data2[i_conv];
-					long step = 0;
-					// reproject index to calculate step from steps
-					for (int d = op.dimensions - 2; d >= 0; d--) {
-						const int stepd = steps[d];
-						const size_t dk =
-							(d == 0 ? k : k % acc_sizes_kernel[d - 1]) /
-							acc_sizes_kernel[d];
-						const size_t di =
-							(d == 0 ? i : i % acc_sizes_pred[d - 1]) /
-							acc_sizes_pred[d];
-						if (dk + stepd < kernel.shape[d] && di >= dk + stepd) {
-							step += stepd * acc_sizes_kernel[d];
-							break;
-						} else {
-							step -= (dk - (di % stepd)) *
-									acc_sizes_kernel[d]; // set to kernel start
-														 // in this dimension
-						}
-					}
-					if (step <= 0)
-						break; // total overflow
-					k += step;
-				}
 			result[i] = res;
 		}
 	} break;
