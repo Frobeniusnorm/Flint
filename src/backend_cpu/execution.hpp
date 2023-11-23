@@ -237,9 +237,16 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 			kernel_num_elems *= kernel.shape[d];
 		for (long d = op.dimensions - 3; d >= 0; d--)
 			acc_sizes[d] = acc_sizes[d + 1] * a.shape[d + 1];
-		size_t overlapping = 1;
-		for (int i = 0; i < op.dimensions - 1; i++)
-			overlapping *= MAX_VAL(1, (long)op.shape[i] - (int)steps[i]);
+		std::vector<size_t> acc_overlapping(op.dimensions - 1);
+		acc_overlapping[acc_overlapping.size() - 1] = 1;
+		for (int i = 0; i < op.dimensions - 2; i++) {
+			acc_overlapping[i] =
+				MAX_VAL(1, (long)op.shape[i + 1] - (int)steps[i + 1]) *
+				acc_overlapping[i + 1];
+		}
+		const size_t overlapping =
+			acc_overlapping[0] * MAX_VAL(1, (long)op.shape[0] - (int)steps[0]);
+
 		for (size_t i = from; i < from + size; i++) {
 			T res = 0;
 			bool in_steps = false;
@@ -247,18 +254,28 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 			int adji = 0;
 			int keri = 0;
 			for (int d = 0; d < a.dimensions - 1; d++) {
-				const size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) / acc_sizes_pred[d];
+				const size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
+								  acc_sizes_pred[d];
 				adji += (di / steps[d]) * acc_sizes[d];
-				const size_t dk = 
-				keri += (di % steps[d]) * acc_sizes_kernel[d];
-			}	
+				const size_t dk = keri += (di % steps[d]) * acc_sizes_kernel[d];
+			}
 			// iterate over overlapping windows = elements in a
 			for (int o = 0; o < overlapping; o++) {
-				// get value from adjoint
+				// offsets
 				int adjo = 0;
+				int kero = 0;
 				for (int d = 0; d < a.dimensions; d++) {
-					
+					// for each index adji will point to the first window in
+					// that dimension calculate overlap in each dimension and
+					// add it to the adjacent offset
+					const size_t io =
+						(d == 0 ? o : o % acc_overlapping[d - 1]) /
+						acc_overlapping[d];
+					adjo += io * acc_sizes[d];
+					kero += io * (d == a.dimensions - 1 ? steps[d] : 1) *
+							acc_sizes_kernel[d];
 				}
+				res += data1[keri + kero] * data2[adji + adjo];
 			}
 			result[i] = res;
 		}
