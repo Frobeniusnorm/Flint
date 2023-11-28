@@ -235,6 +235,7 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 			a_num_elems *= a.shape[d];
 		for (long d = op.dimensions - 2; d >= 0; d--)
 			kernel_num_elems *= kernel.shape[d];
+		// accumulations of overlapping elements (kernel overlapping itself)
 		std::vector<size_t> acc_overlapping(op.dimensions - 1);
 		acc_overlapping[acc_overlapping.size() - 1] = 1;
 		for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
@@ -256,15 +257,13 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 			for (int d = 0; d < op.dimensions - 1; d++) {
 				const size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
 								  acc_sizes_pred[d];
-				const size_t window_span = MAX_VAL(steps[d], kernel.shape[d]);
-				const size_t wi = di / window_span;
-				std::cout << "dimension: " << d << " wi: " << wi << std::endl;
 				// get alignment of first hit of kernel with di
 				const size_t ki = di - (di / steps[d]) * steps[d];
 				if (ki >= kernel.shape[d]) {
 					in_steps = false;
 					break;
 				}
+				// first window for this index
 				const size_t wdf =
 					((std::max(0l, (long)di - (long)kernel.shape[d] + 1) /
 					  steps[d]));
@@ -293,7 +292,9 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 							(d == 0 ? o : o % acc_overlapping[d - 1]) /
 							acc_overlapping[d];
 						const size_t ao =
-							(d == 0 ? actual_overlapping : actual_overlapping % acc_overlapping[d - 1]) /
+							(d == 0 ? actual_overlapping
+									: actual_overlapping %
+										  acc_overlapping[d - 1]) /
 							acc_overlapping[d];
 						// check if kernel offset is feasible (the kernel we
 						// take the offset to is in bounds)
@@ -301,12 +302,13 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 							(d == 0 ? keri : keri % acc_sizes_kernel[d - 1]) /
 							acc_sizes_kernel[d];
 						if (di + kernel.shape[d] - (ki + io * steps[d]) >
-								op.shape[d] || di < ki + io * steps[d]) {
+							op.shape[d]) {
 							// those cases are no real windows
 							actual_overlapping--;
 							skip_kernel = true;
 							break;
-						} else if (ki + io * steps[d] >= kernel.shape[d]){
+						} else if (ki + io * steps[d] >= kernel.shape[d] ||
+								   di < ki + io * steps[d]) {
 							skip_kernel = true;
 							break;
 						}
@@ -317,7 +319,8 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 						std::cout << " + " << data1[keri + kero] << " (" << keri
 								  << " + " << kero << ") * "
 								  << data2[adjo + adji] << " (" << adjo << " + "
-								  << adji << ")";
+								  << adji << ", " << actual_overlapping << ", "
+								  << o << ")";
 						res += data1[keri + kero] * data2[adjo + adji];
 					}
 					actual_overlapping++;
