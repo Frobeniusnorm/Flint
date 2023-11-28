@@ -944,32 +944,6 @@ TEST_CASE("Multifilter Convolve") {
 			for (int k = 0; k < e1.get_shape()[0]; k++)
 				CHECK_EQ(r1[i][j][k], e1[i][j][k]);
 }
-TEST_CASE("Slide") {
-	Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
-						{{5, 6}, {7, 8}, {9, 0}},
-						{{1, 2}, {3, 4}, {5, 6}}};
-	Tensor<float, 3> k1{{{1, 1}, {2, 2}}};
-	Tensor<float, 3> r1 = t1.slide(k1);
-	CHECK_EQ(17, r1[0][0][0]);
-	CHECK_EQ(23, r1[0][0][1]);
-	CHECK_EQ(56, r1[0][1][0]);
-	CHECK_EQ(48, r1[0][1][1]);
-	Tensor<float, 3> t2{{{0}, {1}, {2}, {3}, {4}}, {{4}, {3}, {2}, {1}, {0}}};
-	Tensor<float, 3> k2{{{1}, {2}}};
-	Tensor<float, 3> r2 = t2.slide(k2, 1, 2);
-	CHECK_EQ(8, r2[0][0][0]);
-	CHECK_EQ(16, r2[0][1][0]);
-	// in context
-	Tensor<float, 3> t4{{{0}, {1}}};
-	Tensor<double, 3> k4{{{1}, {0}, {1}, {0}}};
-	Tensor<double, 2> r4 =
-		((t4 + 1).repeat(1, 1, 1).slide(k4.pow(2).repeat(0, 0, 1)) + 1)
-			.reduce_sum(2);
-	CHECK_EQ(6, r4[0][0]);
-	CHECK_EQ(2, r4[0][1]);
-	CHECK_EQ(6, r4[0][2]);
-	CHECK_EQ(2, r4[0][3]);
-}
 TEST_CASE("Total Reduce") {
 	Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
 	Tensor<float, 1> r1 = t1.flattened().reduce_sum();

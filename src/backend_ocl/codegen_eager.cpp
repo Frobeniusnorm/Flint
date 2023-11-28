@@ -142,17 +142,6 @@ std::string generateEagerCode(FOperationType operation, FType res_type,
 				"const long shape_ax, const long a_shape_ax, const long "
 				"b_shape_ax, const int ax";
 	} break;
-	case FSLIDE: {
-		// acc_sizes, acc_sizes_pred, acc_sizes_kernel, steps
-		code += ", const __global " + typeString(parameter_types[0]) + "* P0";
-		code += ", const long num_entries0, const int dimensions0";
-		code += ", const __global " + typeString(parameter_types[1]) + "* P1";
-		code += ", const long num_entries1, const int dimensions1";
-		code += ", __constant long* acc_sizes_pred, "
-				"__constant long* acc_sizes_kernel";
-		code += ", __constant int* steps, __constant long* shape0, __constant "
-				"long* shape1";
-	} break;
 	case FPOOLING_MAX:
 	case FPOOLING_SUM: {
 		code +=
@@ -671,34 +660,6 @@ std::string generateEagerCode(FOperationType operation, FType res_type,
 			"  k += step;\n"
 			" }\n"
 			"R[index] = res;";
-		break;
-	case FSLIDE:
-		code +=
-			"if(index >= num_entriesR) return;\n"
-			"long a = 0;\n"
-			"for(int d = dimensions1 - 1; d >= 0; d--){\n"
-			" long di = (d == 0 ? index : index % acc_sizes_kernel[d - 1]) / "
-			"acc_sizes_kernel[d];\n"
-			" a += di * acc_sizes_pred[d];\n}\n" +
-			typeString(res_type) +
-			" res = 0;\n"
-			"while(a < num_entries0){\n"
-			" long step = 0;\n"
-			" res += P0[a] * P1[index];\n"
-			" for(int d = dimensions0 - 2; d >= 0; d--){\n"
-			"  long da = (d == 0 ? a : a % acc_sizes_pred[d-1]) / "
-			"acc_sizes_pred[d];\n"
-			"  long di = (d == 0 ? index : index % acc_sizes_kernel[d - 1]) / "
-			"acc_sizes_kernel[d];\n"
-			"  if(da + (shape1[d] - di - 1) + steps[d] < shape0[d]){\n"
-			"   step += steps[d] * acc_sizes_pred[d];\n"
-			"   break;\n  }else{\n"
-			"   long di = (d == 0 ? index : index % acc_sizes_kernel[d - 1]) / "
-			"acc_sizes_kernel[d];\n"
-			"   step -= (da - di) * acc_sizes_pred[d];\n  }\n }\n"
-			" if (step <= 0) break;\n"
-			" a += step;\n"
-			"}\nR[index] = res;";
 		break;
 	case FPOOLING_MAX:
 	case FPOOLING_SUM:

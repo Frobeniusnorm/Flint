@@ -25,8 +25,8 @@
 #include <limits>
 #include <ostream>
 #include <vector>
-#define MIN_VAL(x, y) x < y ? x : y
-#define MAX_VAL(x, y) x < y ? y : x
+#define MIN_VAL(x, y) (x < y ? x : y)
+#define MAX_VAL(x, y) (x < y ? y : x)
 // TODO capability to lazily compute some operations
 // use generators for that and overload CPUResultDatas capabilities.
 // e.g. transpose saves a overloaded Generator struct whith all the relevant
@@ -235,48 +235,95 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 			a_num_elems *= a.shape[d];
 		for (long d = op.dimensions - 2; d >= 0; d--)
 			kernel_num_elems *= kernel.shape[d];
-		for (long d = op.dimensions - 3; d >= 0; d--)
-			acc_sizes[d] = acc_sizes[d + 1] * a.shape[d + 1];
 		std::vector<size_t> acc_overlapping(op.dimensions - 1);
 		acc_overlapping[acc_overlapping.size() - 1] = 1;
-		for (int i = 0; i < op.dimensions - 2; i++) {
+		for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
 			acc_overlapping[i] =
-				MAX_VAL(1, (long)op.shape[i + 1] - (int)steps[i + 1]) *
+				MAX_VAL(1, (long)std::ceil((double)kernel.shape[i + 1] /
+										   (double)steps[i + 1])) *
 				acc_overlapping[i + 1];
 		}
 		const size_t overlapping =
-			acc_overlapping[0] * MAX_VAL(1, (long)op.shape[0] - (int)steps[0]);
-
+			MAX_VAL(1, (long)std::ceil((double)kernel.shape[0] /
+									   (double)steps[0])) *
+			acc_overlapping[0];
 		for (size_t i = from; i < from + size; i++) {
 			T res = 0;
-			bool in_steps = false;
+			bool in_steps = true;
 			// get base indices
-			int adji = 0;
-			int keri = 0;
-			for (int d = 0; d < a.dimensions - 1; d++) {
+			size_t keri = 0;
+			size_t adji = 0;
+			for (int d = 0; d < op.dimensions - 1; d++) {
 				const size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
 								  acc_sizes_pred[d];
-				adji += (di / steps[d]) * acc_sizes[d];
-				const size_t dk = keri += (di % steps[d]) * acc_sizes_kernel[d];
-			}
-			// iterate over overlapping windows = elements in a
-			for (int o = 0; o < overlapping; o++) {
-				// offsets
-				int adjo = 0;
-				int kero = 0;
-				for (int d = 0; d < a.dimensions; d++) {
-					// for each index adji will point to the first window in
-					// that dimension calculate overlap in each dimension and
-					// add it to the adjacent offset
-					const size_t io =
-						(d == 0 ? o : o % acc_overlapping[d - 1]) /
-						acc_overlapping[d];
-					adjo += io * acc_sizes[d];
-					kero += io * (d == a.dimensions - 1 ? steps[d] : 1) *
-							acc_sizes_kernel[d];
+				const size_t window_span = MAX_VAL(steps[d], kernel.shape[d]);
+				const size_t wi = di / window_span;
+				std::cout << "dimension: " << d << " wi: " << wi << std::endl;
+				// get alignment of first hit of kernel with di
+				const size_t ki = di - (di / steps[d]) * steps[d];
+				if (ki >= kernel.shape[d]) {
+					in_steps = false;
+					break;
 				}
-				res += data1[keri + kero] * data2[adji + adjo];
+				const size_t wdf =
+					((std::max(0l, (long)di - (long)kernel.shape[d] + 1) /
+					  steps[d]));
+				keri += ki * acc_sizes_kernel[d];
+				adji += wdf * acc_sizes[d];
 			}
+			std::cout << i << " = 0";
+			if (in_steps) {
+				// kernel offset for last index
+				keri += i % op.shape[op.dimensions - 1];
+				size_t actual_overlapping = 0;
+				// iterate over overlapping windows = elements in a
+				for (size_t o = 0; o < overlapping; o++) {
+					// offsets
+					size_t adjo = 0;
+					size_t kero = 0;
+					bool skip_kernel = false;
+					for (int d = 0; d < op.dimensions - 1; d++) {
+						// for each index adji will point to the first window in
+						// that dimension calculate overlap in each dimension
+						// and add it to the adjacent offset
+						const size_t di =
+							(d == 0 ? i : i % acc_sizes_pred[d - 1]) /
+							acc_sizes_pred[d];
+						const size_t io =
+							(d == 0 ? o : o % acc_overlapping[d - 1]) /
+							acc_overlapping[d];
+						const size_t ao =
+							(d == 0 ? actual_overlapping : actual_overlapping % acc_overlapping[d - 1]) /
+							acc_overlapping[d];
+						// check if kernel offset is feasible (the kernel we
+						// take the offset to is in bounds)
+						const size_t ki =
+							(d == 0 ? keri : keri % acc_sizes_kernel[d - 1]) /
+							acc_sizes_kernel[d];
+						if (di + kernel.shape[d] - (ki + io * steps[d]) >
+								op.shape[d] || di < ki + io * steps[d]) {
+							// those cases are no real windows
+							actual_overlapping--;
+							skip_kernel = true;
+							break;
+						} else if (ki + io * steps[d] >= kernel.shape[d]){
+							skip_kernel = true;
+							break;
+						}
+						adjo += ao * acc_sizes[d];
+						kero += io * steps[d] * acc_sizes_kernel[d];
+					}
+					if (!skip_kernel) {
+						std::cout << " + " << data1[keri + kero] << " (" << keri
+								  << " + " << kero << ") * "
+								  << data2[adjo + adji] << " (" << adjo << " + "
+								  << adji << ")";
+						res += data1[keri + kero] * data2[adjo + adji];
+					}
+					actual_overlapping++;
+				}
+			}
+			std::cout << std::endl;
 			result[i] = res;
 		}
 	} break;
@@ -415,53 +462,6 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 				}
 				result[i] += data1[a + a_offset] * data2[w * num_filter + f];
 			}
-		}
-	} break;
-	case FSLIDE: {
-		const FOperation op = curr->operation;
-		const FGraphNode *gnp1 = curr->predecessors[0],
-						 *gnp2 = curr->predecessors[1];
-		const FOperation pred = gnp1->operation, kernel = gnp2->operation;
-		std::vector<size_t> acc_sizes_pred = calcAccSizes(pred);
-		std::vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
-		size_t pred_num_elems = pred.shape[pred.dimensions - 1];
-		for (long d = pred.dimensions - 2; d >= 0; d--)
-			pred_num_elems *= pred.shape[d];
-		const unsigned int *steps = (unsigned int *)op.additional_data;
-		for (size_t i = from; i < from + size; i++) {
-			size_t a = 0;
-			size_t dis[kernel.dimensions];
-			// reproject start
-			for (int d = kernel.dimensions - 1; d >= 0; d--) {
-				dis[d] = (d == 0 ? i : i % acc_sizes_kernel[d - 1]) /
-						 acc_sizes_kernel[d];
-				a += dis[d] * acc_sizes_pred[d];
-			}
-			T res = 0;
-			// we want to iterate over all elements it would be slid against
-			while (a < pred_num_elems) {
-				long step = 0;
-				res += data1[a] * data2[i];
-				// reproject index to calculate step from steps
-				for (int d = pred.dimensions - 2; d >= 0; d--) {
-					// index in this dimension
-					size_t da = (d == 0 ? a : a % acc_sizes_pred[d - 1]) /
-								acc_sizes_pred[d];
-					if (da + (kernel.shape[d] - dis[d] - 1) + steps[d] <
-						pred.shape[d]) {
-						step += steps[d] * acc_sizes_pred[d];
-						break;
-					} else {
-						step -= (da - dis[d]) *
-								acc_sizes_pred[d]; // set to kernel start in
-												   // this dimension
-					}
-				}
-				if (step <= 0)
-					break; // total overflow
-				a += step;
-			}
-			result[i] = res;
 		}
 	} break;
 	case FINDEX: {

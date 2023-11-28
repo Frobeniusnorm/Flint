@@ -248,7 +248,6 @@ enum FOperationType {
 	FEQUAL,
 	FGREATER,
 	FCONVOLVE,
-	FSLIDE,
 	FGRADIENT_CONVOLVE1, // only for internal use!
 	FGRADIENT_CONVOLVE2, // only for internal use!
 	FINDEX,
@@ -971,24 +970,6 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
  */
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
 					  const unsigned int *steps);
-/**
- * Slides `kernel` along `a`, multiplying it with the elements of `a` it is slid
- * over. For each element all multiplied values are summed up, so that the
- * result has the same shape as `kernel` (every element in the result is the
- * accumulated sum of the product of that element with all elements it was slid
- * over). `kernel` is initially placed so that the first element of `a` and
- * the first element of `kernel` overlap. It is then moved for each dimension
- * `i` by `steps[i]` elements forward except for the last (steps should have 1
- * dimension less then `a` and `kernel`), just like it would be by `fconvolve`
- * with the difference, that everything is accumulated for the kernel instead of
- * the original node.
- *
- * The last dimension of `a` and `kernel` should be equal, therefor it has no
- * step in that dimension since the complete kernel is multiplied in that
- * dimension.
- */
-FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel,
-				   const unsigned int *steps);
 /**
  * Selects single elements with a index-tensor (integer tensor containing
  * indices for the selected dimension).

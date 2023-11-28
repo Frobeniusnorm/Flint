@@ -358,7 +358,7 @@ TEST_SUITE("Autodiff") {
 		for (int j = 0; j < 3; j++)
 			CHECK_EQ(Approx(res[j]).epsilon(0.001), dy[j]);
 	}
-	TEST_CASE("CONVOLVE") {
+	TEST_CASE("Convolve") {
 		GradientContext _;
 		Tensor<int, 3> x{{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}, {0, 0, 0}},
 						 {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}, {0, 0, 0}},
@@ -438,24 +438,25 @@ TEST_SUITE("Autodiff") {
 		w.watch();
 		Tensor<double, 3> z = w.convolve(f, 1, 2, 2);
 		Tensor<double, 4> dw = z.gradient(w);
-		CHECK_EQ(3, dw[0][0][0][0]);
-		CHECK_EQ(2, dw[0][0][0][1]);
-		CHECK_EQ(1, dw[0][0][0][2]);
-		CHECK_EQ(-1, dw[0][0][1][0]);
-		CHECK_EQ(1, dw[0][0][1][1]);
-		CHECK_EQ(-1, dw[0][0][1][2]);
+		using doctest::Approx;
+		CHECK_EQ(Approx(3).epsilon(0.000001), dw[0][0][0][0]);
+		CHECK_EQ(Approx(2).epsilon(0.000001), dw[0][0][0][1]);
+		CHECK_EQ(Approx(1).epsilon(0.000001), dw[0][0][0][2]);
+		CHECK_EQ(Approx(-1).epsilon(0.000001), dw[0][0][1][0]);
+		CHECK_EQ(Approx(1).epsilon(0.000001), dw[0][0][1][1]);
+		CHECK_EQ(Approx(-1).epsilon(0.000001), dw[0][0][1][2]);
 		CHECK_EQ(0, dw[0][1][0][0]);
 		CHECK_EQ(0, dw[0][1][0][1]);
 		CHECK_EQ(0, dw[0][1][0][2]);
 		CHECK_EQ(0, dw[0][1][1][0]);
 		CHECK_EQ(0, dw[0][1][1][1]);
 		CHECK_EQ(0, dw[0][1][1][2]);
-		CHECK_EQ(3, dw[1][0][0][0]);
-		CHECK_EQ(2, dw[1][0][0][1]);
-		CHECK_EQ(1, dw[1][0][0][2]);
-		CHECK_EQ(-1, dw[1][0][1][0]);
-		CHECK_EQ(1, dw[1][0][1][1]);
-		CHECK_EQ(-1, dw[1][0][1][2]);
+		CHECK_EQ(Approx(3).epsilon(0.000001), dw[1][0][0][0]);
+		CHECK_EQ(Approx(2).epsilon(0.000001), dw[1][0][0][1]);
+		CHECK_EQ(Approx(1).epsilon(0.000001), dw[1][0][0][2]);
+		CHECK_EQ(Approx(-1).epsilon(0.000001), dw[1][0][1][0]);
+		CHECK_EQ(Approx(1).epsilon(0.000001), dw[1][0][1][1]);
+		CHECK_EQ(Approx(-1).epsilon(0.000001), dw[1][0][1][2]);
 		CHECK_EQ(0, dw[1][1][0][0]);
 		CHECK_EQ(0, dw[1][1][0][1]);
 		CHECK_EQ(0, dw[1][1][0][2]);
@@ -471,42 +472,17 @@ TEST_SUITE("Autodiff") {
 		CHECK_EQ(-1, da[0][1][0]);
 		CHECK_EQ(3, da[0][2][0]);
 		CHECK_EQ(1, da[0][3][0]);
-		CHECK_EQ(3, da[0][4][0]);
-		CHECK_EQ(1, da[0][5][0]);
+		CHECK_EQ(2, da[0][4][0]);
+		CHECK_EQ(2, da[0][5][0]);
 		CHECK_EQ(2, da[1][0][0]);
 		CHECK_EQ(3, da[1][1][0]);
 		CHECK_EQ(1, da[1][2][0]);
 		CHECK_EQ(7, da[1][3][0]);
-		CHECK_EQ(1, da[1][4][0]);
-		CHECK_EQ(7, da[1][5][0]);
+		CHECK_EQ(-1, da[1][4][0]);
+		CHECK_EQ(4, da[1][5][0]);
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 6; j++)
 				CHECK_EQ(0, da[2 + i][j][0]);
-
-		Tensor<int, 3> s1 = x.slide(k, 1, 2);
-		FGraphNode *dxs[] = {k.get_graph_node(), x.get_graph_node()};
-		FGraphNode *grads[2];
-		fCalculateGradients(s1.get_graph_node(), &dxs[0], 2, &grads[0]);
-		dk = Tensor<double, 3>(grads[0], dk.get_shape());
-		CHECK_EQ(s1[0][0][0], dk[0][0][0]);
-		CHECK_EQ(s1[0][0][1], dk[0][0][1]);
-		CHECK_EQ(s1[0][0][2], dk[0][0][2]);
-		CHECK_EQ(10, dk[1][0][0]);
-		CHECK_EQ(12, dk[1][0][2]);
-		CHECK_EQ(s1[1][1][0], dk[1][1][0]);
-		CHECK_EQ(s1[1][1][1], dk[1][1][1]);
-		CHECK_EQ(s1[1][1][2], dk[1][1][2]);
-		dx = Tensor<double, 3>(grads[1], x.get_shape());
-		for (int i = 0; i < 3; i++) {
-			CHECK_EQ(1, dx[0][0][i]);
-			CHECK_EQ(2, dx[0][1][i]);
-			CHECK_EQ(1, dx[0][2][i]);
-			for (int j = 1; j < 4; j++) {
-				CHECK_EQ(-2, dx[j][0][i]);
-				CHECK_EQ(3, dx[j][1][i]);
-				CHECK_EQ(-2, dx[j][2][i]);
-			}
-		}
 	}
 	TEST_CASE("Multifilter Convolve") {
 		GradientContext _;

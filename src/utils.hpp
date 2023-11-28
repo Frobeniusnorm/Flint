@@ -86,7 +86,6 @@ static inline int operationScore(const FGraphNode *g) {
 		const FGraphNode *a = g->predecessors[0];
 		return 5 * a->operation.shape[a->operation.dimensions - 1];
 	}
-	case FGRADIENT_CONVOLVE1:
 	case FCONVOLVE: {
 		// multiply with complete kernel size
 		size_t no_elems = 1;
@@ -95,17 +94,6 @@ static inline int operationScore(const FGraphNode *g) {
 			no_elems *= a->operation.shape[i];
 		}
 		return std::max(1, (int)(100 - 0.001 * no_elems * no_elems));
-	}
-	case FSLIDE: {
-		// no multiplication with complete source, since that would artificially
-		// distort parallelization
-		size_t no_elems = 1;
-		unsigned int *stepsize = (unsigned int *)g->operation.additional_data;
-		const FGraphNode *a = g->predecessors[0];
-		for (int i = 0; i < a->operation.dimensions; i++)
-			no_elems *= a->operation.shape[i] /
-						(i != a->operation.dimensions - 1 ? stepsize[i] : 1);
-		return (int)std::sqrt(no_elems);
 	}
 	case FSLICE: {
 		size_t sliced_away = 1;
@@ -292,7 +280,6 @@ inline void freeAdditionalData(FGraphNode *gn) {
 	case FGEN_CONSTANT:
 	case FCONCAT:
 	case FCONVOLVE:
-	case FSLIDE:
 	case FGRADIENT_CONVOLVE1:
 	case FGRADIENT_CONVOLVE2:
 	case FTRANSPOSE:
