@@ -8,8 +8,8 @@
 #include <unordered_set>
 
 std::string generateEagerCode(FOperationType operation, FType res_type,
-									 std::vector<FType> parameter_types,
-									 std::string &kernel_name) {
+							  std::vector<FType> parameter_types,
+							  std::string &kernel_name) {
 	using namespace std;
 	std::string type_info = to_string(res_type);
 	for (FType t : parameter_types)
@@ -104,14 +104,16 @@ std::string generateEagerCode(FOperationType operation, FType res_type,
 	case FGRADIENT_CONVOLVE1: {
 		code +=
 			", const __global " + typeString(parameter_types[0]) +
-			"* P1"
-			", const long num_entries1, const int dimensions1, const __global "
-			"double* P2, const long num_entries2, const int dimensions2"
-			", const int dimensions0"
+			"* P0"
+			", const long num_entries1, const int dimensions1, const "
+			"__global " +
+			typeString(parameter_types[1]) +
+			"* P1, const long num_entries2, const int dimensions2"
 			", __constant long* acc_sizes_pred, "
 			"__constant long* acc_sizes_kernel"
-			", __constant long* acc_sizes"
-			", __constant int* steps, __constant long* shape1";
+			", __constant long* acc_sizes, __constant long* acc_overlapping"
+			", __constant int* steps, __constant long* op_shape, __constant "
+			"long* kernel_shape";
 	} break;
 	case FGRADIENT_CONVOLVE2: {
 		code +=
@@ -617,49 +619,62 @@ std::string generateEagerCode(FOperationType operation, FType res_type,
 	case FGRADIENT_CONVOLVE1:
 		code +=
 			"if(index >= num_entriesR) return;\n"
-			"long k = 0;\n"
-			"int in_steps = 1;\n"
-			"for(int d = dimensions0 - 1; d >= 0; d--){\n"
-			" long di = (d == 0 ? index : index % acc_sizes_pred[d - 1]) / "
-			"acc_sizes_pred[d];\n"
-			" long dk = d == dimensions0 - 1 ? di : di % steps[d];\n"
-			" if(dk >= shape1[d]){\n"
-			"  in_steps = 0;\n"
-			"  break;\n"
-			" }\n"
-			" k += dk * acc_sizes_kernel[d];\n"
-			"}\n" +
+			"const long overlapping = max(1l, (long)ceil(kernel_shape[0] / "
+			"steps[0]));\n" +
 			typeString(res_type) +
 			" res = 0;\n"
-			"if(in_steps)\n"
-			" while(k < num_entries1){\n"
-			"  long i_conv = 0;\n"
-			"  for(int d = 0; d < dimensions0 - 2; d++){\n"
-			"   long dk = (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / "
-			"acc_sizes_kernel[d];\n"
-			"   long di = (d == 0 ? index : index % acc_sizes_pred[d - 1]) / "
+			"int in_steps = true;\n"
+			"int started_counting = false;\n"
+			"long keri = 0;\n"
+			"long adji = 0;\n"
+			"for(int d = 0; d < dimensions1; d++){\n"
+			" const long di = (d == 0 ? index : index % acc_sizes_pred[d-1]) / "
 			"acc_sizes_pred[d];\n"
-			"   i_conv += ((di - dk) / steps[d]) * acc_sizes[d];\n"
-			"  }\n"
-			"  if (i_conv < num_entries2)\n"
-			"   res += P1[k] * P2[i_conv];\n"
-			"  long step = 0;\n"
-			"  for(int d = dimensions0 - 2; d >= 0; d--) {\n"
-			"   long dk = (d == 0 ? k : k % acc_sizes_kernel[d - 1]) / "
-			"acc_sizes_kernel[d];\n"
-			"   long di = (d == 0 ? index : index % acc_sizes_pred[d - 1]) / "
-			"acc_sizes_pred[d];\n"
-			"   if(dk + steps[d] < shape1[d] && di >= dk + steps[d]){\n"
-			"    step += steps[d] * acc_sizes_kernel[d];\n"
-			"    break;\n"
-			"   }else{\n"
-			"    step -= (dk - (di % steps[d])) * acc_sizes_kernel[d];\n"
-			"   }\n"
-			"  }\n"
-			"  if(step <= 0) break;\n"
-			"  k += step;\n"
+			" const long ki = di - (di / steps[d]) * steps[d];\n"
+			" if(ki >= kernel_shape[d]){\n"
+			"  in_steps = false;\n"
+			"  break;\n"
 			" }\n"
-			"R[index] = res;";
+			" const long wdf = (long)ceil(max(0l, di - kernel_shape[d] + 1) / "
+			"(double)steps[d]);\n"
+			" keri += ki * acc_sizes_kernel[d];\n"
+			" adji += wdf * acc_sizes[d];\n"
+			"}\n"
+			"if(in_steps){\n"
+			" keri += index % op_shape[dimensions1];\n"
+			" long actual_overlapping = 0;\n"
+			" for(long o = 0; o < overlapping; o++){\n"
+			"  long adjo = 0;\n"
+			"  long kero = 0;\n"
+			"  int skip_kernel = false;\n"
+			"  for(int d = 0; d < dimensions1; d++){\n"
+			"   const long di = (d == 0 ? index : index % acc_sizes_pred[d-1]) "
+			"/ acc_sizes_pred[d];\n"
+			"   const long io = (d == 0 ? o : o % acc_overlapping[d-1]) / "
+			"acc_overlapping[d];\n"
+			"   const long ao = (d == 0 ? actual_overlapping : "
+			"actual_overlapping % acc_overlapping[d-1]) / acc_overlapping[d];\n"
+			"   const long ki = (d == 0 ? keri : keri % acc_sizes_kernel[d-1]) "
+			"/ acc_sizes_kernel[d];\n"
+			"   if(di+kernel_shape[d]-(ki+io*steps[d]) > op_shape[d]){\n"
+			"    if(!started_counting) actual_overlapping--;\n"
+			"    skip_kernel = true;\n"
+			"    break;\n"
+			"   }else if(ki+io*steps[d] >= kernel_shape[d] || di < "
+			"ki+io*steps[d]){\n"
+			"    skip_kernel = true;\n"
+			"    break;\n"
+			"   }\n"
+			"   adjo += ao * acc_sizes[d];\n"
+			"   kero += io * steps[d] * acc_sizes_kernel[d];\n"
+			"  }\n"
+			"  if(!skip_kernel){\n"
+			"   started_counting = true;\n"
+			"   res+=P0[kero+keri]*P1[adjo+adji];\n"
+			"  }\n"
+			" }\n"
+			" R[index] = res;\n"
+			"}\n";
 		break;
 	case FPOOLING_MAX:
 	case FPOOLING_SUM:

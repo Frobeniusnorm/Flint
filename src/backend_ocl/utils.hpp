@@ -299,72 +299,9 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
 		}
 	} break;
 	case FGRADIENT_CONVOLVE1: {
-		const FOperation op = node->operation;
-		const FGraphNode *gnp1 = node->predecessors[0],
-						 *gnp2 = node->predecessors[1];
-		FOperation pred;
-		FOperation kernel_par;
-		FOperation adjoint;
-			pred = op;
-			kernel_par = gnp1->operation;
-			adjoint = gnp2->operation;
-			// dimensions0
-			if (clSetKernelArg(kernel, par_index++, sizeof(int),
-							   (void *)&node->operation.dimensions) !=
-				CL_SUCCESS) {
-				setErrorType(OCL_ERROR);
-				flogging(F_ERROR, "Could not load Argument to kernel!");
-				return;
-			}
-		unsigned int *steps = (unsigned int *)op.additional_data;
-		// allocate steps
-		cl_mem steps_mem =
-			clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-						   op.dimensions * sizeof(int), steps, &err_code);
-		if (!steps_mem)
-			flogging(F_ERROR,
-					 "Could not load Argument to kernel! Error Code: " +
-						 std::to_string(err_code));
-		to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape,
-											 kernel, context, par_index));
-		to_free.push_back(calcAndPushAccSize(kernel_par.dimensions,
-											 kernel_par.shape, kernel, context,
-											 par_index));
-			std::vector<size_t> acc_sizes(pred.dimensions - 1);
-			acc_sizes[op.dimensions - 2] = 1;
-			for (long d = op.dimensions - 3; d >= 0; d--)
-				acc_sizes[d] = acc_sizes[d + 1] * adjoint.shape[d + 1];
-
-			cl_mem acc_shape = clCreateBuffer(
-				context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				acc_sizes.size() * sizeof(long), acc_sizes.data(), &err_code);
-			if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-							   (void *)&acc_shape) != CL_SUCCESS)
-				flogging(F_ERROR,
-						 "Could not load Argument to kernel! Error Code: " +
-							 std::to_string(err_code));
-			to_free.push_back(acc_shape);
-		if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-						   (void *)&steps_mem) != CL_SUCCESS)
-			flogging(F_ERROR,
-					 "Could not load Argument to kernel! Error Code: " +
-						 std::to_string(err_code));
-		const FOperation shape_par = kernel_par;
-		const FOperation shape2_par = pred;
-		cl_mem shape_mem = clCreateBuffer(
-			context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			shape_par.dimensions * sizeof(long), shape_par.shape, &err_code);
-		if (!shape_mem)
-			flogging(F_ERROR,
-					 "Could not load Argument to kernel! Error Code: " +
-						 std::to_string(err_code));
-		if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-						   (void *)&shape_mem) != CL_SUCCESS)
-			flogging(F_ERROR,
-					 "Could not load Argument to kernel! Error Code: " +
-						 std::to_string(err_code));
-		to_free.push_back(steps_mem);
-		to_free.push_back(shape_mem);
+		// TODO
+		// acc_sizes_pred, acc_sizes_kernel, acc_sizes, acc_overlapping, steps,
+		// op_shape, kernel_shape
 	} break;
 	case FCONVOLVE: {
 		const FOperation op = node->operation;
@@ -445,7 +382,6 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
 	case FINDEX:
 	case FMATMUL:
 	case FGRADIENT_CONVOLVE2:
-	case FGRADIENT_CONVOLVE1:
 	case FCONVOLVE: {
 		if (clSetKernelArg(kernel, par_index++, sizeof(int),
 						   (void *)&op.dimensions) != CL_SUCCESS) {
