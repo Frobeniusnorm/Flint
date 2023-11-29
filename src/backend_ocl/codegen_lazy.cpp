@@ -238,115 +238,126 @@ generateCode(FGraphNode *node,
 				}
 				const FOperation op = node->operation;
 				const FOperation kernel = gnp1->operation, a = gnp2->operation;
-				unsigned int *steps = (unsigned int *)op.additional_data;
-				vector<size_t> acc_sizes(op.dimensions - 1);
-				vector<size_t> acc_sizes_pred(op.dimensions);
-				vector<size_t> acc_sizes_kernel(op.dimensions);
-				acc_sizes_kernel[acc_sizes_pred.size() - 1] = 1;
-				acc_sizes_pred[acc_sizes_pred.size() - 1] = 1;
+				const unsigned int *steps = (unsigned int *)op.additional_data;
+				// calculate accumulated sizes for result (pred), kernel and a
+				// (adjacent)
+				std::vector<size_t> acc_sizes = calcAccSizes(a);
+				std::vector<size_t> acc_sizes_pred = calcAccSizes(op);
+				std::vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
 				acc_sizes[op.dimensions - 2] = 1;
-				size_t kernel_num_elems =
-					kernel.shape[acc_sizes_kernel.size() - 1];
+				size_t kernel_num_elems = kernel.shape[op.dimensions - 1];
 				size_t a_num_elems = 1;
 				for (long d = a.dimensions - 1; d >= 0; d--)
 					a_num_elems *= a.shape[d];
-				for (long d = acc_sizes_pred.size() - 2; d >= 0; d--) {
+				for (long d = op.dimensions - 2; d >= 0; d--)
 					kernel_num_elems *= kernel.shape[d];
-					acc_sizes_kernel[d] =
-						acc_sizes_kernel[d + 1] * kernel.shape[d + 1];
-					acc_sizes_pred[d] = acc_sizes_pred[d + 1] * op.shape[d + 1];
+				// accumulations of overlapping elements (kernel overlapping
+				// itself)
+				std::vector<size_t> acc_overlapping(op.dimensions - 1);
+				acc_overlapping[acc_overlapping.size() - 1] = 1;
+				for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
+					acc_overlapping[i] =
+						std::max(1l,
+								 (long)std::ceil((double)kernel.shape[i + 1] /
+												 (double)steps[i + 1])) *
+						acc_overlapping[i + 1];
 				}
-				for (long d = op.dimensions - 3; d >= 0; d--)
-					acc_sizes[d] = acc_sizes[d + 1] * a.shape[d + 1];
-
-				string conv_code = type + " " + name +
-								   " = 0;\n{\nlong k = 0;\nint in_steps=1;\n";
-				for (long d = acc_sizes_pred.size() - 1; d >= 0; d--) {
-					conv_code +=
-						(d == acc_sizes_pred.size() - 1
-							 ? string("{")
-							 : string("if(in_steps){")) +
-						"\n"
-						" long di = " +
-						(d == 0 ? string("index")
-								: "(index % " +
-									  to_string(acc_sizes_pred[d - 1]) + ")") +
-						"/" + to_string(acc_sizes_pred[d]) +
+				// First dimension overlap
+				const size_t overlapping =
+					std::max(1l, (long)std::ceil((double)kernel.shape[0] /
+												 (double)steps[0])) *
+					acc_overlapping[0];
+				string convc = type + " " + name + " = 0;\n{";
+				convc += "int in_steps = 1, started_counting = 0;\n"
+						 "long keri = 0, adji = 0;\n";
+				for (int d = 0; d < op.dimensions - 1; d++) {
+					convc += "if(in_steps){\nlong di = (";
+					if (d == 0)
+						convc += "index";
+					else
+						convc += "index%" + to_string(acc_sizes_pred[d - 1]);
+					convc += ") / " + to_string(acc_sizes_pred[d]) +
+							 ";\n"
+							 "long ki = di - (di / " +
+							 to_string(steps[d]) + ")*" + to_string(steps[d]) +
+							 ";\n"
+							 "if (ki >= " +
+							 to_string(kernel.shape[d]) +
+							 ") {"
+							 " in_steps = 0; }\n"
+							 "keri += ki * " +
+							 to_string(acc_sizes_kernel[d]) +
+							 ";\n"
+							 "adji += (long)ceil(max(0l, di - " +
+							 to_string(kernel.shape[d] - 1) + ") / (double)" +
+							 to_string(steps[d]) + ") * " +
+							 to_string(acc_sizes[d]) + ";\n}\n";
+				}
+				convc += "if(in_steps){\n long actual_overlapping = 0;\n keri "
+						 "+= index % " +
+						 to_string(op.shape[op.dimensions - 1]) +
+						 ";\n for(long o = 0; o < " + to_string(overlapping) +
+						 "; o++){\n  int skip_kernel = 0;\n "
+						 " long adjo = "
+						 "0, kero = 0;\n";
+				for (int d = 0; d < op.dimensions - 1; d++) {
+					convc += "  if(!skip_kernel){\n   const long di = (";
+					if (d == 0)
+						convc += "index";
+					else
+						convc += "index%" + to_string(acc_sizes_pred[d - 1]);
+					convc += ")/" + to_string(acc_sizes_pred[d]) +
+							 ";\n"
+							 "   const long io = (";
+					if (d == 0)
+						convc += "o";
+					else
+						convc += "o%" + to_string(acc_overlapping[d - 1]);
+					convc += ")/" + to_string(acc_overlapping[d]) +
+							 ";\n"
+							 "   const long ao = (";
+					if (d == 0)
+						convc += "actual_overlapping";
+					else
+						convc += "actual_overlapping%" +
+								 to_string(acc_overlapping[d - 1]);
+					convc += ")/" + to_string(acc_overlapping[d]) +
+							 ";\n"
+							 "   const long ki = (";
+					if (d == 0)
+						convc += "keri";
+					else
+						convc += "keri%" + to_string(acc_sizes_kernel[d - 1]);
+					convc +=
+						")/" + to_string(acc_sizes_kernel[d]) +
 						";\n"
-						" long dk = " +
-						(d == acc_sizes_pred.size() - 1
-							 ? string("di")
-							 : "di % " + to_string(steps[d])) +
-						";\n"
-						" if(dk >= " +
-						to_string(kernel.shape[d]) +
+						"   if(di + " +
+						to_string(kernel.shape[d]) + " - (ki + io * " +
+						to_string(steps[d]) + ") > " + to_string(op.shape[d]) +
 						"){\n"
-						"  in_steps = 0;\n"
-						" }else\n"
-						"  k += dk * " +
-						to_string(acc_sizes_kernel[d]) + ";\n}\n";
-				}
-				conv_code += "if(in_steps) while(k < " +
-							 to_string(kernel_num_elems) +
-							 "){\n"
-							 "  long i_conv = 0";
-				for (int d = 0; d < op.dimensions - 2; d++) {
-					conv_code +=
-						"+((" +
-						(d == 0 ? string("index")
-								: "(index%" + to_string(acc_sizes_pred[d - 1]) +
-									  ")") +
-						"/" + to_string(acc_sizes_pred[d]) + " - " +
-						(d == 0 ? string("k")
-								: "(k%" + to_string(acc_sizes_kernel[d - 1]) +
-									  ")") +
-						"/" + to_string(acc_sizes_kernel[d]) + ")/" +
-						to_string(steps[d]) + ") * " + to_string(acc_sizes[d]);
-				}
-				conv_code += ";\n  if(i_conv < " + std::to_string(a_num_elems) +
-							 ") " + name + " += " + par1 + "[k] * " + par2 +
-							 "[i_conv];\n"
-							 "  int continue_loop = 1;\n"
-							 "  long step = 0;\n";
-				for (long d = acc_sizes_pred.size() - 2; d >= 0; d--) {
-					conv_code +=
-						"  " +
-						(d == acc_sizes_pred.size() - 2
-							 ? string("{")
-							 : string("if(continue_loop){")) +
-						"\n"
-						"  long di = " +
-						(d == 0 ? string("index")
-								: "(index % " +
-									  to_string(acc_sizes_pred[d - 1]) + ")") +
-						"/" + to_string(acc_sizes_pred[d]) +
-						";\n"
-						"  long dk = " +
-						(d == 0 ? string("k")
-								: "(k % " + to_string(acc_sizes_kernel[d - 1]) +
-									  ")") +
-						"/" + to_string(acc_sizes_kernel[d]) +
-						";\n"
-						"  if(dk + " +
-						to_string(steps[d]) + " < " +
-						to_string(kernel.shape[d]) + " && di >= dk + " +
+						"    if(!started_counting) actual_overlapping--;\n"
+						"    skip_kernel = true;\n"
+						"   }else if(ki + io * " +
 						to_string(steps[d]) +
+						" >= " + to_string(kernel.shape[d]) +
+						" || di < ki + io * " + to_string(steps[d]) +
 						"){\n"
-						"   step += " +
-						to_string(steps[d] * acc_sizes_kernel[d]) +
+						"    skip_kernel = true;\n"
+						"   }\n"
+						"   adjo += ao * " +
+						to_string(acc_sizes[d]) +
 						";\n"
-						"   continue_loop = false;\n"
-						"  }else{\n"
-						"   step -= (dk - (di%" +
-						to_string(steps[d]) + "))*" +
-						to_string(acc_sizes_kernel[d]) +
-						";\n"
-						"  }  }\n";
+						"   kero += io * " +
+						to_string(steps[d] * acc_sizes_kernel[d]) + ";\n  }\n";
 				}
-				conv_code += "  if(step <= 0) break;\n"
-							 "  k += step;\n"
-							 " }\n}";
-				code = conv_code + code;
+				convc += "  if(!skip_kernel){\n"
+						 "   started_counting = true;\n"
+						 "   " +
+						 name + " += " + par1 + "[keri + kero] * " + par2 +
+						 "[adji + adjo];\n"
+						 " }\n"
+						 " actual_overlapping++;\n}\n}\n}\n";
+				code = convc + code;
 			} break;
 			case FCONVOLVE: {
 				string par1, par2;
