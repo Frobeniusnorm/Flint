@@ -446,15 +446,6 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 				a->operation.shape[a->operation.dimensions - 1]);
 			FGraphNode *constant_1 =
 				fconstant_d(1, window_size.data(), a->operation.dimensions);
-			// TODO try using unslide
-			std::cout << printShape(a->operation.shape, a->operation.dimensions)
-					  << std::endl;
-			std::cout << printShape(prev_adj->operation.shape,
-									prev_adj->operation.dimensions)
-					  << std::endl;
-			std::cout << printShape(constant_1->operation.shape,
-									constant_1->operation.dimensions)
-					  << std::endl;
 			return gradient_convolve1(a, constant_1, prev_adj, window.step);
 		} else
 			return nullptr;

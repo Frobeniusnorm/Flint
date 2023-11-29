@@ -218,6 +218,19 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 		}
 	} break;
 	case FGRADIENT_CONVOLVE1: {
+		/* This one is complicated so here is a quick explanation:
+		 * The complicated part is that each value of the original image may
+		 * overlap with several kernel multiplications, each of them
+		 * corresponding to one window in the adjoint. So we iterate per image
+		 * pixel over those overlapping windows. We can precalculate how many
+		 * max. overlap one element, but that leads to the problem, that
+		 * windows, which are not possible for the element will be counted too,
+		 * which don't exist in the adjacent, so we have to skip those windows
+		 * if no other window has already been counted (since if one window has
+		 * been counted, the overlapping impossible windows are needed for the
+		 * dimensional projection). If there is still a bug in this procedure
+		 * bless your poor soul that has to fix it. Maybe rewriting it is
+		 * smarter. */
 		const FOperation op = curr->operation;
 		const FGraphNode *gnp1 = curr->predecessors[0],
 						 *gnp2 = curr->predecessors[1];
@@ -244,6 +257,7 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 										   (double)steps[i + 1])) *
 				acc_overlapping[i + 1];
 		}
+		// First dimension overlap
 		const size_t overlapping =
 			MAX_VAL(1, (long)std::ceil((double)kernel.shape[0] /
 									   (double)steps[0])) *
@@ -251,14 +265,18 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 		for (size_t i = from; i < from + size; i++) {
 			T res = 0;
 			bool in_steps = true;
+			bool started_counting = false;
 			// get base indices
 			size_t keri = 0;
 			size_t adji = 0;
 			for (int d = 0; d < op.dimensions - 1; d++) {
 				const size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
 								  acc_sizes_pred[d];
-				// get alignment of first hit of kernel with di
+				// first kernel element is the offset from di to the first
+				// kernel that overlaps it
 				const size_t ki = di - (di / steps[d]) * steps[d];
+				// if this index is outside the kernel size -> i is not
+				// overlapped by a kernel
 				if (ki >= kernel.shape[d]) {
 					in_steps = false;
 					break;
@@ -270,7 +288,6 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 				keri += ki * acc_sizes_kernel[d];
 				adji += wdf * acc_sizes[d];
 			}
-			std::cout << i << " = 0";
 			if (in_steps) {
 				// kernel offset for last index
 				keri += i % op.shape[op.dimensions - 1];
@@ -303,8 +320,11 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 							acc_sizes_kernel[d];
 						if (di + kernel.shape[d] - (ki + io * steps[d]) >
 							op.shape[d]) {
-							// those cases are no real windows
-							actual_overlapping--;
+							// those cases are no real windows, only skip them
+							// if there haven't been real windows yet
+							if (!started_counting) {
+								actual_overlapping--;
+							}
 							skip_kernel = true;
 							break;
 						} else if (ki + io * steps[d] >= kernel.shape[d] ||
@@ -316,17 +336,12 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 						kero += io * steps[d] * acc_sizes_kernel[d];
 					}
 					if (!skip_kernel) {
-						std::cout << " + " << data1[keri + kero] << " (" << keri
-								  << " + " << kero << ") * "
-								  << data2[adjo + adji] << " (" << adjo << " + "
-								  << adji << ", " << actual_overlapping << ", "
-								  << o << ")";
+						started_counting = true;
 						res += data1[keri + kero] * data2[adjo + adji];
 					}
 					actual_overlapping++;
 				}
 			}
-			std::cout << std::endl;
 			result[i] = res;
 		}
 	} break;
