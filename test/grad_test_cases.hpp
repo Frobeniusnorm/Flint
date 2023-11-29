@@ -781,8 +781,6 @@ TEST_SUITE("Autodiff") {
 			{{2}, {0}, {-1}},
 			{{1}, {0}, {3}},
 			{{1}, {0}, {3}}}.repeat(0, 0, 2);
-		std::cout << y2() << std::endl;
-		std::cout << dx2() << std::endl;
 		for (int i = 0; i < ex2.get_shape()[0]; i++) {
 			for (int j = 0; j < ex2.get_shape()[1]; j++) {
 				for (int k = 0; k < ex2.get_shape()[2]; k++) {

@@ -282,9 +282,9 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 					break;
 				}
 				// first window for this index
-				const size_t wdf =
-					((std::max(0l, (long)di - (long)kernel.shape[d] + 1) /
-					  steps[d]));
+				const size_t wdf = (size_t)std::ceil(
+					(std::max(0l, (long)di - (long)kernel.shape[d] + 1) /
+					 (double)steps[d]));
 				keri += ki * acc_sizes_kernel[d];
 				adji += wdf * acc_sizes[d];
 			}
@@ -681,9 +681,9 @@ static void executeNode(const FGraphNode *node,
 				// first hit is where the window overlaps with the element of
 				// window size - 1 before this element (since the window reaches
 				// to this element)
-				const size_t wdf =
-					((std::max(0l, (long)id - (long)pred.shape[d + 1] + 1) /
-					  steps[d]));
+				const size_t wdf = (size_t)std::ceil(
+					(std::max(0l, (long)id - (long)pred.shape[d + 1] + 1) /
+					 (double)steps[d]));
 				const size_t wfl = id / steps[d];
 				first_w += wdf * acc_no_windows[d];
 				last_w += wfl * acc_no_windows[d];
