@@ -105,10 +105,10 @@ std::string generateEagerCode(FOperationType operation, FType res_type,
 		code +=
 			", const __global " + typeString(parameter_types[0]) +
 			"* P0"
-			", const long num_entries1, const int dimensions1, const "
+			", const long num_entries0, const int dimensions0, const "
 			"__global " +
 			typeString(parameter_types[1]) +
-			"* P1, const long num_entries2, const int dimensions2"
+			"* P1, const long num_entries1, const int dimensions1"
 			", __constant long* acc_sizes_pred, "
 			"__constant long* acc_sizes_kernel"
 			", __constant long* acc_sizes, __constant long* acc_overlapping"
@@ -620,7 +620,7 @@ std::string generateEagerCode(FOperationType operation, FType res_type,
 		code +=
 			"if(index >= num_entriesR) return;\n"
 			"const long overlapping = max(1l, (long)ceil(kernel_shape[0] / "
-			"steps[0]));\n" +
+			"(double)steps[0])) * acc_overlapping[0];\n" +
 			typeString(res_type) +
 			" res = 0;\n"
 			"int in_steps = true;\n"
@@ -672,9 +672,10 @@ std::string generateEagerCode(FOperationType operation, FType res_type,
 			"   started_counting = true;\n"
 			"   res+=P0[kero+keri]*P1[adjo+adji];\n"
 			"  }\n"
+			"  actual_overlapping++;\n"
 			" }\n"
-			" R[index] = res;\n"
-			"}\n";
+			"}\n"
+			"R[index] = res;\n";
 		break;
 	case FPOOLING_MAX:
 	case FPOOLING_SUM:

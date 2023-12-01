@@ -16,9 +16,12 @@
 #include "../../flint.h"
 #include "src/errors.hpp"
 #include <CL/cl.h>
+#include <cmath>
+#include <iostream>
 #include <list>
 #include <mutex>
 #include <optional>
+#include <ostream>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,17 +32,12 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-static cl_mem calcAndPushAccSize(int dim, size_t *shape, cl_kernel kernel,
-								 cl_context context, int &par_index) {
-	std::vector<size_t> acc_sizes(dim);
-	acc_sizes[dim - 1] = 1;
-	for (long d = dim - 2; d >= 0; d--) {
-		acc_sizes[d] = acc_sizes[d + 1] * shape[d + 1];
-	}
+template<typename T>
+static cl_mem pushArray(int size, T* data, cl_kernel kernel, cl_context context, int &par_index) {
 	cl_int err_code;
 	cl_mem acc_mem =
 		clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					   dim * sizeof(long), acc_sizes.data(), &err_code);
+					   size * sizeof(T), data, &err_code);
 	if (!acc_mem) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
@@ -54,6 +52,15 @@ static cl_mem calcAndPushAccSize(int dim, size_t *shape, cl_kernel kernel,
 		return nullptr;
 	}
 	return acc_mem;
+}
+static cl_mem calcAndPushAccSize(int dim, size_t *shape, cl_kernel kernel,
+								 cl_context context, int &par_index) {
+	std::vector<size_t> acc_sizes(dim);
+	acc_sizes[dim - 1] = 1;
+	for (long d = dim - 2; d >= 0; d--) {
+		acc_sizes[d] = acc_sizes[d + 1] * shape[d + 1];
+	}
+	return pushArray(acc_sizes.size(), acc_sizes.data(), kernel, context, par_index);
 }
 // values for a single operation (not related directly to parameters)
 inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
@@ -299,9 +306,33 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
 		}
 	} break;
 	case FGRADIENT_CONVOLVE1: {
-		// TODO
 		// acc_sizes_pred, acc_sizes_kernel, acc_sizes, acc_overlapping, steps,
 		// op_shape, kernel_shape
+		const FOperation op = node->operation;
+		const FGraphNode *gnp1 = node->predecessors[0],
+						 *gnp2 = node->predecessors[1];
+		const FOperation kernel_op = gnp1->operation, a = gnp2->operation;
+		unsigned int *steps = (unsigned int *)op.additional_data;
+		to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel, context, par_index));
+		to_free.push_back(calcAndPushAccSize(kernel_op.dimensions, kernel_op.shape, kernel, context, par_index));
+		to_free.push_back(calcAndPushAccSize(a.dimensions, a.shape, kernel, context, par_index));
+
+		std::vector<size_t> acc_overlapping(op.dimensions - 1);
+		acc_overlapping[acc_overlapping.size() - 1] = 1;
+		for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
+			acc_overlapping[i] =
+				std::max(1l, (long)std::ceil((double)kernel_op.shape[i + 1] /
+										   (double)steps[i + 1])) *
+				acc_overlapping[i + 1];
+		}
+		const size_t overlapping =
+			std::max(1l, (long)std::ceil((double)kernel_op.shape[0] /
+									   (double)steps[0])) *
+			acc_overlapping[0];
+		to_free.push_back(pushArray(acc_overlapping.size(), acc_overlapping.data(), kernel, context, par_index));
+		to_free.push_back(pushArray(op.dimensions - 1, steps, kernel, context, par_index));
+		to_free.push_back(pushArray(op.dimensions, op.shape, kernel, context, par_index));
+		to_free.push_back(pushArray(kernel_op.dimensions, kernel_op.shape, kernel, context, par_index));
 	} break;
 	case FCONVOLVE: {
 		const FOperation op = node->operation;
@@ -381,6 +412,7 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
 	case FSET_INDEX:
 	case FINDEX:
 	case FMATMUL:
+	case FGRADIENT_CONVOLVE1:
 	case FGRADIENT_CONVOLVE2:
 	case FCONVOLVE: {
 		if (clSetKernelArg(kernel, par_index++, sizeof(int),

@@ -242,12 +242,6 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 		std::vector<size_t> acc_sizes_pred = calcAccSizes(op);
 		std::vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
 		acc_sizes[op.dimensions - 2] = 1;
-		size_t kernel_num_elems = kernel.shape[op.dimensions - 1];
-		size_t a_num_elems = 1;
-		for (long d = a.dimensions - 1; d >= 0; d--)
-			a_num_elems *= a.shape[d];
-		for (long d = op.dimensions - 2; d >= 0; d--)
-			kernel_num_elems *= kernel.shape[d];
 		// accumulations of overlapping elements (kernel overlapping itself)
 		std::vector<size_t> acc_overlapping(op.dimensions - 1);
 		acc_overlapping[acc_overlapping.size() - 1] = 1;
