@@ -450,6 +450,41 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 		} else
 			return nullptr;
 	} break;
+	case FPOOLING_MAX: {
+		FGraphNode *a = y->predecessors[0];
+		if (0 == dx_i) {
+			FGraphNode *dx = new FGraphNode();
+			dx->num_predecessor = 3;
+			dx->predecessors = safe_mal<FGraphNode *>(3);
+			if (!dx->predecessors) {
+				return nullptr;
+			}
+			fExecuteGraph(y);
+			fExecuteGraph(prev_adj);
+			fExecuteGraph(a);
+			dx->predecessors[0] = y;
+			prev_adj->reference_counter++;
+			dx->predecessors[1] = prev_adj;
+			y->reference_counter++;
+			dx->predecessors[2] = a;
+			a->reference_counter++;
+			dx->reference_counter = 0;
+			dx->result_data = nullptr;
+			dx->gradient_data = nullptr;
+			dx->operation.op_type = FGRADIENT_POOLING_MAX;
+			dx->operation.data_type = y->operation.data_type;
+			dx->operation.dimensions = a->operation.dimensions;
+			dx->operation.shape = safe_mal<size_t>(a->operation.dimensions);
+			if (!dx->operation.shape)
+				return nullptr;
+			memcpy(dx->operation.shape, a->operation.shape,
+				   a->operation.dimensions * sizeof(size_t));
+			dx->operation.additional_data = nullptr;
+			dx->operation.broadcasting_mode = 0;
+			return dx;
+		} else
+			return nullptr;
+	} break;
 	case FPOW: {
 		FGraphNode *a = y->predecessors[0];
 		FGraphNode *b = y->predecessors[1];

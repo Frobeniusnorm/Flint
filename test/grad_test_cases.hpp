@@ -749,12 +749,12 @@ TEST_SUITE("Autodiff") {
 		CHECK_EQ((t3.equal(t4) - 1).reduce_sum()[0], 0);
 		CHECK_EQ(((g3 - g4).abs() > 0.0001).reduce_sum()[0], 0);
 	}
-	TEST_CASE("Pooling") {
+	TEST_CASE("Sum Pooling") {
 		GradientContext _;
 		Tensor<int, 3> x1{{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}},
-				  {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}},
-				  {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}},
-				  {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}};
+						  {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}},
+						  {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}},
+						  {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}};
 		x1.watch();
 		Tensor<double, 2> c1{{2, -1}, {1, 3}, {3, -2}};
 		Tensor<double, 2> y1 = x1.pooling_sum({2, 2}, {1, 1}).convert<double>();
@@ -788,5 +788,72 @@ TEST_SUITE("Autodiff") {
 				}
 			}
 		}
+	}
+	TEST_CASE("Max Pooling") {
+		auto pooling_sum_ref_impl = [](FGraphNode *a, size_t *window_size,
+									   unsigned int *step_size) {
+			std::vector<size_t> windows(
+				window_size, window_size + a->operation.dimensions - 1);
+			std::vector<unsigned int> steps(
+				step_size, step_size + a->operation.dimensions - 1);
+			windows.push_back(a->operation.shape[a->operation.dimensions - 1]);
+			steps.push_back(a->operation.shape[a->operation.dimensions - 1]);
+			FGraphNode *res = fsliding_window(a, windows.data(), steps.data());
+			for (int i = 1; i < a->operation.dimensions; i++)
+				res = fflatten_dimension(res, 2);
+			res = freduce_sum(res, 1);
+			std::vector<size_t> no_windows(a->operation.dimensions - 1);
+			for (int i = 0; i < no_windows.size(); i++) {
+				size_t no_window = a->operation.shape[i] - window_size[i] + 1;
+				no_window = no_window % step_size[i] == 0
+								? no_window / step_size[i]
+								: no_window / step_size[i] + 1;
+				no_windows[i] = no_window;
+			}
+			return freshape(res, no_windows.data(), no_windows.size());
+		};
+		GradientContext _;
+		Tensor<double, 3> x1{{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}},
+							 {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}},
+							 {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}},
+							 {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}};
+		x1.watch();
+		Tensor<double, 2> c1{{2, -1}, {1, 3}, {3, -2}};
+		Tensor<double, 2> y1 = x1.pooling_max({2, 2}, {1, 1});
+		y1 = y1 * c1;
+		Tensor<double, 3> dx1 = y1.gradient(x1);
+		Tensor<double, 3> ex1 =
+			Tensor<double, 3>{{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}},
+							  {{0, 0, 0}, {0, 0, 3}, {2, 0, 0}},
+							  {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}},
+							  {{0, 0, 0}, {0, 0, 3}, {0, 0, -2}}};
+		for (int i = 0; i < ex1.get_shape()[0]; i++) {
+			for (int j = 0; j < ex1.get_shape()[1]; j++) {
+				for (int k = 0; k < ex1.get_shape()[2]; k++) {
+					CHECK_EQ(ex1[i][j][k], dx1[i][j][k]);
+				}
+			}
+		}
+		for (unsigned int p = 1; p < 3; p++)
+			for (unsigned int q = 2; q < 4; q++)
+				for (unsigned int r = 2; r < 3; r++) {
+					std::array<size_t, 3> w2 = {2, 1, 3};
+					std::array<unsigned int, 3> s2 = {p, q, r};
+					Tensor<double, 4> a2 = Flint::random(15, 15, 15, 1);
+					a2.watch();
+					Tensor<double, 3> rm2 = a2.pooling_sum(w2, s2);
+					Tensor<double, 3> em2(pooling_sum_ref_impl(
+						a2.get_graph_node(), w2.data(), s2.data()));
+					Tensor<double, 4> ex2 = em2.gradient(a2);
+					Tensor<double, 4> dx2 = rm2.gradient(a2);
+					for (int i = 0; i < ex2.get_shape()[0]; i++)
+						for (int j = 0; j < ex2.get_shape()[1]; j++)
+							for (int k = 0; k < ex2.get_shape()[2]; k++)
+								for (int l = 0; l < ex2.get_shape()[3]; l++) {
+									CHECK_EQ(doctest::Approx(ex2[i][j][k][l])
+												 .epsilon(0.000000001f),
+											 dx2[i][j][k][l]);
+								}
+				}
 	}
 }
