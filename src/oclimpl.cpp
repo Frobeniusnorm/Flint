@@ -341,6 +341,19 @@ cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
 								   kernel_name});
 		}
 		break;
+	case FGRADIENT_POOLING_MAX: {
+		std::string kernel_name;
+		for (FType param : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
+			code += generateEagerCode(node->operation.op_type, F_FLOAT64,
+										{param, F_FLOAT64, param}, kernel_name);
+			if (param == node->predecessors[0]->operation.data_type)
+				our_kernel = kernel_name;
+			all_kernels.push_back(
+				{OCLCompilerThread::generateKernelHash(
+					 node->operation.op_type, F_FLOAT64, {param, F_FLOAT64, param}),
+				 kernel_name});
+		}
+	} break;
 	}
 	case FGRADIENT_CONVOLVE1: {
 		std::string kernel_name;

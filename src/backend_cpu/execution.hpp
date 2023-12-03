@@ -1013,7 +1013,6 @@ static void executeNode(const FGraphNode *node,
 				for (size_t o = 0; o < overlapping; o++) {
 					// offsets
 					size_t adjo = 0;
-					size_t kero = 0;
 					bool skip_kernel = false;
 					for (int d = 0; d < op.dimensions - 1; d++) {
 						// for each index adji will point to the first window in
@@ -1050,7 +1049,6 @@ static void executeNode(const FGraphNode *node,
 							break;
 						}
 						adjo += ao * acc_sizes[d];
-						kero += io * steps[d] * acc_sizes_kernel[d];
 					}
 					// if value in image and corresponding pooling are equal
 					bool equal;

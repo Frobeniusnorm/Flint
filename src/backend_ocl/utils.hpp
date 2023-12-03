@@ -32,8 +32,9 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-template<typename T>
-static cl_mem pushArray(int size, T* data, cl_kernel kernel, cl_context context, int &par_index) {
+template <typename T>
+static cl_mem pushArray(int size, T *data, cl_kernel kernel, cl_context context,
+						int &par_index) {
 	cl_int err_code;
 	cl_mem acc_mem =
 		clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
@@ -60,7 +61,8 @@ static cl_mem calcAndPushAccSize(int dim, size_t *shape, cl_kernel kernel,
 	for (long d = dim - 2; d >= 0; d--) {
 		acc_sizes[d] = acc_sizes[d + 1] * shape[d + 1];
 	}
-	return pushArray(acc_sizes.size(), acc_sizes.data(), kernel, context, par_index);
+	return pushArray(acc_sizes.size(), acc_sizes.data(), kernel, context,
+					 par_index);
 }
 // values for a single operation (not related directly to parameters)
 inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
@@ -305,6 +307,44 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
 							 std::to_string(err_code));
 		}
 	} break;
+	case FGRADIENT_POOLING_MAX: {
+		const FOperation op = node->operation;
+		const FGraphNode *gnp1 = node->predecessors[0],
+						 *gnp2 = node->predecessors[1];
+		const FOperation a = gnp2->operation;
+		const FSlidingWindow *window =
+			(FSlidingWindow *)gnp1->operation.additional_data;
+		std::vector<size_t> kernel_shape (window->size, window->size + op.dimensions);
+		kernel_shape.push_back(op.shape[op.dimensions - 1]);
+		unsigned int *steps = window->step;
+		to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+											 context, par_index));
+		to_free.push_back(calcAndPushAccSize(
+			kernel_shape.size(), kernel_shape.data(), kernel, context, par_index));
+		to_free.push_back(calcAndPushAccSize(a.dimensions, a.shape, kernel,
+											 context, par_index));
+		std::vector<size_t> acc_overlapping(op.dimensions - 1);
+		acc_overlapping[acc_overlapping.size() - 1] = 1;
+		for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
+			acc_overlapping[i] =
+				std::max(1l, (long)std::ceil((double)kernel_shape[i + 1] /
+											 (double)steps[i + 1])) *
+				acc_overlapping[i + 1];
+		}
+		const size_t overlapping =
+			std::max(1l, (long)std::ceil((double)kernel_shape[0] /
+										 (double)steps[0])) *
+			acc_overlapping[0];
+		to_free.push_back(pushArray(acc_overlapping.size(),
+									acc_overlapping.data(), kernel, context,
+									par_index));
+		to_free.push_back(
+			pushArray(op.dimensions - 1, steps, kernel, context, par_index));
+		to_free.push_back(
+			pushArray(op.dimensions, op.shape, kernel, context, par_index));
+		to_free.push_back(pushArray(kernel_shape.size(), kernel_shape.data(),
+									kernel, context, par_index));
+	} break;
 	case FGRADIENT_CONVOLVE1: {
 		// acc_sizes_pred, acc_sizes_kernel, acc_sizes, acc_overlapping, steps,
 		// op_shape, kernel_shape
@@ -313,26 +353,34 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
 						 *gnp2 = node->predecessors[1];
 		const FOperation kernel_op = gnp1->operation, a = gnp2->operation;
 		unsigned int *steps = (unsigned int *)op.additional_data;
-		to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel, context, par_index));
-		to_free.push_back(calcAndPushAccSize(kernel_op.dimensions, kernel_op.shape, kernel, context, par_index));
-		to_free.push_back(calcAndPushAccSize(a.dimensions, a.shape, kernel, context, par_index));
+		to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+											 context, par_index));
+		to_free.push_back(calcAndPushAccSize(
+			kernel_op.dimensions, kernel_op.shape, kernel, context, par_index));
+		to_free.push_back(calcAndPushAccSize(a.dimensions, a.shape, kernel,
+											 context, par_index));
 
 		std::vector<size_t> acc_overlapping(op.dimensions - 1);
 		acc_overlapping[acc_overlapping.size() - 1] = 1;
 		for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
 			acc_overlapping[i] =
 				std::max(1l, (long)std::ceil((double)kernel_op.shape[i + 1] /
-										   (double)steps[i + 1])) *
+											 (double)steps[i + 1])) *
 				acc_overlapping[i + 1];
 		}
 		const size_t overlapping =
 			std::max(1l, (long)std::ceil((double)kernel_op.shape[0] /
-									   (double)steps[0])) *
+										 (double)steps[0])) *
 			acc_overlapping[0];
-		to_free.push_back(pushArray(acc_overlapping.size(), acc_overlapping.data(), kernel, context, par_index));
-		to_free.push_back(pushArray(op.dimensions - 1, steps, kernel, context, par_index));
-		to_free.push_back(pushArray(op.dimensions, op.shape, kernel, context, par_index));
-		to_free.push_back(pushArray(kernel_op.dimensions, kernel_op.shape, kernel, context, par_index));
+		to_free.push_back(pushArray(acc_overlapping.size(),
+									acc_overlapping.data(), kernel, context,
+									par_index));
+		to_free.push_back(
+			pushArray(op.dimensions - 1, steps, kernel, context, par_index));
+		to_free.push_back(
+			pushArray(op.dimensions, op.shape, kernel, context, par_index));
+		to_free.push_back(pushArray(kernel_op.dimensions, kernel_op.shape,
+									kernel, context, par_index));
 	} break;
 	case FCONVOLVE: {
 		const FOperation op = node->operation;
@@ -412,6 +460,7 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
 	case FSET_INDEX:
 	case FINDEX:
 	case FMATMUL:
+	case FGRADIENT_POOLING_MAX:
 	case FGRADIENT_CONVOLVE1:
 	case FGRADIENT_CONVOLVE2:
 	case FCONVOLVE: {

@@ -310,7 +310,7 @@ generateCode(FGraphNode *node,
 						 ";\n for(long o = 0; o < " + to_string(overlapping) +
 						 "; o++){\n  int skip_kernel = 0;\n "
 						 " long adjo = "
-						 "0, kero = 0;\n";
+						 "0;\n";
 				for (int d = 0; d < op.dimensions - 1; d++) {
 					convc += "  if(!skip_kernel){\n   const long di = (";
 					if (d == 0)
@@ -357,9 +357,7 @@ generateCode(FGraphNode *node,
 						"   }\n"
 						"   adjo += ao * " +
 						to_string(acc_sizes[d]) +
-						";\n"
-						"   kero += io * " +
-						to_string(steps[d] * acc_sizes_kernel[d]) + ";\n  }\n";
+						";\n  }\n";
 				}
 				convc += "  const int equal = " + par3 + "[index] == " + par1 +
 						 "[adjo + adji];\n"
