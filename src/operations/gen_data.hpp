@@ -13,8 +13,7 @@ struct GenRandomImpl : OperationImplementation {
 
 struct GenConstantImpl : OperationImplementation {
 		template <typename T>
-		void execute_cpu_type(const FGraphNode *node,
-						 std::vector<CPUResultData> predecessor_data,
+		void zeroary_expression(const FGraphNode *node,
 						 T *__restrict__ result, size_t from,
 						 size_t size);
 		void execute_cpu(const FGraphNode *node,

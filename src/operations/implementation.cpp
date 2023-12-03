@@ -1,5 +1,7 @@
 #include "implementation.hpp"
-#include "simple_arithmetic.hpp"
+#include "binary_arithmetic.hpp"
+#include "gen_data.hpp"
+#include "unary_arithmetic.hpp"
 
 struct NopImpl : OperationImplementation {
 		void execute_cpu(const FGraphNode *node,
@@ -11,10 +13,13 @@ struct NopImpl : OperationImplementation {
 };
 
 std::vector<OperationImplementation *>
-	OperationImplementation::implementations = {new NopImpl(), // store
-												new NopImpl(), // gen random
-												new NopImpl(), // gen const
-												new NopImpl(), // gen arange
-												new AddImpl(), new SubImpl(),
-												new MulImpl(), new DivImpl(),
-												new PowImpl()};
+	OperationImplementation::implementations = {
+		new NopImpl(), // store
+		new GenRandomImpl(), new GenConstantImpl(), new GenArangeImpl(),
+		new AddImpl(),		 new SubImpl(),			new MulImpl(),
+		new DivImpl(),		 new PowImpl(),			new NegImpl(),
+		new LogImpl(),		 new SignImpl(),		new EvenImpl(),
+		new Log2Impl(),		 new Log10Impl(),		new SinImpl(),
+		new CosImpl(),		 new TanImpl(),			new ASinImpl(),
+		new ACosImpl(),		 new ATanImpl(),		new SqrtImpl(),
+		new ExpImpl()};

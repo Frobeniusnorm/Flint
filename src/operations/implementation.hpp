@@ -120,25 +120,65 @@
 		DISPATCH_BINARY_OPERATION(double)                                      \
 	} break;                                                                   \
 	}
-// calls a function `execute_cpu_type` with the same signature as execute_cpu
-// but with a typed result
+// calls a function `zeroary_expression` with the same signature as execute_cpu
+// but with a typed result and without predecessor data
 #define ZEROARY_EXECUTE_IMPL                                                   \
 	switch (node->operation.data_type) {                                       \
 	case F_INT32: {                                                            \
-		execute_cpu_type(node, predecessor_data, (int *__restrict__)node,      \
-						 from, size);                                          \
+		zeroary_expression(node, (int *__restrict__)result, from, size);       \
 	} break;                                                                   \
 	case F_FLOAT32: {                                                          \
-		execute_cpu_type(node, predecessor_data, (float *__restrict__)node,    \
-						 from, size);                                          \
+		zeroary_expression(node, (float *__restrict__)result, from, size);     \
 	} break;                                                                   \
 	case F_INT64: {                                                            \
-		execute_cpu_type(node, predecessor_data, (long *__restrict__)node,     \
-						 from, size);                                          \
+		zeroary_expression(node, (long *__restrict__)result, from, size);      \
 	} break;                                                                   \
 	case F_FLOAT64: {                                                          \
-		execute_cpu_type(node, predecessor_data, (double *__restrict__)node,   \
-						 from, size);                                          \
+		zeroary_expression(node, (double *__restrict__)result, from, size);    \
+	} break;                                                                   \
+	}
+#define DISPATCH_UNARY_OPERATION(T)                                            \
+	switch (node->operation.data_type) {                                       \
+	case F_INT32: {                                                            \
+		unary_expression((T *__restrict__)result,                              \
+						 (int *__restrict__)predecessor_data[0].data, from,    \
+						 size, node);                                          \
+	} break;                                                                   \
+	case F_FLOAT32: {                                                          \
+		unary_expression((T *__restrict__)result,                              \
+						 (float *__restrict__)predecessor_data[0].data, from,  \
+						 size, node);                                          \
+	} break;                                                                   \
+	case F_INT64: {                                                            \
+		unary_expression((T *__restrict__)result,                              \
+						 (long *__restrict__)predecessor_data[0].data, from,   \
+						 size, node);                                          \
+	} break;                                                                   \
+	case F_FLOAT64: {                                                          \
+		unary_expression((T *__restrict__)result,                              \
+						 (double *__restrict__)predecessor_data[0].data, from, \
+						 size, node);                                          \
+	} break;                                                                   \
+	}
+/* calls a function `binary_expression` with the signature
+ * template <typename T, typename A>
+ * void unaryExpression(T *__restrict__ result,
+ * 						const A *__restrict__ data1,
+ * 						size_t from, size_t size,
+ * 						const FGraphNode *curr); */
+#define UNARY_EXECUTE_IMPL                                                     \
+	switch (node->operation.data_type) {                                       \
+	case F_INT32: {                                                            \
+		DISPATCH_UNARY_OPERATION(int)                                          \
+	} break;                                                                   \
+	case F_FLOAT32: {                                                          \
+		DISPATCH_UNARY_OPERATION(float)                                        \
+	} break;                                                                   \
+	case F_INT64: {                                                            \
+		DISPATCH_UNARY_OPERATION(long)                                         \
+	} break;                                                                   \
+	case F_FLOAT64: {                                                          \
+		DISPATCH_UNARY_OPERATION(double)                                       \
 	} break;                                                                   \
 	}
 

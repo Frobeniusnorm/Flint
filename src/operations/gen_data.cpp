@@ -12,8 +12,8 @@ void GenRandomImpl::execute_cpu(const FGraphNode *node,
 }
 
 template <typename T>
-void GenConstantImpl::execute_cpu_type(
-	const FGraphNode *node, std::vector<CPUResultData> predecessor_data,
+void GenConstantImpl::zeroary_expression(
+	const FGraphNode *node,
 	T *__restrict__ result, size_t from, size_t size) {
 	T value = ((T *)node->operation.additional_data)[0];
 	for (size_t i = from; i < from + size; i++)
