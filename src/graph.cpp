@@ -1386,10 +1386,10 @@ FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis) {
 }
 FGraphNode *fexpand(FGraphNode *a, const unsigned int ax,
 					const unsigned int ax_size) {
-	int n = a->operation.dimensions;
+	unsigned int n = a->operation.dimensions;
 	std::vector<size_t> new_shape(n + 1);
 	if (ax > 0)
-		std::memcpy(new_shape.data(), a->operation.shape, sizeof(size_t) * ax);
+		std::memcpy(new_shape.data(), a->operation.shape, sizeof(size_t) * std::min(n, ax));
 	new_shape[ax] = 1;
 	if (ax < n)
 		std::memcpy(new_shape.data() + ax + 1, a->operation.shape + ax,
