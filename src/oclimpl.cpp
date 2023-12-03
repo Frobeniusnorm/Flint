@@ -215,7 +215,7 @@ cl_mem OCLCompilerThread::copy_memory(const cl_mem other, size_t num_bytes,
 }
 #include <chrono>
 #include <unordered_map>
-cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
+cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
 	cl_int err_code;
 	cl_kernel kernel = nullptr;
 	auto start = std::chrono::high_resolution_clock::now();
@@ -341,6 +341,19 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
 								   kernel_name});
 		}
 		break;
+	case FGRADIENT_POOLING_MAX: {
+		std::string kernel_name;
+		for (FType param : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
+			code += generateEagerCode(node->operation.op_type, F_FLOAT64,
+										{param, F_FLOAT64, param}, kernel_name);
+			if (param == node->predecessors[0]->operation.data_type)
+				our_kernel = kernel_name;
+			all_kernels.push_back(
+				{OCLCompilerThread::generateKernelHash(
+					 node->operation.op_type, F_FLOAT64, {param, F_FLOAT64, param}),
+				 kernel_name});
+		}
+	} break;
 	}
 	case FGRADIENT_CONVOLVE1: {
 		std::string kernel_name;
@@ -537,7 +550,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 	std::list<cl_mem> to_free;
 	// check if the kernel already exists or if it has to be generated
 	if (prog == OCLCompilerThread::eager_cache.end()) {
-		kernel = OCLCompilerThread::eager_compile(node, hash);
+		kernel = OCLCompilerThread::eagerCompile(node, hash);
 	} else {
 		kernel = prog->second;
 		flogging(F_DEBUG, "Loaded existing eager kernel");
@@ -681,7 +694,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		clReleaseMemObject(tfn);
 	return node;
 }
-cl_kernel OCLCompilerThread::lazy_compile(FGraphNode *node, std::string code) {
+cl_kernel OCLCompilerThread::lazyCompile(FGraphNode *node, std::string code) {
 	using namespace std;
 	cl_kernel kernel;
 	cl_int err_code;
@@ -847,7 +860,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	if (cache_val == OCLCompilerThread::kernel_cache.end()) {
 		flogging(F_DEBUG, "code generation finished (in " +
 							  to_string(elapsed.count()) + " ms): \n" + code);
-		kernel = OCLCompilerThread::lazy_compile(node, code);
+		kernel = OCLCompilerThread::lazyCompile(node, code);
 	} else {
 		flogging(F_DEBUG, "code from cache");
 		kernel = cache_val->second.second;

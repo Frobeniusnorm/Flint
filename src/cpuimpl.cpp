@@ -95,7 +95,7 @@ static void threadRoutine() {
 		sem->release();
 	}
 }
-#define PARALLEL_EXECUTION_SIZE 1024 // for debugging
+#define PARALLEL_EXECUTION_SIZE 4048 // for debugging
 template <typename T>
 static void chooseExecutionMethod(FGraphNode *node,
 								  std::vector<CPUResultData> pred_data,

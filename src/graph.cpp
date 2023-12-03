@@ -69,7 +69,6 @@ const char *fop_to_string[] = {"FSTORE",
 							   "FEQUAL",
 							   "FGREATER",
 							   "FCONVOLVE",
-							   "FSLIDE",
 							   "FGRADIENT_CONVOLVE1",
 							   "FGRADIENT_CONVOLVE2",
 							   "FINDEX",
@@ -77,7 +76,8 @@ const char *fop_to_string[] = {"FSTORE",
 							   "FSLIDING_WINDOW",
 							   "FUNSLIDE_WINDOW",
 							   "FPOOLING_MAX",
-							   "FPOOLING_SUM"};
+							   "FPOOLING_SUM",
+							   "FGRADIENT_POOLING_MAX"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
@@ -1042,7 +1042,6 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 			switch (curr->operation.op_type) {
 			case FCONVOLVE:
 			case FMATMUL:
-			case FSLIDE:
 			case FGRADIENT_CONVOLVE1:
 			case FREDUCE_MAX:
 			case FREDUCE_MIN:
@@ -1408,7 +1407,7 @@ static void calculateShapeAggregatingWindows(FOperation &target,
 											 const FOperation &orig,
 											 const size_t *size,
 											 const unsigned int *steps) {
-	for (int i = 0; i < (orig.dimensions - 1); i++) {
+	for (int i = 0; i < orig.dimensions - 1; i++) {
 		const size_t kernel_shape = size[i];
 		size_t window_size = orig.shape[i] - kernel_shape + 1;
 		window_size = window_size % steps[i] == 0 ? window_size / steps[i]
@@ -1459,46 +1458,6 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
 	if (!op.additional_data)
 		return nullptr;
 	memcpy(op.additional_data, steps, op.dimensions * sizeof(unsigned int));
-	return addNode(op, {a, kernel});
-}
-FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel,
-				   const unsigned int *steps) {
-	const FOperation ao = a->operation;
-	const FOperation bo = kernel->operation;
-	if (!a->result_data && ao.op_type != FSTORE) {
-		fExecuteGraph(a);
-	}
-	if (ao.dimensions != bo.dimensions) {
-		last_error = ILLEGAL_DIMENSIONALITY;
-		flogging(F_ERROR,
-				 "For the slide operation the original Tensor and the filter "
-				 "Kernel have to have to same number of dimensions!");
-		return nullptr; // for c compatibility
-	}
-	if (ao.shape[ao.dimensions - 1] != bo.shape[bo.dimensions - 1]) {
-		last_error = INCOMPATIBLE_SHAPES;
-		flogging(
-			F_ERROR,
-			"For the slide operation the size of the last dimension of the "
-			"Tensor must match that of the kernel! " +
-				std::to_string(ao.shape[ao.dimensions - 1]) + " vs. " +
-				std::to_string(bo.shape[bo.dimensions - 1]));
-		return nullptr; // for c compatibility
-	}
-	FOperation op;
-	op.broadcasting_mode = 0;
-	op.op_type = FSLIDE;
-	op.data_type = higherType(ao.data_type, bo.data_type);
-	op.dimensions = ao.dimensions;
-	op.shape = safe_mal<size_t>(op.dimensions);
-	if (!op.shape)
-		return nullptr;
-	memcpy(op.shape, bo.shape, op.dimensions * sizeof(size_t));
-	op.additional_data = safe_mal<unsigned int>(op.dimensions - 1);
-	if (!op.additional_data)
-		return nullptr;
-	memcpy(op.additional_data, steps,
-		   (op.dimensions - 1) * sizeof(unsigned int));
 	return addNode(op, {a, kernel});
 }
 FGraphNode *frandom(const size_t *shape, const int dimensions) {
@@ -1698,7 +1657,12 @@ FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
 	calculateShapeAggregatingWindows(op, a->operation, window_size, step_size);
 	op.op_type = FPOOLING_SUM;
 	op.data_type = a->operation.data_type;
-	op.additional_data = nullptr;
+	FSlidingWindow *window = new FSlidingWindow();
+	window->size = safe_mal<size_t>(op.dimensions);
+	window->step = safe_mal<unsigned int>(op.dimensions);
+	memcpy(window->size, window_size, sizeof(size_t) * op.dimensions);
+	memcpy(window->step, step_size, sizeof(unsigned int) * op.dimensions);
+	op.additional_data = window;
 	op.broadcasting_mode = 0;
 	return addNode(op, {a});
 }
@@ -1712,7 +1676,12 @@ FGraphNode *fpooling_max(FGraphNode *a, const size_t *window_size,
 	calculateShapeAggregatingWindows(op, a->operation, window_size, step_size);
 	op.op_type = FPOOLING_MAX;
 	op.data_type = a->operation.data_type;
-	op.additional_data = nullptr;
+	FSlidingWindow *window = new FSlidingWindow();
+	window->size = safe_mal<size_t>(op.dimensions);
+	window->step = safe_mal<unsigned int>(op.dimensions);
+	memcpy(window->size, window_size, sizeof(size_t) * op.dimensions);
+	memcpy(window->step, step_size, sizeof(unsigned int) * op.dimensions);
+	op.additional_data = window;
 	op.broadcasting_mode = 0;
 	return addNode(op, {a});
 }

@@ -12,13 +12,16 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-  This file includes methods to pass parameters to the kernels */
+  This file includes methods to pass parameters to the eager kernels */
 #include "../../flint.h"
 #include "src/errors.hpp"
 #include <CL/cl.h>
+#include <cmath>
+#include <iostream>
 #include <list>
 #include <mutex>
 #include <optional>
+#include <ostream>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,17 +32,13 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-static cl_mem calcAndPushAccSize(int dim, size_t *shape, cl_kernel kernel,
-								 cl_context context, int &par_index) {
-	std::vector<size_t> acc_sizes(dim);
-	acc_sizes[dim - 1] = 1;
-	for (long d = dim - 2; d >= 0; d--) {
-		acc_sizes[d] = acc_sizes[d + 1] * shape[d + 1];
-	}
+template <typename T>
+static cl_mem pushArray(int size, T *data, cl_kernel kernel, cl_context context,
+						int &par_index) {
 	cl_int err_code;
 	cl_mem acc_mem =
 		clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					   dim * sizeof(long), acc_sizes.data(), &err_code);
+					   size * sizeof(T), data, &err_code);
 	if (!acc_mem) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
@@ -54,6 +53,16 @@ static cl_mem calcAndPushAccSize(int dim, size_t *shape, cl_kernel kernel,
 		return nullptr;
 	}
 	return acc_mem;
+}
+static cl_mem calcAndPushAccSize(int dim, size_t *shape, cl_kernel kernel,
+								 cl_context context, int &par_index) {
+	std::vector<size_t> acc_sizes(dim);
+	acc_sizes[dim - 1] = 1;
+	for (long d = dim - 2; d >= 0; d--) {
+		acc_sizes[d] = acc_sizes[d + 1] * shape[d + 1];
+	}
+	return pushArray(acc_sizes.size(), acc_sizes.data(), kernel, context,
+					 par_index);
 }
 // values for a single operation (not related directly to parameters)
 inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
@@ -298,98 +307,80 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
 							 std::to_string(err_code));
 		}
 	} break;
-	case FGRADIENT_CONVOLVE1:
-	case FSLIDE: {
-		bool is_slide = node->operation.op_type == FSLIDE;
+	case FGRADIENT_POOLING_MAX: {
 		const FOperation op = node->operation;
 		const FGraphNode *gnp1 = node->predecessors[0],
 						 *gnp2 = node->predecessors[1];
-		FOperation pred;
-		FOperation kernel_par;
-		FOperation adjoint;
-		if (is_slide) {
-			pred = gnp1->operation;
-			kernel_par = gnp2->operation;
-		} else {
-			pred = op;
-			kernel_par = gnp1->operation;
-			adjoint = gnp2->operation;
-			// dimensions0
-			if (clSetKernelArg(kernel, par_index++, sizeof(int),
-							   (void *)&node->operation.dimensions) !=
-				CL_SUCCESS) {
-				setErrorType(OCL_ERROR);
-				flogging(F_ERROR, "Could not load Argument to kernel!");
-				return;
-			}
+		const FOperation a = gnp2->operation;
+		const FSlidingWindow *window =
+			(FSlidingWindow *)gnp1->operation.additional_data;
+		std::vector<size_t> kernel_shape (window->size, window->size + op.dimensions);
+		kernel_shape.push_back(op.shape[op.dimensions - 1]);
+		unsigned int *steps = window->step;
+		to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+											 context, par_index));
+		to_free.push_back(calcAndPushAccSize(
+			kernel_shape.size(), kernel_shape.data(), kernel, context, par_index));
+		to_free.push_back(calcAndPushAccSize(a.dimensions, a.shape, kernel,
+											 context, par_index));
+		std::vector<size_t> acc_overlapping(op.dimensions - 1);
+		acc_overlapping[acc_overlapping.size() - 1] = 1;
+		for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
+			acc_overlapping[i] =
+				std::max(1l, (long)std::ceil((double)kernel_shape[i + 1] /
+											 (double)steps[i + 1])) *
+				acc_overlapping[i + 1];
 		}
+		const size_t overlapping =
+			std::max(1l, (long)std::ceil((double)kernel_shape[0] /
+										 (double)steps[0])) *
+			acc_overlapping[0];
+		to_free.push_back(pushArray(acc_overlapping.size(),
+									acc_overlapping.data(), kernel, context,
+									par_index));
+		to_free.push_back(
+			pushArray(op.dimensions - 1, steps, kernel, context, par_index));
+		to_free.push_back(
+			pushArray(op.dimensions, op.shape, kernel, context, par_index));
+		to_free.push_back(pushArray(kernel_shape.size(), kernel_shape.data(),
+									kernel, context, par_index));
+	} break;
+	case FGRADIENT_CONVOLVE1: {
+		// acc_sizes_pred, acc_sizes_kernel, acc_sizes, acc_overlapping, steps,
+		// op_shape, kernel_shape
+		const FOperation op = node->operation;
+		const FGraphNode *gnp1 = node->predecessors[0],
+						 *gnp2 = node->predecessors[1];
+		const FOperation kernel_op = gnp1->operation, a = gnp2->operation;
 		unsigned int *steps = (unsigned int *)op.additional_data;
-		// allocate steps
-		cl_mem steps_mem =
-			clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-						   op.dimensions * sizeof(int), steps, &err_code);
-		if (!steps_mem)
-			flogging(F_ERROR,
-					 "Could not load Argument to kernel! Error Code: " +
-						 std::to_string(err_code));
-		to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape,
-											 kernel, context, par_index));
-		to_free.push_back(calcAndPushAccSize(kernel_par.dimensions,
-											 kernel_par.shape, kernel, context,
-											 par_index));
-		if (!is_slide) {
-			std::vector<size_t> acc_sizes(pred.dimensions - 1);
-			acc_sizes[op.dimensions - 2] = 1;
-			for (long d = op.dimensions - 3; d >= 0; d--)
-				acc_sizes[d] = acc_sizes[d + 1] * adjoint.shape[d + 1];
+		to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+											 context, par_index));
+		to_free.push_back(calcAndPushAccSize(
+			kernel_op.dimensions, kernel_op.shape, kernel, context, par_index));
+		to_free.push_back(calcAndPushAccSize(a.dimensions, a.shape, kernel,
+											 context, par_index));
 
-			cl_mem acc_shape = clCreateBuffer(
-				context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				acc_sizes.size() * sizeof(long), acc_sizes.data(), &err_code);
-			if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-							   (void *)&acc_shape) != CL_SUCCESS)
-				flogging(F_ERROR,
-						 "Could not load Argument to kernel! Error Code: " +
-							 std::to_string(err_code));
-			to_free.push_back(acc_shape);
+		std::vector<size_t> acc_overlapping(op.dimensions - 1);
+		acc_overlapping[acc_overlapping.size() - 1] = 1;
+		for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
+			acc_overlapping[i] =
+				std::max(1l, (long)std::ceil((double)kernel_op.shape[i + 1] /
+											 (double)steps[i + 1])) *
+				acc_overlapping[i + 1];
 		}
-		if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-						   (void *)&steps_mem) != CL_SUCCESS)
-			flogging(F_ERROR,
-					 "Could not load Argument to kernel! Error Code: " +
-						 std::to_string(err_code));
-		const FOperation shape_par = is_slide ? pred : kernel_par;
-		const FOperation shape2_par = is_slide ? kernel_par : pred;
-		cl_mem shape_mem = clCreateBuffer(
-			context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			shape_par.dimensions * sizeof(long), shape_par.shape, &err_code);
-		if (!shape_mem)
-			flogging(F_ERROR,
-					 "Could not load Argument to kernel! Error Code: " +
-						 std::to_string(err_code));
-		if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-						   (void *)&shape_mem) != CL_SUCCESS)
-			flogging(F_ERROR,
-					 "Could not load Argument to kernel! Error Code: " +
-						 std::to_string(err_code));
-		if (is_slide) {
-			cl_mem shape2_mem =
-				clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-							   shape2_par.dimensions * sizeof(long),
-							   shape2_par.shape, &err_code);
-			if (!shape2_mem)
-				flogging(F_ERROR,
-						 "Could not load Argument to kernel! Error Code: " +
-							 std::to_string(err_code));
-			if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
-							   (void *)&shape2_mem) != CL_SUCCESS)
-				flogging(F_ERROR,
-						 "Could not load Argument to kernel! Error Code: " +
-							 std::to_string(err_code));
-			to_free.push_back(shape2_mem);
-		}
-		to_free.push_back(steps_mem);
-		to_free.push_back(shape_mem);
+		const size_t overlapping =
+			std::max(1l, (long)std::ceil((double)kernel_op.shape[0] /
+										 (double)steps[0])) *
+			acc_overlapping[0];
+		to_free.push_back(pushArray(acc_overlapping.size(),
+									acc_overlapping.data(), kernel, context,
+									par_index));
+		to_free.push_back(
+			pushArray(op.dimensions - 1, steps, kernel, context, par_index));
+		to_free.push_back(
+			pushArray(op.dimensions, op.shape, kernel, context, par_index));
+		to_free.push_back(pushArray(kernel_op.dimensions, kernel_op.shape,
+									kernel, context, par_index));
 	} break;
 	case FCONVOLVE: {
 		const FOperation op = node->operation;
@@ -419,6 +410,39 @@ inline void pushAdditonalVals(FGraphNode *node, cl_kernel kernel,
 						 std::to_string(err_code));
 		to_free.push_back(steps_mem);
 	} break;
+	case FPOOLING_SUM:
+	case FPOOLING_MAX: {
+		const FOperation op = node->operation;
+		const FOperation pred = node->predecessors[0]->operation;
+		const FSlidingWindow *slidewin =
+			(FSlidingWindow *)node->operation.additional_data;
+		size_t kernel_num_elems = slidewin->size[op.dimensions - 1];
+		for (int d = op.dimensions - 2; d >= 0; d--)
+			kernel_num_elems *= slidewin->size[d];
+		to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape,
+											 kernel, context, par_index));
+		to_free.push_back(calcAndPushAccSize(op.dimensions, slidewin->size,
+											 kernel, context, par_index));
+		to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+											 context, par_index));
+		cl_mem steps = clCreateBuffer(
+			context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			pred.dimensions * sizeof(unsigned int), slidewin->step, &err_code);
+		if (!steps)
+			flogging(F_ERROR,
+					 "Could not load Argument to kernel! Error Code: " +
+						 std::to_string(err_code));
+		if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), &steps) !=
+			CL_SUCCESS)
+			flogging(F_ERROR, "Could not load Arguments to kernel!");
+		to_free.push_back(steps);
+		if (clSetKernelArg(kernel, par_index++, sizeof(long),
+						   &pred.shape[pred.dimensions - 1]) != CL_SUCCESS)
+			flogging(F_ERROR, "Could not load Arguments to kernel!");
+		if (clSetKernelArg(kernel, par_index++, sizeof(long),
+						   &kernel_num_elems) != CL_SUCCESS)
+			flogging(F_ERROR, "Could not load Arguments to kernel!");
+	} break;
 	default:
 		break;
 	}
@@ -431,12 +455,14 @@ inline void pushParameterVals(FGraphNode *node, FGraphNode *pred,
 	cl_int err_code;
 	FOperation op = pred->operation;
 	switch (node->operation.op_type) {
+	case FPOOLING_SUM:
+	case FPOOLING_MAX:
 	case FSET_INDEX:
 	case FINDEX:
 	case FMATMUL:
-	case FGRADIENT_CONVOLVE2:
+	case FGRADIENT_POOLING_MAX:
 	case FGRADIENT_CONVOLVE1:
-	case FSLIDE:
+	case FGRADIENT_CONVOLVE2:
 	case FCONVOLVE: {
 		if (clSetKernelArg(kernel, par_index++, sizeof(int),
 						   (void *)&op.dimensions) != CL_SUCCESS) {

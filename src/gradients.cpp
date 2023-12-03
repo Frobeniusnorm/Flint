@@ -325,13 +325,13 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 		} else
 			return nullptr;
 	} break;
-	case FSLIDE:
 	case FCONVOLVE: {
 		FGraphNode *a = y->predecessors[0];
 		FGraphNode *kernel = y->predecessors[1];
 		const unsigned int *steps =
 			(unsigned int *)y->operation.additional_data;
 		if (0 == dx_i) {
+			// TODO automate this
 			if (a->operation.dimensions != kernel->operation.dimensions) {
 				FGraphNode *res = fconstant_d(0.0, a->operation.shape,
 											  a->operation.dimensions);
@@ -361,11 +361,8 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 			} else
 				return gradient_convolve1(a, kernel, prev_adj, steps);
 		} else if (1 == dx_i) {
-			if (y->operation.op_type == FCONVOLVE) {
+			if (y->operation.op_type == FCONVOLVE)
 				return gradient_convolve2(a, kernel, prev_adj, steps);
-			} else
-				return fslide(a, prev_adj,
-							  (unsigned int *)y->operation.additional_data);
 		}
 		return nullptr;
 	}
@@ -408,8 +405,9 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 			configureGradientInformation(gradient, {kernel, prev_adj});
 			return gradient;
 		} else if (0 == dx_i) {
-			return fslide(prev_adj, a,
-						  (unsigned int *)y->operation.additional_data);
+			return gradient_convolve1(
+				prev_adj, kernel, a,
+				(unsigned int *)y->operation.additional_data);
 		}
 		return nullptr;
 	} break;
@@ -435,6 +433,58 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 			return nullptr;
 		}
 	}
+	case FPOOLING_SUM: {
+		FGraphNode *a = y->predecessors[0];
+		if (0 == dx_i) {
+			const FSlidingWindow window =
+				*((FSlidingWindow *)y->operation.additional_data);
+			std::vector<size_t> window_size(
+				window.size, window.size + y->operation.dimensions);
+			std::vector<unsigned int> steps(
+				window.step, window.step + y->operation.dimensions);
+			window_size.push_back(
+				a->operation.shape[a->operation.dimensions - 1]);
+			FGraphNode *constant_1 =
+				fconstant_d(1, window_size.data(), a->operation.dimensions);
+			return gradient_convolve1(a, constant_1, prev_adj, window.step);
+		} else
+			return nullptr;
+	} break;
+	case FPOOLING_MAX: {
+		FGraphNode *a = y->predecessors[0];
+		if (0 == dx_i) {
+			FGraphNode *dx = new FGraphNode();
+			dx->num_predecessor = 3;
+			dx->predecessors = safe_mal<FGraphNode *>(3);
+			if (!dx->predecessors) {
+				return nullptr;
+			}
+			fExecuteGraph(y);
+			fExecuteGraph(prev_adj);
+			fExecuteGraph(a);
+			dx->predecessors[0] = y;
+			prev_adj->reference_counter++;
+			dx->predecessors[1] = prev_adj;
+			y->reference_counter++;
+			dx->predecessors[2] = a;
+			a->reference_counter++;
+			dx->reference_counter = 0;
+			dx->result_data = nullptr;
+			dx->gradient_data = nullptr;
+			dx->operation.op_type = FGRADIENT_POOLING_MAX;
+			dx->operation.data_type = y->operation.data_type;
+			dx->operation.dimensions = a->operation.dimensions;
+			dx->operation.shape = safe_mal<size_t>(a->operation.dimensions);
+			if (!dx->operation.shape)
+				return nullptr;
+			memcpy(dx->operation.shape, a->operation.shape,
+				   a->operation.dimensions * sizeof(size_t));
+			dx->operation.additional_data = nullptr;
+			dx->operation.broadcasting_mode = 0;
+			return dx;
+		} else
+			return nullptr;
+	} break;
 	case FPOW: {
 		FGraphNode *a = y->predecessors[0];
 		FGraphNode *b = y->predecessors[1];

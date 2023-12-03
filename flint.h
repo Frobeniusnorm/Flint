@@ -248,15 +248,15 @@ enum FOperationType {
 	FEQUAL,
 	FGREATER,
 	FCONVOLVE,
-	FSLIDE,
 	FGRADIENT_CONVOLVE1, // only for internal use!
 	FGRADIENT_CONVOLVE2, // only for internal use!
 	FINDEX,
 	FSET_INDEX,
 	FSLIDING_WINDOW,
 	FUNSLIDE_WINDOW,
-	FPOOLING_MAX, // TODO
-	FPOOLING_SUM, // TODO
+	FPOOLING_MAX,
+	FPOOLING_SUM,
+	FGRADIENT_POOLING_MAX, // only for internal use!
 	FNUM_OPERATION_TYPES
 };
 /**
@@ -972,24 +972,6 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
 					  const unsigned int *steps);
 /**
- * Slides `kernel` along `a`, multiplying it with the elements of `a` it is slid
- * over. For each element all multiplied values are summed up, so that the
- * result has the same shape as `kernel` (every element in the result is the
- * accumulated sum of the product of that element with all elements it was slid
- * over). `kernel` is initially placed so that the first element of `a` and
- * the first element of `kernel` overlap. It is then moved for each dimension
- * `i` by `steps[i]` elements forward except for the last (steps should have 1
- * dimension less then `a` and `kernel`), just like it would be by `fconvolve`
- * with the difference, that everything is accumulated for the kernel instead of
- * the original node.
- *
- * The last dimension of `a` and `kernel` should be equal, therefor it has no
- * step in that dimension since the complete kernel is multiplied in that
- * dimension.
- */
-FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel,
-				   const unsigned int *steps);
-/**
  * Selects single elements with a index-tensor (integer tensor containing
  * indices for the selected dimension).
  * It indexes a dimension of the input tensor and the result has
@@ -1086,15 +1068,18 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
 /**
  * TODO not yet implemented
- * Slides a window along the Tensor and sums up all elements inside that window,
- * reducing it into one element and then slides the window in each dimension
- * `step_size` times (like `fsliding_window`).
+ * Slides a window along the Tensor and reduces all elements inside that window
+ * to their sum (just that one remains in the result tensor), and
+ * then slides the window in each dimension by `step_size` forward (like
+ * `fsliding_window`). The last dimension is complety pooled, and the result is
+ * one dimension smaller then the original tensor
  * - `a` the tensor to pool
- * - `window_size` array with as many elements as `a` has dimension, each
- *   describing the window size in that dimension for which all elements inside
- *   each window are to be summed up
+ * - `window_size` array with one element less then `a` has dimension, each
+ *   describing the window size in that dimension for which for all elements
+ *   inside each window the maximum should be taken.
  * - `step_size` array of number of elements the window should be moved after
- *   each reducting for each dimension
+ *   each pooling for each dimension (one element less then `a` has
+ *   dimensions).
  */
 FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
 						 const unsigned int *step_size);
@@ -1102,14 +1087,16 @@ FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
  * TODO not yet implemented
  * Slides a window along the Tensor and reduces all elements inside that window
  * to their maximum element (just that one remains in the result tensor), and
- * then slides the window in each dimension `step_size` times (like
- * `fsliding_window`).
+ * then slides the window in each dimension by `step_size` forward (like
+ * `fsliding_window`). The last dimension is complety pooled, and the result is
+ * one dimension smaller then the original tensor
  * - `a` the tensor to pool
- * - `window_size` array with as many elements as `a` has dimension, each
+ * - `window_size` array with one element less then `a` has dimension, each
  *   describing the window size in that dimension for which for all elements
- * inside each window the maximum should be taken.
+ *   inside each window the maximum should be taken.
  * - `step_size` array of number of elements the window should be moved after
- *   each reducting for each dimension
+ *   each pooling for each dimension (one element less then `a` has
+ *   dimensions).
  */
 FGraphNode *fpooling_max(FGraphNode *a, const size_t *window_size,
 						 const unsigned int *step_size);
@@ -1233,7 +1220,5 @@ inline FGraphNode *fflatten(FGraphNode *a, int dimension) {
 inline void flogging(FLogType type, std::string msg) {
 	flogging(type, msg.c_str());
 }
-
 #endif // __cplusplus
-
 #endif // FLINT_H
