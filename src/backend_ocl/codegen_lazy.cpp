@@ -217,6 +217,161 @@ generateCode(FGraphNode *node,
 					   to_string(acc_sizes_ax) + ")%" +
 					   to_string(node->operation.shape[ax]) + ";\n" + code;
 			} break;
+			case FGRADIENT_POOLING_MAX: {
+				string par1, par2, par3;
+				push_pred = false;
+				FGraphNode *gnp3 = node->predecessors[2];
+				FGraphNode *gnp2 = node->predecessors[1];
+				FGraphNode *gnp1 = node->predecessors[0];
+				if (assigned_params.find(gnp1) != assigned_params.end()) {
+					par1 = assigned_params[gnp1];
+				} else {
+					par1 = "P" + to_string(assigned_params.size());
+					assigned_params.insert({gnp1, par1});
+					parameters.push_back({gnp1, par1});
+				}
+				if (assigned_params.find(gnp2) != assigned_params.end()) {
+					par2 = assigned_params[gnp2];
+				} else {
+					par2 = "P" + to_string(assigned_params.size());
+					assigned_params.insert({gnp2, par2});
+					parameters.push_back({gnp2, par2});
+				}
+				if (assigned_params.find(gnp3) != assigned_params.end()) {
+					par3 = assigned_params[gnp3];
+				} else {
+					par3 = "P" + to_string(assigned_params.size());
+					assigned_params.insert({gnp3, par3});
+					parameters.push_back({gnp3, par3});
+				}
+				const FOperation op = node->operation;
+				const FSlidingWindow *window =
+					(FSlidingWindow *)gnp1->operation.additional_data;
+				const FOperation a = gnp2->operation;
+				const FOperation image = gnp3->operation;
+				const unsigned int *steps = window->step;
+				// calculate accumulated sizes for result (pred), kernel and a
+				// (adjacent)
+				std::vector<size_t> acc_sizes = calcAccSizes(a);
+				std::vector<size_t> acc_sizes_pred = calcAccSizes(op);
+				acc_sizes[op.dimensions - 2] = 1;
+				std::vector<size_t> acc_sizes_kernel(op.dimensions);
+				acc_sizes_kernel[acc_sizes_kernel.size() - 1] = 1;
+				acc_sizes_kernel[acc_sizes_kernel.size() - 2] =
+					op.shape[op.dimensions - 1];
+				for (int i = acc_sizes_kernel.size() - 3; i >= 0; i--)
+					acc_sizes_kernel[i] =
+						window->size[i + 1] * acc_sizes_kernel[i + 1];
+				// accumulations of overlapping elements (kernel overlapping
+				// itself)
+				std::vector<size_t> acc_overlapping(op.dimensions - 1);
+				acc_overlapping[acc_overlapping.size() - 1] = 1;
+				for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
+					acc_overlapping[i] =
+						std::max(1l,
+								 (long)std::ceil((double)window->size[i + 1] /
+												 (double)steps[i + 1])) *
+						acc_overlapping[i + 1];
+				}
+				// First dimension overlap
+				const size_t overlapping =
+					std::max(1l, (long)std::ceil((double)window->size[0] /
+												 (double)steps[0])) *
+					acc_overlapping[0];
+				string convc = type + " " + name + " = 0;\n{";
+				convc += "int in_steps = 1, started_counting = 0;\n"
+						 "long keri = 0, adji = 0;\n";
+				for (int d = 0; d < op.dimensions - 1; d++) {
+					convc += "if(in_steps){\nlong di = (";
+					if (d == 0)
+						convc += "index";
+					else
+						convc += "index%" + to_string(acc_sizes_pred[d - 1]);
+					convc += ") / " + to_string(acc_sizes_pred[d]) +
+							 ";\n"
+							 "long ki = di - (di / " +
+							 to_string(steps[d]) + ")*" + to_string(steps[d]) +
+							 ";\n"
+							 "if (ki >= " +
+							 to_string(window->size[d]) +
+							 ") {"
+							 " in_steps = 0; }\n"
+							 "keri += ki * " +
+							 to_string(acc_sizes_kernel[d]) +
+							 ";\n"
+							 "adji += (long)ceil(max(0l, di - " +
+							 to_string(window->size[d] - 1) + ") / (double)" +
+							 to_string(steps[d]) + ") * " +
+							 to_string(acc_sizes[d]) + ";\n}\n";
+				}
+				convc += "if(in_steps){\n long actual_overlapping = 0;\n keri "
+						 "+= index % " +
+						 to_string(op.shape[op.dimensions - 1]) +
+						 ";\n for(long o = 0; o < " + to_string(overlapping) +
+						 "; o++){\n  int skip_kernel = 0;\n "
+						 " long adjo = "
+						 "0, kero = 0;\n";
+				for (int d = 0; d < op.dimensions - 1; d++) {
+					convc += "  if(!skip_kernel){\n   const long di = (";
+					if (d == 0)
+						convc += "index";
+					else
+						convc += "index%" + to_string(acc_sizes_pred[d - 1]);
+					convc += ")/" + to_string(acc_sizes_pred[d]) +
+							 ";\n"
+							 "   const long io = (";
+					if (d == 0)
+						convc += "o";
+					else
+						convc += "o%" + to_string(acc_overlapping[d - 1]);
+					convc += ")/" + to_string(acc_overlapping[d]) +
+							 ";\n"
+							 "   const long ao = (";
+					if (d == 0)
+						convc += "actual_overlapping";
+					else
+						convc += "actual_overlapping%" +
+								 to_string(acc_overlapping[d - 1]);
+					convc += ")/" + to_string(acc_overlapping[d]) +
+							 ";\n"
+							 "   const long ki = (";
+					if (d == 0)
+						convc += "keri";
+					else
+						convc += "keri%" + to_string(acc_sizes_kernel[d - 1]);
+					convc +=
+						")/" + to_string(acc_sizes_kernel[d]) +
+						";\n"
+						"   if(di + " +
+						to_string(window->size[d]) + " - (ki + io * " +
+						to_string(steps[d]) + ") > " + to_string(op.shape[d]) +
+						"){\n"
+						"    if(!started_counting) actual_overlapping--;\n"
+						"    skip_kernel = true;\n"
+						"   }else if(ki + io * " +
+						to_string(steps[d]) +
+						" >= " + to_string(window->size[d]) +
+						" || di < ki + io * " + to_string(steps[d]) +
+						"){\n"
+						"    skip_kernel = true;\n"
+						"   }\n"
+						"   adjo += ao * " +
+						to_string(acc_sizes[d]) +
+						";\n"
+						"   kero += io * " +
+						to_string(steps[d] * acc_sizes_kernel[d]) + ";\n  }\n";
+				}
+				convc += "  const int equal = " + par3 + "[index] == " + par1 +
+						 "[adjo + adji];\n"
+						 "  if(!skip_kernel && equal){\n"
+						 "   started_counting = true;\n"
+						 "   " +
+						 name + " += " + par2 +
+						 "[adji + adjo];\n"
+						 " }\n"
+						 " actual_overlapping++;\n}\n}\n}\n";
+				code = convc + code;
+			} break;
 			case FGRADIENT_CONVOLVE1: {
 				string par1, par2;
 				push_pred = false;

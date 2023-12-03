@@ -76,7 +76,8 @@ const char *fop_to_string[] = {"FSTORE",
 							   "FSLIDING_WINDOW",
 							   "FUNSLIDE_WINDOW",
 							   "FPOOLING_MAX",
-							   "FPOOLING_SUM"};
+							   "FPOOLING_SUM",
+							   "FGRADIENT_POOLING_MAX"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
