@@ -14,10 +14,10 @@
 
   This file includes the implementation of the CPU backend.
 */
-#include "../flint.h"
-#include "backend_cpu/execution.hpp"
-#include "errors.hpp"
-#include "utils.hpp"
+#include "../../flint.h"
+#include "execution.hpp"
+#include "../errors.hpp"
+#include "../utils.hpp"
 #include <algorithm>
 #include <atomic>
 #include <chrono>

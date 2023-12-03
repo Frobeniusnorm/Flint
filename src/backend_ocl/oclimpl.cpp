@@ -15,12 +15,12 @@
   This file includes the implementation of the GPU backend.
 */
 
-#include "../flint.h"
-#include "backend_ocl/codegen.hpp"
-#include "backend_ocl/comp.hpp"
-#include "backend_ocl/utils.hpp"
-#include "src/errors.hpp"
+#include "../../flint.h"
+#include "codegen.hpp"
+#include "comp.hpp"
 #include "utils.hpp"
+#include "../errors.hpp"
+#include "../utils.hpp"
 #include <CL/cl.h>
 #include <iostream>
 #include <list>

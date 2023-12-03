@@ -18,6 +18,7 @@
 #define CPU_BACKEND_EXECUTION
 #include "../../flint.h"
 #include "../utils.hpp"
+#include "cpu_common.hpp"
 #include <climits>
 #include <cmath>
 #include <cstring>
@@ -31,12 +32,6 @@
 // use generators for that and overload CPUResultDatas capabilities.
 // e.g. transpose saves a overloaded Generator struct whith all the relevant
 // information to compute a index.
-struct CPUResultData {
-		void *data;
-		FType type;
-		size_t num_entries;
-		std::vector<size_t> shape;
-};
 template <typename T, typename A>
 static void unaryExpression(T *__restrict__ result, const A *__restrict__ data,
 							FOperationType op, size_t from, size_t size,
@@ -529,8 +524,6 @@ binaryExpression(T *__restrict__ result, const A *__restrict__ data1,
 		break;
 	}
 }
-// i hate this function more than anything else in this library (yet)
-// EDIT: nope i was wrong, computeGradient is worse
 template <typename T>
 static void executeNode(const FGraphNode *node,
 						std::vector<CPUResultData> predecessor_data,
