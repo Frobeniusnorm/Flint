@@ -3,9 +3,9 @@
 #include "implementation.hpp"
 
 struct NegImpl : OperationImplementation {
-		template <typename T, typename A>
+		template <typename T>
 		static void unary_expression(T *__restrict__ result,
-									 const A *__restrict__ data1, size_t from,
+									 const T *__restrict__ data1, size_t from,
 									 size_t size, const FGraphNode *curr);
 		void execute_cpu(const FGraphNode *node,
 						 std::vector<CPUResultData> predecessor_data,
@@ -51,6 +51,10 @@ struct Log10Impl : OperationImplementation {
 		void generate_gpu_eager() override {}
 };
 struct SignImpl : OperationImplementation {
+		template <typename A>
+		static void unary_expression(int *__restrict__ result,
+									 const A *__restrict__ data1, size_t from,
+									 size_t size, const FGraphNode *curr);
 		void execute_cpu(const FGraphNode *node,
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
@@ -154,6 +158,18 @@ struct ExpImpl : OperationImplementation {
 		template <typename T, typename A>
 		static void unary_expression(T *__restrict__ result,
 									 const A *__restrict__ data1, size_t from,
+									 size_t size, const FGraphNode *curr);
+		void execute_cpu(const FGraphNode *node,
+						 std::vector<CPUResultData> predecessor_data,
+						 void *__restrict__ result, size_t from,
+						 size_t size) override;
+		void generate_gpu_lazy() override {}
+		void generate_gpu_eager() override {}
+};
+struct AbsImpl : OperationImplementation {
+		template <typename T>
+		static void unary_expression(T *__restrict__ result,
+									 const T *__restrict__ data1, size_t from,
 									 size_t size, const FGraphNode *curr);
 		void execute_cpu(const FGraphNode *node,
 						 std::vector<CPUResultData> predecessor_data,
