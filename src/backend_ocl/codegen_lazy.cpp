@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. */
 #include "../../flint.h"
+#include "../operations/implementation.hpp"
 #include "../utils.hpp"
 #include "codegen.hpp"
 #include <list>
@@ -24,16 +25,17 @@ std::string
 generateCode(FGraphNode *node,
 			 std::list<std::pair<FGraphNode *, std::string>> &parameters) {
 	using namespace std;
+	OCLLazyCodegenState state;
 	// we use breadth first search to traverse to operation graph
-	list<tuple<FGraphNode *, string>> todo;
+	list<tuple<FGraphNode *, string>> &todo = state.todo;
 	// some operations work on the parameters, allow them to keep track
-	unordered_map<FGraphNode *, std::string> assigned_params;
-	// so we dont execute nodes multiple times
-	unordered_map<FGraphNode *, std::string> calculated_vars;
-	int variable_index = 0;
+	unordered_map<FGraphNode *, std::string> &assigned_params =
+		state.assigned_params;
+	unsigned int &variable_index = state.variable_index;
 	string code = "";
 	// indexing logic (we save the old index in old_index$i to restore it)
-	unsigned int num_indices = 0;
+	unsigned int &num_indices = state.num_indices;
+	;
 	todo.push_front({node, "v0"});
 	while (!todo.empty()) {
 		// take from queue
@@ -352,25 +354,24 @@ generateCode(FGraphNode *node,
 						convc += "keri";
 					else
 						convc += "keri%" + to_string(acc_sizes_kernel[d - 1]);
-					convc +=
-						")/" + to_string(acc_sizes_kernel[d]) +
-						";\n"
-						"   if(di + " +
-						to_string(window->size[d]) + " - (ki + io * " +
-						to_string(steps[d]) + ") > " + to_string(op.shape[d]) +
-						"){\n"
-						"    if(!started_counting) actual_overlapping--;\n"
-						"    skip_kernel = true;\n"
-						"   }else if(ki + io * " +
-						to_string(steps[d]) +
-						" >= " + to_string(window->size[d]) +
-						" || di < ki + io * " + to_string(steps[d]) +
-						"){\n"
-						"    skip_kernel = true;\n"
-						"   }\n"
-						"   adjo += ao * " +
-						to_string(acc_sizes[d]) +
-						";\n  }\n";
+					convc += ")/" + to_string(acc_sizes_kernel[d]) +
+							 ";\n"
+							 "   if(di + " +
+							 to_string(window->size[d]) + " - (ki + io * " +
+							 to_string(steps[d]) + ") > " +
+							 to_string(op.shape[d]) +
+							 "){\n"
+							 "    if(!started_counting) actual_overlapping--;\n"
+							 "    skip_kernel = true;\n"
+							 "   }else if(ki + io * " +
+							 to_string(steps[d]) +
+							 " >= " + to_string(window->size[d]) +
+							 " || di < ki + io * " + to_string(steps[d]) +
+							 "){\n"
+							 "    skip_kernel = true;\n"
+							 "   }\n"
+							 "   adjo += ao * " +
+							 to_string(acc_sizes[d]) + ";\n  }\n";
 				}
 				convc += "  const int equal = " + par3 + "[index] == " + par1 +
 						 "[adjo + adji];\n"
