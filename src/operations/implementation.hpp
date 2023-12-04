@@ -223,6 +223,27 @@
 						 size, node);                                          \
 	} break;                                                                   \
 	}
+/* calls a function `execute_cpu_typed` with the same signature as
+ * `execute_cpu`, but with a typed return type */
+#define EXECUTE_TYPED_IMPL                                                     \
+	switch (node->operation.data_type) {                                       \
+	case F_INT32: {                                                            \
+		execute_cpu_typed(node, predecessor_data, (int *__restrict__)result,   \
+						  from, size);                                         \
+	} break;                                                                   \
+	case F_FLOAT32: {                                                          \
+		execute_cpu_typed(node, predecessor_data, (float *__restrict__)result, \
+						  from, size);                                         \
+	} break;                                                                   \
+	case F_INT64: {                                                            \
+		execute_cpu_typed(node, predecessor_data, (long *__restrict__)result,  \
+						  from, size);                                         \
+	} break;                                                                   \
+	case F_FLOAT64: {                                                          \
+		execute_cpu_typed(node, predecessor_data,                              \
+						  (double *__restrict__)result, from, size);           \
+	} break;                                                                   \
+	}
 /* calls a function `binary_expression` with the signature
  * template <typename T>
  * void binaryExpression(T *__restrict__ result,
