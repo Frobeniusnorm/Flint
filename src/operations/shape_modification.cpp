@@ -28,7 +28,7 @@ void FlattenImpl::execute_cpu(const FGraphNode *node,
 		break;
 	case F_INT64:
 	case F_FLOAT64:
-		std::memcpy((long *)result + from, (long *)pred.data + from, 4 * size);
+		std::memcpy((long *)result + from, (long *)pred.data + from, 8 * size);
 		break;
 	}
 }

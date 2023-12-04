@@ -56,7 +56,7 @@ void Log10Impl::unary_expression(T *__restrict__ result,
 								 const A *__restrict__ data, size_t from,
 								 size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = log2(data[i]);
+		result[i] = log10(data[i]);
 }
 void Log10Impl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,

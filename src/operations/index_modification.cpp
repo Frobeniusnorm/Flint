@@ -124,7 +124,7 @@ void IndexImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
 							size_t size) {
-	BINARY_EXECUTE_MONOTON_IMPL
+	BINARY_EXECUTE_IMPL
 }
 template <typename T>
 void SetIndexImpl::execute_cpu_typed(

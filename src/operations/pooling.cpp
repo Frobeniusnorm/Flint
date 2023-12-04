@@ -21,7 +21,6 @@ static void pooling(T *__restrict__ result, const T *__restrict__ data,
 		acc_sizes_kernel[d] = acc_sizes_kernel[d + 1] * window->size[d + 1];
 		kernel_num_elems *= window->size[d];
 	}
-
 	for (size_t i = from; i < from + size; i++) {
 		// base index for source
 		size_t j = 0;
@@ -34,12 +33,7 @@ static void pooling(T *__restrict__ result, const T *__restrict__ data,
 		}
 		T res = 0;
 		if (op.op_type == FPOOLING_MAX) {
-			if constexpr (std::is_same<T, int>())
-				res = -INT_MAX - 1;
-			else if constexpr (std::is_same<T, long>())
-				res = -LONG_MAX - 1l;
-			else
-				res = std::numeric_limits<T>::lowest();
+			res = std::numeric_limits<T>::lowest();
 		}
 		for (size_t k = 0; k < kernel_num_elems; k++) {
 			size_t o = 0; // source offset

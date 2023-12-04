@@ -15,8 +15,9 @@
   This file includes the implementation of the CPU backend.
 */
 #include "../../flint.h"
-#include "execution.hpp"
+// #include "execution.hpp"
 #include "../errors.hpp"
+#include "../operations/implementation.hpp"
 #include "../utils.hpp"
 #include <algorithm>
 #include <atomic>
@@ -78,20 +79,8 @@ static void threadRoutine() {
 			thread_queue.pop_front();
 		if (!node)
 			break;
-		switch (node->operation.data_type) {
-		case F_FLOAT32:
-			executeNode(node, pred_data, (float *)result, from, to);
-			break;
-		case F_FLOAT64:
-			executeNode(node, pred_data, (double *)result, from, to);
-			break;
-		case F_INT32:
-			executeNode(node, pred_data, (int *)result, from, to);
-			break;
-		case F_INT64:
-			executeNode(node, pred_data, (long *)result, from, to);
-			break;
-		}
+		OperationImplementation::implementations[node->operation.op_type]
+			->execute_cpu(node, pred_data, result, from, to);
 		sem->release();
 	}
 }
@@ -116,7 +105,8 @@ static void chooseExecutionMethod(FGraphNode *node,
 			sem->acquire();
 		delete sem;
 	} else {
-		executeNode(node, pred_data, result, 0, size);
+		OperationImplementation::implementations[node->operation.op_type]
+			->execute_cpu(node, pred_data, result, 0, size);
 	}
 	std::chrono::duration<double, std::milli> elapsed =
 		std::chrono::high_resolution_clock::now() - start;

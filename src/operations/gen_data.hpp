@@ -36,6 +36,7 @@ struct GenConstantImpl : OperationImplementation {
 		void generate_gpu_lazy() override {}
 		void generate_gpu_eager() override {}
 };
+
 struct GenArangeImpl : OperationImplementation {
 		void execute_cpu(const FGraphNode *node,
 						 std::vector<CPUResultData> predecessor_data,

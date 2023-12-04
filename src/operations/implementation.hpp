@@ -151,7 +151,7 @@
 	} break;                                                                   \
 	}
 #define DISPATCH_UNARY_OPERATION(T)                                            \
-	switch (node->operation.data_type) {                                       \
+	switch (node->predecessors[0]->operation.data_type) {                      \
 	case F_INT32: {                                                            \
 		unary_expression((T *__restrict__)result,                              \
 						 (int *__restrict__)predecessor_data[0].data, from,    \
