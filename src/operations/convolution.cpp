@@ -84,6 +84,8 @@ void ConvolveImpl::binary_expression(T *__restrict__ result,
 		result[i] = res;
 	}
 }
+int ConvolveImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+									OCLLazyCodegenState &compiler_state) {}
 template <typename T, typename A, typename B>
 void GradientConvolve1Impl::binary_expression(
 	T *__restrict__ result, const A *__restrict__ data1,
@@ -209,6 +211,9 @@ void GradientConvolve1Impl::binary_expression(
 		result[i] = res;
 	}
 }
+int GradientConvolve1Impl::generate_ocl_lazy(
+	const FGraphNode *node, std::string name,
+	OCLLazyCodegenState &compiler_state) {}
 template <typename T, typename A, typename B>
 void GradientConvolve2Impl::binary_expression(
 	T *__restrict__ result, const A *__restrict__ data1,
@@ -270,6 +275,9 @@ void GradientConvolve2Impl::binary_expression(
 		}
 	}
 }
+int GradientConvolve2Impl::generate_ocl_lazy(
+	const FGraphNode *node, std::string name,
+	OCLLazyCodegenState &compiler_state) {}
 void ConvolveImpl::execute_cpu(const FGraphNode *node,
 							   std::vector<CPUResultData> predecessor_data,
 							   void *__restrict__ result, size_t from,

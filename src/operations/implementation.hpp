@@ -282,8 +282,11 @@
 struct OCLLazyCodegenState {
 		/** Working queue of nodes for which still code has to be generated */
 		std::list<std::tuple<FGraphNode *, std::string>> todo;
-		/** Maps storage nodes to their kernel parameter names */
+		/** Maps storage nodes to their kernel parameter names (for fast lookup)
+		 */
 		std::unordered_map<FGraphNode *, std::string> assigned_params;
+		/** To register new parameter nodes to their name */
+		std::list<std::pair<FGraphNode *, std::string>> *parameters;
 		/** indexing logic (we save the old index in old_index$i to restore it)
 		 */
 		unsigned int num_indices = 0;

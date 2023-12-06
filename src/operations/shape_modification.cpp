@@ -32,6 +32,8 @@ void FlattenImpl::execute_cpu(const FGraphNode *node,
 		break;
 	}
 }
+int FlattenImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 template <typename T, typename A>
 void ConversionImpl::unary_expression(T *__restrict__ result,
 									  const A *__restrict__ data1, size_t from,
@@ -39,6 +41,8 @@ void ConversionImpl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = (T)data1[i];
 }
+int ConversionImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void ConversionImpl::execute_cpu(const FGraphNode *node,
 								 std::vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
@@ -68,6 +72,8 @@ void RepeatImpl::unary_expression(T *__restrict__ result,
 		result[i] = data[src_index];
 	}
 }
+int RepeatImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void RepeatImpl::execute_cpu(const FGraphNode *node,
 							 std::vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
@@ -98,6 +104,8 @@ void TransposeImpl::unary_expression(T *__restrict__ result,
 		result[i] = data[src_index];
 	}
 }
+int TransposeImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void TransposeImpl::execute_cpu(const FGraphNode *node,
 								std::vector<CPUResultData> predecessor_data,
 								void *__restrict__ result, size_t from,
@@ -136,6 +144,8 @@ void ConcatImpl::binary_expression(T *__restrict__ result,
 		}
 	}
 }
+int ConcatImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void ConcatImpl::execute_cpu(const FGraphNode *node,
 							 std::vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,

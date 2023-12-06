@@ -23,15 +23,19 @@ void GenRandomImpl::execute_cpu(const FGraphNode *node,
 		((double *)result)[i] = std::min(v - floor(v), 0.99999);
 	}
 }
+int GenRandomImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+									 OCLLazyCodegenState &compiler_state) {}
 
 template <typename T>
-void GenConstantImpl::zeroary_expression(
-	const FGraphNode *node,
-	T *__restrict__ result, size_t from, size_t size) {
+void GenConstantImpl::zeroary_expression(const FGraphNode *node,
+										 T *__restrict__ result, size_t from,
+										 size_t size) {
 	T value = ((T *)node->operation.additional_data)[0];
 	for (size_t i = from; i < from + size; i++)
 		result[i] = value;
 }
+int GenConstantImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+									   OCLLazyCodegenState &compiler_state) {}
 void GenConstantImpl::execute_cpu(const FGraphNode *node,
 								  std::vector<CPUResultData> predecessor_data,
 								  void *__restrict__ result, size_t from,
@@ -49,3 +53,5 @@ void GenArangeImpl::execute_cpu(const FGraphNode *node,
 	for (size_t i = from; i < from + size; i++)
 		((long *)result)[i] = (i / acc_sizes_ax) % node->operation.shape[ax];
 }
+int GenArangeImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+									 OCLLazyCodegenState &compiler_state) {}

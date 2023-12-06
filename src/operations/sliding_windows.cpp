@@ -48,6 +48,8 @@ void SlidingWindowImpl::unary_expression(T *__restrict__ result,
 		result[i] = data[base + offset];
 	}
 }
+int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void SlidingWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,
 									void *__restrict__ result, size_t from,
@@ -120,6 +122,8 @@ void UnslideWindowImpl::unary_expression(T *__restrict__ result,
 		}
 	}
 }
+int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void UnslideWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,
 									void *__restrict__ result, size_t from,

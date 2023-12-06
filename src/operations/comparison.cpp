@@ -33,6 +33,8 @@ void MinImpl::execute_cpu(const FGraphNode *node,
 						  void *__restrict__ result, size_t from, size_t size) {
 	BINARY_EXECUTE_IMPL
 }
+int MinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 template <typename T, typename A, typename B>
 void MaxImpl::binary_expression(T *__restrict__ result,
 								const A *__restrict__ data1,
@@ -44,6 +46,8 @@ void MaxImpl::binary_expression(T *__restrict__ result,
 		result[i] = MAX_VAL(data1[(i / inv_man_1) % index_man_1],
 							data2[(i / inv_man_2) % index_man_2]);
 }
+int MaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void MaxImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -62,6 +66,8 @@ void LessImpl::binary_expression(int *__restrict__ result,
 						? 1
 						: 0;
 }
+int LessImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void LessImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -81,6 +87,8 @@ void GreaterImpl::binary_expression(int *__restrict__ result,
 						? 1
 						: 0;
 }
+int GreaterImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void GreaterImpl::execute_cpu(const FGraphNode *node,
 							  std::vector<CPUResultData> predecessor_data,
 							  void *__restrict__ result, size_t from,
@@ -100,6 +108,8 @@ void EqualImpl::binary_expression(int *__restrict__ result,
 						? 1
 						: 0;
 }
+int EqualImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void EqualImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,

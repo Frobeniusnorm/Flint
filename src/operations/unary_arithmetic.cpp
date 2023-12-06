@@ -21,6 +21,8 @@ void NegImpl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = -data[i];
 }
+int NegImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void NegImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -33,6 +35,8 @@ void LogImpl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = log(data[i]);
 }
+int LogImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void LogImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -45,6 +49,8 @@ void Log2Impl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = log2(data[i]);
 }
+int Log2Impl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void Log2Impl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -58,6 +64,8 @@ void Log10Impl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = log10(data[i]);
 }
+int Log10Impl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void Log10Impl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
@@ -71,6 +79,8 @@ void SignImpl::unary_expression(int *__restrict result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = data1[i] < 0 ? -1 : 1;
 }
+int SignImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void SignImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -99,6 +109,8 @@ void EvenImpl::execute_cpu(const FGraphNode *node,
 			break;
 		}
 }
+int EvenImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 template <typename T, typename A>
 void SinImpl::unary_expression(T *__restrict__ result,
 							   const A *__restrict__ data, size_t from,
@@ -106,6 +118,8 @@ void SinImpl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = sin(data[i]);
 }
+int SinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void SinImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -118,6 +132,8 @@ void CosImpl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = cos(data[i]);
 }
+int CosImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void CosImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -130,6 +146,8 @@ void TanImpl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = tan(data[i]);
 }
+int TanImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void TanImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -142,6 +160,8 @@ void ASinImpl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = asin(data[i]);
 }
+int ASinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void ASinImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -155,6 +175,8 @@ void ACosImpl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = acos(data[i]);
 }
+int ACosImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void ACosImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -168,6 +190,8 @@ void ATanImpl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = atan(data[i]);
 }
+int ATanImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void ATanImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -181,6 +205,8 @@ void SqrtImpl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = sqrt(data[i]);
 }
+int SqrtImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void SqrtImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -194,6 +220,8 @@ void ExpImpl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = exp(data[i]);
 }
+int ExpImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void ExpImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -206,6 +234,8 @@ void AbsImpl::unary_expression(T *__restrict__ result,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = abs(data[i]);
 }
+int AbsImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void AbsImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {

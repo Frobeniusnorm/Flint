@@ -24,8 +24,9 @@ struct NegImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct LogImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -36,8 +37,9 @@ struct LogImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct Log2Impl : OperationImplementation {
 		template <typename T, typename A>
@@ -48,8 +50,9 @@ struct Log2Impl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct Log10Impl : OperationImplementation {
 		template <typename T, typename A>
@@ -60,8 +63,9 @@ struct Log10Impl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct SignImpl : OperationImplementation {
 		template <typename A>
@@ -72,16 +76,18 @@ struct SignImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct EvenImpl : OperationImplementation {
 		void execute_cpu(const FGraphNode *node,
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct SinImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -92,8 +98,9 @@ struct SinImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct CosImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -104,8 +111,9 @@ struct CosImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct TanImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -116,8 +124,9 @@ struct TanImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct ASinImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -128,8 +137,9 @@ struct ASinImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct ACosImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -140,8 +150,9 @@ struct ACosImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct ATanImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -152,8 +163,9 @@ struct ATanImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct SqrtImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -164,8 +176,9 @@ struct SqrtImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct ExpImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -176,8 +189,9 @@ struct ExpImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 struct AbsImpl : OperationImplementation {
 		template <typename T>
@@ -188,7 +202,8 @@ struct AbsImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		void generate_gpu_lazy() override {}
-		void generate_gpu_eager() override {}
+		int generate_ocl_lazy(const FGraphNode *node, std::string name,
+									  OCLLazyCodegenState &compiler_state) override;
+		void generate_ocl_eager() override {}
 };
 #endif

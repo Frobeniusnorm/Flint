@@ -65,7 +65,8 @@ void PoolingSumImpl::unary_expression(T *__restrict__ result,
 									  size_t size, const FGraphNode *curr) {
 	pooling(result, data, from, size, curr);
 }
-
+int PoolingSumImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void PoolingSumImpl::execute_cpu(const FGraphNode *node,
 								 std::vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
@@ -79,7 +80,8 @@ void PoolingMaxImpl::unary_expression(T *__restrict__ result,
 									  size_t size, const FGraphNode *curr) {
 	pooling(result, data, from, size, curr);
 }
-
+int PoolingMaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void PoolingMaxImpl::execute_cpu(const FGraphNode *node,
 								 std::vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
@@ -225,6 +227,8 @@ void GradientPoolingMax::execute_cpu_typed(
 		result[i] = res;
 	}
 }
+int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void GradientPoolingMax::execute_cpu(
 	const FGraphNode *node, std::vector<CPUResultData> predecessor_data,
 	void *__restrict__ result, size_t from, size_t size) {

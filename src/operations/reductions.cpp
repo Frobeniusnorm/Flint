@@ -35,6 +35,8 @@ void ReduceSumImpl::unary_expression(T *__restrict__ result,
 		}
 	}
 }
+int ReduceSumImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+									 OCLLazyCodegenState &compiler_state) {}
 template <typename T>
 void ReduceMulImpl::unary_expression(T *__restrict__ result,
 									 const T *__restrict__ data, size_t from,
@@ -53,6 +55,8 @@ void ReduceMulImpl::unary_expression(T *__restrict__ result,
 		}
 	}
 }
+int ReduceMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+									 OCLLazyCodegenState &compiler_state) {}
 template <typename T>
 void ReduceMinImpl::unary_expression(T *__restrict__ result,
 									 const T *__restrict__ data, size_t from,
@@ -71,6 +75,8 @@ void ReduceMinImpl::unary_expression(T *__restrict__ result,
 		}
 	}
 }
+int ReduceMinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+									 OCLLazyCodegenState &compiler_state) {}
 template <typename T>
 void ReduceMaxImpl::unary_expression(T *__restrict__ result,
 									 const T *__restrict__ data, size_t from,
@@ -89,6 +95,8 @@ void ReduceMaxImpl::unary_expression(T *__restrict__ result,
 		}
 	}
 }
+int ReduceMaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+									 OCLLazyCodegenState &compiler_state) {}
 void ReduceSumImpl::execute_cpu(const FGraphNode *node,
 								std::vector<CPUResultData> predecessor_data,
 								void *__restrict__ result, size_t from,

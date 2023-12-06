@@ -40,6 +40,8 @@ void SliceImpl::unary_expression(T *__restrict__ result,
 		result[i] = data[j];
 	}
 }
+int SliceImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+								 OCLLazyCodegenState &compiler_state) {}
 void SliceImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
@@ -90,6 +92,8 @@ void ExtendImpl::unary_expression(T *__restrict__ result,
 		result[i] = set_zero ? 0 : data[j];
 	}
 }
+int ExtendImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void ExtendImpl::execute_cpu(const FGraphNode *node,
 							 std::vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
@@ -120,6 +124,8 @@ void IndexImpl::binary_expression(T *__restrict__ result,
 						  (ind * acc_sizes_ax) + rest];
 	}
 }
+int IndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void IndexImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
@@ -162,6 +168,8 @@ void SetIndexImpl::execute_cpu_typed(
 			result[i] = ((T *)a.data)[i];
 	}
 }
+int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+							   OCLLazyCodegenState &compiler_state) {}
 void SetIndexImpl::execute_cpu(const FGraphNode *node,
 							   std::vector<CPUResultData> predecessor_data,
 							   void *__restrict__ result, size_t from,
