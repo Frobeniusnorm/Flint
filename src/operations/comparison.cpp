@@ -17,6 +17,8 @@
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
 
+using namespace std;
+
 template <typename T, typename A, typename B>
 void MinImpl::binary_expression(T *__restrict__ result,
 								const A *__restrict__ data1,
@@ -34,7 +36,14 @@ void MinImpl::execute_cpu(const FGraphNode *node,
 	BINARY_EXECUTE_IMPL
 }
 int MinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
-							   OCLLazyCodegenState &compiler_state) {}
+							   OCLLazyCodegenState &compiler_state) {
+	const std::string type = typeString(node->operation.data_type);
+	compiler_state.code.prepend(
+		"const " + type + " " + name + " = min((" + type + ")v" +
+		to_string(compiler_state.variable_index + 1) + ", (" + type + ")v" +
+		to_string(compiler_state.variable_index + 2) + ");\n");
+	return OCL_LAZY_INVERSE_BROADCASTING;
+}
 template <typename T, typename A, typename B>
 void MaxImpl::binary_expression(T *__restrict__ result,
 								const A *__restrict__ data1,
@@ -47,7 +56,14 @@ void MaxImpl::binary_expression(T *__restrict__ result,
 							data2[(i / inv_man_2) % index_man_2]);
 }
 int MaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
-							   OCLLazyCodegenState &compiler_state) {}
+							   OCLLazyCodegenState &compiler_state) {
+	const std::string type = typeString(node->operation.data_type);
+	compiler_state.code.prepend(
+		"const " + type + " " + name + " = max((" + type + ")v" +
+		to_string(compiler_state.variable_index + 1) + ", (" + type + ")v" +
+		to_string(compiler_state.variable_index + 2) + ");\n");
+	return OCL_LAZY_INVERSE_BROADCASTING;
+}
 void MaxImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -67,7 +83,14 @@ void LessImpl::binary_expression(int *__restrict__ result,
 						: 0;
 }
 int LessImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
-							   OCLLazyCodegenState &compiler_state) {}
+								OCLLazyCodegenState &compiler_state) {
+	const std::string type = typeString(node->operation.data_type);
+	compiler_state.code.prepend(
+		"const " + type + " " + name + " = v" +
+		to_string(compiler_state.variable_index + 1) + " < v" +
+		to_string(compiler_state.variable_index + 2) + " ? 1 : 0;\n");
+	return OCL_LAZY_INVERSE_BROADCASTING;
+}
 void LessImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -88,7 +111,14 @@ void GreaterImpl::binary_expression(int *__restrict__ result,
 						: 0;
 }
 int GreaterImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
-							   OCLLazyCodegenState &compiler_state) {}
+								   OCLLazyCodegenState &compiler_state) {
+	const std::string type = typeString(node->operation.data_type);
+	compiler_state.code.prepend(
+		"const " + type + " " + name + " = v" +
+		to_string(compiler_state.variable_index + 1) + " > v" +
+		to_string(compiler_state.variable_index + 2) + " ? 1 : 0;\n");
+	return OCL_LAZY_INVERSE_BROADCASTING;
+}
 void GreaterImpl::execute_cpu(const FGraphNode *node,
 							  std::vector<CPUResultData> predecessor_data,
 							  void *__restrict__ result, size_t from,
@@ -109,7 +139,14 @@ void EqualImpl::binary_expression(int *__restrict__ result,
 						: 0;
 }
 int EqualImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
-							   OCLLazyCodegenState &compiler_state) {}
+								 OCLLazyCodegenState &compiler_state) {
+	const std::string type = typeString(node->operation.data_type);
+	compiler_state.code.prepend(
+		"const " + type + " " + name + " = v" +
+		to_string(compiler_state.variable_index + 1) + " == v" +
+		to_string(compiler_state.variable_index + 2) + " ? 1 : 0;\n");
+	return OCL_LAZY_INVERSE_BROADCASTING;
+}
 void EqualImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
