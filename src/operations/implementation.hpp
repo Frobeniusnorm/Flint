@@ -293,8 +293,27 @@ struct OCLLazyCodegenState {
 		/** Number of nodes that are already assigned to variables (for naming)
 		 */
 		unsigned int variable_index = 0;
+		/** a code segment that is inserted before the predecessors (cleared
+		 * after each node) */
+		std::string index_defs;
 		/** Actual code as twine for fast prepend and append operations */
 		Twine code;
+		/**
+		 * Checks if the nodes has already been included as a parameter for the
+		 * kernel. If it has, returnes the binded variable, else it creates a
+		 * new parameter for it and returns its name.
+		 */
+		std::string findOrInsertParameter(FGraphNode *gnp1) {
+			std::string par1;
+			if (assigned_params.find(gnp1) != assigned_params.end()) {
+				par1 = assigned_params[gnp1];
+			} else {
+				par1 = "P" + std::to_string(assigned_params.size());
+				assigned_params.insert({gnp1, par1});
+				parameters->push_back({gnp1, par1});
+			}
+			return par1;
+		}
 };
 struct OperationImplementation {
 		/** Disables automatic code generation for the parents */

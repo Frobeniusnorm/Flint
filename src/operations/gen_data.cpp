@@ -13,6 +13,9 @@
  * limitations under the License. */
 #include "gen_data.hpp"
 #include "src/operations/implementation.hpp"
+
+using namespace std;
+
 void GenRandomImpl::execute_cpu(const FGraphNode *node,
 								std::vector<CPUResultData> predecessor_data,
 								void *__restrict__ result, size_t from,
@@ -24,7 +27,17 @@ void GenRandomImpl::execute_cpu(const FGraphNode *node,
 	}
 }
 int GenRandomImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
-									 OCLLazyCodegenState &compiler_state) {}
+									 OCLLazyCodegenState &compiler_state) {
+	const string type = typeString(node->operation.data_type);
+	double seed = ((double *)node->operation.additional_data)[0];
+	compiler_state.code.prepend(type + " " + name + " = 0;\n{\n " + name +
+								" = sin(index + " + std::to_string(seed) +
+								") * 43758.5453123;\n " + name + " = min(" +
+								name + " - floor(" + name +
+								"), 0.99999);\n"
+								"}\n");
+	return 0;
+}
 
 template <typename T>
 void GenConstantImpl::zeroary_expression(const FGraphNode *node,
@@ -35,7 +48,11 @@ void GenConstantImpl::zeroary_expression(const FGraphNode *node,
 		result[i] = value;
 }
 int GenConstantImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
-									   OCLLazyCodegenState &compiler_state) {}
+									   OCLLazyCodegenState &compiler_state) {
+	flogging(F_ERROR, "Constant Generation should not be implemented in OpenCL "
+					  "code generation!");
+	return 0;
+}
 void GenConstantImpl::execute_cpu(const FGraphNode *node,
 								  std::vector<CPUResultData> predecessor_data,
 								  void *__restrict__ result, size_t from,
@@ -54,4 +71,14 @@ void GenArangeImpl::execute_cpu(const FGraphNode *node,
 		((long *)result)[i] = (i / acc_sizes_ax) % node->operation.shape[ax];
 }
 int GenArangeImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
-									 OCLLazyCodegenState &compiler_state) {}
+									 OCLLazyCodegenState &compiler_state) {
+	const string type = typeString(node->operation.data_type);
+	unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
+	size_t acc_sizes_ax = 1;
+	for (unsigned int i = ax + 1; i < node->operation.dimensions; i++)
+		acc_sizes_ax *= node->operation.shape[i];
+	compiler_state.code.prepend("const " + type + " " + name + " = (index/" +
+								to_string(acc_sizes_ax) + ")%" +
+								to_string(node->operation.shape[ax]) + ";\n");
+	return 0;
+}

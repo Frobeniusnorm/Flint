@@ -1432,7 +1432,6 @@ generateCode(FGraphNode *node,
 											   " = index;\n"
 											   "index /= " +
 											   to_string(acc_sizes_ax) + ";\n";
-				// TODO look for cashed vars
 				todo.push_front({nullptr, local_index_def2});
 				todo.push_front({b, par2});
 				todo.push_front({nullptr, local_index_def1});
