@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. */
 #include "comparison.hpp"
-#include "src/operations/implementation.hpp"
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)

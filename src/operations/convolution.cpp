@@ -1,6 +1,4 @@
 #include "convolution.hpp"
-#include "src/operations/implementation.hpp"
-#include "src/utils.hpp"
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)

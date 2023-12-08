@@ -1,5 +1,6 @@
 #include "sliding_windows.hpp"
-#include "src/operations/implementation.hpp"
+
+using namespace std;
 
 template <typename T>
 void SlidingWindowImpl::unary_expression(T *__restrict__ result,
@@ -48,8 +49,65 @@ void SlidingWindowImpl::unary_expression(T *__restrict__ result,
 		result[i] = data[base + offset];
 	}
 }
-int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
-							   OCLLazyCodegenState &compiler_state) {}
+int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
+										 std::string name,
+										 OCLLazyCodegenState &compiler_state) {
+	const FOperation pred = node->predecessors[0]->operation;
+	const FSlidingWindow *slidewin =
+		(FSlidingWindow *)node->operation.additional_data;
+	size_t acc_size = node->operation.shape[1];
+	vector<size_t> acc_sizes_pred(pred.dimensions);
+	vector<size_t> acc_sizes_win(pred.dimensions);
+	vector<size_t> acc_sizes_rest(pred.dimensions);
+	acc_sizes_pred[acc_sizes_pred.size() - 1] = 1;
+	acc_sizes_win[acc_sizes_win.size() - 1] = 1;
+	acc_sizes_rest[acc_sizes_win.size() - 1] = 1;
+	for (int i = acc_sizes_pred.size() - 2; i >= 0; i--) {
+		acc_size *= node->operation.shape[i + 2];
+		acc_sizes_pred[i] = acc_sizes_pred[i + 1] * pred.shape[i + 1];
+		acc_sizes_rest[i] = acc_sizes_rest[i + 1] * slidewin->size[i + 1];
+		// no of windows in that dimension
+		size_t window_size = pred.shape[i + 1] - slidewin->size[i + 1] + 1;
+		window_size = window_size % slidewin->step[i + 1] == 0
+						  ? window_size / slidewin->step[i + 1]
+						  : window_size / slidewin->step[i + 1] + 1;
+		acc_sizes_win[i] = acc_sizes_win[i + 1] * window_size;
+	}
+	const size_t num_elems = acc_size * node->operation.shape[0];
+	const unsigned int old_idx = compiler_state.num_indices++;
+	const std::string i = "old_index" + to_string(old_idx);
+	Twine index_defs;
+	index_defs += "long " + i +
+				  " = index;\n"
+				  "index = 0;\n{\n"
+				  "long wi = (" +
+				  i + "%" + to_string(num_elems) + ")/" + to_string(acc_size) +
+				  ";\n"
+				  "long rest = " +
+				  i + "%" + to_string(acc_size) + ";\n";
+	for (int d = 0; d < pred.dimensions; d++) {
+		std::string local_wi = "wi/" + to_string(acc_sizes_win[d]);
+		std::string loc_base = local_wi + "*" + to_string(acc_sizes_pred[d]) +
+							   "*" + to_string(slidewin->step[d]);
+		std::string local_ri = "rest/" + to_string(acc_sizes_rest[d]) + "*" +
+							   to_string(acc_sizes_pred[d]);
+		index_defs += "index += " + loc_base + " + " + local_ri +
+					  ";\n"
+					  "wi %= " +
+					  to_string(acc_sizes_win[d]) +
+					  ";\n"
+					  "rest %= " +
+					  to_string(acc_sizes_rest[d]) + ";\n";
+	}
+	index_defs += "}\n";
+	compiler_state.code.prepend(
+		"const " + typeString(node->operation.data_type) + " " + name + " = v" +
+		to_string(compiler_state.variable_index + 1) +
+		";\n"
+		"index = old_index" +
+		to_string(old_idx) + ";\n");
+	return 0;
+}
 void SlidingWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,
 									void *__restrict__ result, size_t from,
@@ -122,8 +180,84 @@ void UnslideWindowImpl::unary_expression(T *__restrict__ result,
 		}
 	}
 }
-int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
-							   OCLLazyCodegenState &compiler_state) {}
+int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
+										 std::string name,
+										 OCLLazyCodegenState &compiler_state) {
+
+	FGraphNode *gnp1 = node->predecessors[0];
+	const FOperation pred = gnp1->operation;
+	const string par1 = compiler_state.findOrInsertParameter(gnp1);
+	const unsigned int *steps = (unsigned int *)node->operation.additional_data;
+	const vector<size_t> acc_sizes =
+		calcAccSizes(node->operation.dimensions, node->operation.shape);
+	const vector<size_t> acc_sizes_pred =
+		calcAccSizes(pred.dimensions, pred.shape);
+	size_t no_windows[pred.dimensions - 1];
+	for (int i = 0; i < pred.dimensions - 1; i++) {
+		size_t window_size = node->operation.shape[i] - pred.shape[i + 1] + 1;
+		no_windows[i] = window_size % steps[i] == 0
+							? window_size / steps[i]
+							: window_size / steps[i] + 1;
+	}
+	const vector<size_t> acc_no_windows =
+		calcAccSizes(pred.dimensions - 1, no_windows);
+	Twine local_code = typeString(node->operation.data_type) + " " + name +
+						" = 0;\n"
+						"{\n"
+						"const long first_w = 0";
+	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
+		local_code += " + max(0l, ((index / " + to_string(acc_sizes[d]) +
+					  ") % " + to_string(node->operation.shape[d]) + ") - " +
+					  to_string(pred.shape[d + 1]) + " + 1) / " +
+					  to_string(steps[d]) + " * " +
+					  to_string(acc_no_windows[d]);
+	}
+	local_code += ";\nconst long last_w = 0";
+	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
+		local_code += " + ((index / " + to_string(acc_sizes[d]) + ") % " +
+					  to_string(node->operation.shape[d]) + ") / " +
+					  to_string(steps[d]) + " * " +
+					  to_string(acc_no_windows[d]);
+	}
+	local_code += ";\nfor(long w=first_w;w<=last_w;){\n"
+				  " bool contained = true;\n"
+				  " long wi = 0;\n"
+				  " long wpp = 0;\n";
+	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
+		local_code += " {\n"
+					  "  const long w_start=((w/" +
+					  to_string(acc_no_windows[d]) + ")%" +
+					  to_string(no_windows[d]) + ")*" + to_string(steps[d]) +
+					  ";\n"
+					  "  const long id=(index/" +
+					  to_string(acc_sizes[d]) + ")%" +
+					  to_string(node->operation.shape[d]) +
+					  ";\n"
+					  "  if(id>=w_start && id<w_start+" +
+					  to_string(pred.shape[d + 1]) +
+					  ")\n"
+					  "   wi+=(id-w_start)*" +
+					  to_string(acc_sizes_pred[d + 1]) +
+					  ";\n"
+					  "  else{\n"
+					  "   contained = false;\n"
+					  "   wpp += " +
+					  to_string(acc_no_windows[d]) +
+					  ";\n"
+					  "  }\n"
+					  " }\n";
+	}
+	local_code += " if(contained) {"
+				  "  " +
+				  name + "+=" + par1 + "[wi+w*" + to_string(acc_sizes_pred[0]) +
+				  "];\n"
+				  "  wpp = 1;\n}\n"
+				  " w += wpp;\n"
+				  "}\n"
+				  "}";
+	compiler_state.code.prepend(local_code);
+	return OCL_LAZY_DONT_PUSH_PREDS;
+}
 void UnslideWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,
 									void *__restrict__ result, size_t from,
