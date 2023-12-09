@@ -100,6 +100,7 @@ int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 					  to_string(acc_sizes_rest[d]) + ";\n";
 	}
 	index_defs += "}\n";
+	compiler_state.index_defs = index_defs;
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) +

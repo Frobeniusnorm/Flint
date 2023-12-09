@@ -341,7 +341,8 @@ int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node,
 		std::max(1l,
 				 (long)std::ceil((double)window->size[0] / (double)steps[0])) *
 		acc_overlapping[0];
-	Twine convc = type + " " + name + " = 0;\n{";
+	Twine convc;
+	convc += type + " " + name + " = 0;\n{";
 	convc += "int in_steps = 1, started_counting = 0;\n"
 			 "long keri = 0, adji = 0;\n";
 	for (int d = 0; d < op.dimensions - 1; d++) {

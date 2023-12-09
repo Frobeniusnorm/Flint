@@ -14,21 +14,38 @@
 #include "implementation.hpp"
 #include "binary_arithmetic.hpp"
 #include "comparison.hpp"
+#include "convolution.hpp"
 #include "gen_data.hpp"
 #include "index_modification.hpp"
+#include "pooling.hpp"
 #include "reductions.hpp"
 #include "shape_modification.hpp"
-#include "convolution.hpp"
-#include "pooling.hpp"
-#include "unary_arithmetic.hpp"
 #include "sliding_windows.hpp"
+#include "unary_arithmetic.hpp"
+
+int Twine::num_twines = 0;
+
+std::ostream &operator<<(std::ostream &out, const Twine &twine) {
+	out << "{";
+	for (auto i = twine.strings.begin(); i != twine.strings.end(); i++) {
+		const std::string s = *i;
+		if (s[0] < ' ' || s[0] > '~') {
+			out << "<broken string>" << std::endl;
+		}
+		out << "\"" << s << "\"";
+		if (i != --twine.strings.end())
+			out << ", ";
+	}
+	out << "}";
+	return out;
+}
 struct NopImpl : OperationImplementation {
 		void execute_cpu(const FGraphNode *node,
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override {}
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override {}
+							  OCLLazyCodegenState &compiler_state) override {}
 		void generate_ocl_eager() override {}
 };
 

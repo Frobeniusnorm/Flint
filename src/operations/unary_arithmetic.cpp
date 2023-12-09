@@ -45,8 +45,7 @@ int LogImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name +
-		" = log(v" + to_string(compiler_state.variable_index + 1) +
-		");\n");
+		" = log(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
 void LogImpl::execute_cpu(const FGraphNode *node,
@@ -65,8 +64,7 @@ int Log2Impl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name +
-		" = log2(v" + to_string(compiler_state.variable_index + 1) +
-		");\n");
+		" = log2(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
 void Log2Impl::execute_cpu(const FGraphNode *node,
@@ -86,8 +84,7 @@ int Log10Impl::generate_ocl_lazy(const FGraphNode *node, string name,
 								 OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name +
-		" = log10(v" + to_string(compiler_state.variable_index + 1) +
-		");\n");
+		" = log10(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
 void Log10Impl::execute_cpu(const FGraphNode *node,
@@ -143,8 +140,7 @@ int EvenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name + " = v" +
-		to_string(compiler_state.variable_index + 1) +
-		" % 2 == 0 ? 1 : 0;\n");
+		to_string(compiler_state.variable_index + 1) + " % 2 == 0 ? 1 : 0;\n");
 	return 0;
 }
 template <typename T, typename A>
@@ -158,8 +154,7 @@ int SinImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name +
-		" = sin(v" + to_string(compiler_state.variable_index + 1) +
-		");\n");
+		" = sin(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
 void SinImpl::execute_cpu(const FGraphNode *node,
@@ -178,8 +173,7 @@ int CosImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name +
-		" = cos(v" + to_string(compiler_state.variable_index + 1) +
-		");\n");
+		" = cos(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
 void CosImpl::execute_cpu(const FGraphNode *node,
@@ -198,8 +192,7 @@ int TanImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name +
-		" = tan(v" + to_string(compiler_state.variable_index + 1) +
-		");\n");
+		" = tan(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
 void TanImpl::execute_cpu(const FGraphNode *node,
@@ -218,8 +211,7 @@ int ASinImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name +
-		" = asin(v" + to_string(compiler_state.variable_index + 1) +
-		");\n");
+		" = asin(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
 void ASinImpl::execute_cpu(const FGraphNode *node,
@@ -239,8 +231,7 @@ int ACosImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name +
-		" = acos(v" + to_string(compiler_state.variable_index + 1) +
-		");\n");
+		" = acos(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
 void ACosImpl::execute_cpu(const FGraphNode *node,
@@ -260,8 +251,7 @@ int ATanImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name +
-		" = atan(v" + to_string(compiler_state.variable_index + 1) +
-		");\n");
+		" = atan(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
 void ATanImpl::execute_cpu(const FGraphNode *node,
@@ -281,8 +271,7 @@ int SqrtImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name +
-		" = sqrt(v" + to_string(compiler_state.variable_index + 1) +
-		");\n");
+		" = sqrt(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
 void SqrtImpl::execute_cpu(const FGraphNode *node,
@@ -302,8 +291,7 @@ int ExpImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
 		"const " + typeString(node->operation.data_type) + " " + name +
-		" = exp(v" + to_string(compiler_state.variable_index + 1) +
-		");\n");
+		" = exp(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
 void ExpImpl::execute_cpu(const FGraphNode *node,
@@ -321,9 +309,10 @@ void AbsImpl::unary_expression(T *__restrict__ result,
 int AbsImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
-		" = abs(v" + to_string(compiler_state.variable_index + 1) +
-		");\n");
+		"const " + typeString(node->operation.data_type) + " " + name + " = v" +
+		to_string(compiler_state.variable_index + 1) + " < 0 ? -v" +
+		to_string(compiler_state.variable_index + 1) + ": v" +
+		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
 void AbsImpl::execute_cpu(const FGraphNode *node,

@@ -140,10 +140,18 @@ void EqualImpl::binary_expression(int *__restrict__ result,
 int EqualImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								 OCLLazyCodegenState &compiler_state) {
 	const std::string type = typeString(node->operation.data_type);
+	const FOperation x = node->predecessors[0]->operation;
+	const FOperation y = node->predecessors[1]->operation;
 	compiler_state.code.prepend(
 		"const " + type + " " + name + " = v" +
-		to_string(compiler_state.variable_index + 1) + " == v" +
-		to_string(compiler_state.variable_index + 2) + " ? 1 : 0;\n");
+		to_string(compiler_state.variable_index + 1) + " + " +
+		epsilonForType(x.data_type) + " >= v" +
+		to_string(compiler_state.variable_index + 2) +
+		" && "
+		"v" +
+		to_string(compiler_state.variable_index + 1) + " <= v" +
+		to_string(compiler_state.variable_index + 2) + " + " +
+		epsilonForType(y.data_type) + "? 1 : 0;\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
 void EqualImpl::execute_cpu(const FGraphNode *node,

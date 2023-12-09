@@ -107,7 +107,8 @@ int ConvolveImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 			kernel_num_elems *= kernel.shape[d];
 	}
 	const std::string type = typeString(node->operation.data_type);
-	Twine conv_code = type + " " + name + " = 0;\n{\nlong j = 0";
+	Twine conv_code;
+	conv_code += type + " " + name + " = 0;\n{\nlong j = 0";
 	for (unsigned int d = 0;
 		 d < (multiple_filter ? op.dimensions - 1 : op.dimensions); d++)
 		conv_code += " + (" +
@@ -291,7 +292,7 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 	OCLLazyCodegenState &compiler_state) {
 	FGraphNode *gnp2 = node->predecessors[1];
 	FGraphNode *gnp1 = node->predecessors[0];
-	string par1 = compiler_state.findOrInsertParameter(gnp2),
+	string par1 = compiler_state.findOrInsertParameter(gnp1),
 		   par2 = compiler_state.findOrInsertParameter(gnp2);
 	const FOperation op = node->operation;
 	const FOperation kernel = gnp1->operation, a = gnp2->operation;
@@ -324,7 +325,8 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 				 (long)std::ceil((double)kernel.shape[0] / (double)steps[0])) *
 		acc_overlapping[0];
 	const string type = typeString(op.data_type);
-	string convc = type + " " + name + " = 0;\n{";
+	Twine convc;
+	convc += type + " " + name + " = 0;\n{";
 	convc += "int in_steps = 1, started_counting = 0;\n"
 			 "long keri = 0, adji = 0;\n";
 	for (int d = 0; d < op.dimensions - 1; d++) {

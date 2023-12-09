@@ -197,6 +197,7 @@ int ExtendImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		index_defs += " + " + dim_idx + " * " + to_string(acc_sizes_pred[d]);
 	}
 	index_defs += ";\nif(index < 0) index = 0;\n";
+	compiler_state.index_defs = index_defs;
 	compiler_state.code.prepend(set_zero_cond + ") " + name + " = 0;\n");
 	compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
 								";\n");
