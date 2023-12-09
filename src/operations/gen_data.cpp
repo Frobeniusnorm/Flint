@@ -37,6 +37,9 @@ int GenRandomImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								"}\n");
 	return 0;
 }
+std::string
+GenRandomImpl::generate_ocl_eager(FType res_type,
+								  std::vector<FType> parameter_types) {}
 
 template <typename T>
 void GenConstantImpl::zeroary_expression(const FGraphNode *node,
@@ -52,6 +55,9 @@ int GenConstantImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 					  "code generation!");
 	return 0;
 }
+std::string
+GenConstantImpl::generate_ocl_eager(FType res_type,
+									std::vector<FType> parameter_types) {}
 void GenConstantImpl::execute_cpu(const FGraphNode *node,
 								  std::vector<CPUResultData> predecessor_data,
 								  void *__restrict__ result, size_t from,
@@ -81,3 +87,6 @@ int GenArangeImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								to_string(node->operation.shape[ax]) + ";\n");
 	return 0;
 }
+std::string
+GenArangeImpl::generate_ocl_eager(FType res_type,
+								  std::vector<FType> parameter_types) {}

@@ -29,7 +29,8 @@ struct ConvolveImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) override;
-		void generate_ocl_eager() override {}
+    std::string generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) override;
 };
 
 struct GradientConvolve1Impl : OperationImplementation {
@@ -46,7 +47,8 @@ struct GradientConvolve1Impl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) override;
-		void generate_ocl_eager() override {}
+    std::string generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) override;
 };
 struct GradientConvolve2Impl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -62,6 +64,7 @@ struct GradientConvolve2Impl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) override;
-		void generate_ocl_eager() override {}
+    std::string generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) override;
 };
 #endif

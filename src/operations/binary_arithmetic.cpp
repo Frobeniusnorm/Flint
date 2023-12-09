@@ -37,6 +37,9 @@ int AddImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 2) + ";\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
+std::string AddImpl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
+}
 template <typename T, typename A, typename B>
 void SubImpl::binary_expression(T *__restrict__ result,
 								const A *__restrict__ data1,
@@ -57,6 +60,9 @@ int SubImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 1) + " - v" +
 		to_string(compiler_state.variable_index + 2) + ";\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
+}
+std::string SubImpl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
 }
 template <typename T, typename A, typename B>
 void MulImpl::binary_expression(T *__restrict__ result,
@@ -79,6 +85,9 @@ int MulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 2) + ";\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
+std::string MulImpl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
+}
 template <typename T, typename A, typename B>
 void DivImpl::binary_expression(T *__restrict__ result,
 								const A *__restrict__ data1,
@@ -99,6 +108,9 @@ int DivImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 1) + " / v" +
 		to_string(compiler_state.variable_index + 2) + ";\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
+}
+std::string PowImpl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
 }
 template <typename T, typename A, typename B>
 void PowImpl::binary_expression(T *__restrict__ result,
@@ -226,6 +238,9 @@ int MatMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		   to_string(n) + " + " + k + "];\n}\n");
 	code.prepend(type + " " + name + " = 0;\n" );
 	return OCL_LAZY_DONT_PUSH_PREDS;
+}
+std::string MatMulImpl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
 }
 void SubImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,

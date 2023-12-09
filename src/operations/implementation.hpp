@@ -338,7 +338,12 @@ struct OperationImplementation {
 		 * here the definition of the `code` string is as well*/
 		virtual int generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) = 0;
-		virtual void generate_ocl_eager() = 0;
+    /**
+     * Generates the content of a eager kernel.
+     * `res_type` is the result type of the kernel and `parameter_types` contains the parameter types in order.
+     */
+		virtual std::string generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) = 0;
 
 	protected:
 };

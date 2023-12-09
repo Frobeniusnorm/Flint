@@ -39,6 +39,8 @@ int FlattenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
+std::string FlattenImpl::generate_ocl_eager(FType res_type,
+								 std::vector<FType> parameter_types) {}
 template <typename T, typename A>
 void ConversionImpl::unary_expression(T *__restrict__ result,
 									  const A *__restrict__ data1, size_t from,
@@ -54,6 +56,8 @@ int ConversionImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
+std::string ConversionImpl::generate_ocl_eager(FType res_type,
+								 std::vector<FType> parameter_types) {}
 void ConversionImpl::execute_cpu(const FGraphNode *node,
 								 vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
@@ -120,6 +124,8 @@ int RepeatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
+std::string RepeatImpl::generate_ocl_eager(FType res_type,
+								 std::vector<FType> parameter_types) {}
 void RepeatImpl::execute_cpu(const FGraphNode *node,
 							 vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
@@ -188,6 +194,8 @@ int TransposeImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
+std::string TransposeImpl::generate_ocl_eager(FType res_type,
+								 std::vector<FType> parameter_types) {}
 void TransposeImpl::execute_cpu(const FGraphNode *node,
 								vector<CPUResultData> predecessor_data,
 								void *__restrict__ result, size_t from,
@@ -262,6 +270,8 @@ int ConcatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		to_string(compiler_state.variable_index + 2) + ";\n");
 	return 0;
 }
+std::string ConcatImpl::generate_ocl_eager(FType res_type,
+								 std::vector<FType> parameter_types) {}
 void ConcatImpl::execute_cpu(const FGraphNode *node,
 							 vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,

@@ -43,6 +43,9 @@ int MinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 2) + ");\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
+std::string MinImpl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
+}
 template <typename T, typename A, typename B>
 void MaxImpl::binary_expression(T *__restrict__ result,
 								const A *__restrict__ data1,
@@ -62,6 +65,9 @@ int MaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 1) + ", (" + type + ")v" +
 		to_string(compiler_state.variable_index + 2) + ");\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
+}
+std::string MaxImpl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
 }
 void MaxImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
@@ -90,6 +96,9 @@ int LessImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 2) + " ? 1 : 0;\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
+std::string LessImpl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
+}
 void LessImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -117,6 +126,9 @@ int GreaterImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 1) + " > v" +
 		to_string(compiler_state.variable_index + 2) + " ? 1 : 0;\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
+}
+std::string GreaterImpl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
 }
 void GreaterImpl::execute_cpu(const FGraphNode *node,
 							  std::vector<CPUResultData> predecessor_data,
@@ -153,6 +165,9 @@ int EqualImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 2) + " + " +
 		epsilonForType(y.data_type) + "? 1 : 0;\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
+}
+std::string EqualImpl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
 }
 void EqualImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,

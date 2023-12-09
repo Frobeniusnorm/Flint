@@ -22,7 +22,8 @@ struct GenRandomImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) override;
-		void generate_ocl_eager() override {}
+    std::string generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) override;
 };
 
 struct GenConstantImpl : OperationImplementation {
@@ -36,7 +37,8 @@ struct GenConstantImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) override;
-		void generate_ocl_eager() override {}
+    std::string generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) override;
 };
 
 struct GenArangeImpl : OperationImplementation {
@@ -46,6 +48,7 @@ struct GenArangeImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) override;
-		void generate_ocl_eager() override {}
+    std::string generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) override;
 };
 #endif

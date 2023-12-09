@@ -138,6 +138,8 @@ int PoolingSumImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) {
 	return pooling_gpu(node, name, compiler_state);
 }
+std::string PoolingSumImpl::generate_ocl_eager(FType res_type,
+								 std::vector<FType> parameter_types) {}
 void PoolingSumImpl::execute_cpu(const FGraphNode *node,
 								 std::vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
@@ -155,6 +157,8 @@ int PoolingMaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) {
 	return pooling_gpu(node, name, compiler_state);
 }
+std::string PoolingMaxImpl::generate_ocl_eager(FType res_type,
+								 std::vector<FType> parameter_types) {}
 void PoolingMaxImpl::execute_cpu(const FGraphNode *node,
 								 std::vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
@@ -431,6 +435,8 @@ int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node,
 	compiler_state.code.prepend(convc);
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
+std::string GradientPoolingMax::generate_ocl_eager(FType res_type,
+								 std::vector<FType> parameter_types) {}
 void GradientPoolingMax::execute_cpu(
 	const FGraphNode *node, std::vector<CPUResultData> predecessor_data,
 	void *__restrict__ result, size_t from, size_t size) {

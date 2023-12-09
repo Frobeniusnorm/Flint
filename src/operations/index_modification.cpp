@@ -86,6 +86,8 @@ int SliceImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	compiler_state.index_defs = index_defs;
 	return 0;
 }
+std::string SliceImpl::generate_ocl_eager(FType res_type,
+										  std::vector<FType> parameter_types) {}
 void SliceImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
@@ -206,6 +208,9 @@ int ExtendImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								";\n");
 	return 0;
 }
+std::string ExtendImpl::generate_ocl_eager(FType res_type,
+										   std::vector<FType> parameter_types) {
+}
 void ExtendImpl::execute_cpu(const FGraphNode *node,
 							 std::vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
@@ -275,6 +280,8 @@ int IndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	compiler_state.todo.push_front({a, par1});
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
+std::string IndexImpl::generate_ocl_eager(FType res_type,
+										  std::vector<FType> parameter_types) {}
 void IndexImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
@@ -324,7 +331,8 @@ int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	FGraphNode *c = node->predecessors[2];
 	const FOperation op = node->operation;
 	const unsigned int axis = c->operation.dimensions - 1;
-	const string par2 = compiler_state.findOrInsertParameter(b), par3 = compiler_state.findOrInsertParameter(c);
+	const string par2 = compiler_state.findOrInsertParameter(b),
+				 par3 = compiler_state.findOrInsertParameter(c);
 	// a may be calculated lazily
 	const string par1 = "v" + to_string(++compiler_state.variable_index);
 	size_t acc_sizes_ax = 1;
@@ -341,37 +349,40 @@ int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		base + " * " + to_string(c->operation.shape[axis]);
 	const string type = typeString(node->operation.data_type);
 	compiler_state.code.prepend(type + " " + name +
-		   " = 0;\n"
-		   "{const long base_ind = " +
-		   base_ind +
-		   ";\n"
-		   " const long axi = " +
-		   axi +
-		   ";\n"
-		   " const long rest = " +
-		   rest +
-		   ";\n"
-		   "int found_something = false;\n"
-		   " for(long j = 0; j < " +
-		   to_string(c->operation.shape[axis]) +
-		   "; j++){\n"
-		   "  const long ind = " +
-		   par3 +
-		   "[base_ind + j];\n"
-		   "  if(ind == axi) {\n   " +
-		   name + " += " + par2 + "[(base_ind + j) * " +
-		   to_string(acc_sizes_ax) +
-		   " + rest];\n"
-		   "   found_something = true;\n"
-		   "  }\n"
-		   " }\n"
-		   " if(!found_something) " +
-		   name + " = " + par1 +
-		   ";\n"
-		   "}\n");
+								" = 0;\n"
+								"{const long base_ind = " +
+								base_ind +
+								";\n"
+								" const long axi = " +
+								axi +
+								";\n"
+								" const long rest = " +
+								rest +
+								";\n"
+								"int found_something = false;\n"
+								" for(long j = 0; j < " +
+								to_string(c->operation.shape[axis]) +
+								"; j++){\n"
+								"  const long ind = " +
+								par3 +
+								"[base_ind + j];\n"
+								"  if(ind == axi) {\n   " +
+								name + " += " + par2 + "[(base_ind + j) * " +
+								to_string(acc_sizes_ax) +
+								" + rest];\n"
+								"   found_something = true;\n"
+								"  }\n"
+								" }\n"
+								" if(!found_something) " +
+								name + " = " + par1 +
+								";\n"
+								"}\n");
 	compiler_state.todo.push_front({a, par1});
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
+std::string
+SetIndexImpl::generate_ocl_eager(FType res_type,
+								 std::vector<FType> parameter_types) {}
 void SetIndexImpl::execute_cpu(const FGraphNode *node,
 							   std::vector<CPUResultData> predecessor_data,
 							   void *__restrict__ result, size_t from,

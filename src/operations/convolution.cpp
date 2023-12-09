@@ -162,6 +162,9 @@ int ConvolveImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	compiler_state.code.prepend(conv_code);
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
+std::string ConvolveImpl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
+}
 template <typename T, typename A, typename B>
 void GradientConvolve1Impl::binary_expression(
 	T *__restrict__ result, const A *__restrict__ data1,
@@ -416,6 +419,9 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 	compiler_state.code.prepend(convc);
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
+std::string GradientConvolve1Impl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
+}
 template <typename T, typename A, typename B>
 void GradientConvolve2Impl::binary_expression(
 	T *__restrict__ result, const A *__restrict__ data1,
@@ -543,6 +549,9 @@ int GradientConvolve2Impl::generate_ocl_lazy(
 								" index = " +
 								old_idx + ";\n}\n");
 	return OCL_LAZY_DONT_PUSH_PREDS;
+}
+std::string GradientConvolve2Impl::generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
 }
 void ConvolveImpl::execute_cpu(const FGraphNode *node,
 							   std::vector<CPUResultData> predecessor_data,

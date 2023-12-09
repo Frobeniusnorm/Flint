@@ -109,6 +109,9 @@ int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 		to_string(old_idx) + ";\n");
 	return 0;
 }
+std::string
+SlidingWindowImpl::generate_ocl_eager(FType res_type,
+									  std::vector<FType> parameter_types) {}
 void SlidingWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,
 									void *__restrict__ result, size_t from,
@@ -203,9 +206,9 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 	const vector<size_t> acc_no_windows =
 		calcAccSizes(pred.dimensions - 1, no_windows);
 	Twine local_code = typeString(node->operation.data_type) + " " + name +
-						" = 0;\n"
-						"{\n"
-						"const long first_w = 0";
+					   " = 0;\n"
+					   "{\n"
+					   "const long first_w = 0";
 	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
 		local_code += " + max(0l, ((index / " + to_string(acc_sizes[d]) +
 					  ") % " + to_string(node->operation.shape[d]) + ") - " +
@@ -259,6 +262,9 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 	compiler_state.code.prepend(local_code);
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
+std::string
+UnslideWindowImpl::generate_ocl_eager(FType res_type,
+									  std::vector<FType> parameter_types) {}
 void UnslideWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,
 									void *__restrict__ result, size_t from,
