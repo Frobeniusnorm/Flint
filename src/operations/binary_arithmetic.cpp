@@ -283,6 +283,18 @@ int MatMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	code.prepend(type + " " + name + " = 0;\n");
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
+std::string
+MatMulImpl::generate_ocl_parameters_eager(FType res_type,
+										  std::vector<FType> parameter_types) {
+	Twine code;
+	for (int i = 0; i < 2; i++) {
+		code += ", const __global " + typeString(parameter_types[i]) + "* P" +
+				to_string(i) + ", long num_entries" + to_string(i) +
+				", int dimensions" + to_string(i);
+	}
+	code += ", long l, long m, long n";
+	return code;
+}
 std::string MatMulImpl::generate_ocl_eager(FType res_type,
 										   std::vector<FType> parameter_types) {
 	return "if(index >= num_entriesR) return;\n" + typeString(res_type) +

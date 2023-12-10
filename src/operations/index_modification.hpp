@@ -25,9 +25,12 @@ struct SliceImpl : OperationImplementation {
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+							  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
 };
 struct ExtendImpl : OperationImplementation {
 		template <typename T>
@@ -39,9 +42,12 @@ struct ExtendImpl : OperationImplementation {
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+							  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
 };
 struct IndexImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -56,23 +62,29 @@ struct IndexImpl : OperationImplementation {
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+							  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
 };
 struct SetIndexImpl : OperationImplementation {
 		template <typename T>
 		void execute_cpu_typed(const FGraphNode *node,
-						 std::vector<CPUResultData> predecessor_data,
-						 T *__restrict__ result, size_t from,
-						 size_t size);
+							   std::vector<CPUResultData> predecessor_data,
+							   T *__restrict__ result, size_t from,
+							   size_t size);
 		void execute_cpu(const FGraphNode *node,
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+							  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
 };
 #endif

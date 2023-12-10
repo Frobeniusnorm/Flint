@@ -28,6 +28,8 @@ struct SlidingWindowImpl : OperationImplementation {
 									  OCLLazyCodegenState &compiler_state) override;
     std::string generate_ocl_eager(FType res_type,
 							  std::vector<FType> parameter_types) override;
+    std::string generate_ocl_parameters_eager(FType res_type,
+							  std::vector<FType> parameter_types) override;
 };
 struct UnslideWindowImpl : OperationImplementation {
 		template <typename T>
@@ -41,6 +43,8 @@ struct UnslideWindowImpl : OperationImplementation {
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) override;
     std::string generate_ocl_eager(FType res_type,
+							  std::vector<FType> parameter_types) override;
+    std::string generate_ocl_parameters_eager(FType res_type,
 							  std::vector<FType> parameter_types) override;
 };
 

@@ -37,12 +37,16 @@ int GenRandomImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								"}\n");
 	return 0;
 }
+std::string GenRandomImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return ", const double time";
+}
 std::string
 GenRandomImpl::generate_ocl_eager(FType res_type,
 								  std::vector<FType> parameter_types) {
-  return "if(index >= num_entriesR) return;\n"
-				"const double v = sin(index + time) * 43758.5453123;\n"
-				"R[index] = min(v - floor(v), 0.99999);\n";
+	return "if(index >= num_entriesR) return;\n"
+		   "const double v = sin(index + time) * 43758.5453123;\n"
+		   "R[index] = min(v - floor(v), 0.99999);\n";
 }
 
 template <typename T>
@@ -53,6 +57,10 @@ void GenConstantImpl::zeroary_expression(const FGraphNode *node,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = value;
 }
+std::string GenConstantImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return ", const " + typeString(res_type) + " constant_val";
+}
 int GenConstantImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									   OCLLazyCodegenState &compiler_state) {
 	flogging(F_ERROR, "Constant Generation should not be implemented in OpenCL "
@@ -62,8 +70,8 @@ int GenConstantImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 std::string
 GenConstantImpl::generate_ocl_eager(FType res_type,
 									std::vector<FType> parameter_types) {
-  return "if(index >= num_entriesR) return;\n"
-				"R[index] = constant_val;\n";
+	return "if(index >= num_entriesR) return;\n"
+		   "R[index] = constant_val;\n";
 }
 void GenConstantImpl::execute_cpu(const FGraphNode *node,
 								  std::vector<CPUResultData> predecessor_data,
@@ -94,10 +102,14 @@ int GenArangeImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								to_string(node->operation.shape[ax]) + ";\n");
 	return 0;
 }
+std::string GenArangeImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return ", const long acc_sizes_ax, const long shape_ax";
+}
 std::string
 GenArangeImpl::generate_ocl_eager(FType res_type,
 								  std::vector<FType> parameter_types) {
-  return "if(index >= num_entriesR) return;\n"
-				"const long i = (index / acc_sizes_ax) % shape_ax\n;"
-				"R[index] = i;\n";
+	return "if(index >= num_entriesR) return;\n"
+		   "const long i = (index / acc_sizes_ax) % shape_ax\n;"
+		   "R[index] = i;\n";
 }

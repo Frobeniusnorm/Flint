@@ -162,6 +162,20 @@ int ConvolveImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	compiler_state.code.prepend(conv_code);
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
+std::string ConvolveImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0"
+		   ", const long num_entries0, const int dimensions0"
+		   ", const __global " +
+		   typeString(parameter_types[1]) +
+		   "* P1"
+		   ", const long num_entries1, const int dimensions1"
+
+		   ", __constant long* acc_sizes, __constant long* acc_sizes_pred, "
+		   "__constant long* acc_sizes_kernel"
+		   ", __constant int* steps";
+}
 std::string
 ConvolveImpl::generate_ocl_eager(FType res_type,
 								 std::vector<FType> parameter_types) {
@@ -463,6 +477,20 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 	compiler_state.code.prepend(convc);
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
+std::string GradientConvolve1Impl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0"
+		   ", const long num_entries0, const int dimensions0, const "
+		   "__global " +
+		   typeString(parameter_types[1]) +
+		   "* P1, const long num_entries1, const int dimensions1"
+		   ", __constant long* acc_sizes_pred, "
+		   "__constant long* acc_sizes_kernel"
+		   ", __constant long* acc_sizes, __constant long* acc_overlapping"
+		   ", __constant int* steps, __constant long* op_shape, __constant "
+		   "long* kernel_shape";
+}
 std::string
 GradientConvolve1Impl::generate_ocl_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
@@ -652,6 +680,18 @@ int GradientConvolve2Impl::generate_ocl_lazy(
 								" index = " +
 								old_idx + ";\n}\n");
 	return OCL_LAZY_DONT_PUSH_PREDS;
+}
+std::string GradientConvolve2Impl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P1"
+		   ", const long num_entries1, const int dimensions1, const __global "
+		   "double* P2, const long num_entries2, const int dimensions2, "
+		   "const int dimensions0, "
+		   "__constant long* acc_sizes_pred, __constant long* "
+		   "acc_sizes_kernel, "
+		   "__constant long* acc_sizes_windows, __constant int* steps, "
+		   "__constant long* op_shape, __constant long* prev_adj_shape";
 }
 std::string
 GradientConvolve2Impl::generate_ocl_eager(FType res_type,

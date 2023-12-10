@@ -28,6 +28,8 @@ struct ReduceSumImpl : OperationImplementation {
 									  OCLLazyCodegenState &compiler_state) override;
     std::string generate_ocl_eager(FType res_type,
 							  std::vector<FType> parameter_types) override;
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
 };
 struct ReduceMulImpl : OperationImplementation {
 		template <typename T>
@@ -42,6 +44,8 @@ struct ReduceMulImpl : OperationImplementation {
 									  OCLLazyCodegenState &compiler_state) override;
     std::string generate_ocl_eager(FType res_type,
 							  std::vector<FType> parameter_types) override;
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
 };
 struct ReduceMinImpl : OperationImplementation {
 		template <typename T>
@@ -56,6 +60,8 @@ struct ReduceMinImpl : OperationImplementation {
 									  OCLLazyCodegenState &compiler_state) override;
     std::string generate_ocl_eager(FType res_type,
 							  std::vector<FType> parameter_types) override;
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
 };
 struct ReduceMaxImpl : OperationImplementation {
 		template <typename T>
@@ -70,5 +76,7 @@ struct ReduceMaxImpl : OperationImplementation {
 									  OCLLazyCodegenState &compiler_state) override;
     std::string generate_ocl_eager(FType res_type,
 							  std::vector<FType> parameter_types) override;
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
 };
 #endif

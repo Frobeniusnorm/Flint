@@ -132,6 +132,15 @@ int RepeatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
+std::string
+RepeatImpl::generate_ocl_parameters_eager(FType res_type,
+										  std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0"
+		   ", const long num_entries0, const int dimensions0"
+		   ", __constant long* acc_sizes_d, __constant long* acc_sizes_s"
+		   ", __constant long* pred_shape";
+}
 std::string RepeatImpl::generate_ocl_eager(FType res_type,
 										   std::vector<FType> parameter_types) {
 	return "if(index >= num_entriesR) return;\n"
@@ -210,6 +219,12 @@ int TransposeImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		"const " + typeString(node->operation.data_type) + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
+}
+std::string TransposeImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0, const long num_entries0, const int dimensions0, __constant "
+		   "long* acc_sizes_d, __constant long* acc_sizes_s";
 }
 std::string
 TransposeImpl::generate_ocl_eager(FType res_type,
@@ -296,6 +311,17 @@ int ConcatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		" ? v" + to_string(compiler_state.variable_index + 1) + " : v" +
 		to_string(compiler_state.variable_index + 2) + ";\n");
 	return 0;
+}
+
+std::string
+ConcatImpl::generate_ocl_parameters_eager(FType res_type,
+										  std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0, const long num_entries0, const __global " +
+		   typeString(parameter_types[1]) +
+		   "* P1, const long num_entries1, const long acc_size_last,"
+		   "const long shape_ax, const long a_shape_ax, const long "
+		   "b_shape_ax, const int ax";
 }
 std::string ConcatImpl::generate_ocl_eager(FType res_type,
 										   std::vector<FType> parameter_types) {

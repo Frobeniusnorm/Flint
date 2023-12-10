@@ -141,7 +141,13 @@ static std::string reducing_eager(FType res_type,
 	code += "\n}R[index] = res;\n";
 	return code;
 }
-
+std::string reducing_parameters_eager(FType res_type,
+									  std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0, const long num_entries0, const int dimensions0, const long "
+		   "it_dim0, const long shape_dim0"
+		   ", int reduce_dim";
+}
 template <typename T>
 void ReduceSumImpl::unary_expression(T *__restrict__ result,
 									 const T *__restrict__ data, size_t from,
@@ -164,10 +170,14 @@ int ReduceSumImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	return reducing<FREDUCE_SUM>(node, name, compiler_state);
 }
+std::string ReduceSumImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return reducing_parameters_eager(res_type, parameter_types);
+}
 std::string
 ReduceSumImpl::generate_ocl_eager(FType res_type,
 								  std::vector<FType> parameter_types) {
-  return reducing_eager<FREDUCE_SUM>(res_type, parameter_types);
+	return reducing_eager<FREDUCE_SUM>(res_type, parameter_types);
 }
 template <typename T>
 void ReduceMulImpl::unary_expression(T *__restrict__ result,
@@ -187,6 +197,10 @@ void ReduceMulImpl::unary_expression(T *__restrict__ result,
 		}
 	}
 }
+std::string ReduceMulImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return reducing_parameters_eager(res_type, parameter_types);
+}
 int ReduceMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	return reducing<FREDUCE_MUL>(node, name, compiler_state);
@@ -194,7 +208,7 @@ int ReduceMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 std::string
 ReduceMulImpl::generate_ocl_eager(FType res_type,
 								  std::vector<FType> parameter_types) {
-  return reducing_eager<FREDUCE_MUL>(res_type, parameter_types);
+	return reducing_eager<FREDUCE_MUL>(res_type, parameter_types);
 }
 template <typename T>
 void ReduceMinImpl::unary_expression(T *__restrict__ result,
@@ -218,10 +232,14 @@ int ReduceMinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	return reducing<FREDUCE_MIN>(node, name, compiler_state);
 }
+std::string ReduceMinImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return reducing_parameters_eager(res_type, parameter_types);
+}
 std::string
 ReduceMinImpl::generate_ocl_eager(FType res_type,
 								  std::vector<FType> parameter_types) {
-  return reducing_eager<FREDUCE_MIN>(res_type, parameter_types);
+	return reducing_eager<FREDUCE_MIN>(res_type, parameter_types);
 }
 template <typename T>
 void ReduceMaxImpl::unary_expression(T *__restrict__ result,
@@ -245,10 +263,14 @@ int ReduceMaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	return reducing<FREDUCE_MAX>(node, name, compiler_state);
 }
+std::string ReduceMaxImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return reducing_parameters_eager(res_type, parameter_types);
+}
 std::string
 ReduceMaxImpl::generate_ocl_eager(FType res_type,
 								  std::vector<FType> parameter_types) {
-  return reducing_eager<FREDUCE_MAX>(res_type, parameter_types);
+	return reducing_eager<FREDUCE_MAX>(res_type, parameter_types);
 }
 void ReduceSumImpl::execute_cpu(const FGraphNode *node,
 								std::vector<CPUResultData> predecessor_data,

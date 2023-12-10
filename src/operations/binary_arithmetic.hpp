@@ -26,10 +26,12 @@ struct AddImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		virtual int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+		virtual int
+		generate_ocl_lazy(const FGraphNode *node, std::string name,
+						  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
 };
 struct SubImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -43,10 +45,12 @@ struct SubImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		virtual int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+		virtual int
+		generate_ocl_lazy(const FGraphNode *node, std::string name,
+						  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
 };
 struct MulImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -60,10 +64,12 @@ struct MulImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		virtual int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+		virtual int
+		generate_ocl_lazy(const FGraphNode *node, std::string name,
+						  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
 };
 struct DivImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -77,10 +83,12 @@ struct DivImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		virtual int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+		virtual int
+		generate_ocl_lazy(const FGraphNode *node, std::string name,
+						  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
 };
 struct PowImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -94,10 +102,12 @@ struct PowImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		virtual int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+		virtual int
+		generate_ocl_lazy(const FGraphNode *node, std::string name,
+						  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
 };
 struct MatMulImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -111,9 +121,13 @@ struct MatMulImpl : OperationImplementation {
 						 std::vector<CPUResultData> predecessor_data,
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
-		virtual int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+		virtual int
+		generate_ocl_lazy(const FGraphNode *node, std::string name,
+						  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
 };
 #endif

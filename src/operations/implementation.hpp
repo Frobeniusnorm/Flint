@@ -344,6 +344,17 @@ struct OperationImplementation {
      */
 		virtual std::string generate_ocl_eager(FType res_type,
 							  std::vector<FType> parameter_types) = 0;
+    /**
+     * Generates additional parameters to the kernel additional to the result array
+     */
+    virtual std::string generate_ocl_parameters_eager(FType res_type,
+							  std::vector<FType> parameter_types) {
+      Twine code;
+      for (int i = 0; i < parameter_types.size(); i++)
+        code += ", const __global " + typeString(parameter_types[i]) +
+            "* P" + std::to_string(i) + ", long num_entries" + std::to_string(i);
+      return code;
+    }
 
 	protected:
 };

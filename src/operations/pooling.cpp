@@ -129,6 +129,15 @@ static int pooling_gpu(const FGraphNode *node, std::string name,
 		";\n }\n}");
 	return 0;
 }
+static std::string
+pooling_gpu_eager_params(FType res_type, std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0"
+		   ", const long num_entries0, const int dimensions0"
+		   ", __constant long* acc_sizes_pred, __constant long* "
+		   "acc_sizes_kernel, __constant long* acc_sizes, __constant int* "
+		   "steps, const long pred_last_shape, const long kernel_num_elems";
+}
 template <FOperationType operation>
 static std::string pooling_gpu_eager(FType res_type,
 									 std::vector<FType> parameter_types) {
@@ -175,6 +184,10 @@ int PoolingSumImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) {
 	return pooling_gpu(node, name, compiler_state);
 }
+std::string PoolingSumImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+  return pooling_gpu_eager_params(res_type, parameter_types);
+}
 std::string
 PoolingSumImpl::generate_ocl_eager(FType res_type,
 								   std::vector<FType> parameter_types) {
@@ -196,6 +209,10 @@ void PoolingMaxImpl::unary_expression(T *__restrict__ result,
 int PoolingMaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) {
 	return pooling_gpu(node, name, compiler_state);
+}
+std::string PoolingMaxImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+  return pooling_gpu_eager_params(res_type, parameter_types);
 }
 std::string
 PoolingMaxImpl::generate_ocl_eager(FType res_type,
@@ -477,6 +494,23 @@ int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node,
 			 " actual_overlapping++;\n}\n}\n}\n";
 	compiler_state.code.prepend(convc);
 	return OCL_LAZY_DONT_PUSH_PREDS;
+}
+std::string GradientPoolingMax::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0"
+		   ", const long num_entries0, const int dimensions0, const "
+		   "__global " +
+		   typeString(parameter_types[1]) +
+		   "* P1, const long num_entries1, const int dimensions1, const "
+		   "__global " +
+		   typeString(parameter_types[2]) +
+		   "* P2, const long num_entries2, const int dimensions2"
+		   ", __constant long* acc_sizes_pred, "
+		   "__constant long* acc_sizes_kernel"
+		   ", __constant long* acc_sizes, __constant long* acc_overlapping"
+		   ", __constant int* steps, __constant long* op_shape, __constant "
+		   "long* kernel_shape";
 }
 std::string
 GradientPoolingMax::generate_ocl_eager(FType res_type,

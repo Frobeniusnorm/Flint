@@ -109,6 +109,15 @@ int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 		to_string(old_idx) + ";\n");
 	return 0;
 }
+std::string SlidingWindowImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0"
+		   ", const long num_entries0, const int dimensions0"
+		   ", __constant long* acc_sizes_pred, __constant long* "
+		   "acc_sizes_win, __constant long* acc_sizes_rest, const long "
+		   "acc_sizes, __constant int* steps";
+}
 std::string
 SlidingWindowImpl::generate_ocl_eager(FType res_type,
 									  std::vector<FType> parameter_types) {
@@ -276,6 +285,17 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 				  "}";
 	compiler_state.code.prepend(local_code);
 	return OCL_LAZY_DONT_PUSH_PREDS;
+}
+std::string UnslideWindowImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0"
+		   ", const long num_entries0, const int dimensions0"
+		   ", __constant long* shapeR, __constant "
+		   "long* acc_sizes"
+		   ", __constant long* shape0,  __constant long* acc_sizes_pred"
+		   ", __constant long* acc_no_windows, __constant long* no_windows"
+		   ", __constant int* steps";
 }
 std::string
 UnslideWindowImpl::generate_ocl_eager(FType res_type,

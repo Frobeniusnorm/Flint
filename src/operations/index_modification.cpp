@@ -86,6 +86,15 @@ int SliceImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	compiler_state.index_defs = index_defs;
 	return 0;
 }
+std::string
+SliceImpl::generate_ocl_parameters_eager(FType res_type,
+										 std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0"
+		   ", const long num_entries0, const int dimensions0"
+		   ", __constant long* acc_sizes, __constant long* acc_sizes_pred"
+		   ", __constant long* steps, const long start";
+}
 std::string SliceImpl::generate_ocl_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
 	return "if(index >= num_entriesR) return;\n"
@@ -216,6 +225,16 @@ int ExtendImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								";\n");
 	return 0;
 }
+std::string
+ExtendImpl::generate_ocl_parameters_eager(FType res_type,
+										  std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0"
+		   ", const long num_entries0, const int dimensions0"
+		   ", __constant long* acc_sizes, __constant long* acc_sizes_pred"
+		   ", __constant long* steps, __constant long* start, __constant "
+		   "long* pred_shape";
+}
 std::string ExtendImpl::generate_ocl_eager(FType res_type,
 										   std::vector<FType> parameter_types) {
 	return "if(index >= num_entriesR) return;\n"
@@ -306,6 +325,19 @@ int IndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	compiler_state.todo.push_front({nullptr, local_index_def1});
 	compiler_state.todo.push_front({a, par1});
 	return OCL_LAZY_DONT_PUSH_PREDS;
+}
+std::string
+IndexImpl::generate_ocl_parameters_eager(FType res_type,
+										 std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0"
+		   ", const long num_entries0, const int dimensions0"
+		   ", const __global " +
+		   typeString(parameter_types[1]) +
+		   "* P1"
+		   ", const long num_entries1, const int dimensions1 "
+		   ", const long acc_sizes_ax, const long op_shape_ax, const long "
+		   "a_shape_ax";
 }
 std::string IndexImpl::generate_ocl_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
@@ -414,6 +446,22 @@ int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								"}\n");
 	compiler_state.todo.push_front({a, par1});
 	return OCL_LAZY_DONT_PUSH_PREDS;
+}
+std::string SetIndexImpl::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0"
+		   ", const long num_entries0, const int dimensions0"
+		   ", const __global " +
+		   typeString(parameter_types[1]) +
+		   "* P1"
+		   ", const long num_entries1, const int dimensions1 "
+		   ", const __global " +
+		   typeString(parameter_types[2]) +
+		   "* P2"
+		   ", const long num_entries2, const int dimensions2 "
+		   ", const long acc_sizes_ax, const long op_shape_ax, const long "
+		   "c_shape_ax";
 }
 std::string
 SetIndexImpl::generate_ocl_eager(FType res_type,
