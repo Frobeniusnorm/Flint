@@ -111,7 +111,22 @@ int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 }
 std::string
 SlidingWindowImpl::generate_ocl_eager(FType res_type,
-									  std::vector<FType> parameter_types) {}
+									  std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "long wi = index / acc_sizes;\n"
+		   "long rest = index % acc_sizes;\n"
+		   "long offset = 0, base = 0;\n"
+		   "for(int d = 0; d < dimensions0; d++){\n"
+		   " long local_wi = wi / acc_sizes_win[d];\n"
+		   " long local_base = local_wi * steps[d];\n"
+		   " base += local_base * acc_sizes_pred[d];\n"
+		   " wi %= acc_sizes_win[d];\n"
+		   " long local_ri = rest / acc_sizes_rest[d];\n"
+		   " offset += local_ri * acc_sizes_pred[d];\n"
+		   " rest %= acc_sizes_rest[d];\n"
+		   "}\n"
+		   "R[index] = P0[base + offset];\n";
+}
 void SlidingWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,
 									void *__restrict__ result, size_t from,
@@ -264,7 +279,40 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 }
 std::string
 UnslideWindowImpl::generate_ocl_eager(FType res_type,
-									  std::vector<FType> parameter_types) {}
+									  std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "R[index] = 0;\n"
+		   "long first_w = 0;\n"
+		   "long last_w = 0;\n"
+		   "for (int d = 0; d < dimensions0 - 1; d++) {\n"
+		   " const long id = (index / acc_sizes[d]) % shapeR[d];\n"
+		   " const long wdf = max(0l, (id - shape0[d + 1] + 1)) / steps[d];\n"
+		   " const long wfl = id / steps[d];\n"
+		   " first_w += wdf * acc_no_windows[d];\n"
+		   " last_w += wfl * acc_no_windows[d];\n"
+		   "}\n"
+		   "for (long w = first_w; w <= last_w;) {\n"
+		   " int contained = true;\n"
+		   " long wi = 0;\n"
+		   " long wpp = 0;\n"
+		   " for (int d = dimensions0 - 2; d >= 0; d--) {\n"
+		   "  const long wd = (w/acc_no_windows[d]) % no_windows[d];\n"
+		   "  const long w_start = wd * steps[d]\n;"
+		   "  const long id = (index / acc_sizes[d]) % shapeR[d];\n"
+		   "  if (id >= w_start && id < w_start + shape0[d + 1])\n"
+		   "   wi += (id - w_start) * acc_sizes_pred[d + 1];\n"
+		   "  else {\n"
+		   "   contained = false;\n"
+		   "   wpp += acc_no_windows[d];\n"
+		   "  }\n"
+		   " }\n"
+		   " if (contained) {\n"
+		   "   R[index] += P0[wi + w * acc_sizes_pred[0]];\n"
+		   "   wpp = 1;\n"
+		   " }\n"
+		   " w += wpp;\n"
+		   "}\n";
+}
 void UnslideWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,
 									void *__restrict__ result, size_t from,

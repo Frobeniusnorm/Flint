@@ -38,7 +38,11 @@ int AddImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
 std::string AddImpl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+										std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0 && index >= num_entries1) "
+		   " return;\n"
+		   "R[index] = P0[(index/inv_broad0)%num_entries0] + "
+		   "P1[(index/inv_broad1)%num_entries1];";
 }
 template <typename T, typename A, typename B>
 void SubImpl::binary_expression(T *__restrict__ result,
@@ -62,7 +66,11 @@ int SubImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
 std::string SubImpl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+										std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0 && index >= num_entries1) "
+		   "return;\nR[index] = "
+		   "P0[(index/inv_broad0)%num_entries0] - "
+		   "P1[(index/inv_broad1)%num_entries1];";
 }
 template <typename T, typename A, typename B>
 void MulImpl::binary_expression(T *__restrict__ result,
@@ -86,7 +94,11 @@ int MulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
 std::string MulImpl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+										std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0 && index >= num_entries1) "
+		   "return;\nR[index] = "
+		   "P0[(index/inv_broad0)%num_entries0] * "
+		   "P1[(index/inv_broad1)%num_entries1];";
 }
 template <typename T, typename A, typename B>
 void DivImpl::binary_expression(T *__restrict__ result,
@@ -109,8 +121,12 @@ int DivImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 2) + ";\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
-std::string PowImpl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+std::string DivImpl::generate_ocl_eager(FType res_type,
+										std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0 && index >= num_entries1) "
+		   "return;\nR[index] = "
+		   "P0[(index/inv_broad0)%num_entries0] / "
+		   "P1[(index/inv_broad1)%num_entries1];";
 }
 template <typename T, typename A, typename B>
 void PowImpl::binary_expression(T *__restrict__ result,
@@ -152,6 +168,32 @@ int PowImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 					 to_string(variable_index + 2) + ");\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
+std::string PowImpl::generate_ocl_eager(FType res_type,
+										std::vector<FType> parameter_types) {
+	std::string code =
+		"if(index >= num_entries0 && index >= num_entries1) return;\n";
+	string type = typeString(res_type);
+	if ((parameter_types[0] == F_FLOAT32 || parameter_types[0] == F_FLOAT64) &&
+		(parameter_types[1] == F_FLOAT32 || parameter_types[1] == F_FLOAT64))
+		code += "R[index] = pow((" + type +
+				")P0[(index/inv_broad0)%num_entries0], (" + type +
+				")P1[(index/inv_broad1)%num_entries1]);";
+	else if (parameter_types[0] == F_INT64 &&
+			 (parameter_types[1] == F_INT32 || parameter_types[1] == F_INT64))
+		code += "R[index] "
+				"= (long)pown((double)P0[(index/inv_broad0)%num_entries0], "
+				"(int)P1[(index/inv_broad1)%num_entries1]);";
+	else if (parameter_types[0] == F_INT32 &&
+			 (parameter_types[1] == F_INT32 || parameter_types[1] == F_INT64))
+		code += "R[index] = "
+				"(int)pown((float)P0[(index/inv_broad0)%num_entries0], "
+				"(int)P1[(index/inv_broad1)%num_entries1]);";
+	else
+		code += "R[index] = "
+				"pow((double)P0[(index/inv_broad0)%num_entries0], "
+				"(double)P1[(index/inv_broad1)%num_entries1]);";
+	return code;
+}
 template <typename T, typename A, typename B>
 void MatMulImpl::binary_expression(T *__restrict__ result,
 								   const A *__restrict__ data1,
@@ -192,10 +234,11 @@ int MatMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	string par1, par2;
 	auto parameters = compiler_state.parameters;
 	FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
-	Twine& code = compiler_state.code;
+	Twine &code = compiler_state.code;
 	// we ignore the value assignment of the parameters since we
 	// have to access the arrays directly parameter 1
-	if (compiler_state.assigned_params.find(gnp1) != compiler_state.assigned_params.end()) {
+	if (compiler_state.assigned_params.find(gnp1) !=
+		compiler_state.assigned_params.end()) {
 		par1 = compiler_state.assigned_params[gnp1];
 	} else {
 		par1 = "P" + to_string(compiler_state.assigned_params.size());
@@ -203,7 +246,8 @@ int MatMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		parameters->push_back({gnp1, par1});
 	}
 	// parameter 2
-	if (compiler_state.assigned_params.find(gnp2) != compiler_state.assigned_params.end()) {
+	if (compiler_state.assigned_params.find(gnp2) !=
+		compiler_state.assigned_params.end()) {
 		par2 = compiler_state.assigned_params[gnp2];
 	} else {
 		par2 = "P" + to_string(compiler_state.assigned_params.size());
@@ -231,16 +275,27 @@ int MatMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	} else
 		base_p2 = "0";
 	code.prepend("for(int i = 0; i < " + to_string(m) +
-		   "; i++){\n"
-		   "  " +
-		   name + " += " + par1 + "[" + base_p1 + " + " + j + " * " +
-		   to_string(m) + " + i] * " + par2 + "[" + base_p2 + " + i * " +
-		   to_string(n) + " + " + k + "];\n}\n");
-	code.prepend(type + " " + name + " = 0;\n" );
+				 "; i++){\n"
+				 "  " +
+				 name + " += " + par1 + "[" + base_p1 + " + " + j + " * " +
+				 to_string(m) + " + i] * " + par2 + "[" + base_p2 + " + i * " +
+				 to_string(n) + " + " + k + "];\n}\n");
+	code.prepend(type + " " + name + " = 0;\n");
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
 std::string MatMulImpl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+										   std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n" + typeString(res_type) +
+		   " res = 0;\n"
+		   "long j = (index % (l * n)) / n;\n"
+		   "long k = (index % (l * n)) % n;\n"
+		   "long base_p0 = dimensions0 > 2 ? (index / (l * n)) * (l * m) : "
+		   "0;\n"
+		   "long base_p1 = dimensions1 > 2 ? (index / (l * n)) * (m * n) : "
+		   "0;\n"
+		   "for(int i = 0; i < m; i++){\n res += P0[base_p0 + j * m + i] * "
+		   "P1[base_p1 + i * n + k];\n}"
+		   "R[index] = res;\n";
 }
 void SubImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,

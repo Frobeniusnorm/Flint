@@ -30,7 +30,11 @@ int NegImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string NegImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0) return;\n"
+		   "R[index] = "
+		   "-P0[index];";
+}
 void NegImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -51,7 +55,15 @@ int LogImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string LogImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										std::vector<FType> parameter_types) {
+	const string conv = parameter_types[0] == F_INT32	? "(float)"
+						: parameter_types[0] == F_INT64 ? "(double)"
+														: "";
+	return "if(index >= num_entries0) return;\n"
+		   "R[index] = "
+		   "log(" +
+		   conv + "P0[index]);";
+}
 void LogImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -72,7 +84,15 @@ int Log2Impl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string Log2Impl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										 std::vector<FType> parameter_types) {
+	const string conv = parameter_types[0] == F_INT32	? "(float)"
+						: parameter_types[0] == F_INT64 ? "(double)"
+														: "";
+	return "if(index >= num_entries0) return;\n"
+		   "R[index] = "
+		   "log2(" +
+		   conv + "P0[index]);";
+}
 void Log2Impl::execute_cpu(const FGraphNode *node,
 						   vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -94,7 +114,15 @@ int Log10Impl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string Log10Impl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										  std::vector<FType> parameter_types) {
+	const string conv = parameter_types[0] == F_INT32	? "(float)"
+						: parameter_types[0] == F_INT64 ? "(double)"
+														: "";
+	return "if(index >= num_entries0) return;\n"
+		   "R[index] = "
+		   "log10(" +
+		   conv + "P0[index]);";
+}
 void Log10Impl::execute_cpu(const FGraphNode *node,
 							vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
@@ -117,7 +145,11 @@ int SignImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string SignImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										 std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0) return;\n"
+		   "R[index] = "
+		   "P0[index] >= 0 ? 1 : -1;";
+}
 void SignImpl::execute_cpu(const FGraphNode *node,
 						   vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -154,7 +186,11 @@ int EvenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string EvenImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										 std::vector<FType> parameter_types) {
+  return "if(index >= num_entries0) return;\n"
+				"R[index] = "
+				"P0[index] % 2 == 0 ? 1 : 0;";
+}
 template <typename T, typename A>
 void SinImpl::unary_expression(T *__restrict__ result,
 							   const A *__restrict__ data, size_t from,
@@ -170,7 +206,11 @@ int SinImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string SinImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										std::vector<FType> parameter_types) {
+  return "if(index >= num_entries0) return;\n"
+				"R[index] = "
+				"sin(P0[index]);";
+}
 void SinImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -191,7 +231,11 @@ int CosImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string CosImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										std::vector<FType> parameter_types) {
+  return "if(index >= num_entries0) return;\n"
+				"R[index] = "
+				"cos(P0[index]);";
+}
 void CosImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -212,7 +256,11 @@ int TanImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string TanImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										std::vector<FType> parameter_types) {
+  return "if(index >= num_entries0) return;\n"
+				"R[index] = "
+				"tan(P0[index]);";
+}
 void TanImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -233,7 +281,11 @@ int ASinImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string ASinImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										 std::vector<FType> parameter_types) {
+  return "if(index >= num_entries0) return;\n"
+				"R[index] = "
+				"asin(P0[index]);";
+}
 void ASinImpl::execute_cpu(const FGraphNode *node,
 						   vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -255,7 +307,11 @@ int ACosImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string ACosImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										 std::vector<FType> parameter_types) {
+  return "if(index >= num_entries0) return;\n"
+				"R[index] = "
+				"acos(P0[index]);";
+}
 void ACosImpl::execute_cpu(const FGraphNode *node,
 						   vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -270,7 +326,11 @@ void ATanImpl::unary_expression(T *__restrict__ result,
 		result[i] = atan(data[i]);
 }
 std::string ATanImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										 std::vector<FType> parameter_types) {
+  return "if(index >= num_entries0) return;\n"
+				"R[index] = "
+				"atan(P0[index]);";
+}
 int ATanImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
@@ -299,7 +359,11 @@ int SqrtImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string SqrtImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										 std::vector<FType> parameter_types) {
+  return "if(index >= num_entries0) return;\n"
+				"R[index] = "
+				"sqrt(P0[index]);";
+}
 void SqrtImpl::execute_cpu(const FGraphNode *node,
 						   vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -321,7 +385,11 @@ int ExpImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string ExpImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										std::vector<FType> parameter_types) {
+  return "if(index >= num_entries0) return;\n"
+				"R[index] = "
+				"exp(P0[index]);";
+}
 void ExpImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {
@@ -344,7 +412,11 @@ int AbsImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string AbsImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										std::vector<FType> parameter_types) {
+  return "if(index >= num_entries0) return;\n"
+				"R[index] = "
+				"P0[index] < 0 ? -P0[index] : P0[index];";
+}
 void AbsImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {

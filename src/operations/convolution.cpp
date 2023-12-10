@@ -162,8 +162,52 @@ int ConvolveImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	compiler_state.code.prepend(conv_code);
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
-std::string ConvolveImpl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+std::string
+ConvolveImpl::generate_ocl_eager(FType res_type,
+								 std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "int multi_filter = dimensions0 != dimensions1;\n"
+		   "long j = 0;\n"
+		   "for(int d = 0; d < dimensions0 - 1; d++){\n"
+		   " long di = (d == 0 ? index : index % acc_sizes[d - 1]) / "
+		   "acc_sizes[d];\n"
+		   " j += di * steps[d] * acc_sizes_pred[d];\n"
+		   "}\n"
+		   "long kernel_offset = 0;\n"
+		   "if(multi_filter){\n"
+		   " long fi = (index % acc_sizes[dimensions0 - 2]) / "
+		   "acc_sizes[dimensions0 - 1];\n"
+		   " kernel_offset = fi * acc_sizes_kernel[0];\n"
+		   "}\n" +
+		   typeString(res_type) +
+		   " res = 0;\n"
+		   "const long kernel_num_elems = multi_filter ? acc_sizes_kernel[0] "
+		   ": "
+		   "num_entries1;\n"
+		   "for(long k = 0; k < kernel_num_elems; k++){\n"
+		   " bool set_zero = false;\n"
+		   " long o = 0;\n"
+		   " const int last_dim = multi_filter ? dimensions1 - 1 : "
+		   "dimensions1;\n"
+		   " for(int d = 0; d < last_dim; d++){\n"
+		   "  const int kn_d = multi_filter ? d + 1 : d;\n"
+		   "  long di = d == last_dim ? 0 : (d == 0 ? index : index % "
+		   "acc_sizes[d - 1]) / "
+		   "acc_sizes[d];\n"
+		   "  long dk = (kn_d == 0 ? k : k % acc_sizes_kernel[kn_d - 1]) / "
+		   "acc_sizes_kernel[kn_d];\n"
+		   "  if(d < dimensions0 - 1)\n"
+		   "   if(((di * steps[d]) + dk) * acc_sizes_pred[d] >= num_entries0 "
+		   "||\n"
+		   "        (d > 0 && ((di * steps[d]) + dk) * acc_sizes_pred[d] >= \n"
+		   "acc_sizes_pred[d - 1])) {\n"
+		   "    set_zero = true; break;\n}\n"
+		   "  o += dk * acc_sizes_pred[d];\n"
+		   " }\n"
+		   " if (set_zero) continue;\n"
+		   " res += P1[k + kernel_offset] * P0[j + o];\n"
+		   "}\n"
+		   "R[index] = res;";
 }
 template <typename T, typename A, typename B>
 void GradientConvolve1Impl::binary_expression(
@@ -419,8 +463,67 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 	compiler_state.code.prepend(convc);
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
-std::string GradientConvolve1Impl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+std::string
+GradientConvolve1Impl::generate_ocl_eager(FType res_type,
+										  std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "const long overlapping = max(1l, (long)ceil(kernel_shape[0] / "
+		   "(double)steps[0])) * acc_overlapping[0];\n" +
+		   typeString(res_type) +
+		   " res = 0;\n"
+		   "int in_steps = true;\n"
+		   "int started_counting = false;\n"
+		   "long keri = 0;\n"
+		   "long adji = 0;\n"
+		   "for(int d = 0; d < dimensions1; d++){\n"
+		   " const long di = (d == 0 ? index : index % acc_sizes_pred[d-1]) / "
+		   "acc_sizes_pred[d];\n"
+		   " const long ki = di - (di / steps[d]) * steps[d];\n"
+		   " if(ki >= kernel_shape[d]){\n"
+		   "  in_steps = false;\n"
+		   "  break;\n"
+		   " }\n"
+		   " const long wdf = (long)ceil(max(0l, di - kernel_shape[d] + 1) / "
+		   "(double)steps[d]);\n"
+		   " keri += ki * acc_sizes_kernel[d];\n"
+		   " adji += wdf * acc_sizes[d];\n"
+		   "}\n"
+		   "if(in_steps){\n"
+		   " keri += index % op_shape[dimensions1];\n"
+		   " long actual_overlapping = 0;\n"
+		   " for(long o = 0; o < overlapping; o++){\n"
+		   "  long adjo = 0;\n"
+		   "  long kero = 0;\n"
+		   "  int skip_kernel = false;\n"
+		   "  for(int d = 0; d < dimensions1; d++){\n"
+		   "   const long di = (d == 0 ? index : index % acc_sizes_pred[d-1]) "
+		   "/ acc_sizes_pred[d];\n"
+		   "   const long io = (d == 0 ? o : o % acc_overlapping[d-1]) / "
+		   "acc_overlapping[d];\n"
+		   "   const long ao = (d == 0 ? actual_overlapping : "
+		   "actual_overlapping % acc_overlapping[d-1]) / acc_overlapping[d];\n"
+		   "   const long ki = (d == 0 ? keri : keri % acc_sizes_kernel[d-1]) "
+		   "/ acc_sizes_kernel[d];\n"
+		   "   if(di+kernel_shape[d]-(ki+io*steps[d]) > op_shape[d]){\n"
+		   "    if(!started_counting) actual_overlapping--;\n"
+		   "    skip_kernel = true;\n"
+		   "    break;\n"
+		   "   }else if(ki+io*steps[d] >= kernel_shape[d] || di < "
+		   "ki+io*steps[d]){\n"
+		   "    skip_kernel = true;\n"
+		   "    break;\n"
+		   "   }\n"
+		   "   adjo += ao * acc_sizes[d];\n"
+		   "   kero += io * steps[d] * acc_sizes_kernel[d];\n"
+		   "  }\n"
+		   "  if(!skip_kernel){\n"
+		   "   started_counting = true;\n"
+		   "   res+=P0[kero+keri]*P1[adjo+adji];\n"
+		   "  }\n"
+		   "  actual_overlapping++;\n"
+		   " }\n"
+		   "}\n"
+		   "R[index] = res;\n";
 }
 template <typename T, typename A, typename B>
 void GradientConvolve2Impl::binary_expression(
@@ -550,8 +653,33 @@ int GradientConvolve2Impl::generate_ocl_lazy(
 								old_idx + ";\n}\n");
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
-std::string GradientConvolve2Impl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+std::string
+GradientConvolve2Impl::generate_ocl_eager(FType res_type,
+										  std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "const bool multifilter = dimensions0 > dimensions1;\n"
+		   "const long windows = acc_sizes_windows[0] * prev_adj_shape[0];\n"
+		   "const long num_elems_kernel = multifilter ? acc_sizes_kernel[0] : "
+		   "acc_sizes_kernel[0] * op_shape[0];\n"
+		   "const int num_filter = multifilter ? op_shape[0] : 1;\n"
+		   "const long f = multifilter ? index / num_elems_kernel : 0;\n"
+		   "long a_offset = 0;\n"
+		   "for(int j = multifilter ? 1 : 0; j < dimensions0; j++){\n"
+		   " const long ki = (index / acc_sizes_kernel[j]) % op_shape[j];\n"
+		   " a_offset += ki * acc_sizes_pred[multifilter ? j - 1 : j];\n"
+		   "}\n"
+		   "R[index] = 0;\n"
+		   "for(long w = 0; w < windows; w++){\n"
+		   " long a = 0;"
+		   " for(int j = 0; j < (multifilter ? dimensions2 - 1 : "
+		   "dimensions2); "
+		   "j++){\n"
+		   "  const long wj = (w / acc_sizes_windows[j]) % "
+		   "prev_adj_shape[j];\n"
+		   "  a += wj * acc_sizes_pred[j] * steps[j];\n"
+		   " }\n"
+		   " R[index] += P1[a + a_offset] * P2[w * num_filter + f];\n"
+		   "}\n";
 }
 void ConvolveImpl::execute_cpu(const FGraphNode *node,
 							   std::vector<CPUResultData> predecessor_data,

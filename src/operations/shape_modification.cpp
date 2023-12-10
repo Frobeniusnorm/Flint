@@ -39,8 +39,11 @@ int FlattenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
-std::string FlattenImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+std::string
+FlattenImpl::generate_ocl_eager(FType res_type,
+								std::vector<FType> parameter_types) {
+	return ""; // implemented as store
+}
 template <typename T, typename A>
 void ConversionImpl::unary_expression(T *__restrict__ result,
 									  const A *__restrict__ data1, size_t from,
@@ -56,8 +59,13 @@ int ConversionImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
-std::string ConversionImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+std::string
+ConversionImpl::generate_ocl_eager(FType res_type,
+								   std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0) return;\n"
+		   "R[index] = (" +
+		   typeString(res_type) + ")P0[index];";
+}
 void ConversionImpl::execute_cpu(const FGraphNode *node,
 								 vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
@@ -125,7 +133,16 @@ int RepeatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string RepeatImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										   std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "long src_index = 0;\n"
+		   "int i = index;\n"
+		   "for (int dim = 0; dim < dimensions0; dim++){\n"
+		   " int curr = i / acc_sizes_d[dim];\n"
+		   " i %= acc_sizes_d[dim];\n"
+		   " src_index += (curr % pred_shape[dim]) * acc_sizes_s[dim];\n}\n"
+		   "R[index] = P0[src_index];\n";
+}
 void RepeatImpl::execute_cpu(const FGraphNode *node,
 							 vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
@@ -194,8 +211,18 @@ int TransposeImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
-std::string TransposeImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+std::string
+TransposeImpl::generate_ocl_eager(FType res_type,
+								  std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0) return;\n"
+		   "long src_index = 0;\n"
+		   "int i = index;\n"
+		   "for(int dim = 0; dim < dimensions0; dim++){\n"
+		   " int curr_idx = i / acc_sizes_d[dim];\n"
+		   " i %= acc_sizes_d[dim];\n"
+		   " src_index += curr_idx * acc_sizes_s[dim];\n}\n"
+		   "R[index] = P0[src_index];\n";
+}
 void TransposeImpl::execute_cpu(const FGraphNode *node,
 								vector<CPUResultData> predecessor_data,
 								void *__restrict__ result, size_t from,
@@ -271,7 +298,21 @@ int ConcatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	return 0;
 }
 std::string ConcatImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+										   std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "long sx = index / acc_size_last;\n"
+		   "long sc = ax > 0 ? sx % shape_ax : sx;\n"
+		   "if(sc < a_shape_ax){\n"
+		   " long ai = (sx / shape_ax) * acc_size_last * a_shape_ax + sc * "
+		   "acc_size_last + index % acc_size_last;\n"
+		   " R[index] = P0[ai];\n"
+		   "}else{\n"
+		   " long bi = (sx / shape_ax) * acc_size_last * b_shape_ax + (sc - "
+		   "a_shape_ax) * "
+		   "acc_size_last + index % acc_size_last;\n"
+		   " R[index] = P1[bi];\n"
+		   "}";
+}
 void ConcatImpl::execute_cpu(const FGraphNode *node,
 							 vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,

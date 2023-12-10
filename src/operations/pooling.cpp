@@ -1,4 +1,5 @@
 #include "pooling.hpp"
+#include "flint.h"
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
@@ -128,6 +129,42 @@ static int pooling_gpu(const FGraphNode *node, std::string name,
 		";\n }\n}");
 	return 0;
 }
+template <FOperationType operation>
+static std::string pooling_gpu_eager(FType res_type,
+									 std::vector<FType> parameter_types) {
+	Twine code;
+	code += "if(index >= num_entriesR) return;\n"
+			"long j = 0;\n"
+			"for(int d = 0; d < dimensions0 - 1; d++){\n"
+			" const long di = (d == 0 ? index : index%acc_sizes[d - 1]) / "
+			"acc_sizes[d];\n"
+			" j += di * steps[d] * acc_sizes_pred[d];\n"
+			"}\n" +
+			typeString(res_type) + " res = ";
+	if constexpr (operation == FPOOLING_SUM)
+		code += "0";
+	else
+		code += minForType(res_type);
+	code += ";\n"
+			"for(long k = 0; k < kernel_num_elems; k++){\n"
+			" int set_zero = false;\n"
+			" long o = 0;\n"
+			" for(int d = 0; d < dimensions0 - 1; d++){"
+			"  const long dk = (d == 0 ? k : k%acc_sizes_kernel[d - 1]) / "
+			"acc_sizes_kernel[d];\n"
+			"  o += dk * acc_sizes_pred[d];\n"
+			" }"
+			" for(long ld = 0; ld < pred_last_shape; ld++){";
+	if constexpr (operation == FPOOLING_SUM) {
+		code += "  res += P0[j + o + ld];\n";
+	} else {
+		code += "  res = max(res, P0[j + o + ld]);\n";
+	}
+	code += " }\n"
+			"}\n"
+			"R[index] = res;\n";
+	return code;
+}
 template <typename T>
 void PoolingSumImpl::unary_expression(T *__restrict__ result,
 									  const T *__restrict__ data, size_t from,
@@ -138,8 +175,11 @@ int PoolingSumImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) {
 	return pooling_gpu(node, name, compiler_state);
 }
-std::string PoolingSumImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+std::string
+PoolingSumImpl::generate_ocl_eager(FType res_type,
+								   std::vector<FType> parameter_types) {
+	return pooling_gpu_eager<FPOOLING_SUM>(res_type, parameter_types);
+}
 void PoolingSumImpl::execute_cpu(const FGraphNode *node,
 								 std::vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
@@ -157,8 +197,11 @@ int PoolingMaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) {
 	return pooling_gpu(node, name, compiler_state);
 }
-std::string PoolingMaxImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+std::string
+PoolingMaxImpl::generate_ocl_eager(FType res_type,
+								   std::vector<FType> parameter_types) {
+	return pooling_gpu_eager<FPOOLING_MAX>(res_type, parameter_types);
+}
 void PoolingMaxImpl::execute_cpu(const FGraphNode *node,
 								 std::vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
@@ -435,8 +478,66 @@ int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node,
 	compiler_state.code.prepend(convc);
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
-std::string GradientPoolingMax::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+std::string
+GradientPoolingMax::generate_ocl_eager(FType res_type,
+									   std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "const long overlapping = max(1l, (long)ceil(kernel_shape[0] / "
+		   "(double)steps[0])) * acc_overlapping[0];\n" +
+		   typeString(res_type) +
+		   " res = 0;\n"
+		   "int in_steps = true;\n"
+		   "int started_counting = false;\n"
+		   "long keri = 0;\n"
+		   "long adji = 0;\n"
+		   "for(int d = 0; d < dimensions1; d++){\n"
+		   " const long di = (d == 0 ? index : index % acc_sizes_pred[d-1]) / "
+		   "acc_sizes_pred[d];\n"
+		   " const long ki = di - (di / steps[d]) * steps[d];\n"
+		   " if(ki >= kernel_shape[d]){\n"
+		   "  in_steps = false;\n"
+		   "  break;\n"
+		   " }\n"
+		   " const long wdf = (long)ceil(max(0l, di - kernel_shape[d] + 1) / "
+		   "(double)steps[d]);\n"
+		   " keri += ki * acc_sizes_kernel[d];\n"
+		   " adji += wdf * acc_sizes[d];\n"
+		   "}\n"
+		   "if(in_steps){\n"
+		   " keri += index % op_shape[dimensions1];\n"
+		   " long actual_overlapping = 0;\n"
+		   " for(long o = 0; o < overlapping; o++){\n"
+		   "  long adjo = 0;\n"
+		   "  int skip_kernel = false;\n"
+		   "  for(int d = 0; d < dimensions1; d++){\n"
+		   "   const long di = (d == 0 ? index : index % acc_sizes_pred[d-1]) "
+		   "/ acc_sizes_pred[d];\n"
+		   "   const long io = (d == 0 ? o : o % acc_overlapping[d-1]) / "
+		   "acc_overlapping[d];\n"
+		   "   const long ao = (d == 0 ? actual_overlapping : "
+		   "actual_overlapping % acc_overlapping[d-1]) / acc_overlapping[d];\n"
+		   "   const long ki = (d == 0 ? keri : keri % acc_sizes_kernel[d-1]) "
+		   "/ acc_sizes_kernel[d];\n"
+		   "   if(di+kernel_shape[d]-(ki+io*steps[d]) > op_shape[d]){\n"
+		   "    if(!started_counting) actual_overlapping--;\n"
+		   "    skip_kernel = true;\n"
+		   "    break;\n"
+		   "   }else if(ki+io*steps[d] >= kernel_shape[d] || di < "
+		   "ki+io*steps[d]){\n"
+		   "    skip_kernel = true;\n"
+		   "    break;\n"
+		   "   }\n"
+		   "   adjo += ao * acc_sizes[d];\n"
+		   "  }\n"
+		   "  if(!skip_kernel && P0[adjo + adji] == P2[index]){\n"
+		   "   started_counting = true;\n"
+		   "   res+=P1[adjo+adji];\n"
+		   "  }\n"
+		   "  actual_overlapping++;\n"
+		   " }\n"
+		   "}\n"
+		   "R[index] = res;\n";
+}
 void GradientPoolingMax::execute_cpu(
 	const FGraphNode *node, std::vector<CPUResultData> predecessor_data,
 	void *__restrict__ result, size_t from, size_t size) {

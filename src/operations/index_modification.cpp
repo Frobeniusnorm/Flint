@@ -87,7 +87,15 @@ int SliceImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	return 0;
 }
 std::string SliceImpl::generate_ocl_eager(FType res_type,
-										  std::vector<FType> parameter_types) {}
+										  std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "long j = start;\n"
+		   "for (int d = 0; d < dimensions0; d++){\n"
+		   " long di = (d == 0 ? index : index % acc_sizes[d - 1]) /"
+		   "acc_sizes[d];\n"
+		   " j += di * steps[d] * acc_sizes_pred[d];\n}\n"
+		   "R[index] = P0[j];\n";
+}
 void SliceImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
@@ -210,6 +218,25 @@ int ExtendImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string ExtendImpl::generate_ocl_eager(FType res_type,
 										   std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "long j = 0;\n"
+		   "int set_zero = 0;\n"
+		   "for(int d = 0; d < dimensions0; d++){\n"
+		   " long step = steps[d];\n"
+		   " int inv = step < 0;\n"
+		   " if(inv) step = -step;\n"
+		   " long di = (d == 0 ? index : index % acc_sizes[d - 1]) / "
+		   "acc_sizes[d];\n"
+		   " if(di < start[d]){\n"
+		   "  set_zero = 1;\n  break;\n }\n"
+		   " di -= start[d];\n"
+		   " if(di % step != 0){\n  set_zero = 1;\n  break;\n }\n"
+		   " di /= step;\n"
+		   " if(di >= pred_shape[d]){\n"
+		   "  set_zero = 1;\n  break;\n }\n"
+		   " if(inv) di = pred_shape[d] - di - 1;\n"
+		   " j += di * acc_sizes_pred[d];\n}\n"
+		   "R[index] = set_zero ? 0 : P0[j];";
 }
 void ExtendImpl::execute_cpu(const FGraphNode *node,
 							 std::vector<CPUResultData> predecessor_data,
@@ -281,7 +308,15 @@ int IndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
 std::string IndexImpl::generate_ocl_eager(FType res_type,
-										  std::vector<FType> parameter_types) {}
+										  std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "const int axis = dimensions1 - 1;\n"
+		   "const long base = index / (acc_sizes_ax * op_shape_ax);\n"
+		   "const long rest = index % acc_sizes_ax;\n"
+		   "const long ind = (long) P1[index / acc_sizes_ax];\n"
+		   "R[index] = P0[(base * acc_sizes_ax * a_shape_ax) + (ind * "
+		   "acc_sizes_ax) + rest];\n";
+}
 void IndexImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
@@ -382,7 +417,24 @@ int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string
 SetIndexImpl::generate_ocl_eager(FType res_type,
-								 std::vector<FType> parameter_types) {}
+								 std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "const int axis = dimensions2 - 1;\n"
+		   "const long base = index / (acc_sizes_ax * op_shape_ax);\n"
+		   "const long rest = index % acc_sizes_ax;\n"
+		   "const long axi = (index / acc_sizes_ax) % op_shape_ax;\n"
+		   "const long base_ind = base * c_shape_ax;\n"
+		   "R[index] = 0;\n"
+		   "int found_something = false;\n"
+		   "for (long j = base_ind; j < base_ind + c_shape_ax; j++) {\n"
+		   " const long ind = (long) P2[j];\n"
+		   " if(ind == axi){"
+		   "   R[index] += P1[j * acc_sizes_ax + rest];\n"
+		   "   found_something = true;\n"
+		   " }\n"
+		   "}\n"
+		   "if(!found_something) R[index] = P0[index];\n";
+}
 void SetIndexImpl::execute_cpu(const FGraphNode *node,
 							   std::vector<CPUResultData> predecessor_data,
 							   void *__restrict__ result, size_t from,

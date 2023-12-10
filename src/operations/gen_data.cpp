@@ -39,7 +39,11 @@ int GenRandomImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string
 GenRandomImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {}
+								  std::vector<FType> parameter_types) {
+  return "if(index >= num_entriesR) return;\n"
+				"const double v = sin(index + time) * 43758.5453123;\n"
+				"R[index] = min(v - floor(v), 0.99999);\n";
+}
 
 template <typename T>
 void GenConstantImpl::zeroary_expression(const FGraphNode *node,
@@ -57,7 +61,10 @@ int GenConstantImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string
 GenConstantImpl::generate_ocl_eager(FType res_type,
-									std::vector<FType> parameter_types) {}
+									std::vector<FType> parameter_types) {
+  return "if(index >= num_entriesR) return;\n"
+				"R[index] = constant_val;\n";
+}
 void GenConstantImpl::execute_cpu(const FGraphNode *node,
 								  std::vector<CPUResultData> predecessor_data,
 								  void *__restrict__ result, size_t from,
@@ -89,4 +96,8 @@ int GenArangeImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string
 GenArangeImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {}
+								  std::vector<FType> parameter_types) {
+  return "if(index >= num_entriesR) return;\n"
+				"const long i = (index / acc_sizes_ax) % shape_ax\n;"
+				"R[index] = i;\n";
+}

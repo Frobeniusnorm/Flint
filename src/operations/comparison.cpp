@@ -44,7 +44,13 @@ int MinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
 std::string MinImpl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+										std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
+		   typeString(parameter_types[0]) +
+		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
+		   typeString(parameter_types[1]) +
+		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
+		   "R[index] = a < b ? a : b;";
 }
 template <typename T, typename A, typename B>
 void MaxImpl::binary_expression(T *__restrict__ result,
@@ -67,7 +73,13 @@ int MaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
 std::string MaxImpl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+										std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
+		   typeString(parameter_types[0]) +
+		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
+		   typeString(parameter_types[1]) +
+		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
+		   "R[index] = a >= b ? a : b;";
 }
 void MaxImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
@@ -97,7 +109,13 @@ int LessImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
 std::string LessImpl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+										 std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
+		   typeString(parameter_types[0]) +
+		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
+		   typeString(parameter_types[1]) +
+		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
+		   "R[index] = a < b ? 1 : 0;";
 }
 void LessImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
@@ -127,8 +145,15 @@ int GreaterImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 2) + " ? 1 : 0;\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
-std::string GreaterImpl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+std::string
+GreaterImpl::generate_ocl_eager(FType res_type,
+								std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
+		   typeString(parameter_types[0]) +
+		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
+		   typeString(parameter_types[1]) +
+		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
+		   "R[index] = a > b ? 1 : 0;";
 }
 void GreaterImpl::execute_cpu(const FGraphNode *node,
 							  std::vector<CPUResultData> predecessor_data,
@@ -167,7 +192,14 @@ int EqualImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
 std::string EqualImpl::generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
+										  std::vector<FType> parameter_types) {
+	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
+		   typeString(parameter_types[0]) +
+		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
+		   typeString(parameter_types[1]) +
+		   " b = P1[(index/inv_broad1)%num_entries1];\n" + "R[index] = a + " +
+		   epsilonForType(parameter_types[0]) + " >= b && a <= b + " +
+		   epsilonForType(parameter_types[1]) + " ? 1 : 0;";
 }
 void EqualImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
