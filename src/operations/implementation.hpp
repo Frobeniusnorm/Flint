@@ -338,25 +338,45 @@ struct OperationImplementation {
 		 * here the definition of the `code` string is as well*/
 		virtual int generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) = 0;
-    /**
-     * Generates the content of a eager kernel.
-     * `res_type` is the result type of the kernel and `parameter_types` contains the parameter types in order.
-     */
-		virtual std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) = 0;
-    /**
-     * Generates additional parameters to the kernel additional to the result array
-     */
-    virtual std::string generate_ocl_parameters_eager(FType res_type,
-							  std::vector<FType> parameter_types) {
-      Twine code;
-      for (int i = 0; i < parameter_types.size(); i++)
-        code += ", const __global " + typeString(parameter_types[i]) +
-            "* P" + std::to_string(i) + ", long num_entries" + std::to_string(i);
-      return code;
-    }
-
-	protected:
+		/**
+		 * Generates the content of a eager kernel.
+		 * `res_type` is the result type of the kernel and `parameter_types`
+		 * contains the parameter types in order.
+		 */
+		virtual std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) = 0;
+		/**
+		 * Generates additional parameters to the kernel additional to the
+		 * result array
+		 */
+		virtual std::string
+		generate_ocl_parameters_eager(FType res_type,
+									  std::vector<FType> parameter_types) {
+			Twine code;
+			for (int i = 0; i < parameter_types.size(); i++)
+				code += ", const __global " + typeString(parameter_types[i]) +
+						"* P" + std::to_string(i) + ", long num_entries" +
+						std::to_string(i);
+			return code;
+		}
+		/**
+		 * Pushes additional values to the eager opencl program that don't
+		 * depend on the parameters. The `par_index` has to be incremented for
+		 * every pushed parameter. Every memory object in `to_free` will be
+		 * freed after program execution.
+		 */
+		virtual void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) {}
+		/**
+		 * Pushed per parameter values (is called once per parameter).
+		 * See `push_additional_kernel_parameters`.
+		 */
+		virtual void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+									   cl_kernel kernel, cl_context context,
+									   int &par_index,
+									   std::list<cl_mem> &to_free) {}
 };
-
 #endif

@@ -68,6 +68,10 @@ struct IndexImpl : OperationImplementation {
 						   std::vector<FType> parameter_types) override;
 		std::string generate_ocl_parameters_eager(
 			FType res_type, std::vector<FType> parameter_types) override;
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override;
 };
 struct SetIndexImpl : OperationImplementation {
 		template <typename T>
@@ -86,5 +90,9 @@ struct SetIndexImpl : OperationImplementation {
 						   std::vector<FType> parameter_types) override;
 		std::string generate_ocl_parameters_eager(
 			FType res_type, std::vector<FType> parameter_types) override;
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override;
 };
 #endif

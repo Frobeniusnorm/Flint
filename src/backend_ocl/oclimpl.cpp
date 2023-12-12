@@ -13,11 +13,12 @@
  * limitations under the License. */
 
 #include "../../flint.h"
-#include "codegen.hpp"
-#include "comp.hpp"
-#include "utils.hpp"
 #include "../errors.hpp"
 #include "../utils.hpp"
+#include "codegen.hpp"
+#include "comp.hpp"
+#include "src/operations/implementation.hpp"
+#include "utils.hpp"
 #include <CL/cl.h>
 #include <iostream>
 #include <list>
@@ -342,13 +343,13 @@ cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
 		std::string kernel_name;
 		for (FType param : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
 			code += generateEagerCode(node->operation.op_type, F_FLOAT64,
-										{param, F_FLOAT64, param}, kernel_name);
+									  {param, F_FLOAT64, param}, kernel_name);
 			if (param == node->predecessors[0]->operation.data_type)
 				our_kernel = kernel_name;
-			all_kernels.push_back(
-				{OCLCompilerThread::generateKernelHash(
-					 node->operation.op_type, F_FLOAT64, {param, F_FLOAT64, param}),
-				 kernel_name});
+			all_kernels.push_back({OCLCompilerThread::generateKernelHash(
+									   node->operation.op_type, F_FLOAT64,
+									   {param, F_FLOAT64, param}),
+								   kernel_name});
 		}
 	} break;
 	}
@@ -649,7 +650,9 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		pushParameterVals(node, pred, kernel, context, par_index, to_free);
 	}
 	// parameters for functions that dont set them per parent
-	pushAdditonalVals(node, kernel, context, par_index, to_free);
+	OperationImplementation::implementations[node->operation.op_type]
+		->push_additional_kernel_parameters(node, kernel, context, par_index,
+											to_free);
 	// broadcasting values
 	if (node->num_predecessor == 2) {
 		for (int i = 0; i < node->num_predecessor; i++) {

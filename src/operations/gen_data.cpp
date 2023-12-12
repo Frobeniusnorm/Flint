@@ -48,6 +48,17 @@ GenRandomImpl::generate_ocl_eager(FType res_type,
 		   "const double v = sin(index + time) * 43758.5453123;\n"
 		   "R[index] = min(v - floor(v), 0.99999);\n";
 }
+void GenRandomImpl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	double seed = ((double *)node->operation.additional_data)[0];
+	if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&seed) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+}
 
 template <typename T>
 void GenConstantImpl::zeroary_expression(const FGraphNode *node,
@@ -72,6 +83,27 @@ GenConstantImpl::generate_ocl_eager(FType res_type,
 									std::vector<FType> parameter_types) {
 	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = constant_val;\n";
+}
+void GenConstantImpl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	unsigned int byte_size;
+	switch (node->operation.data_type) {
+	case F_FLOAT64:
+	case F_INT64:
+		byte_size = 8;
+		break;
+	case F_INT32:
+	case F_FLOAT32:
+		byte_size = 4;
+		break;
+	}
+	if (clSetKernelArg(kernel, par_index++, byte_size,
+					   node->operation.additional_data) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
 }
 void GenConstantImpl::execute_cpu(const FGraphNode *node,
 								  std::vector<CPUResultData> predecessor_data,
@@ -112,4 +144,26 @@ GenArangeImpl::generate_ocl_eager(FType res_type,
 	return "if(index >= num_entriesR) return;\n"
 		   "const long i = (index / acc_sizes_ax) % shape_ax\n;"
 		   "R[index] = i;\n";
+}
+void GenArangeImpl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
+	size_t acc_sizes_ax = 1;
+	for (unsigned int i = ax + 1; i < node->operation.dimensions; i++)
+		acc_sizes_ax *= node->operation.shape[i];
+	// push acc_sizes_ax
+	if (clSetKernelArg(kernel, par_index++, sizeof(size_t),
+					   (void *)&acc_sizes_ax) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	// push shape_ax
+	if (clSetKernelArg(kernel, par_index++, sizeof(size_t),
+					   (void *)&node->operation.shape[ax]) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
 }

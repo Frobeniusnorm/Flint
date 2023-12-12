@@ -141,12 +141,23 @@ static std::string reducing_eager(FType res_type,
 	code += "\n}R[index] = res;\n";
 	return code;
 }
-std::string reducing_parameters_eager(FType res_type,
-									  std::vector<FType> parameter_types) {
+static std::string
+reducing_parameters_eager(FType res_type, std::vector<FType> parameter_types) {
 	return ", const __global " + typeString(parameter_types[0]) +
 		   "* P0, const long num_entries0, const int dimensions0, const long "
 		   "it_dim0, const long shape_dim0"
 		   ", int reduce_dim";
+}
+static void reducing_push_parameters(FGraphNode *node, cl_kernel kernel,
+									 cl_context context, int &par_index,
+									 std::list<cl_mem> &to_free) {
+	int *dim = ((int *)node->operation.additional_data);
+	if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)dim) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
 }
 template <typename T>
 void ReduceSumImpl::unary_expression(T *__restrict__ result,
@@ -179,6 +190,11 @@ ReduceSumImpl::generate_ocl_eager(FType res_type,
 								  std::vector<FType> parameter_types) {
 	return reducing_eager<FREDUCE_SUM>(res_type, parameter_types);
 }
+void ReduceSumImpl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	reducing_push_parameters(node, kernel, context, par_index, to_free);
+}
 template <typename T>
 void ReduceMulImpl::unary_expression(T *__restrict__ result,
 									 const T *__restrict__ data, size_t from,
@@ -209,6 +225,11 @@ std::string
 ReduceMulImpl::generate_ocl_eager(FType res_type,
 								  std::vector<FType> parameter_types) {
 	return reducing_eager<FREDUCE_MUL>(res_type, parameter_types);
+}
+void ReduceMulImpl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	reducing_push_parameters(node, kernel, context, par_index, to_free);
 }
 template <typename T>
 void ReduceMinImpl::unary_expression(T *__restrict__ result,
@@ -241,6 +262,11 @@ ReduceMinImpl::generate_ocl_eager(FType res_type,
 								  std::vector<FType> parameter_types) {
 	return reducing_eager<FREDUCE_MIN>(res_type, parameter_types);
 }
+void ReduceMinImpl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	reducing_push_parameters(node, kernel, context, par_index, to_free);
+}
 template <typename T>
 void ReduceMaxImpl::unary_expression(T *__restrict__ result,
 									 const T *__restrict__ data, size_t from,
@@ -271,6 +297,11 @@ std::string
 ReduceMaxImpl::generate_ocl_eager(FType res_type,
 								  std::vector<FType> parameter_types) {
 	return reducing_eager<FREDUCE_MAX>(res_type, parameter_types);
+}
+void ReduceMaxImpl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	reducing_push_parameters(node, kernel, context, par_index, to_free);
 }
 void ReduceSumImpl::execute_cpu(const FGraphNode *node,
 								std::vector<CPUResultData> predecessor_data,

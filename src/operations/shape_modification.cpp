@@ -339,6 +339,48 @@ std::string ConcatImpl::generate_ocl_eager(FType res_type,
 		   " R[index] = P1[bi];\n"
 		   "}";
 }
+void ConcatImpl::push_additional_kernel_parameters(FGraphNode *node,
+												   cl_kernel kernel,
+												   cl_context context,
+												   int &par_index,
+												   std::list<cl_mem> &to_free) {
+	FGraphNode *a = node->predecessors[0];
+	FGraphNode *b = node->predecessors[1];
+	unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
+	size_t acc_size_last = 1;
+	for (int i = node->operation.dimensions - 2; i >= (int)ax; i--)
+		acc_size_last *= node->operation.shape[i + 1];
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&acc_size_last) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&(node->operation.shape[ax])) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&a->operation.shape[ax]) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&b->operation.shape[ax]) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)&ax) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+}
 void ConcatImpl::execute_cpu(const FGraphNode *node,
 							 vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,

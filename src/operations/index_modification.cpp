@@ -349,6 +349,43 @@ std::string IndexImpl::generate_ocl_eager(FType res_type,
 		   "R[index] = P0[(base * acc_sizes_ax * a_shape_ax) + (ind * "
 		   "acc_sizes_ax) + rest];\n";
 }
+
+void IndexImpl::push_additional_kernel_parameters(FGraphNode *node,
+												  cl_kernel kernel,
+												  cl_context context,
+												  int &par_index,
+												  std::list<cl_mem> &to_free) {
+	const FOperation op = node->operation;
+	const unsigned int axis =
+		node->predecessors[op.op_type == FSET_INDEX ? 2 : 1]
+			->operation.dimensions -
+		1;
+	size_t acc_sizes_ax = 1;
+	for (int i = axis + 1; i < op.dimensions; i++)
+		acc_sizes_ax *= op.shape[i];
+	// push acc_sizes_ax
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&acc_sizes_ax) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	// push op shape
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&op.shape[axis]) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	// push a shape
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&node->predecessors[0]->operation.shape[axis]) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+}
 void IndexImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
@@ -482,6 +519,40 @@ SetIndexImpl::generate_ocl_eager(FType res_type,
 		   " }\n"
 		   "}\n"
 		   "if(!found_something) R[index] = P0[index];\n";
+}
+void SetIndexImpl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	const FOperation op = node->operation;
+	const unsigned int axis =
+		node->predecessors[op.op_type == FSET_INDEX ? 2 : 1]
+			->operation.dimensions -
+		1;
+	size_t acc_sizes_ax = 1;
+	for (int i = axis + 1; i < op.dimensions; i++)
+		acc_sizes_ax *= op.shape[i];
+	// push acc_sizes_ax
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&acc_sizes_ax) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	// push op shape
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&op.shape[axis]) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	// push c shape
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&node->predecessors[2]->operation.shape[axis]) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
 }
 void SetIndexImpl::execute_cpu(const FGraphNode *node,
 							   std::vector<CPUResultData> predecessor_data,

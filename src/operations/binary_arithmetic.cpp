@@ -309,6 +309,25 @@ std::string MatMulImpl::generate_ocl_eager(FType res_type,
 		   "P1[base_p1 + i * n + k];\n}"
 		   "R[index] = res;\n";
 }
+void MatMulImpl::push_additional_kernel_parameters(FGraphNode *node,
+												   cl_kernel kernel,
+												   cl_context context,
+												   int &par_index,
+												   std::list<cl_mem> &to_free) {
+	const FGraphNode *gnp1 = node->predecessors[0],
+					 *gnp2 = node->predecessors[1];
+	const long l = gnp1->operation.shape[gnp1->operation.dimensions - 2];
+	const long m = gnp1->operation.shape[gnp1->operation.dimensions - 1];
+	const long n = gnp2->operation.shape[gnp2->operation.dimensions - 1];
+	for (const long *mmd : {&l, &m, &n}) {
+		if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)mmd) !=
+			CL_SUCCESS) {
+			setErrorType(OCL_ERROR);
+			flogging(F_ERROR, "Could not load Argument to kernel!");
+			return;
+		}
+	}
+}
 void SubImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
 						  void *__restrict__ result, size_t from, size_t size) {

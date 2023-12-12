@@ -1,4 +1,5 @@
 #include "convolution.hpp"
+#include "../backend_ocl/utils.hpp"
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
@@ -222,6 +223,34 @@ ConvolveImpl::generate_ocl_eager(FType res_type,
 		   " res += P1[k + kernel_offset] * P0[j + o];\n"
 		   "}\n"
 		   "R[index] = res;";
+}
+void ConvolveImpl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	cl_int err_code;
+	const FOperation op = node->operation;
+	const FGraphNode *gnp1 = node->predecessors[0],
+					 *gnp2 = node->predecessors[1];
+	const FOperation pred = gnp1->operation, kernel_par = gnp2->operation;
+	unsigned int *steps = (unsigned int *)op.additional_data;
+	// allocate steps
+	cl_mem steps_mem =
+		clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					   op.dimensions * sizeof(int), steps, &err_code);
+	if (!steps_mem)
+		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+							  std::to_string(err_code));
+	to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+										 context, par_index));
+	to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape, kernel,
+										 context, par_index));
+	to_free.push_back(calcAndPushAccSize(
+		kernel_par.dimensions, kernel_par.shape, kernel, context, par_index));
+	if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
+					   (void *)&steps_mem) != CL_SUCCESS)
+		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+							  std::to_string(err_code));
+	to_free.push_back(steps_mem);
 }
 template <typename T, typename A, typename B>
 void GradientConvolve1Impl::binary_expression(
@@ -553,6 +582,42 @@ GradientConvolve1Impl::generate_ocl_eager(FType res_type,
 		   "}\n"
 		   "R[index] = res;\n";
 }
+void GradientConvolve1Impl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	const FOperation op = node->operation;
+	const FGraphNode *gnp1 = node->predecessors[0],
+					 *gnp2 = node->predecessors[1];
+	const FOperation kernel_op = gnp1->operation, a = gnp2->operation;
+	unsigned int *steps = (unsigned int *)op.additional_data;
+	to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+										 context, par_index));
+	to_free.push_back(calcAndPushAccSize(kernel_op.dimensions, kernel_op.shape,
+										 kernel, context, par_index));
+	to_free.push_back(
+		calcAndPushAccSize(a.dimensions, a.shape, kernel, context, par_index));
+
+	std::vector<size_t> acc_overlapping(op.dimensions - 1);
+	acc_overlapping[acc_overlapping.size() - 1] = 1;
+	for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
+		acc_overlapping[i] =
+			std::max(1l, (long)std::ceil((double)kernel_op.shape[i + 1] /
+										 (double)steps[i + 1])) *
+			acc_overlapping[i + 1];
+	}
+	const size_t overlapping =
+		std::max(1l, (long)std::ceil((double)kernel_op.shape[0] /
+									 (double)steps[0])) *
+		acc_overlapping[0];
+	to_free.push_back(pushArray(acc_overlapping.size(), acc_overlapping.data(),
+								kernel, context, par_index));
+	to_free.push_back(
+		pushArray(op.dimensions - 1, steps, kernel, context, par_index));
+	to_free.push_back(
+		pushArray(op.dimensions, op.shape, kernel, context, par_index));
+	to_free.push_back(pushArray(kernel_op.dimensions, kernel_op.shape, kernel,
+								context, par_index));
+}
 template <typename T, typename A, typename B>
 void GradientConvolve2Impl::binary_expression(
 	T *__restrict__ result, const A *__restrict__ data1,
@@ -720,6 +785,60 @@ GradientConvolve2Impl::generate_ocl_eager(FType res_type,
 		   " }\n"
 		   " R[index] += P1[a + a_offset] * P2[w * num_filter + f];\n"
 		   "}\n";
+}
+void GradientConvolve2Impl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	const FOperation op = node->operation;
+	const FGraphNode *gnp1 = node->predecessors[0],
+					 *gnp2 = node->predecessors[1];
+	const FOperation pred = gnp1->operation, prev_adj = gnp2->operation;
+	cl_int err_code;
+	// dimensions0
+	if (clSetKernelArg(kernel, par_index++, sizeof(int),
+					   (void *)&node->operation.dimensions) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	const bool multifilter = op.dimensions > pred.dimensions;
+	to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape, kernel,
+										 context, par_index));
+	to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+										 context, par_index));
+	to_free.push_back(calcAndPushAccSize(
+		multifilter ? prev_adj.dimensions - 1 : prev_adj.dimensions,
+		prev_adj.shape, kernel, context, par_index));
+	unsigned int *steps = (unsigned int *)op.additional_data;
+	// allocate steps
+	cl_mem steps_mem =
+		clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					   (pred.dimensions - 1) * sizeof(int), steps, &err_code);
+	if (!steps_mem)
+		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+							  std::to_string(err_code));
+	// allocate shape0
+	cl_mem op_shape_mem =
+		clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					   op.dimensions * sizeof(long), op.shape, &err_code);
+	if (!op_shape_mem)
+		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+							  std::to_string(err_code));
+	// allocate prev_adj_shape
+	cl_mem prev_adj_shape = clCreateBuffer(
+		context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+		prev_adj.dimensions * sizeof(long), prev_adj.shape, &err_code);
+	if (!prev_adj_shape)
+		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+							  std::to_string(err_code));
+	for (cl_mem mem : {steps_mem, op_shape_mem, prev_adj_shape}) {
+		to_free.push_back(mem);
+		if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&mem) !=
+			CL_SUCCESS)
+			flogging(F_ERROR,
+					 "Could not load Argument to kernel! Error Code: " +
+						 std::to_string(err_code));
+	}
 }
 void ConvolveImpl::execute_cpu(const FGraphNode *node,
 							   std::vector<CPUResultData> predecessor_data,
