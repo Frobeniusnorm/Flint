@@ -240,11 +240,11 @@ void ConvolveImpl::push_additional_kernel_parameters(
 	if (!steps_mem)
 		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
 							  std::to_string(err_code));
-	to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
 										 context, par_index));
-	to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape, kernel,
+	to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape, kernel,
 										 context, par_index));
-	to_free.push_back(calcAndPushAccSize(
+	to_free.push_back(calc_and_push_acc_size(
 		kernel_par.dimensions, kernel_par.shape, kernel, context, par_index));
 	if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
 					   (void *)&steps_mem) != CL_SUCCESS)
@@ -590,12 +590,12 @@ void GradientConvolve1Impl::push_additional_kernel_parameters(
 					 *gnp2 = node->predecessors[1];
 	const FOperation kernel_op = gnp1->operation, a = gnp2->operation;
 	unsigned int *steps = (unsigned int *)op.additional_data;
-	to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
 										 context, par_index));
-	to_free.push_back(calcAndPushAccSize(kernel_op.dimensions, kernel_op.shape,
+	to_free.push_back(calc_and_push_acc_size(kernel_op.dimensions, kernel_op.shape,
 										 kernel, context, par_index));
 	to_free.push_back(
-		calcAndPushAccSize(a.dimensions, a.shape, kernel, context, par_index));
+		calc_and_push_acc_size(a.dimensions, a.shape, kernel, context, par_index));
 
 	std::vector<size_t> acc_overlapping(op.dimensions - 1);
 	acc_overlapping[acc_overlapping.size() - 1] = 1;
@@ -609,13 +609,13 @@ void GradientConvolve1Impl::push_additional_kernel_parameters(
 		std::max(1l, (long)std::ceil((double)kernel_op.shape[0] /
 									 (double)steps[0])) *
 		acc_overlapping[0];
-	to_free.push_back(pushArray(acc_overlapping.size(), acc_overlapping.data(),
+	to_free.push_back(push_array(acc_overlapping.size(), acc_overlapping.data(),
 								kernel, context, par_index));
 	to_free.push_back(
-		pushArray(op.dimensions - 1, steps, kernel, context, par_index));
+		push_array(op.dimensions - 1, steps, kernel, context, par_index));
 	to_free.push_back(
-		pushArray(op.dimensions, op.shape, kernel, context, par_index));
-	to_free.push_back(pushArray(kernel_op.dimensions, kernel_op.shape, kernel,
+		push_array(op.dimensions, op.shape, kernel, context, par_index));
+	to_free.push_back(push_array(kernel_op.dimensions, kernel_op.shape, kernel,
 								context, par_index));
 }
 template <typename T, typename A, typename B>
@@ -802,11 +802,11 @@ void GradientConvolve2Impl::push_additional_kernel_parameters(
 		return;
 	}
 	const bool multifilter = op.dimensions > pred.dimensions;
-	to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape, kernel,
+	to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape, kernel,
 										 context, par_index));
-	to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
 										 context, par_index));
-	to_free.push_back(calcAndPushAccSize(
+	to_free.push_back(calc_and_push_acc_size(
 		multifilter ? prev_adj.dimensions - 1 : prev_adj.dimensions,
 		prev_adj.shape, kernel, context, par_index));
 	unsigned int *steps = (unsigned int *)op.additional_data;

@@ -154,26 +154,24 @@ std::string RepeatImpl::generate_ocl_eager(FType res_type,
 		   " src_index += (curr % pred_shape[dim]) * acc_sizes_s[dim];\n}\n"
 		   "R[index] = P0[src_index];\n";
 }
-void RepeatImpl::push_additional_kernel_parameters(FGraphNode *node,
-												   cl_kernel kernel,
-												   cl_context context,
-												   int &par_index,
-												   std::list<cl_mem> &to_free) {
-	const FOperation op = node->operation;
-	cl_int err_code;
+void RepeatImpl::push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) {
+	const FOperation op = pred->operation;
 	if (clSetKernelArg(kernel, par_index++, sizeof(int),
 					   (void *)&op.dimensions) != CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Could not load Argument to kernel!");
 		return;
 	}
-	to_free.push_back(calcAndPushAccSize(node->operation.dimensions,
+	to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
 										 node->operation.shape, kernel, context,
 										 par_index));
-	to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
 										 context, par_index));
 	to_free.push_back(
-		pushArray(op.dimensions, op.shape, kernel, context, par_index));
+		push_array(op.dimensions, op.shape, kernel, context, par_index));
 }
 void RepeatImpl::execute_cpu(const FGraphNode *node,
 							 vector<CPUResultData> predecessor_data,
@@ -264,7 +262,7 @@ TransposeImpl::generate_ocl_eager(FType res_type,
 void TransposeImpl::push_parameter_kernel_parameters(
 	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
 	int &par_index, std::list<cl_mem> &to_free) {
-	const FOperation op = node->operation;
+	const FOperation op = pred->operation;
 	cl_int err_code;
 	if (clSetKernelArg(kernel, par_index++, sizeof(int),
 					   (void *)&op.dimensions) != CL_SUCCESS) {
@@ -282,7 +280,7 @@ void TransposeImpl::push_parameter_kernel_parameters(
 	for (int i = 0; i < op.dimensions; i++) {
 		acc_sizes_st[i] = acc_sizes_s[transpositions[i]];
 	}
-	to_free.push_back(calcAndPushAccSize(node->operation.dimensions,
+	to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
 										 node->operation.shape, kernel, context,
 										 par_index));
 	cl_mem ass_mem = clCreateBuffer(

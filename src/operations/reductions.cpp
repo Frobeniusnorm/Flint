@@ -162,7 +162,6 @@ static void reducing_push_parameters(FGraphNode *node, cl_kernel kernel,
 static void reducing_push_per_parameter(FGraphNode *node, cl_kernel kernel,
 										cl_context context, int &par_index,
 										std::list<cl_mem> &to_free) {
-	const FOperation op = node->operation;
 	const int dim = ((int *)node->operation.additional_data)[0];
 	const FOperation pred = node->predecessors[0]->operation;
 	long it_dim = 1; // iteration size <=> product of all dimensions along dim
@@ -170,7 +169,7 @@ static void reducing_push_per_parameter(FGraphNode *node, cl_kernel kernel,
 		it_dim *= pred.shape[d];
 	const long shape_dim = pred.shape[dim];
 	if (clSetKernelArg(kernel, par_index++, sizeof(int),
-					   (void *)&op.dimensions) != CL_SUCCESS) {
+					   (void *)&pred.dimensions) != CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Could not load Argument to kernel!");
 		return;

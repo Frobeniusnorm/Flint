@@ -58,9 +58,10 @@ struct RepeatImpl : OperationImplementation {
 		std::string generate_ocl_parameters_eager(
 			FType res_type, std::vector<FType> parameter_types) override;
 		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override;
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override;
 };
 struct TransposeImpl : OperationImplementation {
 		template <typename T>

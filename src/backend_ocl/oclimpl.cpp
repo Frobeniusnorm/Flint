@@ -647,7 +647,9 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 			return nullptr;
 		}
 		// push per-parameter values
-		pushParameterVals(node, pred, kernel, context, par_index, to_free);
+		OperationImplementation::implementations[node->operation.op_type]
+			->push_parameter_kernel_parameters(node, pred, kernel, context,
+											   par_index, to_free);
 	}
 	// parameters for functions that dont set them per parent
 	OperationImplementation::implementations[node->operation.op_type]

@@ -39,7 +39,8 @@ struct PoolingSumImpl : OperationImplementation {
 									   cl_kernel kernel, cl_context context,
 									   int &par_index,
 									   std::list<cl_mem> &to_free) override {
-			push_per_parameter_dimension(node->operation, kernel, par_index);
+
+			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
 };
 struct PoolingMaxImpl : OperationImplementation {
@@ -66,7 +67,7 @@ struct PoolingMaxImpl : OperationImplementation {
 									   cl_kernel kernel, cl_context context,
 									   int &par_index,
 									   std::list<cl_mem> &to_free) override {
-			push_per_parameter_dimension(node->operation, kernel, par_index);
+			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
 };
 struct GradientPoolingMax : OperationImplementation {
@@ -94,7 +95,7 @@ struct GradientPoolingMax : OperationImplementation {
 									   cl_kernel kernel, cl_context context,
 									   int &par_index,
 									   std::list<cl_mem> &to_free) override {
-			push_per_parameter_dimension(node->operation, kernel, par_index);
+			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
 };
 

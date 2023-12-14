@@ -142,7 +142,7 @@ void SlidingWindowImpl::push_parameter_kernel_parameters(
 	int &par_index, std::list<cl_mem> &to_free) {
 	{
 		cl_int err_code;
-		const FOperation op = node->operation;
+		const FOperation op = pred->operation;
 		const FOperation pred = node->predecessors[0]->operation;
 		const FSlidingWindow *slidewin =
 			(FSlidingWindow *)node->operation.additional_data;
@@ -174,11 +174,11 @@ void SlidingWindowImpl::push_parameter_kernel_parameters(
 			flogging(F_ERROR,
 					 "Could not load Argument to kernel! Error Code: " +
 						 std::to_string(err_code));
-		to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape,
+		to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape,
 											 kernel, context, par_index));
-		to_free.push_back(pushArray(acc_sizes_win.size(), acc_sizes_win.data(),
+		to_free.push_back(push_array(acc_sizes_win.size(), acc_sizes_win.data(),
 									kernel, context, par_index));
-		to_free.push_back(pushArray(acc_sizes_rest.size(),
+		to_free.push_back(push_array(acc_sizes_rest.size(),
 									acc_sizes_rest.data(), kernel, context,
 									par_index));
 		if (clSetKernelArg(kernel, par_index++, sizeof(long), &acc_size) !=
@@ -187,7 +187,7 @@ void SlidingWindowImpl::push_parameter_kernel_parameters(
 			flogging(F_ERROR, "Could not load Argument to kernel!");
 			return;
 		}
-		to_free.push_back(pushArray(pred.dimensions, slidewin->step, kernel,
+		to_free.push_back(push_array(pred.dimensions, slidewin->step, kernel,
 									context, par_index));
 		to_free.push_back(steps);
 	}
@@ -394,9 +394,9 @@ void UnslideWindowImpl::push_parameter_kernel_parameters(
 	int &par_index, std::list<cl_mem> &to_free) {
 	{
 		cl_int err_code;
-		const FOperation op = node->operation;
+		const FOperation op = pred->operation;
 		const FOperation pred = node->predecessors[0]->operation;
-		const unsigned int *steps =
+		unsigned int *steps =
 			(unsigned int *)node->operation.additional_data;
 		// dimensions 0
 		if (clSetKernelArg(kernel, par_index++, sizeof(int),
@@ -406,18 +406,18 @@ void UnslideWindowImpl::push_parameter_kernel_parameters(
 			return;
 		}
 		// shapeR
-		to_free.push_back(pushArray(node->operation.dimensions,
+		to_free.push_back(push_array(node->operation.dimensions,
 									node->operation.shape, kernel, context,
 									par_index));
 		// acc_sizes
-		to_free.push_back(calcAndPushAccSize(node->operation.dimensions,
+		to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
 											 node->operation.shape, kernel,
 											 context, par_index));
 		// shapeR
 		to_free.push_back(
-			pushArray(pred.dimensions, pred.shape, kernel, context, par_index));
+			push_array(pred.dimensions, pred.shape, kernel, context, par_index));
 		// acc_sizes_pred
-		to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape,
+		to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape,
 											 kernel, context, par_index));
 		size_t no_windows[pred.dimensions - 1];
 		for (int i = 0; i < pred.dimensions - 1; i++) {
@@ -428,14 +428,14 @@ void UnslideWindowImpl::push_parameter_kernel_parameters(
 								: window_size / steps[i] + 1;
 		}
 		// acc_no_windows
-		to_free.push_back(calcAndPushAccSize(pred.dimensions - 1, no_windows,
+		to_free.push_back(calc_and_push_acc_size(pred.dimensions - 1, no_windows,
 											 kernel, context, par_index));
 		// no_windows
-		to_free.push_back(pushArray(pred.dimensions - 1, no_windows, kernel,
+		to_free.push_back(push_array(pred.dimensions - 1, no_windows, kernel,
 									context, par_index));
 		// steps
 		to_free.push_back(
-			pushArray(pred.dimensions - 1, steps, kernel, context, par_index));
+			push_array(pred.dimensions - 1, steps, kernel, context, par_index));
 	}
 }
 void UnslideWindowImpl::execute_cpu(const FGraphNode *node,

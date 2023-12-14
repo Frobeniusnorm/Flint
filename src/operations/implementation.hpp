@@ -371,12 +371,22 @@ struct OperationImplementation {
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) {}
 		/**
-		 * Pushed per parameter values (is called once per parameter).
-		 * See `push_additional_kernel_parameters`.
+		 * Pushes per parameter values (the function is called once per
+		 * parameter). See `push_additional_kernel_parameters`.
 		 */
-		virtual void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-									   cl_kernel kernel, cl_context context,
-									   int &par_index,
-									   std::list<cl_mem> &to_free) {}
+		virtual void push_parameter_kernel_parameters(
+			FGraphNode *node, FGraphNode *pred, cl_kernel kernel,
+			cl_context context, int &par_index, std::list<cl_mem> &to_free) {}
+		/**
+		 * Calculates the operation score for a node, i.e. assigns a score
+		 * to each node depending on its parallelizability, very high scores are
+		 * calculated on gpu, middle high scores parallel on cpus, lower scores
+		 * sequentially. The scores is multiplied with the number of elements of
+		 * the node (assuming a node has 5000 elements and `operation_score`
+		 * returns 2, the final score is 10000)
+		 */
+		virtual int operation_score(FGraphNode *node) {
+      return 2;
+    }
 };
 #endif

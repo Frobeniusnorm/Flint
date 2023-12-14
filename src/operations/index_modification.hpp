@@ -13,8 +13,8 @@
  * limitations under the License. */
 #ifndef FLINT_INDEX_MODIFICATION_HPP
 #define FLINT_INDEX_MODIFICATION_HPP
-#include "implementation.hpp"
 #include "../backend_ocl/utils.hpp"
+#include "implementation.hpp"
 
 struct SliceImpl : OperationImplementation {
 		template <typename T>
@@ -54,6 +54,11 @@ struct ExtendImpl : OperationImplementation {
 						   std::vector<FType> parameter_types) override;
 		std::string generate_ocl_parameters_eager(
 			FType res_type, std::vector<FType> parameter_types) override;
+		void
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override;
 };
 struct IndexImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -83,7 +88,7 @@ struct IndexImpl : OperationImplementation {
 										 cl_kernel kernel, cl_context context,
 										 int &par_index,
 										 std::list<cl_mem> &to_free) override {
-			push_per_parameter_dimension(node->operation, kernel, par_index);
+			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
 };
 struct SetIndexImpl : OperationImplementation {
@@ -112,7 +117,7 @@ struct SetIndexImpl : OperationImplementation {
 										 cl_kernel kernel, cl_context context,
 										 int &par_index,
 										 std::list<cl_mem> &to_free) override {
-			push_per_parameter_dimension(node->operation, kernel, par_index);
+			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
 };
 #endif

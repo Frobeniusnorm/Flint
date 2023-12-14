@@ -108,7 +108,7 @@ std::string SliceImpl::generate_ocl_eager(FType res_type,
 void SliceImpl::push_parameter_kernel_parameters(
 	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
 	int &par_index, std::list<cl_mem> &to_free) {
-	const FOperation op = node->operation;
+	const FOperation op = pred->operation;
 	cl_int err_code;
 	if (clSetKernelArg(kernel, par_index++, sizeof(int),
 					   (void *)&op.dimensions) != CL_SUCCESS) {
@@ -137,10 +137,10 @@ void SliceImpl::push_parameter_kernel_parameters(
 	for (unsigned int d = 0; d < node->operation.dimensions; d++) {
 		start += slice->start[d] * acc_sizes_pred[d];
 	}
-	to_free.push_back(calcAndPushAccSize(node->operation.dimensions,
+	to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
 										 node->operation.shape, kernel, context,
 										 par_index));
-	to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
 										 context, par_index));
 	if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&steps) !=
 			CL_SUCCESS ||
@@ -303,6 +303,27 @@ std::string ExtendImpl::generate_ocl_eager(FType res_type,
 		   " if(inv) di = pred_shape[d] - di - 1;\n"
 		   " j += di * acc_sizes_pred[d];\n}\n"
 		   "R[index] = set_zero ? 0 : P0[j];";
+}
+void ExtendImpl::push_parameter_kernel_parameters(
+	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
+	int &par_index, std::list<cl_mem> &to_free) {
+  const FOperation op = pred->operation;
+  cl_int err_code;
+	if (clSetKernelArg(kernel, par_index++, sizeof(int),
+					   (void *)&op.dimensions) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
+										 node->operation.shape, kernel, context,
+										 par_index));
+	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
+										 context, par_index));
+	const FExtend *extend = (FExtend *)node->operation.additional_data;
+  to_free.push_back(push_array(op.dimensions, extend->step, kernel, context, par_index));
+  to_free.push_back(push_array(op.dimensions, extend->start, kernel, context, par_index));
+  to_free.push_back(push_array(op.dimensions, op.shape, kernel, context, par_index));
 }
 void ExtendImpl::execute_cpu(const FGraphNode *node,
 							 std::vector<CPUResultData> predecessor_data,

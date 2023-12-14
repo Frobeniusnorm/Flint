@@ -187,11 +187,11 @@ static void push_pooling_parameters(FGraphNode *node, cl_kernel kernel,
 	size_t kernel_num_elems = slidewin->size[op.dimensions - 1];
 	for (int d = op.dimensions - 2; d >= 0; d--)
 		kernel_num_elems *= slidewin->size[d];
-	to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape, kernel,
+	to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape, kernel,
 										 context, par_index));
-	to_free.push_back(calcAndPushAccSize(op.dimensions, slidewin->size, kernel,
+	to_free.push_back(calc_and_push_acc_size(op.dimensions, slidewin->size, kernel,
 										 context, par_index));
-	to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
 										 context, par_index));
 	cl_mem steps = clCreateBuffer(
 		context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
@@ -631,12 +631,12 @@ void GradientPoolingMax::push_additional_kernel_parameters(
 									 window->size + op.dimensions);
 	kernel_shape.push_back(op.shape[op.dimensions - 1]);
 	unsigned int *steps = window->step;
-	to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
 										 context, par_index));
-	to_free.push_back(calcAndPushAccSize(
+	to_free.push_back(calc_and_push_acc_size(
 		kernel_shape.size(), kernel_shape.data(), kernel, context, par_index));
 	to_free.push_back(
-		calcAndPushAccSize(a.dimensions, a.shape, kernel, context, par_index));
+		calc_and_push_acc_size(a.dimensions, a.shape, kernel, context, par_index));
 	std::vector<size_t> acc_overlapping(op.dimensions - 1);
 	acc_overlapping[acc_overlapping.size() - 1] = 1;
 	for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
@@ -649,13 +649,13 @@ void GradientPoolingMax::push_additional_kernel_parameters(
 		std::max(1l,
 				 (long)std::ceil((double)kernel_shape[0] / (double)steps[0])) *
 		acc_overlapping[0];
-	to_free.push_back(pushArray(acc_overlapping.size(), acc_overlapping.data(),
+	to_free.push_back(push_array(acc_overlapping.size(), acc_overlapping.data(),
 								kernel, context, par_index));
 	to_free.push_back(
-		pushArray(op.dimensions - 1, steps, kernel, context, par_index));
+		push_array(op.dimensions - 1, steps, kernel, context, par_index));
 	to_free.push_back(
-		pushArray(op.dimensions, op.shape, kernel, context, par_index));
-	to_free.push_back(pushArray(kernel_shape.size(), kernel_shape.data(),
+		push_array(op.dimensions, op.shape, kernel, context, par_index));
+	to_free.push_back(push_array(kernel_shape.size(), kernel_shape.data(),
 								kernel, context, par_index));
 }
 void GradientPoolingMax::execute_cpu(
