@@ -1,4 +1,5 @@
 #include "sliding_windows.hpp"
+#include "src/backend_ocl/utils.hpp"
 
 using namespace std;
 
@@ -135,6 +136,61 @@ SlidingWindowImpl::generate_ocl_eager(FType res_type,
 		   " rest %= acc_sizes_rest[d];\n"
 		   "}\n"
 		   "R[index] = P0[base + offset];\n";
+}
+void SlidingWindowImpl::push_parameter_kernel_parameters(
+	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
+	int &par_index, std::list<cl_mem> &to_free) {
+	{
+		cl_int err_code;
+		const FOperation op = node->operation;
+		const FOperation pred = node->predecessors[0]->operation;
+		const FSlidingWindow *slidewin =
+			(FSlidingWindow *)node->operation.additional_data;
+		size_t acc_size = node->operation.shape[1];
+		std::vector<size_t> acc_sizes_win(pred.dimensions);
+		std::vector<size_t> acc_sizes_rest(pred.dimensions);
+		acc_sizes_win[acc_sizes_win.size() - 1] = 1;
+		acc_sizes_rest[acc_sizes_win.size() - 1] = 1;
+		for (int i = acc_sizes_win.size() - 2; i >= 0; i--) {
+			acc_size *= node->operation.shape[i + 2];
+			acc_sizes_rest[i] = acc_sizes_rest[i + 1] * slidewin->size[i + 1];
+			// no of windows in that dimension
+			size_t window_size = pred.shape[i + 1] - slidewin->size[i + 1] + 1;
+			window_size = window_size % slidewin->step[i + 1] == 0
+							  ? window_size / slidewin->step[i + 1]
+							  : window_size / slidewin->step[i + 1] + 1;
+			acc_sizes_win[i] = acc_sizes_win[i + 1] * window_size;
+		}
+		if (clSetKernelArg(kernel, par_index++, sizeof(int),
+						   (void *)&op.dimensions) != CL_SUCCESS) {
+			setErrorType(OCL_ERROR);
+			flogging(F_ERROR, "Could not load Argument to kernel!");
+			return;
+		}
+		cl_mem steps = clCreateBuffer(
+			context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			pred.dimensions * sizeof(unsigned int), slidewin->step, &err_code);
+		if (!steps)
+			flogging(F_ERROR,
+					 "Could not load Argument to kernel! Error Code: " +
+						 std::to_string(err_code));
+		to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape,
+											 kernel, context, par_index));
+		to_free.push_back(pushArray(acc_sizes_win.size(), acc_sizes_win.data(),
+									kernel, context, par_index));
+		to_free.push_back(pushArray(acc_sizes_rest.size(),
+									acc_sizes_rest.data(), kernel, context,
+									par_index));
+		if (clSetKernelArg(kernel, par_index++, sizeof(long), &acc_size) !=
+			CL_SUCCESS) {
+			setErrorType(OCL_ERROR);
+			flogging(F_ERROR, "Could not load Argument to kernel!");
+			return;
+		}
+		to_free.push_back(pushArray(pred.dimensions, slidewin->step, kernel,
+									context, par_index));
+		to_free.push_back(steps);
+	}
 }
 void SlidingWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,
@@ -332,6 +388,55 @@ UnslideWindowImpl::generate_ocl_eager(FType res_type,
 		   " }\n"
 		   " w += wpp;\n"
 		   "}\n";
+}
+void UnslideWindowImpl::push_parameter_kernel_parameters(
+	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
+	int &par_index, std::list<cl_mem> &to_free) {
+	{
+		cl_int err_code;
+		const FOperation op = node->operation;
+		const FOperation pred = node->predecessors[0]->operation;
+		const unsigned int *steps =
+			(unsigned int *)node->operation.additional_data;
+		// dimensions 0
+		if (clSetKernelArg(kernel, par_index++, sizeof(int),
+						   (void *)&op.dimensions) != CL_SUCCESS) {
+			setErrorType(OCL_ERROR);
+			flogging(F_ERROR, "Could not load Argument to kernel!");
+			return;
+		}
+		// shapeR
+		to_free.push_back(pushArray(node->operation.dimensions,
+									node->operation.shape, kernel, context,
+									par_index));
+		// acc_sizes
+		to_free.push_back(calcAndPushAccSize(node->operation.dimensions,
+											 node->operation.shape, kernel,
+											 context, par_index));
+		// shapeR
+		to_free.push_back(
+			pushArray(pred.dimensions, pred.shape, kernel, context, par_index));
+		// acc_sizes_pred
+		to_free.push_back(calcAndPushAccSize(pred.dimensions, pred.shape,
+											 kernel, context, par_index));
+		size_t no_windows[pred.dimensions - 1];
+		for (int i = 0; i < pred.dimensions - 1; i++) {
+			size_t window_size =
+				node->operation.shape[i] - pred.shape[i + 1] + 1;
+			no_windows[i] = window_size % steps[i] == 0
+								? window_size / steps[i]
+								: window_size / steps[i] + 1;
+		}
+		// acc_no_windows
+		to_free.push_back(calcAndPushAccSize(pred.dimensions - 1, no_windows,
+											 kernel, context, par_index));
+		// no_windows
+		to_free.push_back(pushArray(pred.dimensions - 1, no_windows, kernel,
+									context, par_index));
+		// steps
+		to_free.push_back(
+			pushArray(pred.dimensions - 1, steps, kernel, context, par_index));
+	}
 }
 void UnslideWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,

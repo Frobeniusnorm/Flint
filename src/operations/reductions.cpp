@@ -159,6 +159,35 @@ static void reducing_push_parameters(FGraphNode *node, cl_kernel kernel,
 		return;
 	}
 }
+static void reducing_push_per_parameter(FGraphNode *node, cl_kernel kernel,
+										cl_context context, int &par_index,
+										std::list<cl_mem> &to_free) {
+	const FOperation op = node->operation;
+	const int dim = ((int *)node->operation.additional_data)[0];
+	const FOperation pred = node->predecessors[0]->operation;
+	long it_dim = 1; // iteration size <=> product of all dimensions along dim
+	for (size_t d = dim + 1; d < pred.dimensions; d++)
+		it_dim *= pred.shape[d];
+	const long shape_dim = pred.shape[dim];
+	if (clSetKernelArg(kernel, par_index++, sizeof(int),
+					   (void *)&op.dimensions) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&it_dim) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&shape_dim) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+}
 template <typename T>
 void ReduceSumImpl::unary_expression(T *__restrict__ result,
 									 const T *__restrict__ data, size_t from,
@@ -194,6 +223,11 @@ void ReduceSumImpl::push_additional_kernel_parameters(
 	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
 	std::list<cl_mem> &to_free) {
 	reducing_push_parameters(node, kernel, context, par_index, to_free);
+}
+void ReduceSumImpl::push_parameter_kernel_parameters(
+	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
+	int &par_index, std::list<cl_mem> &to_free) {
+	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
 }
 template <typename T>
 void ReduceMulImpl::unary_expression(T *__restrict__ result,
@@ -231,6 +265,11 @@ void ReduceMulImpl::push_additional_kernel_parameters(
 	std::list<cl_mem> &to_free) {
 	reducing_push_parameters(node, kernel, context, par_index, to_free);
 }
+void ReduceMulImpl::push_parameter_kernel_parameters(
+	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
+	int &par_index, std::list<cl_mem> &to_free) {
+	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
+}
 template <typename T>
 void ReduceMinImpl::unary_expression(T *__restrict__ result,
 									 const T *__restrict__ data, size_t from,
@@ -267,6 +306,11 @@ void ReduceMinImpl::push_additional_kernel_parameters(
 	std::list<cl_mem> &to_free) {
 	reducing_push_parameters(node, kernel, context, par_index, to_free);
 }
+void ReduceMinImpl::push_parameter_kernel_parameters(
+	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
+	int &par_index, std::list<cl_mem> &to_free) {
+	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
+}
 template <typename T>
 void ReduceMaxImpl::unary_expression(T *__restrict__ result,
 									 const T *__restrict__ data, size_t from,
@@ -302,6 +346,11 @@ void ReduceMaxImpl::push_additional_kernel_parameters(
 	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
 	std::list<cl_mem> &to_free) {
 	reducing_push_parameters(node, kernel, context, par_index, to_free);
+}
+void ReduceMaxImpl::push_parameter_kernel_parameters(
+	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
+	int &par_index, std::list<cl_mem> &to_free) {
+	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
 }
 void ReduceSumImpl::execute_cpu(const FGraphNode *node,
 								std::vector<CPUResultData> predecessor_data,

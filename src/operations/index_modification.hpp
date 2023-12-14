@@ -14,6 +14,7 @@
 #ifndef FLINT_INDEX_MODIFICATION_HPP
 #define FLINT_INDEX_MODIFICATION_HPP
 #include "implementation.hpp"
+#include "../backend_ocl/utils.hpp"
 
 struct SliceImpl : OperationImplementation {
 		template <typename T>
@@ -31,6 +32,11 @@ struct SliceImpl : OperationImplementation {
 						   std::vector<FType> parameter_types) override;
 		std::string generate_ocl_parameters_eager(
 			FType res_type, std::vector<FType> parameter_types) override;
+		void
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override;
 };
 struct ExtendImpl : OperationImplementation {
 		template <typename T>
@@ -72,6 +78,13 @@ struct IndexImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override {
+			push_per_parameter_dimension(node->operation, kernel, par_index);
+		}
 };
 struct SetIndexImpl : OperationImplementation {
 		template <typename T>
@@ -94,5 +107,12 @@ struct SetIndexImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override {
+			push_per_parameter_dimension(node->operation, kernel, par_index);
+		}
 };
 #endif

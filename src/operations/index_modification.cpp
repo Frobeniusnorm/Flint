@@ -105,6 +105,53 @@ std::string SliceImpl::generate_ocl_eager(FType res_type,
 		   " j += di * steps[d] * acc_sizes_pred[d];\n}\n"
 		   "R[index] = P0[j];\n";
 }
+void SliceImpl::push_parameter_kernel_parameters(
+	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
+	int &par_index, std::list<cl_mem> &to_free) {
+	const FOperation op = node->operation;
+	cl_int err_code;
+	if (clSetKernelArg(kernel, par_index++, sizeof(int),
+					   (void *)&op.dimensions) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	const FSlice *slice = (FSlice *)node->operation.additional_data;
+	// flattened shape data
+	std::vector<size_t> acc_sizes_pred(node->operation.dimensions);
+	for (long d = node->operation.dimensions - 1; d >= 0; d--) {
+		if (d == node->operation.dimensions - 1)
+			acc_sizes_pred[d] = 1;
+		else
+			acc_sizes_pred[d] = acc_sizes_pred[d + 1] * op.shape[d + 1];
+	}
+	// allocate steps
+	cl_mem steps =
+		clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					   op.dimensions * sizeof(long), slice->step, &err_code);
+	if (!steps)
+		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+							  std::to_string(err_code));
+	// calculate start and step size in flattened array
+	long start = 0;
+	for (unsigned int d = 0; d < node->operation.dimensions; d++) {
+		start += slice->start[d] * acc_sizes_pred[d];
+	}
+	to_free.push_back(calcAndPushAccSize(node->operation.dimensions,
+										 node->operation.shape, kernel, context,
+										 par_index));
+	to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+										 context, par_index));
+	if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&steps) !=
+			CL_SUCCESS ||
+		clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&start) !=
+			CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	to_free.push_back(steps);
+}
 void SliceImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,

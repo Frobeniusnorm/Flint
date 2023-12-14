@@ -14,6 +14,7 @@
 #ifndef FLINT_BINARY_ARITHMETIC_HPP
 #define FLINT_BINARY_ARITHMETIC_HPP
 #include "implementation.hpp"
+#include "../backend_ocl/utils.hpp"
 struct AddImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
 		static void binary_expression(T *__restrict__ result,
@@ -133,5 +134,11 @@ struct MatMulImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+									   cl_kernel kernel, cl_context context,
+									   int &par_index,
+									   std::list<cl_mem> &to_free) override {
+			push_per_parameter_dimension(node->operation, kernel, par_index);
+		}
 };
 #endif

@@ -14,6 +14,7 @@
 #ifndef FLINT_CONVOLUTION_HPP
 #define FLINT_CONVOLUTION_HPP
 #include "implementation.hpp"
+#include "../backend_ocl/utils.hpp"
 
 struct ConvolveImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -38,6 +39,12 @@ struct ConvolveImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+									   cl_kernel kernel, cl_context context,
+									   int &par_index,
+									   std::list<cl_mem> &to_free) override {
+			push_per_parameter_dimension(node->operation, kernel, par_index);
+		}
 };
 
 struct GradientConvolve1Impl : OperationImplementation {
@@ -63,6 +70,12 @@ struct GradientConvolve1Impl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+									   cl_kernel kernel, cl_context context,
+									   int &par_index,
+									   std::list<cl_mem> &to_free) override {
+			push_per_parameter_dimension(node->operation, kernel, par_index);
+		}
 };
 struct GradientConvolve2Impl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -87,5 +100,11 @@ struct GradientConvolve2Impl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+									   cl_kernel kernel, cl_context context,
+									   int &par_index,
+									   std::list<cl_mem> &to_free) override {
+			push_per_parameter_dimension(node->operation, kernel, par_index);
+		}
 };
 #endif

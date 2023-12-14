@@ -12,6 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. */
 #include "shape_modification.hpp"
+#include "../backend_ocl/utils.hpp"
+#include "flint.h"
 #include <cstring>
 
 using namespace std;
@@ -152,6 +154,27 @@ std::string RepeatImpl::generate_ocl_eager(FType res_type,
 		   " src_index += (curr % pred_shape[dim]) * acc_sizes_s[dim];\n}\n"
 		   "R[index] = P0[src_index];\n";
 }
+void RepeatImpl::push_additional_kernel_parameters(FGraphNode *node,
+												   cl_kernel kernel,
+												   cl_context context,
+												   int &par_index,
+												   std::list<cl_mem> &to_free) {
+	const FOperation op = node->operation;
+	cl_int err_code;
+	if (clSetKernelArg(kernel, par_index++, sizeof(int),
+					   (void *)&op.dimensions) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	to_free.push_back(calcAndPushAccSize(node->operation.dimensions,
+										 node->operation.shape, kernel, context,
+										 par_index));
+	to_free.push_back(calcAndPushAccSize(op.dimensions, op.shape, kernel,
+										 context, par_index));
+	to_free.push_back(
+		pushArray(op.dimensions, op.shape, kernel, context, par_index));
+}
 void RepeatImpl::execute_cpu(const FGraphNode *node,
 							 vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
@@ -237,6 +260,46 @@ TransposeImpl::generate_ocl_eager(FType res_type,
 		   " i %= acc_sizes_d[dim];\n"
 		   " src_index += curr_idx * acc_sizes_s[dim];\n}\n"
 		   "R[index] = P0[src_index];\n";
+}
+void TransposeImpl::push_parameter_kernel_parameters(
+	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
+	int &par_index, std::list<cl_mem> &to_free) {
+	const FOperation op = node->operation;
+	cl_int err_code;
+	if (clSetKernelArg(kernel, par_index++, sizeof(int),
+					   (void *)&op.dimensions) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	std::vector<long> acc_sizes_s(op.dimensions);
+	acc_sizes_s[op.dimensions - 1] = 1;
+	for (int dim = op.dimensions - 2; dim >= 0; dim--) {
+		acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op.shape[dim + 1];
+	}
+	const int *transpositions = (int *)node->operation.additional_data;
+	std::vector<long> acc_sizes_st(op.dimensions);
+	for (int i = 0; i < op.dimensions; i++) {
+		acc_sizes_st[i] = acc_sizes_s[transpositions[i]];
+	}
+	to_free.push_back(calcAndPushAccSize(node->operation.dimensions,
+										 node->operation.shape, kernel, context,
+										 par_index));
+	cl_mem ass_mem = clCreateBuffer(
+		context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+		op.dimensions * sizeof(long), acc_sizes_st.data(), &err_code);
+	if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&ass_mem) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	if (!ass_mem) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	to_free.push_back(ass_mem);
 }
 void TransposeImpl::execute_cpu(const FGraphNode *node,
 								vector<CPUResultData> predecessor_data,

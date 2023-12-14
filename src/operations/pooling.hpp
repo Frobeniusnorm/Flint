@@ -14,7 +14,7 @@
 #ifndef FLINT_POOLING_HPP
 #define FLINT_POOLING_HPP
 #include "implementation.hpp"
-
+#include "../backend_ocl/utils.hpp"
 struct PoolingSumImpl : OperationImplementation {
 		template <typename T>
 		static void unary_expression(T *__restrict__ result,
@@ -35,6 +35,12 @@ struct PoolingSumImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+									   cl_kernel kernel, cl_context context,
+									   int &par_index,
+									   std::list<cl_mem> &to_free) override {
+			push_per_parameter_dimension(node->operation, kernel, par_index);
+		}
 };
 struct PoolingMaxImpl : OperationImplementation {
 		template <typename T>
@@ -56,6 +62,12 @@ struct PoolingMaxImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+									   cl_kernel kernel, cl_context context,
+									   int &par_index,
+									   std::list<cl_mem> &to_free) override {
+			push_per_parameter_dimension(node->operation, kernel, par_index);
+		}
 };
 struct GradientPoolingMax : OperationImplementation {
 		template <typename T>
@@ -78,6 +90,12 @@ struct GradientPoolingMax : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+									   cl_kernel kernel, cl_context context,
+									   int &par_index,
+									   std::list<cl_mem> &to_free) override {
+			push_per_parameter_dimension(node->operation, kernel, par_index);
+		}
 };
 
 #endif

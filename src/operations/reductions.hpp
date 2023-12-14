@@ -35,6 +35,10 @@ struct ReduceSumImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+									   cl_kernel kernel, cl_context context,
+									   int &par_index,
+									   std::list<cl_mem> &to_free) override;
 };
 struct ReduceMulImpl : OperationImplementation {
 		template <typename T>
@@ -56,6 +60,10 @@ struct ReduceMulImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+									   cl_kernel kernel, cl_context context,
+									   int &par_index,
+									   std::list<cl_mem> &to_free) override;
 };
 struct ReduceMinImpl : OperationImplementation {
 		template <typename T>
@@ -77,6 +85,10 @@ struct ReduceMinImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+									   cl_kernel kernel, cl_context context,
+									   int &par_index,
+									   std::list<cl_mem> &to_free) override;
 };
 struct ReduceMaxImpl : OperationImplementation {
 		template <typename T>
@@ -98,5 +110,9 @@ struct ReduceMaxImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+									   cl_kernel kernel, cl_context context,
+									   int &par_index,
+									   std::list<cl_mem> &to_free) override;
 };
 #endif
