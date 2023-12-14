@@ -31,6 +31,8 @@ struct MinImpl: OperationImplementation {
 									  OCLLazyCodegenState &compiler_state) override;
     std::string generate_ocl_eager(FType res_type,
 							  std::vector<FType> parameter_types) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct MaxImpl: OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -48,6 +50,8 @@ struct MaxImpl: OperationImplementation {
 									  OCLLazyCodegenState &compiler_state) override;
     std::string generate_ocl_eager(FType res_type,
 							  std::vector<FType> parameter_types) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct LessImpl: OperationImplementation {
 		template <typename A, typename B>
@@ -65,6 +69,8 @@ struct LessImpl: OperationImplementation {
 									  OCLLazyCodegenState &compiler_state) override;
     std::string generate_ocl_eager(FType res_type,
 							  std::vector<FType> parameter_types) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct GreaterImpl: OperationImplementation {
 		template <typename A, typename B>
@@ -82,6 +88,8 @@ struct GreaterImpl: OperationImplementation {
 									  OCLLazyCodegenState &compiler_state) override;
     std::string generate_ocl_eager(FType res_type,
 							  std::vector<FType> parameter_types) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct EqualImpl: OperationImplementation {
 		template <typename A, typename B>
@@ -99,6 +107,8 @@ struct EqualImpl: OperationImplementation {
 									  OCLLazyCodegenState &compiler_state) override;
     std::string generate_ocl_eager(FType res_type,
 							  std::vector<FType> parameter_types) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 
 #endif

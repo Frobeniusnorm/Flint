@@ -42,6 +42,8 @@ struct PoolingSumImpl : OperationImplementation {
 
 			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct PoolingMaxImpl : OperationImplementation {
 		template <typename T>
@@ -69,6 +71,8 @@ struct PoolingMaxImpl : OperationImplementation {
 									   std::list<cl_mem> &to_free) override {
 			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct GradientPoolingMax : OperationImplementation {
 		template <typename T>
@@ -97,6 +101,8 @@ struct GradientPoolingMax : OperationImplementation {
 									   std::list<cl_mem> &to_free) override {
 			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 
 #endif

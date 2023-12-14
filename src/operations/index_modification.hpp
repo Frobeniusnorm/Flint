@@ -14,6 +14,7 @@
 #ifndef FLINT_INDEX_MODIFICATION_HPP
 #define FLINT_INDEX_MODIFICATION_HPP
 #include "../backend_ocl/utils.hpp"
+#include "flint.h"
 #include "implementation.hpp"
 
 struct SliceImpl : OperationImplementation {
@@ -37,6 +38,22 @@ struct SliceImpl : OperationImplementation {
 										 cl_kernel kernel, cl_context context,
 										 int &par_index,
 										 std::list<cl_mem> &to_free) override;
+		int operation_score(FGraphNode *node) override {
+			if (!fIsEagerExecution()) {
+				size_t sliced_away = 1;
+				const FGraphNode *p = node->predecessors[0];
+				for (int i = 0; i < node->operation.dimensions; i++) {
+					long diff =
+						(p->operation.shape[i] - node->operation.shape[i]);
+					if (diff > 0)
+						sliced_away *= diff;
+				}
+				return sliced_away;
+			} else
+				return 3;
+		}
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+								   FGraphNode *prev_adj) override;
 };
 struct ExtendImpl : OperationImplementation {
 		template <typename T>
@@ -59,6 +76,8 @@ struct ExtendImpl : OperationImplementation {
 										 cl_kernel kernel, cl_context context,
 										 int &par_index,
 										 std::list<cl_mem> &to_free) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+								   FGraphNode *prev_adj) override;
 };
 struct IndexImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -90,6 +109,8 @@ struct IndexImpl : OperationImplementation {
 										 std::list<cl_mem> &to_free) override {
 			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+								   FGraphNode *prev_adj) override;
 };
 struct SetIndexImpl : OperationImplementation {
 		template <typename T>
@@ -119,5 +140,7 @@ struct SetIndexImpl : OperationImplementation {
 										 std::list<cl_mem> &to_free) override {
 			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+								   FGraphNode *prev_adj) override;
 };
 #endif

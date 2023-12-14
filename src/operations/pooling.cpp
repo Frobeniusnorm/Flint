@@ -1,6 +1,8 @@
 #include "pooling.hpp"
 #include "../backend_ocl/utils.hpp"
-#include "flint.h"
+#include "../utils.hpp"
+#include "convolution.hpp"
+#include "../../flint.h"
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
@@ -187,12 +189,12 @@ static void push_pooling_parameters(FGraphNode *node, cl_kernel kernel,
 	size_t kernel_num_elems = slidewin->size[op.dimensions - 1];
 	for (int d = op.dimensions - 2; d >= 0; d--)
 		kernel_num_elems *= slidewin->size[d];
-	to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape, kernel,
-										 context, par_index));
-	to_free.push_back(calc_and_push_acc_size(op.dimensions, slidewin->size, kernel,
-										 context, par_index));
+	to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape,
+											 kernel, context, par_index));
+	to_free.push_back(calc_and_push_acc_size(op.dimensions, slidewin->size,
+											 kernel, context, par_index));
 	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
-										 context, par_index));
+											 context, par_index));
 	cl_mem steps = clCreateBuffer(
 		context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		pred.dimensions * sizeof(unsigned int), slidewin->step, &err_code);
@@ -209,6 +211,25 @@ static void push_pooling_parameters(FGraphNode *node, cl_kernel kernel,
 	if (clSetKernelArg(kernel, par_index++, sizeof(long), &kernel_num_elems) !=
 		CL_SUCCESS)
 		flogging(F_ERROR, "Could not load Arguments to kernel!");
+}
+
+FGraphNode *PoolingSumImpl::local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	if (0 == dx_i) {
+		const FSlidingWindow window =
+			*((FSlidingWindow *)y->operation.additional_data);
+		std::vector<size_t> window_size(window.size,
+										window.size + y->operation.dimensions);
+		std::vector<unsigned int> steps(window.step,
+										window.step + y->operation.dimensions);
+		window_size.push_back(a->operation.shape[a->operation.dimensions - 1]);
+		FGraphNode *constant_1 =
+			fconstant_d(1, window_size.data(), a->operation.dimensions);
+		return ConvolveImpl::gradient_convolve1(a, constant_1, prev_adj,
+												window.step);
+	} else
+		return nullptr;
 }
 template <typename T>
 void PoolingSumImpl::unary_expression(T *__restrict__ result,
@@ -241,6 +262,42 @@ void PoolingSumImpl::execute_cpu(const FGraphNode *node,
 	UNARY_EXECUTE_MONOTON_IMPL
 }
 
+FGraphNode *PoolingMaxImpl::local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) {
+		FGraphNode *a = y->predecessors[0];
+		if (0 == dx_i) {
+			FGraphNode *dx = new FGraphNode();
+			dx->num_predecessor = 3;
+			dx->predecessors = safe_mal<FGraphNode *>(3);
+			if (!dx->predecessors) {
+				return nullptr;
+			}
+			fExecuteGraph(y);
+			fExecuteGraph(prev_adj);
+			fExecuteGraph(a);
+			y->reference_counter++;
+			dx->predecessors[0] = y;
+			prev_adj->reference_counter++;
+			dx->predecessors[1] = prev_adj;
+			a->reference_counter++;
+			dx->predecessors[2] = a;
+			dx->reference_counter = 0;
+			dx->result_data = nullptr;
+			dx->gradient_data = nullptr;
+			dx->operation.op_type = FGRADIENT_POOLING_MAX;
+			dx->operation.data_type = y->operation.data_type;
+			dx->operation.dimensions = a->operation.dimensions;
+			dx->operation.shape = safe_mal<size_t>(a->operation.dimensions);
+			if (!dx->operation.shape)
+				return nullptr;
+			memcpy(dx->operation.shape, a->operation.shape,
+				   a->operation.dimensions * sizeof(size_t));
+			dx->operation.additional_data = nullptr;
+			dx->operation.broadcasting_mode = 0;
+			return dx;
+		} else
+			return nullptr;
+}
 template <typename T>
 void PoolingMaxImpl::unary_expression(T *__restrict__ result,
 									  const T *__restrict__ data, size_t from,
@@ -270,6 +327,11 @@ void PoolingMaxImpl::execute_cpu(const FGraphNode *node,
 								 void *__restrict__ result, size_t from,
 								 size_t size) {
 	UNARY_EXECUTE_MONOTON_IMPL
+}
+FGraphNode *GradientPoolingMax::local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) {
+  // TODO
+  return nullptr;
 }
 template <typename T>
 void GradientPoolingMax::execute_cpu_typed(
@@ -632,11 +694,11 @@ void GradientPoolingMax::push_additional_kernel_parameters(
 	kernel_shape.push_back(op.shape[op.dimensions - 1]);
 	unsigned int *steps = window->step;
 	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
-										 context, par_index));
+											 context, par_index));
 	to_free.push_back(calc_and_push_acc_size(
 		kernel_shape.size(), kernel_shape.data(), kernel, context, par_index));
-	to_free.push_back(
-		calc_and_push_acc_size(a.dimensions, a.shape, kernel, context, par_index));
+	to_free.push_back(calc_and_push_acc_size(a.dimensions, a.shape, kernel,
+											 context, par_index));
 	std::vector<size_t> acc_overlapping(op.dimensions - 1);
 	acc_overlapping[acc_overlapping.size() - 1] = 1;
 	for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
@@ -650,13 +712,13 @@ void GradientPoolingMax::push_additional_kernel_parameters(
 				 (long)std::ceil((double)kernel_shape[0] / (double)steps[0])) *
 		acc_overlapping[0];
 	to_free.push_back(push_array(acc_overlapping.size(), acc_overlapping.data(),
-								kernel, context, par_index));
+								 kernel, context, par_index));
 	to_free.push_back(
 		push_array(op.dimensions - 1, steps, kernel, context, par_index));
 	to_free.push_back(
 		push_array(op.dimensions, op.shape, kernel, context, par_index));
 	to_free.push_back(push_array(kernel_shape.size(), kernel_shape.data(),
-								kernel, context, par_index));
+								 kernel, context, par_index));
 }
 void GradientPoolingMax::execute_cpu(
 	const FGraphNode *node, std::vector<CPUResultData> predecessor_data,

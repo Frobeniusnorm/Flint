@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. */
 #include "implementation.hpp"
+#include "../utils.hpp"
 #include "binary_arithmetic.hpp"
 #include "comparison.hpp"
 #include "convolution.hpp"
@@ -39,6 +40,40 @@ std::ostream &operator<<(std::ostream &out, const Twine &twine) {
 	out << "}";
 	return out;
 }
+FGraphNode *OperationImplementation::constant_tensor(double val, FType type,
+													 size_t *shape,
+													 int dimensions) {
+	switch (type) {
+	case F_FLOAT32:
+		return fconstant_f((float)val, shape, dimensions);
+	case F_INT32:
+		return fconstant_i((int)val, shape, dimensions);
+	case F_INT64:
+		return fconstant_l((long)val, shape, dimensions);
+	case F_FLOAT64:
+		return fconstant_d((double)val, shape, dimensions);
+	}
+  return nullptr;
+}
+void OperationImplementation::configure_gradient_information(
+	FGraphNode *g, std::vector<FGraphNode *> pred) {
+	std::unordered_set<const FGraphNode *> *gd = nullptr;
+	for (FGraphNode *p : pred) {
+		if (p->gradient_data) {
+			if (!gd)
+				gd = new std::unordered_set<const FGraphNode *>();
+			std::unordered_set<const FGraphNode *> *other =
+				(std::unordered_set<const FGraphNode *> *)p->gradient_data;
+			gd->reserve(other->size() + gd->size());
+			for (const FGraphNode *g : *other) {
+				// check if it is still a variable
+				if (g->gradient_data)
+					gd->insert(g);
+			}
+		}
+	}
+	g->gradient_data = (void *)gd;
+}
 struct NopImpl : OperationImplementation {
 		void execute_cpu(const FGraphNode *node,
 						 std::vector<CPUResultData> predecessor_data,
@@ -52,6 +87,10 @@ struct NopImpl : OperationImplementation {
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override {
 			return "";
+		}
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+								   FGraphNode *prev_adj) override {
+			return nullptr;
 		}
 };
 
@@ -108,3 +147,12 @@ std::vector<OperationImplementation *>
 												new PoolingMaxImpl(),
 												new PoolingSumImpl(),
 												new GradientPoolingMax()};
+
+std::string OperationImplementation::generate_ocl_parameters_eager(
+	FType res_type, std::vector<FType> parameter_types) {
+	Twine code;
+	for (int i = 0; i < parameter_types.size(); i++)
+		code += ", const __global " + typeString(parameter_types[i]) + "* P" +
+				std::to_string(i) + ", long num_entries" + std::to_string(i);
+	return code;
+}

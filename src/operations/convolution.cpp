@@ -1,11 +1,126 @@
 #include "convolution.hpp"
 #include "../backend_ocl/utils.hpp"
+#include "../utils.hpp"
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
 
 using namespace std;
 
+FGraphNode *ConvolveImpl::gradient_convolve2(FGraphNode *a, FGraphNode *kernel,
+									  FGraphNode *prev_adj,
+									  const unsigned int *steps) {
+	if (!kernel->result_data)
+		fExecuteGraph(kernel);
+	if (!prev_adj->result_data)
+		fExecuteGraph(prev_adj);
+	FGraphNode *gradient = new FGraphNode();
+	gradient->num_predecessor = 2;
+	gradient->predecessors = safe_mal<FGraphNode *>(2);
+	if (!gradient->predecessors)
+		return nullptr;
+	gradient->predecessors[0] = a;
+	gradient->predecessors[1] = prev_adj;
+	a->reference_counter++;
+	prev_adj->reference_counter++;
+	gradient->result_data = nullptr;
+	gradient->reference_counter = 0;
+	FOperation op;
+	op.broadcasting_mode = 0;
+	op.data_type = F_FLOAT64;
+	op.dimensions = kernel->operation.dimensions;
+	op.shape = safe_mal<size_t>(op.dimensions);
+	if (!op.shape)
+		return nullptr;
+	memcpy(op.shape, kernel->operation.shape, op.dimensions * sizeof(size_t));
+	op.op_type = FGRADIENT_CONVOLVE2;
+	op.additional_data = safe_mal<unsigned int>(a->operation.dimensions - 1);
+	if (!op.additional_data)
+		return nullptr;
+	memcpy(op.additional_data, steps,
+		   (a->operation.dimensions - 1) * sizeof(unsigned int));
+	gradient->operation = op;
+	OperationImplementation::configure_gradient_information(gradient,
+															{a, prev_adj});
+	return gradient;
+}
+FGraphNode *ConvolveImpl::gradient_convolve1(FGraphNode *a, FGraphNode *kernel,
+									  FGraphNode *prev_adj,
+									  const unsigned int *steps) {
+	if (!kernel->result_data)
+		fExecuteGraph(kernel);
+	if (!prev_adj->result_data)
+		fExecuteGraph(prev_adj);
+	FGraphNode *gradient = new FGraphNode();
+	gradient->num_predecessor = 2;
+	gradient->predecessors = safe_mal<FGraphNode *>(2);
+	if (!gradient->predecessors)
+		return nullptr;
+	gradient->predecessors[0] = kernel;
+	gradient->predecessors[1] = prev_adj;
+	kernel->reference_counter++;
+	prev_adj->reference_counter++;
+	gradient->result_data = nullptr;
+	gradient->reference_counter = 0;
+	FOperation op;
+	op.broadcasting_mode = 0;
+	op.data_type = F_FLOAT64;
+	op.dimensions = a->operation.dimensions;
+	op.shape = safe_mal<size_t>(op.dimensions);
+	if (!op.shape)
+		return nullptr;
+	memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
+	op.op_type = FGRADIENT_CONVOLVE1;
+	op.additional_data = safe_mal<unsigned int>(a->operation.dimensions - 1);
+	if (!op.additional_data)
+		return nullptr;
+	memcpy(op.additional_data, steps,
+		   (a->operation.dimensions - 1) * sizeof(unsigned int));
+	gradient->operation = op;
+	OperationImplementation::configure_gradient_information(gradient,
+															{kernel, prev_adj});
+	return gradient;
+}
+FGraphNode *ConvolveImpl::local_gradient(FGraphNode *y, int dx_i,
+										 FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	FGraphNode *kernel = y->predecessors[1];
+	const unsigned int *steps = (unsigned int *)y->operation.additional_data;
+	if (0 == dx_i) {
+		// TODO automate this
+		if (a->operation.dimensions != kernel->operation.dimensions) {
+			FGraphNode *res =
+				fconstant_d(0.0, a->operation.shape, a->operation.dimensions);
+			for (int i = 0; i < kernel->operation.shape[0]; i++) {
+				using namespace std;
+				vector<long> start_kernel(kernel->operation.dimensions, 0);
+				vector<long> end_kernel(kernel->operation.shape,
+										kernel->operation.shape +
+											kernel->operation.dimensions);
+				start_kernel[0] = i;
+				end_kernel[0] = i + 1;
+				FGraphNode *sk = fflatten_dimension(
+					fslice(kernel, start_kernel.data(), end_kernel.data()), 1);
+				vector<long> start_adj(prev_adj->operation.dimensions, 0);
+				vector<long> end_adj(prev_adj->operation.shape,
+									 prev_adj->operation.shape +
+										 prev_adj->operation.dimensions);
+				FGraphNode *sa = fflatten_dimension(
+					fslice(prev_adj, start_adj.data(), end_adj.data()),
+					prev_adj->operation.dimensions - 1);
+				FGraphNode *curr =
+					fExecuteGraph(gradient_convolve1(a, sk, sa, steps));
+				res = fadd(res, curr);
+			}
+			return res;
+		} else
+			return gradient_convolve1(a, kernel, prev_adj, steps);
+	} else if (1 == dx_i) {
+		if (y->operation.op_type == FCONVOLVE)
+			return gradient_convolve2(a, kernel, prev_adj, steps);
+	}
+	return nullptr;
+}
 template <typename T, typename A, typename B>
 void ConvolveImpl::binary_expression(T *__restrict__ result,
 									 const A *__restrict__ data1,
@@ -241,9 +356,9 @@ void ConvolveImpl::push_additional_kernel_parameters(
 		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
 							  std::to_string(err_code));
 	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
-										 context, par_index));
-	to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape, kernel,
-										 context, par_index));
+											 context, par_index));
+	to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape,
+											 kernel, context, par_index));
 	to_free.push_back(calc_and_push_acc_size(
 		kernel_par.dimensions, kernel_par.shape, kernel, context, par_index));
 	if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
@@ -251,6 +366,50 @@ void ConvolveImpl::push_additional_kernel_parameters(
 		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
 							  std::to_string(err_code));
 	to_free.push_back(steps_mem);
+}
+FGraphNode *GradientConvolve1Impl::local_gradient(FGraphNode *y, int dx_i,
+												  FGraphNode *prev_adj) {
+	FGraphNode *kernel = y->predecessors[0];
+	FGraphNode *a = y->predecessors[1];
+	if (1 == dx_i) {
+		const unsigned int *steps =
+			(unsigned int *)y->operation.additional_data;
+		if (!kernel->result_data)
+			fExecuteGraph(kernel);
+		FGraphNode *gradient = new FGraphNode();
+		gradient->num_predecessor = 2;
+		gradient->predecessors = safe_mal<FGraphNode *>(2);
+		if (!gradient->predecessors)
+			return nullptr;
+		gradient->predecessors[0] = kernel;
+		gradient->predecessors[1] = prev_adj;
+		kernel->reference_counter++;
+		prev_adj->reference_counter++;
+		gradient->result_data = nullptr;
+		gradient->reference_counter = 0;
+		FOperation op;
+		op.data_type = F_FLOAT64;
+		op.dimensions = a->operation.dimensions;
+		op.shape = safe_mal<size_t>(op.dimensions);
+		if (!op.shape)
+			return nullptr;
+		memcpy(op.shape, a->operation.shape, op.dimensions * sizeof(size_t));
+		op.op_type = FGRADIENT_CONVOLVE1;
+		op.additional_data =
+			safe_mal<unsigned int>(a->operation.dimensions - 1);
+		if (!op.additional_data)
+			return nullptr;
+		memcpy(op.additional_data, steps,
+			   (a->operation.dimensions - 1) * sizeof(unsigned int));
+		gradient->operation = op;
+		OperationImplementation::configure_gradient_information(
+			gradient, {kernel, prev_adj});
+		return gradient;
+	} else if (0 == dx_i) {
+		return ConvolveImpl::gradient_convolve1(prev_adj, kernel, a,
+								  (unsigned int *)y->operation.additional_data);
+	}
+	return nullptr;
 }
 template <typename T, typename A, typename B>
 void GradientConvolve1Impl::binary_expression(
@@ -591,11 +750,11 @@ void GradientConvolve1Impl::push_additional_kernel_parameters(
 	const FOperation kernel_op = gnp1->operation, a = gnp2->operation;
 	unsigned int *steps = (unsigned int *)op.additional_data;
 	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
-										 context, par_index));
-	to_free.push_back(calc_and_push_acc_size(kernel_op.dimensions, kernel_op.shape,
-										 kernel, context, par_index));
-	to_free.push_back(
-		calc_and_push_acc_size(a.dimensions, a.shape, kernel, context, par_index));
+											 context, par_index));
+	to_free.push_back(calc_and_push_acc_size(
+		kernel_op.dimensions, kernel_op.shape, kernel, context, par_index));
+	to_free.push_back(calc_and_push_acc_size(a.dimensions, a.shape, kernel,
+											 context, par_index));
 
 	std::vector<size_t> acc_overlapping(op.dimensions - 1);
 	acc_overlapping[acc_overlapping.size() - 1] = 1;
@@ -610,13 +769,34 @@ void GradientConvolve1Impl::push_additional_kernel_parameters(
 									 (double)steps[0])) *
 		acc_overlapping[0];
 	to_free.push_back(push_array(acc_overlapping.size(), acc_overlapping.data(),
-								kernel, context, par_index));
+								 kernel, context, par_index));
 	to_free.push_back(
 		push_array(op.dimensions - 1, steps, kernel, context, par_index));
 	to_free.push_back(
 		push_array(op.dimensions, op.shape, kernel, context, par_index));
 	to_free.push_back(push_array(kernel_op.dimensions, kernel_op.shape, kernel,
-								context, par_index));
+								 context, par_index));
+}
+FGraphNode *GradientConvolve2Impl::local_gradient(FGraphNode *y, int dx_i,
+												  FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	FGraphNode *b = y->predecessors[1];
+	const unsigned int *steps = (unsigned int *)y->operation.additional_data;
+	const bool multifilter = a->operation.dimensions != b->operation.dimensions;
+	if (0 == dx_i) {
+		return ConvolveImpl::gradient_convolve1(a, b, prev_adj, steps);
+	} else if (1 == dx_i) {
+		FGraphNode *sliding_window =
+			fmul(fsliding_window(a, y->operation.shape, steps), prev_adj);
+		// now reduce each window
+		for (int d = sliding_window->operation.dimensions; d > 0; d--) {
+			sliding_window = freduce_sum(sliding_window, d);
+		}
+		return freshape(sliding_window, b->operation.shape,
+						b->operation.dimensions);
+	} else {
+		return nullptr;
+	}
 }
 template <typename T, typename A, typename B>
 void GradientConvolve2Impl::binary_expression(
@@ -802,10 +982,10 @@ void GradientConvolve2Impl::push_additional_kernel_parameters(
 		return;
 	}
 	const bool multifilter = op.dimensions > pred.dimensions;
-	to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape, kernel,
-										 context, par_index));
+	to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape,
+											 kernel, context, par_index));
 	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
-										 context, par_index));
+											 context, par_index));
 	to_free.push_back(calc_and_push_acc_size(
 		multifilter ? prev_adj.dimensions - 1 : prev_adj.dimensions,
 		prev_adj.shape, kernel, context, par_index));

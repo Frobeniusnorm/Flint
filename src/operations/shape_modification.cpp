@@ -13,11 +13,18 @@
  * limitations under the License. */
 #include "shape_modification.hpp"
 #include "../backend_ocl/utils.hpp"
+#include "../utils.hpp"
 #include "flint.h"
 #include <cstring>
 
 using namespace std;
 
+FGraphNode *FlattenImpl::local_gradient(FGraphNode *y, int dx_i,
+										FGraphNode *prev_adj) {
+	FGraphNode *prev = y->predecessors[0];
+	return freshape(prev_adj, prev->operation.shape,
+					prev->operation.dimensions);
+}
 void FlattenImpl::execute_cpu(const FGraphNode *node,
 							  vector<CPUResultData> predecessor_data,
 							  void *__restrict__ result, size_t from,
@@ -46,6 +53,10 @@ FlattenImpl::generate_ocl_eager(FType res_type,
 								std::vector<FType> parameter_types) {
 	return ""; // implemented as store
 }
+FGraphNode *ConversionImpl::local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) {
+	return prev_adj;
+}
 template <typename T, typename A>
 void ConversionImpl::unary_expression(T *__restrict__ result,
 									  const A *__restrict__ data1, size_t from,
@@ -71,8 +82,35 @@ ConversionImpl::generate_ocl_eager(FType res_type,
 void ConversionImpl::execute_cpu(const FGraphNode *node,
 								 vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
-								 size_t size) {
-	UNARY_EXECUTE_IMPL
+								 size_t size){UNARY_EXECUTE_IMPL}
+
+FGraphNode *RepeatImpl::local_gradient(FGraphNode *y, int dx_i,
+									   FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	FGraphNode *grad = prev_adj;
+	std::vector<size_t> orig_shape(prev_adj->operation.shape,
+								   prev_adj->operation.shape +
+									   prev_adj->operation.dimensions);
+	for (int i = 0; i < a->operation.dimensions; i++) {
+		if (a->operation.shape[i] != y->operation.shape[i]) {
+			// reduce repeated gradient into correct shape
+			std::vector<size_t> new_shape(orig_shape.size() + 1);
+			// add extra dimension for reducing
+			if (i > 0)
+				std::memcpy(new_shape.data(), grad->operation.shape,
+							sizeof(size_t) * i);
+			new_shape[i] = orig_shape[i] / a->operation.shape[i];
+			new_shape[i + 1] = a->operation.shape[i];
+			if (orig_shape.size() - i > 1)
+				std::memcpy(new_shape.data() + i + 2,
+							grad->operation.shape + i + 1,
+							sizeof(size_t) * (orig_shape.size() - i - 1));
+			// reduce along that axis
+			grad = freduce_sum(
+				freshape(grad, new_shape.data(), new_shape.size()), i);
+		}
+	}
+	return grad;
 }
 template <typename T>
 void RepeatImpl::unary_expression(T *__restrict__ result,
@@ -154,10 +192,9 @@ std::string RepeatImpl::generate_ocl_eager(FType res_type,
 		   " src_index += (curr % pred_shape[dim]) * acc_sizes_s[dim];\n}\n"
 		   "R[index] = P0[src_index];\n";
 }
-void RepeatImpl::push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-										 cl_kernel kernel, cl_context context,
-										 int &par_index,
-										 std::list<cl_mem> &to_free) {
+void RepeatImpl::push_parameter_kernel_parameters(
+	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
+	int &par_index, std::list<cl_mem> &to_free) {
 	const FOperation op = pred->operation;
 	if (clSetKernelArg(kernel, par_index++, sizeof(int),
 					   (void *)&op.dimensions) != CL_SUCCESS) {
@@ -166,18 +203,22 @@ void RepeatImpl::push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *
 		return;
 	}
 	to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
-										 node->operation.shape, kernel, context,
-										 par_index));
+											 node->operation.shape, kernel,
+											 context, par_index));
 	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
-										 context, par_index));
+											 context, par_index));
 	to_free.push_back(
 		push_array(op.dimensions, op.shape, kernel, context, par_index));
 }
 void RepeatImpl::execute_cpu(const FGraphNode *node,
 							 vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
-							 size_t size) {
-	UNARY_EXECUTE_MONOTON_IMPL
+							 size_t size){UNARY_EXECUTE_MONOTON_IMPL}
+
+FGraphNode *TransposeImpl::local_gradient(FGraphNode *y, int dx_i,
+										  FGraphNode *prev_adj) {
+	int *transp = ((int *)y->operation.additional_data);
+	return ftranspose(prev_adj, transp);
 }
 template <typename T>
 void TransposeImpl::unary_expression(T *__restrict__ result,
@@ -281,8 +322,8 @@ void TransposeImpl::push_parameter_kernel_parameters(
 		acc_sizes_st[i] = acc_sizes_s[transpositions[i]];
 	}
 	to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
-										 node->operation.shape, kernel, context,
-										 par_index));
+											 node->operation.shape, kernel,
+											 context, par_index));
 	cl_mem ass_mem = clCreateBuffer(
 		context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		op.dimensions * sizeof(long), acc_sizes_st.data(), &err_code);
@@ -302,8 +343,32 @@ void TransposeImpl::push_parameter_kernel_parameters(
 void TransposeImpl::execute_cpu(const FGraphNode *node,
 								vector<CPUResultData> predecessor_data,
 								void *__restrict__ result, size_t from,
-								size_t size) {
-	UNARY_EXECUTE_MONOTON_IMPL
+								size_t size){UNARY_EXECUTE_MONOTON_IMPL}
+
+FGraphNode *ConcatImpl::local_gradient(FGraphNode *y, int dx_i,
+									   FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	FGraphNode *b = y->predecessors[1];
+	unsigned int ax = *((unsigned int *)y->operation.additional_data);
+	if (0 == dx_i) {
+		std::vector<long> start(a->operation.dimensions);
+		std::vector<long> stop(a->operation.dimensions);
+		for (int i = 0; i < a->operation.dimensions; i++) {
+			start[i] = 0;
+			stop[i] = a->operation.shape[i];
+		}
+		return fslice(prev_adj, start.data(), stop.data());
+	} else if (1 == dx_i) {
+		std::vector<long> start(b->operation.dimensions);
+		std::vector<long> stop(b->operation.dimensions);
+		for (int i = 0; i < b->operation.dimensions; i++) {
+			start[i] = ax == i ? a->operation.shape[i] : 0;
+			stop[i] = ax == i ? a->operation.shape[i] + b->operation.shape[i]
+							  : b->operation.shape[i];
+		}
+		return fslice(prev_adj, start.data(), stop.data());
+	} else
+		return nullptr;
 }
 template <typename T>
 void ConcatImpl::binary_expression(T *__restrict__ result,

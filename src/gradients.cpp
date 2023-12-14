@@ -17,6 +17,7 @@
 #include "../flint.h"
 #include "backend_ocl/comp.hpp"
 #include "src/errors.hpp"
+#include "src/operations/implementation.hpp"
 #include "utils.hpp"
 #include <cmath>
 #include <cstring>
@@ -459,12 +460,12 @@ static FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 			fExecuteGraph(y);
 			fExecuteGraph(prev_adj);
 			fExecuteGraph(a);
+			y->reference_counter++;
 			dx->predecessors[0] = y;
 			prev_adj->reference_counter++;
 			dx->predecessors[1] = prev_adj;
-			y->reference_counter++;
-			dx->predecessors[2] = a;
 			a->reference_counter++;
+			dx->predecessors[2] = a;
 			dx->reference_counter = 0;
 			dx->result_data = nullptr;
 			dx->gradient_data = nullptr;
@@ -835,8 +836,11 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 			if (!visited.contains(parent))
 				continue;
 			// auto start = std::chrono::high_resolution_clock::now();
-			FGraphNode *local_grad =
-				unbroadcast(local_gradient(curr, i, adj), parent);
+			FGraphNode *local_grad = unbroadcast(
+				OperationImplementation::implementations[curr->operation
+															 .op_type]
+					->local_gradient(curr, i, adj),
+				parent);
 			if (adjoints.contains(parent)) {
 				adjoints[parent] =
 					fExecuteGraph(fadd(adjoints[parent], local_grad));

@@ -13,8 +13,8 @@
  * limitations under the License. */
 #ifndef FLINT_BINARY_ARITHMETIC_HPP
 #define FLINT_BINARY_ARITHMETIC_HPP
-#include "implementation.hpp"
 #include "../backend_ocl/utils.hpp"
+#include "implementation.hpp"
 struct AddImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
 		static void binary_expression(T *__restrict__ result,
@@ -33,6 +33,8 @@ struct AddImpl : OperationImplementation {
 		std::string
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct SubImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -52,6 +54,8 @@ struct SubImpl : OperationImplementation {
 		std::string
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct MulImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -71,6 +75,8 @@ struct MulImpl : OperationImplementation {
 		std::string
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct DivImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -90,6 +96,8 @@ struct DivImpl : OperationImplementation {
 		std::string
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct PowImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -109,6 +117,9 @@ struct PowImpl : OperationImplementation {
 		std::string
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
+		int operation_score(FGraphNode *node) override { return 1; }
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct MatMulImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -134,11 +145,18 @@ struct MatMulImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
-		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-									   cl_kernel kernel, cl_context context,
-									   int &par_index,
-									   std::list<cl_mem> &to_free) override {
+		void
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override {
 			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
+		int operation_score(FGraphNode *node) override {
+			const FGraphNode *a = node->predecessors[0];
+			return 5 * a->operation.shape[a->operation.dimensions - 1];
+		}
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 #endif

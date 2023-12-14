@@ -149,6 +149,8 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
 	if (eager_execution)
 		return execute_eagerly(node);
 	if (use_gpu && use_cpu) {
+		// TODO the number of elements has to be large enough for accelerator,
+		// somehow query here
 		unsigned int gpu_score = computeScore(node, true);
 		return gpu_score >= 2048 ? fExecuteGraph_gpu(node)
 								 : fExecuteGraph_cpu(node);
@@ -1389,7 +1391,8 @@ FGraphNode *fexpand(FGraphNode *a, const unsigned int ax,
 	unsigned int n = a->operation.dimensions;
 	std::vector<size_t> new_shape(n + 1);
 	if (ax > 0)
-		std::memcpy(new_shape.data(), a->operation.shape, sizeof(size_t) * std::min(n, ax));
+		std::memcpy(new_shape.data(), a->operation.shape,
+					sizeof(size_t) * std::min(n, ax));
 	new_shape[ax] = 1;
 	if (ax < n)
 		std::memcpy(new_shape.data() + ax + 1, a->operation.shape + ax,

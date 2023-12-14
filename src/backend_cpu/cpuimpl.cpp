@@ -84,16 +84,18 @@ static void threadRoutine() {
 		sem->release();
 	}
 }
-#define PARALLEL_EXECUTION_SIZE 4048 // for debugging
+#define PARALLEL_EXECUTION_SIZE 256 // for debugging
 template <typename T>
 static void chooseExecutionMethod(FGraphNode *node,
 								  std::vector<CPUResultData> pred_data,
 								  T *result, size_t size) {
-	auto start = std::chrono::high_resolution_clock::now();
-	size_t score = size * operationScore(node);
+	const auto start = std::chrono::high_resolution_clock::now();
+	const size_t score =
+		size * OperationImplementation::implementations[node->operation.op_type]
+				   ->operation_score(node);
 	if (score >= PARALLEL_EXECUTION_SIZE && size >= threads.size()) {
-		size_t exeUnits = std::min(size, threads.size());
-		size_t workSize = size / exeUnits;
+		const size_t exeUnits = std::min(size, threads.size());
+		const size_t workSize = size / exeUnits;
 		std::counting_semaphore<MAX_PARALLELITY> *sem =
 			new std::counting_semaphore<MAX_PARALLELITY>(0);
 		for (size_t i = 0; i < exeUnits; i++) {

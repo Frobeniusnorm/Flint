@@ -1,8 +1,21 @@
 #include "sliding_windows.hpp"
-#include "src/backend_ocl/utils.hpp"
+#include "../backend_ocl/utils.hpp"
+#include "../utils.hpp"
 
 using namespace std;
 
+FGraphNode *SlidingWindowImpl::local_gradient(FGraphNode *y, int dx_i,
+											  FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	if (0 == dx_i) {
+		FSlidingWindow *sliding_win =
+			(FSlidingWindow *)y->operation.additional_data;
+		FGraphNode *res =
+			funslide_window(prev_adj, a->operation.shape, sliding_win->step);
+		return res;
+	} else
+		return nullptr;
+}
 template <typename T>
 void SlidingWindowImpl::unary_expression(T *__restrict__ result,
 										 const T *__restrict__ data,
@@ -175,12 +188,12 @@ void SlidingWindowImpl::push_parameter_kernel_parameters(
 					 "Could not load Argument to kernel! Error Code: " +
 						 std::to_string(err_code));
 		to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape,
-											 kernel, context, par_index));
+												 kernel, context, par_index));
 		to_free.push_back(push_array(acc_sizes_win.size(), acc_sizes_win.data(),
-									kernel, context, par_index));
+									 kernel, context, par_index));
 		to_free.push_back(push_array(acc_sizes_rest.size(),
-									acc_sizes_rest.data(), kernel, context,
-									par_index));
+									 acc_sizes_rest.data(), kernel, context,
+									 par_index));
 		if (clSetKernelArg(kernel, par_index++, sizeof(long), &acc_size) !=
 			CL_SUCCESS) {
 			setErrorType(OCL_ERROR);
@@ -188,15 +201,19 @@ void SlidingWindowImpl::push_parameter_kernel_parameters(
 			return;
 		}
 		to_free.push_back(push_array(pred.dimensions, slidewin->step, kernel,
-									context, par_index));
+									 context, par_index));
 		to_free.push_back(steps);
 	}
 }
 void SlidingWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,
 									void *__restrict__ result, size_t from,
-									size_t size) {
-	UNARY_EXECUTE_MONOTON_IMPL
+									size_t size){UNARY_EXECUTE_MONOTON_IMPL}
+
+FGraphNode *UnslideWindowImpl::local_gradient(FGraphNode *y, int dx_i,
+											  FGraphNode *prev_adj) {
+	// TODO
+	return nullptr;
 }
 template <typename T>
 void UnslideWindowImpl::unary_expression(T *__restrict__ result,
@@ -396,8 +413,7 @@ void UnslideWindowImpl::push_parameter_kernel_parameters(
 		cl_int err_code;
 		const FOperation op = pred->operation;
 		const FOperation pred = node->predecessors[0]->operation;
-		unsigned int *steps =
-			(unsigned int *)node->operation.additional_data;
+		unsigned int *steps = (unsigned int *)node->operation.additional_data;
 		// dimensions 0
 		if (clSetKernelArg(kernel, par_index++, sizeof(int),
 						   (void *)&op.dimensions) != CL_SUCCESS) {
@@ -407,18 +423,18 @@ void UnslideWindowImpl::push_parameter_kernel_parameters(
 		}
 		// shapeR
 		to_free.push_back(push_array(node->operation.dimensions,
-									node->operation.shape, kernel, context,
-									par_index));
+									 node->operation.shape, kernel, context,
+									 par_index));
 		// acc_sizes
 		to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
-											 node->operation.shape, kernel,
-											 context, par_index));
+												 node->operation.shape, kernel,
+												 context, par_index));
 		// shapeR
-		to_free.push_back(
-			push_array(pred.dimensions, pred.shape, kernel, context, par_index));
+		to_free.push_back(push_array(pred.dimensions, pred.shape, kernel,
+									 context, par_index));
 		// acc_sizes_pred
 		to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape,
-											 kernel, context, par_index));
+												 kernel, context, par_index));
 		size_t no_windows[pred.dimensions - 1];
 		for (int i = 0; i < pred.dimensions - 1; i++) {
 			size_t window_size =
@@ -428,11 +444,11 @@ void UnslideWindowImpl::push_parameter_kernel_parameters(
 								: window_size / steps[i] + 1;
 		}
 		// acc_no_windows
-		to_free.push_back(calc_and_push_acc_size(pred.dimensions - 1, no_windows,
-											 kernel, context, par_index));
+		to_free.push_back(calc_and_push_acc_size(
+			pred.dimensions - 1, no_windows, kernel, context, par_index));
 		// no_windows
 		to_free.push_back(push_array(pred.dimensions - 1, no_windows, kernel,
-									context, par_index));
+									 context, par_index));
 		// steps
 		to_free.push_back(
 			push_array(pred.dimensions - 1, steps, kernel, context, par_index));

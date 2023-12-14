@@ -12,9 +12,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. */
 #include "index_modification.hpp"
+#include "../utils.hpp"
+#include "flint.h"
 
 using namespace std;
 
+FGraphNode *SliceImpl::local_gradient(FGraphNode *y, int dx_i,
+									  FGraphNode *prev_adj) {
+	const FGraphNode *a = y->predecessors[0];
+	const FSlice *slice = (FSlice *)y->operation.additional_data;
+	std::vector<size_t> start(a->operation.dimensions);
+	for (int i = 0; i < a->operation.dimensions; i++) {
+		start[i] = slice->step[i] >= 0 ? slice->start[i] : slice->end[i] + 1;
+	}
+	return fextend_step(prev_adj, a->operation.shape, start.data(),
+						slice->step);
+}
 template <typename T>
 void SliceImpl::unary_expression(T *__restrict__ result,
 								 const T *__restrict__ data, size_t from,
@@ -138,10 +151,10 @@ void SliceImpl::push_parameter_kernel_parameters(
 		start += slice->start[d] * acc_sizes_pred[d];
 	}
 	to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
-										 node->operation.shape, kernel, context,
-										 par_index));
+											 node->operation.shape, kernel,
+											 context, par_index));
 	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
-										 context, par_index));
+											 context, par_index));
 	if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&steps) !=
 			CL_SUCCESS ||
 		clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&start) !=
@@ -155,8 +168,21 @@ void SliceImpl::push_parameter_kernel_parameters(
 void SliceImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
-							size_t size) {
-	UNARY_EXECUTE_MONOTON_IMPL
+							size_t size){UNARY_EXECUTE_MONOTON_IMPL}
+
+FGraphNode *ExtendImpl::local_gradient(FGraphNode *y, int dx_i,
+									   FGraphNode *prev_adj) {
+	const FGraphNode *a = y->predecessors[0];
+	const FExtend *extend = (FExtend *)y->operation.additional_data;
+	std::vector<long> start(a->operation.dimensions);
+	std::vector<long> ends(a->operation.dimensions);
+	std::vector<long> steps(a->operation.dimensions);
+	for (int i = 0; i < a->operation.dimensions; i++) {
+		start[i] = extend->start[i];
+		ends[i] = a->operation.shape[i] * extend->step[i] + extend->start[i];
+		steps[i] = extend->step[i];
+	}
+	return fslice_step(prev_adj, start.data(), ends.data(), steps.data());
 }
 template <typename T>
 void ExtendImpl::unary_expression(T *__restrict__ result,
@@ -307,8 +333,8 @@ std::string ExtendImpl::generate_ocl_eager(FType res_type,
 void ExtendImpl::push_parameter_kernel_parameters(
 	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
 	int &par_index, std::list<cl_mem> &to_free) {
-  const FOperation op = pred->operation;
-  cl_int err_code;
+	const FOperation op = pred->operation;
+	cl_int err_code;
 	if (clSetKernelArg(kernel, par_index++, sizeof(int),
 					   (void *)&op.dimensions) != CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
@@ -316,20 +342,34 @@ void ExtendImpl::push_parameter_kernel_parameters(
 		return;
 	}
 	to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
-										 node->operation.shape, kernel, context,
-										 par_index));
+											 node->operation.shape, kernel,
+											 context, par_index));
 	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
-										 context, par_index));
+											 context, par_index));
 	const FExtend *extend = (FExtend *)node->operation.additional_data;
-  to_free.push_back(push_array(op.dimensions, extend->step, kernel, context, par_index));
-  to_free.push_back(push_array(op.dimensions, extend->start, kernel, context, par_index));
-  to_free.push_back(push_array(op.dimensions, op.shape, kernel, context, par_index));
+	to_free.push_back(
+		push_array(op.dimensions, extend->step, kernel, context, par_index));
+	to_free.push_back(
+		push_array(op.dimensions, extend->start, kernel, context, par_index));
+	to_free.push_back(
+		push_array(op.dimensions, op.shape, kernel, context, par_index));
 }
 void ExtendImpl::execute_cpu(const FGraphNode *node,
 							 std::vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
 							 size_t size) {
 	UNARY_EXECUTE_MONOTON_IMPL
+}
+FGraphNode *IndexImpl::local_gradient(FGraphNode *y, int dx_i,
+									   FGraphNode *prev_adj) {
+		FGraphNode *a = y->predecessors[0];
+		FGraphNode *b = y->predecessors[1];
+		if (0 == dx_i) {
+			FGraphNode *g =
+				fconstant_d(0, a->operation.shape, a->operation.dimensions);
+			return findex_set(g, prev_adj, b);
+		} else
+			return fconstant_d(0, b->operation.shape, b->operation.dimensions);
 }
 template <typename T, typename A, typename B>
 void IndexImpl::binary_expression(T *__restrict__ result,
@@ -459,6 +499,21 @@ void IndexImpl::execute_cpu(const FGraphNode *node,
 							void *__restrict__ result, size_t from,
 							size_t size) {
 	BINARY_EXECUTE_IMPL
+}
+FGraphNode *SetIndexImpl::local_gradient(FGraphNode *y, int dx_i,
+									   FGraphNode *prev_adj) {
+		FGraphNode *b = y->predecessors[1];
+		FGraphNode *i = y->predecessors[2];
+		// a[i] = b
+		if (0 == dx_i) {
+			FGraphNode *g =
+				fconstant_d(0, b->operation.shape, b->operation.dimensions);
+			// remove values that have been overwritten
+			return findex_set(prev_adj, g, i);
+		} else {
+			// filter for b relevant elements
+			return findex(prev_adj, i);
+		}
 }
 template <typename T>
 void SetIndexImpl::execute_cpu_typed(

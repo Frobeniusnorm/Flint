@@ -12,12 +12,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. */
 #include "comparison.hpp"
+#include "../utils.hpp"
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
 
 using namespace std;
 
+FGraphNode *MinImpl::local_gradient(FGraphNode *y, int dx_i,
+									FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	FGraphNode *b = y->predecessors[1];
+	if (0 == dx_i) {
+		return fmul(prev_adj, fadd(fless(a, b), fequal(a, b)));
+	} else if (1 == dx_i)
+		return fmul(prev_adj, fgreater(a, b));
+	else
+		return nullptr;
+}
 template <typename T, typename A, typename B>
 void MinImpl::binary_expression(T *__restrict__ result,
 								const A *__restrict__ data1,
@@ -52,6 +64,17 @@ std::string MinImpl::generate_ocl_eager(FType res_type,
 		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
 		   "R[index] = a < b ? a : b;";
 }
+FGraphNode *MaxImpl::local_gradient(FGraphNode *y, int dx_i,
+									FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	FGraphNode *b = y->predecessors[1];
+	if (0 == dx_i)
+		return fmul(prev_adj, fadd(fgreater(a, b), fequal(a, b)));
+	else if (1 == dx_i)
+		return fmul(prev_adj, fadd(fless(a, b), fequal(a, b)));
+	else
+		return nullptr;
+}
 template <typename T, typename A, typename B>
 void MaxImpl::binary_expression(T *__restrict__ result,
 								const A *__restrict__ data1,
@@ -83,8 +106,13 @@ std::string MaxImpl::generate_ocl_eager(FType res_type,
 }
 void MaxImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
-						  void *__restrict__ result, size_t from, size_t size) {
-	BINARY_EXECUTE_IMPL
+						  void *__restrict__ result, size_t from,
+						  size_t size){BINARY_EXECUTE_IMPL}
+
+FGraphNode *LessImpl::local_gradient(FGraphNode *y, int dx_i,
+									 FGraphNode *prev_adj) {
+	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
+						   y->operation.dimensions);
 }
 template <typename A, typename B>
 void LessImpl::binary_expression(int *__restrict__ result,
@@ -123,6 +151,12 @@ void LessImpl::execute_cpu(const FGraphNode *node,
 						   size_t size) {
 	DISPATCH_BINARY_OPERATION(int)
 }
+
+FGraphNode *GreaterImpl::local_gradient(FGraphNode *y, int dx_i,
+									 FGraphNode *prev_adj) {
+	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
+						   y->operation.dimensions);
+}
 template <typename A, typename B>
 void GreaterImpl::binary_expression(int *__restrict__ result,
 									const A *__restrict__ data1,
@@ -160,6 +194,12 @@ void GreaterImpl::execute_cpu(const FGraphNode *node,
 							  void *__restrict__ result, size_t from,
 							  size_t size) {
 	DISPATCH_BINARY_OPERATION(int)
+}
+
+FGraphNode *EqualImpl::local_gradient(FGraphNode *y, int dx_i,
+									 FGraphNode *prev_adj) {
+	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
+						   y->operation.dimensions);
 }
 template <typename A, typename B>
 void EqualImpl::binary_expression(int *__restrict__ result,

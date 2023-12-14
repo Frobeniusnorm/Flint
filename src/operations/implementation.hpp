@@ -17,7 +17,6 @@
 #include "../../flint.h"
 #include "../backend_cpu/cpu_common.hpp"
 #include "../backend_ocl/twine.hpp"
-#include "../utils.hpp"
 #include <unordered_map>
 #include <vector>
 
@@ -316,12 +315,30 @@ struct OCLLazyCodegenState {
 		}
 };
 struct OperationImplementation {
+		// helper function
+		static FGraphNode *constant_tensor(double val, FType type,
+										   size_t *shape, int dimensions);
+		static void
+		configure_gradient_information(FGraphNode *g,
+									 std::vector<FGraphNode *> pred);
 		/** Disables automatic code generation for the parents */
 		static const int OCL_LAZY_DONT_PUSH_PREDS = 1;
 		/** Enables automatic index insertion for inverse broadcasting if the
 		 * node request it */
 		static const int OCL_LAZY_INVERSE_BROADCASTING = 2;
 		static std::vector<OperationImplementation *> implementations;
+
+		/** Calculates the local gradient for the operation.
+		 * `y` is the node from which the gradient has to be calculated,
+		 * `dx_i` denotes the variable for which `y` is derived (0 means first
+		 * parameter, 1 means second parameter, ...), `prev_adj` denotes the
+		 * adjoint in the chain rule, i.e. we know that for `y = f(x)` in an
+		 * expression `g` (in which `y` occurs) the deriviant for `x` can be
+		 * calculated by `dg/dx = dy/dx * dg/dy`, the adjoint represents
+		 * `dg/dy`.
+		 */
+		virtual FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) = 0;
 		/** Executes the given node in the range of `from` to `from + size` and
 		 * stores its result data in `result`. The results of the parameters are
 		 * in `predecessor_data`. See Dispatch and Execute macros to dispatch to
@@ -352,14 +369,7 @@ struct OperationImplementation {
 		 */
 		virtual std::string
 		generate_ocl_parameters_eager(FType res_type,
-									  std::vector<FType> parameter_types) {
-			Twine code;
-			for (int i = 0; i < parameter_types.size(); i++)
-				code += ", const __global " + typeString(parameter_types[i]) +
-						"* P" + std::to_string(i) + ", long num_entries" +
-						std::to_string(i);
-			return code;
-		}
+									  std::vector<FType> parameter_types);
 		/**
 		 * Pushes additional values to the eager opencl program that don't
 		 * depend on the parameters. The `par_index` has to be incremented for
@@ -385,8 +395,6 @@ struct OperationImplementation {
 		 * the node (assuming a node has 5000 elements and `operation_score`
 		 * returns 2, the final score is 10000)
 		 */
-		virtual int operation_score(FGraphNode *node) {
-      return 2;
-    }
+		virtual int operation_score(FGraphNode *node) { return 2; }
 };
 #endif

@@ -16,6 +16,7 @@
 #define UTILS_HPP
 #include "../flint.h"
 #include "src/errors.hpp"
+#include "src/operations/implementation.hpp"
 #include <cmath>
 #include <condition_variable>
 #include <iostream>
@@ -59,75 +60,17 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
 	}
 	return res + "]";
 }
-static inline int operationScore(const FGraphNode *g) {
-	switch (g->operation.op_type) {
-	case FPOW:
-	case FSQRT:
-		return 1;
-	case FLOG:
-	case FSIN:
-	case FCOS:
-	case FTAN:
-	case FLOG2:
-	case FLOG10:
-	case FASIN:
-	case FACOS:
-	case FATAN:
-		return 3;
-	case FREDUCE_SUM:
-	case FREDUCE_MUL: {
-		// int dim = *((int *)g->operation.additional_data);
-		// size_t total = 1;
-		// for (int i = 0; i < g->operation.dimensions; i++)
-		//   if (i != dim) total *= g->operation.shape[i];
-		return 5; //* g->predecessors[0]->operation.shape[dim];
-	}
-	case FMATMUL: {
-		const FGraphNode *a = g->predecessors[0];
-		return 5 * a->operation.shape[a->operation.dimensions - 1];
-	}
-	case FCONVOLVE: {
-		// multiply with complete kernel size
-		size_t no_elems = 1;
-		const FGraphNode *a = g->predecessors[1];
-		for (int i = 0; i < a->operation.dimensions; i++) {
-			no_elems *= a->operation.shape[i];
-		}
-		return std::max(1, (int)(100 - 0.001 * no_elems * no_elems));
-	}
-	case FSLICE: {
-		size_t sliced_away = 1;
-		const FGraphNode *p = g->predecessors[0];
-		for (int i = 0; i < g->operation.dimensions; i++) {
-			long diff = (p->operation.shape[i] - g->operation.shape[i]);
-			if (diff > 0)
-				sliced_away *= diff;
-		}
-		return sliced_away;
-	}
-	case FGEN_CONSTANT: {
-		return 10;
-	}
-	case FSLIDING_WINDOW:
-		return g->operation.shape[0];
-	case FUNSLIDE_WINDOW:
-		return g->predecessors[0]->operation.shape[0];
-	default:
-		break;
-	}
-	return 2;
-}
-static inline size_t computeScore(const FGraphNode *g, bool with_pred = true) {
-	std::queue<const FGraphNode *> todo;
+static inline size_t computeScore(FGraphNode *g, bool with_pred = true) {
+	std::queue<FGraphNode *> todo;
 	size_t no_elems = 1;
 	for (int i = 0; i < g->operation.dimensions; i++)
 		no_elems *= g->operation.shape[i];
 	size_t score = 0;
 	todo.push(g);
 	while (!todo.empty()) {
-		const FGraphNode *c = todo.front();
+		FGraphNode *c = todo.front();
 		todo.pop();
-		score += operationScore(c);
+		score += OperationImplementation::implementations[c->operation.op_type]->operation_score(c);
 		if (with_pred) {
 			for (int i = 0; i < c->num_predecessor; i++)
 				if (!c->predecessors[i]->result_data &&

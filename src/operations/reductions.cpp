@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. */
 #include "reductions.hpp"
+#include "../utils.hpp"
 #include "flint.h"
 #include <limits>
 
@@ -187,6 +188,22 @@ static void reducing_push_per_parameter(FGraphNode *node, cl_kernel kernel,
 		return;
 	}
 }
+FGraphNode *ReduceSumImpl::local_gradient(FGraphNode *y, int dx_i,
+										  FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	if (0 == dx_i) {
+		const FOperation op = y->operation;
+		const int dim = ((int *)op.additional_data)[0];
+		std::vector<int> rep(a->operation.dimensions);
+		std::vector<size_t> ns(a->operation.dimensions);
+		for (int i = 0; i < rep.size(); i++) {
+			rep[i] = i == dim ? a->operation.shape[i] - 1 : 0;
+			ns[i] = i != dim ? a->operation.shape[i] : 1;
+		}
+		return frepeat(freshape(prev_adj, ns.data(), ns.size()), rep.data());
+	} else
+		return nullptr;
+}
 template <typename T>
 void ReduceSumImpl::unary_expression(T *__restrict__ result,
 									 const T *__restrict__ data, size_t from,
@@ -227,6 +244,44 @@ void ReduceSumImpl::push_parameter_kernel_parameters(
 	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
 	int &par_index, std::list<cl_mem> &to_free) {
 	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
+}
+FGraphNode *ReduceMulImpl::local_gradient(FGraphNode *y, int dx_i,
+										  FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	if (0 == dx_i) {
+		const FOperation op = y->operation;
+		const int dim = ((int *)op.additional_data)[0];
+		std::vector<int> rep(a->operation.dimensions);
+		std::vector<size_t> ns(a->operation.dimensions);
+		for (int i = 0; i < rep.size(); i++) {
+			rep[i] = i == dim ? a->operation.shape[i] - 1 : 0;
+			ns[i] = i != dim ? a->operation.shape[i] : 1;
+		}
+		FGraphNode *zero_node = fequal(a, 0.0);
+		// the normal gradient would be y/a, this does not work for a_i = 0,
+		// but at first we calculate the gradient for every a_i != 0
+		// broadcast y
+		FGraphNode *ls = frepeat(freshape(y, ns.data(), ns.size()), rep.data());
+		// calculate y/a and remove division by 0 case (it does not matter
+		// what we add in that case, since we multiply by 1 - fequal(a,
+		// 0.0), just avoid / 0 for portability)
+		FGraphNode *lg = fmul(
+			fsub_ici(1, zero_node),
+			fdiv(ls, fadd(a, zero_node))); // explicitly removing divison by 0
+		// to compute a_i = 0 case we set each 0-entry to 1 and repeat the
+		// computation, this yields the correct gradients only for the
+		// entries where a_i = 0
+		FGraphNode *zg = fmul(
+			zero_node, frepeat(freshape(freduce_mul(fadd(a, zero_node), dim),
+										ns.data(), ns.size()),
+							   rep.data()));
+		// now we can add both gradients and multiply with the previous
+		// adjoint
+		return fmul(
+			frepeat(freshape(prev_adj, ns.data(), ns.size()), rep.data()),
+			fadd(lg, zg));
+	} else
+		return nullptr;
 }
 template <typename T>
 void ReduceMulImpl::unary_expression(T *__restrict__ result,
@@ -269,6 +324,16 @@ void ReduceMulImpl::push_parameter_kernel_parameters(
 	int &par_index, std::list<cl_mem> &to_free) {
 	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
 }
+FGraphNode *ReduceMinImpl::local_gradient(FGraphNode *y, int dx_i,
+										  FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	unsigned int ax = ((unsigned int *)y->operation.additional_data)[0];
+	// work with extend to readjust the node to the same shape as before by
+	// repetition, then compare it with equal and multiply the 0-1 tensor
+	// with previous adjoint.
+	FGraphNode *n = fequal(a, fexpand(y, ax, a->operation.shape[ax]));
+	return fmul(fexpand(prev_adj, ax, a->operation.shape[ax]), n);
+}
 template <typename T>
 void ReduceMinImpl::unary_expression(T *__restrict__ result,
 									 const T *__restrict__ data, size_t from,
@@ -309,6 +374,13 @@ void ReduceMinImpl::push_parameter_kernel_parameters(
 	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
 	int &par_index, std::list<cl_mem> &to_free) {
 	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
+}
+FGraphNode *ReduceMaxImpl::local_gradient(FGraphNode *y, int dx_i,
+										  FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	unsigned int ax = ((unsigned int *)y->operation.additional_data)[0];
+	FGraphNode *n = fequal(a, fexpand(y, ax, a->operation.shape[ax]));
+	return fmul(fexpand(prev_adj, ax, a->operation.shape[ax]), n);
 }
 template <typename T>
 void ReduceMaxImpl::unary_expression(T *__restrict__ result,

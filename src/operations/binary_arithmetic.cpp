@@ -16,6 +16,10 @@
 
 using namespace std;
 
+FGraphNode *AddImpl::local_gradient(FGraphNode *y, int dx_i,
+									FGraphNode *prev_adj) {
+	return (dx_i == 0 || dx_i == 1) ? prev_adj : nullptr;
+}
 template <typename T, typename A, typename B>
 void AddImpl::binary_expression(T *__restrict__ result,
 								const A *__restrict__ data1,
@@ -43,6 +47,15 @@ std::string AddImpl::generate_ocl_eager(FType res_type,
 		   " return;\n"
 		   "R[index] = P0[(index/inv_broad0)%num_entries0] + "
 		   "P1[(index/inv_broad1)%num_entries1];";
+}
+FGraphNode *SubImpl::local_gradient(FGraphNode *y, int dx_i,
+									FGraphNode *prev_adj) {
+	if (dx_i == 0)
+		return prev_adj;
+	else if (dx_i == 1)
+		return fneg(prev_adj);
+	else
+		return nullptr;
 }
 template <typename T, typename A, typename B>
 void SubImpl::binary_expression(T *__restrict__ result,
@@ -72,6 +85,15 @@ std::string SubImpl::generate_ocl_eager(FType res_type,
 		   "P0[(index/inv_broad0)%num_entries0] - "
 		   "P1[(index/inv_broad1)%num_entries1];";
 }
+FGraphNode *MulImpl::local_gradient(FGraphNode *y, int dx_i,
+									FGraphNode *prev_adj) {
+	if (0 == dx_i) {
+		return fmul(prev_adj, y->predecessors[1]);
+	} else if (1 == dx_i) {
+		return fmul(prev_adj, y->predecessors[0]);
+	} else
+		return nullptr;
+}
 template <typename T, typename A, typename B>
 void MulImpl::binary_expression(T *__restrict__ result,
 								const A *__restrict__ data1,
@@ -100,6 +122,19 @@ std::string MulImpl::generate_ocl_eager(FType res_type,
 		   "P0[(index/inv_broad0)%num_entries0] * "
 		   "P1[(index/inv_broad1)%num_entries1];";
 }
+FGraphNode *DivImpl::local_gradient(FGraphNode *y, int dx_i,
+									FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	FGraphNode *b = y->predecessors[1];
+	if (0 == dx_i) {
+		// d(a / b)/da = d(a * b^(-1))/da = b^(-1)
+		return fdiv(prev_adj, b);
+	} else if (1 == dx_i) {
+		// d(a / b)/db = d(a * b^(-1))/db = -a * b^(-2)
+		return fneg(fdiv(fmul(prev_adj, a), fpow(b, 2.)));
+	} else
+		return nullptr;
+}
 template <typename T, typename A, typename B>
 void DivImpl::binary_expression(T *__restrict__ result,
 								const A *__restrict__ data1,
@@ -127,6 +162,21 @@ std::string DivImpl::generate_ocl_eager(FType res_type,
 		   "return;\nR[index] = "
 		   "P0[(index/inv_broad0)%num_entries0] / "
 		   "P1[(index/inv_broad1)%num_entries1];";
+}
+FGraphNode *PowImpl::local_gradient(FGraphNode *y, int dx_i,
+									FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	FGraphNode *b = y->predecessors[1];
+	if (0 == dx_i) {
+		// x^b / dx = b*x^(b-1)
+		return fmul(prev_adj, fmul(b, fpow(a, fsub(b, 1))));
+	} else if (1 == dx_i) {
+		// a^x / dx = a^x * ln(a)
+		// has to be zero when a < 0 since not differentiable
+		return fmul(prev_adj, fmul(fmul(fadd(fsign(a), 1), 0.5),
+								   fmul(fpow(a, b), flog(fabs_g(a)))));
+	} else
+		return nullptr;
 }
 template <typename T, typename A, typename B>
 void PowImpl::binary_expression(T *__restrict__ result,
@@ -193,6 +243,28 @@ std::string PowImpl::generate_ocl_eager(FType res_type,
 				"pow((double)P0[(index/inv_broad0)%num_entries0], "
 				"(double)P1[(index/inv_broad1)%num_entries1]);";
 	return code;
+}
+FGraphNode *MatMulImpl::local_gradient(FGraphNode *y, int dx_i,
+									   FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	FGraphNode *b = y->predecessors[1];
+	if (0 == dx_i) {
+		vector<int> perm(b->operation.dimensions);
+		for (int i = 0; i < perm.size() - 2; i++)
+			perm[i] = i;
+		perm[perm.size() - 2] = perm.size() - 1;
+		perm[perm.size() - 1] = perm.size() - 2;
+		return fmatmul(prev_adj, ftranspose(b, perm.data()));
+	} else if (1 == dx_i) {
+		vector<int> perm(a->operation.dimensions);
+		for (int i = 0; i < perm.size() - 2; i++)
+			perm[i] = i;
+		perm[perm.size() - 2] = perm.size() - 1;
+		perm[perm.size() - 1] = perm.size() - 2;
+		return fmatmul(ftranspose(a, perm.data()), prev_adj);
+	} else {
+		return nullptr;
+	}
 }
 template <typename T, typename A, typename B>
 void MatMulImpl::binary_expression(T *__restrict__ result,

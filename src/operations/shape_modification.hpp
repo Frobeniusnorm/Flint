@@ -25,6 +25,8 @@ struct FlattenImpl : OperationImplementation {
 		std::string
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct ConversionImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -40,6 +42,8 @@ struct ConversionImpl : OperationImplementation {
 		std::string
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct RepeatImpl : OperationImplementation {
 		template <typename T>
@@ -62,6 +66,8 @@ struct RepeatImpl : OperationImplementation {
 										 cl_kernel kernel, cl_context context,
 										 int &par_index,
 										 std::list<cl_mem> &to_free) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct TransposeImpl : OperationImplementation {
 		template <typename T>
@@ -84,6 +90,8 @@ struct TransposeImpl : OperationImplementation {
 										 cl_kernel kernel, cl_context context,
 										 int &par_index,
 										 std::list<cl_mem> &to_free) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct ConcatImpl : OperationImplementation {
 		template <typename T>
@@ -108,5 +116,7 @@ struct ConcatImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 #endif

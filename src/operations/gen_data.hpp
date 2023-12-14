@@ -31,6 +31,10 @@ struct GenRandomImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override {
+      return nullptr;
+    }
 };
 
 struct GenConstantImpl : OperationImplementation {
@@ -52,6 +56,13 @@ struct GenConstantImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		int operation_score(FGraphNode *node) override {
+      return 10;
+    }
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override {
+      return nullptr;
+    }
 };
 
 struct GenArangeImpl : OperationImplementation {
@@ -70,5 +81,12 @@ struct GenArangeImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
+		int operation_score(FGraphNode *node) override {
+      return 5;
+    }
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override {
+      return nullptr;
+    }
 };
 #endif

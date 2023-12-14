@@ -39,6 +39,11 @@ struct ReduceSumImpl : OperationImplementation {
 									   cl_kernel kernel, cl_context context,
 									   int &par_index,
 									   std::list<cl_mem> &to_free) override;
+		virtual int operation_score(FGraphNode *node) override {
+      return 5;
+    }
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct ReduceMulImpl : OperationImplementation {
 		template <typename T>
@@ -64,6 +69,11 @@ struct ReduceMulImpl : OperationImplementation {
 									   cl_kernel kernel, cl_context context,
 									   int &par_index,
 									   std::list<cl_mem> &to_free) override;
+		virtual int operation_score(FGraphNode *node) override {
+      return 5;
+    }
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct ReduceMinImpl : OperationImplementation {
 		template <typename T>
@@ -89,6 +99,11 @@ struct ReduceMinImpl : OperationImplementation {
 									   cl_kernel kernel, cl_context context,
 									   int &par_index,
 									   std::list<cl_mem> &to_free) override;
+		virtual int operation_score(FGraphNode *node) override {
+      return 5;
+    }
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 struct ReduceMaxImpl : OperationImplementation {
 		template <typename T>
@@ -114,5 +129,10 @@ struct ReduceMaxImpl : OperationImplementation {
 									   cl_kernel kernel, cl_context context,
 									   int &par_index,
 									   std::list<cl_mem> &to_free) override;
+		virtual int operation_score(FGraphNode *node) override {
+      return 5;
+    }
+		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
+										   FGraphNode *prev_adj) override;
 };
 #endif
