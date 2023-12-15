@@ -15,7 +15,7 @@
 #define FLINT_COMPARISON_HPP
 #include "implementation.hpp"
 
-struct MinImpl: OperationImplementation {
+struct MinImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
 		static void binary_expression(T *__restrict__ result,
 									  const A *__restrict__ data1,
@@ -28,13 +28,14 @@ struct MinImpl: OperationImplementation {
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+							  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
 };
-struct MaxImpl: OperationImplementation {
+struct MaxImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
 		static void binary_expression(T *__restrict__ result,
 									  const A *__restrict__ data1,
@@ -47,13 +48,14 @@ struct MaxImpl: OperationImplementation {
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+							  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
 };
-struct LessImpl: OperationImplementation {
+struct LessImpl : OperationImplementation {
 		template <typename A, typename B>
 		static void binary_expression(int *__restrict__ result,
 									  const A *__restrict__ data1,
@@ -66,13 +68,21 @@ struct LessImpl: OperationImplementation {
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+							  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override {
+			return {{F_INT32, F_INT32},
+					{F_INT32, F_INT64},
+					{F_INT32, F_FLOAT32},
+					{F_INT32, F_FLOAT64}};
+		}
 };
-struct GreaterImpl: OperationImplementation {
+struct GreaterImpl : OperationImplementation {
 		template <typename A, typename B>
 		static void binary_expression(int *__restrict__ result,
 									  const A *__restrict__ data1,
@@ -85,13 +95,21 @@ struct GreaterImpl: OperationImplementation {
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+							  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override {
+			return {{F_INT32, F_INT32},
+					{F_INT32, F_INT64},
+					{F_INT32, F_FLOAT32},
+					{F_INT32, F_FLOAT64}};
+		}
 };
-struct EqualImpl: OperationImplementation {
+struct EqualImpl : OperationImplementation {
 		template <typename A, typename B>
 		static void binary_expression(int *__restrict__ result,
 									  const A *__restrict__ data1,
@@ -104,11 +122,19 @@ struct EqualImpl: OperationImplementation {
 						 void *__restrict__ result, size_t from,
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
-									  OCLLazyCodegenState &compiler_state) override;
-    std::string generate_ocl_eager(FType res_type,
-							  std::vector<FType> parameter_types) override;
+							  OCLLazyCodegenState &compiler_state) override;
+		std::string
+		generate_ocl_eager(FType res_type,
+						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override {
+			return {{F_INT32, F_INT32},
+					{F_INT32, F_INT64},
+					{F_INT32, F_FLOAT32},
+					{F_INT32, F_FLOAT64}};
+		}
 };
 
 #endif

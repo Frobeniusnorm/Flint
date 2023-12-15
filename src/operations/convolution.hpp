@@ -79,6 +79,9 @@ struct ConvolveImpl : OperationImplementation {
 		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
 };
 
 struct GradientConvolve1Impl : OperationImplementation {
@@ -121,6 +124,16 @@ struct GradientConvolve1Impl : OperationImplementation {
 		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override {
+			return {{F_FLOAT64, F_INT32, F_FLOAT64},
+					{F_FLOAT64, F_INT64, F_FLOAT64},
+					{F_FLOAT64, F_FLOAT32, F_FLOAT64},
+					{F_FLOAT64, F_FLOAT64, F_FLOAT64}};
+		}
 };
 struct GradientConvolve2Impl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -155,5 +168,15 @@ struct GradientConvolve2Impl : OperationImplementation {
 		int operation_score(FGraphNode *node) override { return 10; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override {
+			return {{F_FLOAT64, F_INT32, F_FLOAT64},
+					{F_FLOAT64, F_INT64, F_FLOAT64},
+					{F_FLOAT64, F_FLOAT32, F_FLOAT64},
+					{F_FLOAT64, F_FLOAT64, F_FLOAT64}};
+		}
 };
 #endif

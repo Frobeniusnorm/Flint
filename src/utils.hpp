@@ -70,7 +70,8 @@ static inline size_t computeScore(FGraphNode *g, bool with_pred = true) {
 	while (!todo.empty()) {
 		FGraphNode *c = todo.front();
 		todo.pop();
-		score += OperationImplementation::implementations[c->operation.op_type]->operation_score(c);
+		score += OperationImplementation::implementations[c->operation.op_type]
+					 ->operation_score(c);
 		if (with_pred) {
 			for (int i = 0; i < c->num_predecessor; i++)
 				if (!c->predecessors[i]->result_data &&
@@ -193,48 +194,6 @@ static std::string minForType(FType type) {
 		return "LONG_MIN";
 	}
 	return "0";
-}
-inline void freeAdditionalData(FGraphNode *gn) {
-	switch (gn->operation.op_type) {
-	case FSLICE: {
-		FSlice *s = (FSlice *)gn->operation.additional_data;
-		free(s->end);
-		free(s->start);
-		free(s->step);
-		delete s;
-	} break;
-	case FEXTEND: {
-		FExtend *s = (FExtend *)gn->operation.additional_data;
-		free(s->start);
-		free(s->step);
-		delete s;
-	} break;
-  case FPOOLING_MAX:
-  case FPOOLING_SUM:
-	case FSLIDING_WINDOW: {
-		FSlidingWindow *s = (FSlidingWindow *)gn->operation.additional_data;
-		free(s->step);
-		free(s->size);
-		delete s;
-	} break;
-	case FUNSLIDE_WINDOW:
-	case FGEN_ARANGE:
-	case FGEN_RANDOM:
-	case FGEN_CONSTANT:
-	case FCONCAT:
-	case FCONVOLVE:
-	case FGRADIENT_CONVOLVE1:
-	case FGRADIENT_CONVOLVE2:
-	case FTRANSPOSE:
-	case FREDUCE_MIN:
-	case FREDUCE_MAX:
-	case FREDUCE_SUM:
-	case FREDUCE_MUL:
-		free(gn->operation.additional_data);
-		gn->operation.additional_data = nullptr;
-	default:
-		break;
-	}
 }
 template <typename T> class blocking_queue {
 	private:

@@ -35,15 +35,17 @@ struct ReduceSumImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
-		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-									   cl_kernel kernel, cl_context context,
-									   int &par_index,
-									   std::list<cl_mem> &to_free) override;
-		virtual int operation_score(FGraphNode *node) override {
-      return 5;
-    }
+		void
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override;
+		virtual int operation_score(FGraphNode *node) override { return 5; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
 };
 struct ReduceMulImpl : OperationImplementation {
 		template <typename T>
@@ -65,15 +67,17 @@ struct ReduceMulImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
-		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-									   cl_kernel kernel, cl_context context,
-									   int &par_index,
-									   std::list<cl_mem> &to_free) override;
-		virtual int operation_score(FGraphNode *node) override {
-      return 5;
-    }
+		void
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override;
+		virtual int operation_score(FGraphNode *node) override { return 5; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
 };
 struct ReduceMinImpl : OperationImplementation {
 		template <typename T>
@@ -95,15 +99,17 @@ struct ReduceMinImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
-		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-									   cl_kernel kernel, cl_context context,
-									   int &par_index,
-									   std::list<cl_mem> &to_free) override;
-		virtual int operation_score(FGraphNode *node) override {
-      return 5;
-    }
+		void
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override;
+		virtual int operation_score(FGraphNode *node) override { return 5; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
 };
 struct ReduceMaxImpl : OperationImplementation {
 		template <typename T>
@@ -125,14 +131,16 @@ struct ReduceMaxImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
-		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-									   cl_kernel kernel, cl_context context,
-									   int &par_index,
-									   std::list<cl_mem> &to_free) override;
-		virtual int operation_score(FGraphNode *node) override {
-      return 5;
-    }
+		void
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override;
+		virtual int operation_score(FGraphNode *node) override { return 5; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
 };
 #endif

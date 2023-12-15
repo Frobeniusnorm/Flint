@@ -37,10 +37,16 @@ struct SlidingWindowImpl : OperationImplementation {
 										 int &par_index,
 										 std::list<cl_mem> &to_free) override;
 		int operation_score(FGraphNode *node) override {
-		  return node->operation.shape[0];
-    }
+			return node->operation.shape[0];
+		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			FSlidingWindow *s = (FSlidingWindow *)gn->operation.additional_data;
+			free(s->step);
+			free(s->size);
+			delete s;
+		}
 };
 struct UnslideWindowImpl : OperationImplementation {
 		template <typename T>
@@ -64,10 +70,13 @@ struct UnslideWindowImpl : OperationImplementation {
 										 int &par_index,
 										 std::list<cl_mem> &to_free) override;
 		int operation_score(FGraphNode *node) override {
-		  return node->predecessors[0]->operation.shape[0];
-    }
+			return node->predecessors[0]->operation.shape[0];
+		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
 };
 
 #endif

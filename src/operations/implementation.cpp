@@ -53,7 +53,7 @@ FGraphNode *OperationImplementation::constant_tensor(double val, FType type,
 	case F_FLOAT64:
 		return fconstant_d((double)val, shape, dimensions);
 	}
-  return nullptr;
+	return nullptr;
 }
 void OperationImplementation::configure_gradient_information(
 	FGraphNode *g, std::vector<FGraphNode *> pred) {
@@ -155,4 +155,17 @@ std::string OperationImplementation::generate_ocl_parameters_eager(
 		code += ", const __global " + typeString(parameter_types[i]) + "* P" +
 				std::to_string(i) + ", long num_entries" + std::to_string(i);
 	return code;
+}
+
+std::vector<std::vector<FType>>
+OperationImplementation::kernel_type_combinations(const FGraphNode *node) {
+	std::vector<std::vector<FType>> par_poss =
+		allTypePermutations(node->num_predecessor);
+	for (int i = 0; i < par_poss.size(); i++) {
+		FType highest = par_poss[i][0];
+		for (int j = 1; j < par_poss[i].size(); j++)
+			highest = higherType(highest, par_poss[i][j]);
+		par_poss[i].insert(par_poss[i].begin(), highest);
+	}
+	return par_poss;
 }

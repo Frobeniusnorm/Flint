@@ -15,6 +15,7 @@
 #include "../flint.h"
 #include "backend_ocl/comp.hpp"
 #include "errors.hpp"
+#include "src/operations/implementation.hpp"
 #include "utils.hpp"
 #include <cmath>
 #include <cstring>
@@ -315,7 +316,8 @@ void fFreeGraph(FGraphNode *graph) {
 				delete st;
 			} break;
 			default:
-				freeAdditionalData(gn);
+				OperationImplementation::implementations[gn->operation.op_type]
+					->free_additional_data(gn);
 			}
 			gn->operation.additional_data = nullptr;
 		}
@@ -428,7 +430,8 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
 		node->result_data) {
 		FResultData *rd = node->result_data;
 		// we can modify this node to a STORE operation
-		freeAdditionalData(node);
+		OperationImplementation::implementations[node->operation.op_type]
+			->free_additional_data(node);
 		node->operation.op_type = FSTORE;
 		if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU)
 			// we can do this only when all operations have been finished

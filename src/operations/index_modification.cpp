@@ -357,19 +357,16 @@ void ExtendImpl::push_parameter_kernel_parameters(
 void ExtendImpl::execute_cpu(const FGraphNode *node,
 							 std::vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
-							 size_t size) {
-	UNARY_EXECUTE_MONOTON_IMPL
-}
-FGraphNode *IndexImpl::local_gradient(FGraphNode *y, int dx_i,
-									   FGraphNode *prev_adj) {
-		FGraphNode *a = y->predecessors[0];
-		FGraphNode *b = y->predecessors[1];
-		if (0 == dx_i) {
-			FGraphNode *g =
-				fconstant_d(0, a->operation.shape, a->operation.dimensions);
-			return findex_set(g, prev_adj, b);
-		} else
-			return fconstant_d(0, b->operation.shape, b->operation.dimensions);
+							 size_t size){UNARY_EXECUTE_MONOTON_IMPL} FGraphNode
+	*IndexImpl::local_gradient(FGraphNode *y, int dx_i, FGraphNode *prev_adj) {
+	FGraphNode *a = y->predecessors[0];
+	FGraphNode *b = y->predecessors[1];
+	if (0 == dx_i) {
+		FGraphNode *g =
+			fconstant_d(0, a->operation.shape, a->operation.dimensions);
+		return findex_set(g, prev_adj, b);
+	} else
+		return fconstant_d(0, b->operation.shape, b->operation.dimensions);
 }
 template <typename T, typename A, typename B>
 void IndexImpl::binary_expression(T *__restrict__ result,
@@ -494,26 +491,36 @@ void IndexImpl::push_additional_kernel_parameters(FGraphNode *node,
 		return;
 	}
 }
+std::vector<std::vector<FType>>
+IndexImpl::kernel_type_combinations(const FGraphNode *node) {
+	std::vector<std::vector<FType>> res(8);
+	int i = 0;
+	for (FType a_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
+		for (FType i_type : {F_INT32, F_INT64}) {
+			res[i++] = {a_type, a_type, i_type};
+		}
+	}
+	return res;
+}
 void IndexImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
-							size_t size) {
-	BINARY_EXECUTE_IMPL
-}
+							size_t size){BINARY_EXECUTE_IMPL}
+
 FGraphNode *SetIndexImpl::local_gradient(FGraphNode *y, int dx_i,
-									   FGraphNode *prev_adj) {
-		FGraphNode *b = y->predecessors[1];
-		FGraphNode *i = y->predecessors[2];
-		// a[i] = b
-		if (0 == dx_i) {
-			FGraphNode *g =
-				fconstant_d(0, b->operation.shape, b->operation.dimensions);
-			// remove values that have been overwritten
-			return findex_set(prev_adj, g, i);
-		} else {
-			// filter for b relevant elements
-			return findex(prev_adj, i);
-		}
+										 FGraphNode *prev_adj) {
+	FGraphNode *b = y->predecessors[1];
+	FGraphNode *i = y->predecessors[2];
+	// a[i] = b
+	if (0 == dx_i) {
+		FGraphNode *g =
+			fconstant_d(0, b->operation.shape, b->operation.dimensions);
+		// remove values that have been overwritten
+		return findex_set(prev_adj, g, i);
+	} else {
+		// filter for b relevant elements
+		return findex(prev_adj, i);
+	}
 }
 template <typename T>
 void SetIndexImpl::execute_cpu_typed(
@@ -676,6 +683,17 @@ void SetIndexImpl::push_additional_kernel_parameters(
 		flogging(F_ERROR, "Could not load Argument to kernel!");
 		return;
 	}
+}
+std::vector<std::vector<FType>>
+SetIndexImpl::kernel_type_combinations(const FGraphNode *node) {
+	std::vector<std::vector<FType>> res(8);
+	int i = 0;
+	for (FType a_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
+		for (FType i_type : {F_INT32, F_INT64}) {
+			res[i++] = {a_type, a_type, a_type, i_type};
+		}
+	}
+	return res;
 }
 void SetIndexImpl::execute_cpu(const FGraphNode *node,
 							   std::vector<CPUResultData> predecessor_data,

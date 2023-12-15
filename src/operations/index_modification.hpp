@@ -54,6 +54,13 @@ struct SliceImpl : OperationImplementation {
 		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			FSlice *s = (FSlice *)gn->operation.additional_data;
+			free(s->end);
+			free(s->start);
+			free(s->step);
+			delete s;
+		}
 };
 struct ExtendImpl : OperationImplementation {
 		template <typename T>
@@ -78,6 +85,11 @@ struct ExtendImpl : OperationImplementation {
 										 std::list<cl_mem> &to_free) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			FExtend *s = (FExtend *)gn->operation.additional_data;
+			free(s->start);
+			free(s->step);
+		}
 };
 struct IndexImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -111,6 +123,8 @@ struct IndexImpl : OperationImplementation {
 		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override;
 };
 struct SetIndexImpl : OperationImplementation {
 		template <typename T>
@@ -142,5 +156,7 @@ struct SetIndexImpl : OperationImplementation {
 		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override;
 };
 #endif

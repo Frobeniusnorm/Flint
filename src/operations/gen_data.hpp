@@ -32,9 +32,16 @@ struct GenRandomImpl : OperationImplementation {
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override {
-      return nullptr;
-    }
+								   FGraphNode *prev_adj) override {
+			return nullptr;
+		}
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override {
+			return {{F_FLOAT64}};
+		}
 };
 
 struct GenConstantImpl : OperationImplementation {
@@ -56,13 +63,18 @@ struct GenConstantImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
-		int operation_score(FGraphNode *node) override {
-      return 10;
-    }
+		int operation_score(FGraphNode *node) override { return 10; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override {
-      return nullptr;
-    }
+								   FGraphNode *prev_adj) override {
+			return nullptr;
+		}
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override {
+			return {{F_INT32}, {F_INT64}, {F_FLOAT32}, {F_FLOAT64}};
+		}
 };
 
 struct GenArangeImpl : OperationImplementation {
@@ -81,12 +93,17 @@ struct GenArangeImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
-		int operation_score(FGraphNode *node) override {
-      return 5;
-    }
+		int operation_score(FGraphNode *node) override { return 5; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override {
-      return nullptr;
-    }
+								   FGraphNode *prev_adj) override {
+			return nullptr;
+		}
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override {
+			return {{F_INT64}};
+		}
 };
 #endif

@@ -13,6 +13,8 @@
  * limitations under the License. */
 #ifndef FLINT_SHAPE_MODIFICATION_HPP
 #define FLINT_SHAPE_MODIFICATION_HPP
+#include "../utils.hpp"
+#include "flint.h"
 #include "implementation.hpp"
 
 struct FlattenImpl : OperationImplementation {
@@ -26,7 +28,7 @@ struct FlattenImpl : OperationImplementation {
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
 };
 struct ConversionImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -43,7 +45,12 @@ struct ConversionImpl : OperationImplementation {
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override {
+			// all combinations of parameter and return type possible
+			return allTypePermutations(2);
+		}
 };
 struct RepeatImpl : OperationImplementation {
 		template <typename T>
@@ -67,7 +74,7 @@ struct RepeatImpl : OperationImplementation {
 										 int &par_index,
 										 std::list<cl_mem> &to_free) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
 };
 struct TransposeImpl : OperationImplementation {
 		template <typename T>
@@ -91,7 +98,10 @@ struct TransposeImpl : OperationImplementation {
 										 int &par_index,
 										 std::list<cl_mem> &to_free) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
 };
 struct ConcatImpl : OperationImplementation {
 		template <typename T>
@@ -117,6 +127,17 @@ struct ConcatImpl : OperationImplementation {
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override {
+			// all combinations of parameter and return type possible
+			return {{F_INT32, F_INT32, F_INT32},
+					{F_FLOAT32, F_FLOAT32, F_FLOAT32},
+					{F_INT64, F_INT64, F_INT64},
+					{F_FLOAT64, F_FLOAT64, F_FLOAT64}};
+		}
 };
 #endif

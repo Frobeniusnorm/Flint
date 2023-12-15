@@ -13,8 +13,9 @@
  * limitations under the License. */
 #ifndef FLINT_POOLING_HPP
 #define FLINT_POOLING_HPP
-#include "implementation.hpp"
 #include "../backend_ocl/utils.hpp"
+#include "flint.h"
+#include "implementation.hpp"
 struct PoolingSumImpl : OperationImplementation {
 		template <typename T>
 		static void unary_expression(T *__restrict__ result,
@@ -35,15 +36,22 @@ struct PoolingSumImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
-		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-									   cl_kernel kernel, cl_context context,
-									   int &par_index,
-									   std::list<cl_mem> &to_free) override {
+		void
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override {
 
 			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			FSlidingWindow *s = (FSlidingWindow *)gn->operation.additional_data;
+			free(s->step);
+			free(s->size);
+			delete s;
+		}
 };
 struct PoolingMaxImpl : OperationImplementation {
 		template <typename T>
@@ -65,14 +73,21 @@ struct PoolingMaxImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
-		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-									   cl_kernel kernel, cl_context context,
-									   int &par_index,
-									   std::list<cl_mem> &to_free) override {
+		void
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override {
 			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			FSlidingWindow *s = (FSlidingWindow *)gn->operation.additional_data;
+			free(s->step);
+			free(s->size);
+			delete s;
+		}
 };
 struct GradientPoolingMax : OperationImplementation {
 		template <typename T>
@@ -95,14 +110,24 @@ struct GradientPoolingMax : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
-		void push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-									   cl_kernel kernel, cl_context context,
-									   int &par_index,
-									   std::list<cl_mem> &to_free) override {
+		void
+		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
+										 cl_kernel kernel, cl_context context,
+										 int &par_index,
+										 std::list<cl_mem> &to_free) override {
 			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override {
+			return {
+				{F_FLOAT64, F_INT32, F_FLOAT64, F_INT32},
+				{F_FLOAT64, F_INT64, F_FLOAT64, F_INT64},
+				{F_FLOAT64, F_FLOAT32, F_FLOAT64, F_FLOAT32},
+				{F_FLOAT64, F_FLOAT64, F_FLOAT64, F_FLOAT64}
+			};
+		}
 };
 
 #endif

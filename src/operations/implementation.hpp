@@ -17,6 +17,7 @@
 #include "../../flint.h"
 #include "../backend_cpu/cpu_common.hpp"
 #include "../backend_ocl/twine.hpp"
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -320,7 +321,7 @@ struct OperationImplementation {
 										   size_t *shape, int dimensions);
 		static void
 		configure_gradient_information(FGraphNode *g,
-									 std::vector<FGraphNode *> pred);
+									   std::vector<FGraphNode *> pred);
 		/** Disables automatic code generation for the parents */
 		static const int OCL_LAZY_DONT_PUSH_PREDS = 1;
 		/** Enables automatic index insertion for inverse broadcasting if the
@@ -388,6 +389,20 @@ struct OperationImplementation {
 			FGraphNode *node, FGraphNode *pred, cl_kernel kernel,
 			cl_context context, int &par_index, std::list<cl_mem> &to_free) {}
 		/**
+		 * Calculates all possible combinations of return types and parameter
+		 * values. Each possible combination is denoted by a vector in which the
+		 * first type represents the return type, the second the first parameter
+		 * type, the third the second parameter type and so on.
+		 * It is used to determine which kernels have to be generated for a
+		 * operation (i.e. which actually could occur). The default
+		 * implementation takes all possible parameter combinations and the
+		 * highest of them as return type (semantic of most binary operations).
+		 * The given node should be treated as an example and except for the
+		 * number of parameters no concrete values should be taken.
+		 */
+		virtual std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node);
+		/**
 		 * Calculates the operation score for a node, i.e. assigns a score
 		 * to each node depending on its parallelizability, very high scores are
 		 * calculated on gpu, middle high scores parallel on cpus, lower scores
@@ -396,5 +411,11 @@ struct OperationImplementation {
 		 * returns 2, the final score is 10000)
 		 */
 		virtual int operation_score(FGraphNode *node) { return 2; }
+		/**
+		 * Is called during the process of freeing a node.
+		 * This function should free all memory allocated in the
+		 * `additional_data´ field of the Operation.
+		 */
+		virtual void free_additional_data(FGraphNode *node) {}
 };
 #endif
