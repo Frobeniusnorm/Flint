@@ -14,6 +14,7 @@
 #ifndef FLINT_COMPARISON_HPP
 #define FLINT_COMPARISON_HPP
 #include "implementation.hpp"
+#include "src/utils.hpp"
 
 struct MinImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -76,10 +77,11 @@ struct LessImpl : OperationImplementation {
 								   FGraphNode *prev_adj) override;
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_INT32, F_INT32},
-					{F_INT32, F_INT64},
-					{F_INT32, F_FLOAT32},
-					{F_INT32, F_FLOAT64}};
+			using namespace std;
+			vector<vector<FType>> all_comb = allTypePermutations(2);
+			for (vector<FType>& comb : all_comb)
+				comb.insert(comb.begin(), F_INT32);
+			return all_comb;
 		}
 };
 struct GreaterImpl : OperationImplementation {
@@ -103,10 +105,11 @@ struct GreaterImpl : OperationImplementation {
 								   FGraphNode *prev_adj) override;
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_INT32, F_INT32},
-					{F_INT32, F_INT64},
-					{F_INT32, F_FLOAT32},
-					{F_INT32, F_FLOAT64}};
+			using namespace std;
+			vector<vector<FType>> all_comb = allTypePermutations(2);
+			for (vector<FType>& comb : all_comb)
+				comb.insert(comb.begin(), F_INT32);
+			return all_comb;
 		}
 };
 struct EqualImpl : OperationImplementation {
@@ -130,10 +133,11 @@ struct EqualImpl : OperationImplementation {
 								   FGraphNode *prev_adj) override;
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_INT32, F_INT32},
-					{F_INT32, F_INT64},
-					{F_INT32, F_FLOAT32},
-					{F_INT32, F_FLOAT64}};
+			using namespace std;
+			vector<vector<FType>> all_comb = allTypePermutations(2);
+			for (vector<FType>& comb : all_comb)
+				comb.insert(comb.begin(), F_INT32);
+			return all_comb;
 		}
 };
 
