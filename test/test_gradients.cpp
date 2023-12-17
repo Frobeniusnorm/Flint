@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
 	if (!doCPU && !doGPU) {
 		doCPU = doGPU = true;
 	}
-	fSetLoggingLevel(F_DEBUG);
+	fSetLoggingLevel(F_INFO);
 	doctest::Context context;
 	context.applyCommandLine(argc, argv);
 	int res;

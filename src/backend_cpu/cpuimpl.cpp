@@ -14,10 +14,11 @@
 
   This file includes the implementation of the CPU backend.
 */
-#include "../flint.h"
-#include "backend_cpu/execution.hpp"
-#include "errors.hpp"
-#include "utils.hpp"
+#include "../../flint.h"
+// #include "execution.hpp"
+#include "../errors.hpp"
+#include "../operations/implementation.hpp"
+#include "../utils.hpp"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -78,33 +79,23 @@ static void threadRoutine() {
 			thread_queue.pop_front();
 		if (!node)
 			break;
-		switch (node->operation.data_type) {
-		case F_FLOAT32:
-			executeNode(node, pred_data, (float *)result, from, to);
-			break;
-		case F_FLOAT64:
-			executeNode(node, pred_data, (double *)result, from, to);
-			break;
-		case F_INT32:
-			executeNode(node, pred_data, (int *)result, from, to);
-			break;
-		case F_INT64:
-			executeNode(node, pred_data, (long *)result, from, to);
-			break;
-		}
+		OperationImplementation::implementations[node->operation.op_type]
+			->execute_cpu(node, pred_data, result, from, to);
 		sem->release();
 	}
 }
-#define PARALLEL_EXECUTION_SIZE 4048 // for debugging
+#define PARALLEL_EXECUTION_SIZE 256 // for debugging
 template <typename T>
 static void chooseExecutionMethod(FGraphNode *node,
 								  std::vector<CPUResultData> pred_data,
 								  T *result, size_t size) {
-	auto start = std::chrono::high_resolution_clock::now();
-	size_t score = size * operationScore(node);
+	const auto start = std::chrono::high_resolution_clock::now();
+	const size_t score =
+		size * OperationImplementation::implementations[node->operation.op_type]
+				   ->operation_score(node);
 	if (score >= PARALLEL_EXECUTION_SIZE && size >= threads.size()) {
-		size_t exeUnits = std::min(size, threads.size());
-		size_t workSize = size / exeUnits;
+		const size_t exeUnits = std::min(size, threads.size());
+		const size_t workSize = size / exeUnits;
 		std::counting_semaphore<MAX_PARALLELITY> *sem =
 			new std::counting_semaphore<MAX_PARALLELITY>(0);
 		for (size_t i = 0; i < exeUnits; i++) {
@@ -116,7 +107,8 @@ static void chooseExecutionMethod(FGraphNode *node,
 			sem->acquire();
 		delete sem;
 	} else {
-		executeNode(node, pred_data, result, 0, size);
+		OperationImplementation::implementations[node->operation.op_type]
+			->execute_cpu(node, pred_data, result, 0, size);
 	}
 	std::chrono::duration<double, std::milli> elapsed =
 		std::chrono::high_resolution_clock::now() - start;

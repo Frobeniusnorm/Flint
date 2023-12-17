@@ -1,20 +1,21 @@
-/* Copyright 2022 David Schwarzbeck
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-	   http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License. */
+/* Copyright 2023 David Schwarzbeck
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. */
 
 #include "../flint.h"
 #include "backend_ocl/comp.hpp"
 #include "errors.hpp"
+#include "src/operations/implementation.hpp"
 #include "utils.hpp"
 #include <cmath>
 #include <cstring>
@@ -149,6 +150,8 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
 	if (eager_execution)
 		return execute_eagerly(node);
 	if (use_gpu && use_cpu) {
+		// TODO the number of elements has to be large enough for accelerator,
+		// somehow query here
 		unsigned int gpu_score = computeScore(node, true);
 		return gpu_score >= 2048 ? fExecuteGraph_gpu(node)
 								 : fExecuteGraph_cpu(node);
@@ -313,7 +316,8 @@ void fFreeGraph(FGraphNode *graph) {
 				delete st;
 			} break;
 			default:
-				freeAdditionalData(gn);
+				OperationImplementation::implementations[gn->operation.op_type]
+					->free_additional_data(gn);
 			}
 			gn->operation.additional_data = nullptr;
 		}
@@ -426,7 +430,8 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
 		node->result_data) {
 		FResultData *rd = node->result_data;
 		// we can modify this node to a STORE operation
-		freeAdditionalData(node);
+		OperationImplementation::implementations[node->operation.op_type]
+			->free_additional_data(node);
 		node->operation.op_type = FSTORE;
 		if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU)
 			// we can do this only when all operations have been finished
@@ -1389,7 +1394,8 @@ FGraphNode *fexpand(FGraphNode *a, const unsigned int ax,
 	unsigned int n = a->operation.dimensions;
 	std::vector<size_t> new_shape(n + 1);
 	if (ax > 0)
-		std::memcpy(new_shape.data(), a->operation.shape, sizeof(size_t) * std::min(n, ax));
+		std::memcpy(new_shape.data(), a->operation.shape,
+					sizeof(size_t) * std::min(n, ax));
 	new_shape[ax] = 1;
 	if (ax < n)
 		std::memcpy(new_shape.data() + ax + 1, a->operation.shape + ax,

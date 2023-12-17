@@ -1,25 +1,23 @@
-/* Copyright 2022 David Schwarzbeck
+/* Copyright 2023 David Schwarzbeck
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. */
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-	   http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-  This file includes the implementation of the GPU backend.
-*/
-
-#include "../flint.h"
-#include "backend_ocl/codegen.hpp"
-#include "backend_ocl/comp.hpp"
-#include "backend_ocl/utils.hpp"
-#include "src/errors.hpp"
+#include "../../flint.h"
+#include "../errors.hpp"
+#include "../utils.hpp"
+#include "codegen.hpp"
+#include "comp.hpp"
+#include "src/operations/implementation.hpp"
 #include "utils.hpp"
 #include <CL/cl.h>
 #include <iostream>
@@ -36,10 +34,11 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+using namespace std;
 static const char *clCompilerOpts = "-cl-no-signed-zeros";
 static void openclCallback(const char *errinfo, const void *privateinfo,
 						   size_t cb, void *user_data) {
-	flogging(F_WARNING, "{OpenCL} " + std::string(errinfo));
+	flogging(F_WARNING, "{OpenCL} " + string(errinfo));
 }
 
 static bool initialized = false;
@@ -63,7 +62,7 @@ FErrorType flintInit_gpu() {
 				 "sure, you have setup your OpenCL driver right!");
 		return OCL_ERROR;
 	}
-	flogging(F_VERBOSE, "Found " + std::to_string(num_plat) + " platforms!");
+	flogging(F_VERBOSE, "Found " + to_string(num_plat) + " platforms!");
 	device = NULL;
 	// find suitable device
 	char dev_name[128];
@@ -74,7 +73,7 @@ FErrorType flintInit_gpu() {
 	size_t dev_vend_size;
 	cl_device_type dev_type;
 	size_t dev_type_size;
-	std::string dev_type_string;
+	string dev_type_string;
 	cl_uint dev_no_units;
 	cl_uint highest_no_units = 0;
 	for (int i = 0; i < num_plat; i++) {
@@ -125,16 +124,15 @@ FErrorType flintInit_gpu() {
 			"you have setup your OpenCL driver right!");
 		return OCL_ERROR;
 	}
-	std::string info = "Using " + dev_type_string + " '" +
-					   std::string(dev_vend, dev_vend_size - 1) + "', '" +
-					   std::string(dev_name, dev_name_size - 1) +
-					   "' with OpenCL version " +
-					   std::string(dev_vers, dev_vers_size);
+	string info = "Using " + dev_type_string + " '" +
+				  string(dev_vend, dev_vend_size - 1) + "', '" +
+				  string(dev_name, dev_name_size - 1) +
+				  "' with OpenCL version " + string(dev_vers, dev_vers_size);
 	flogging(F_INFO, info);
 	int status = 0;
 	context = clCreateContext(NULL, 1, &device, openclCallback, NULL, &status);
 	if (status != CL_SUCCESS) {
-		std::string err = "Could not create OpenCL context: ";
+		string err = "Could not create OpenCL context: ";
 		setErrorType(OCL_ERROR);
 		switch (status) {
 		case CL_INVALID_VALUE:
@@ -162,7 +160,7 @@ FErrorType flintInit_gpu() {
 		clCreateCommandQueueWithProperties(context, device, NULL, &status);
 	if (status != CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "clCreateCommandQueue " + std::to_string(status));
+		flogging(F_ERROR, "clCreateCommandQueue " + to_string(status));
 		return OCL_ERROR;
 	}
 	initialized = true;
@@ -206,7 +204,7 @@ cl_mem OCLCompilerThread::copy_memory(const cl_mem other, size_t num_bytes,
 	if (err_code != CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Unknown Error while creating gpu memory! " +
-							  std::to_string(err_code));
+							  to_string(err_code));
 		return nullptr;
 	}
 	clEnqueueCopyBuffer(clqueue, other, mem, 0, 0, num_bytes, 0, nullptr,
@@ -218,197 +216,41 @@ cl_mem OCLCompilerThread::copy_memory(const cl_mem other, size_t num_bytes,
 cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
 	cl_int err_code;
 	cl_kernel kernel = nullptr;
-	auto start = std::chrono::high_resolution_clock::now();
+	auto start = chrono::high_resolution_clock::now();
 	// generate code for this operation for all datatypes (one kernel for each
 	// parameter / return type combination) will be used to store all kernels
 	// for this operation
-	std::string code;
+	Twine code;
 	// the kernel for `node`
-	std::string our_kernel;
+	string our_kernel;
 	// all generated kernels (for caching)
-	std::vector<std::pair<int, std::string>> all_kernels;
+	vector<pair<int, string>> all_kernels;
 	// match operation and generate code for all combinations
-	switch (node->operation.op_type) {
-	case FEVEN:
-	case FCONVERSION: { // depends on operation
-		std::vector<FType> par_types(node->num_predecessor);
-		for (int i = 0; i < node->num_predecessor; i++)
-			par_types[i] = node->predecessors[i]->operation.data_type;
-		code =
-			generateEagerCode(node->operation.op_type,
-							  node->operation.data_type, par_types, our_kernel);
-		all_kernels.push_back({hash, our_kernel});
-	} break;
-
-	case FGEN_ARANGE:
-	case FGEN_RANDOM: {
-		code = generateEagerCode(node->operation.op_type,
-								 node->operation.data_type, {}, our_kernel);
-		all_kernels.push_back({hash, our_kernel});
-	} break;
-	case FGEN_CONSTANT: {
-		for (FType ret_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
-			std::string kernel_name;
-			code += generateEagerCode(node->operation.op_type, ret_type, {},
-									  kernel_name);
-			all_kernels.push_back({OCLCompilerThread::generateKernelHash(
-									   node->operation.op_type, ret_type, {}),
-								   kernel_name});
-			if (ret_type == node->operation.data_type)
-				our_kernel = kernel_name;
-		}
-	} break;
-	case FSET_INDEX: {
-		for (FType a_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
-			for (FType i_type : {F_INT32, F_INT64}) {
-				std::string kernel_name;
-				code +=
-					generateEagerCode(node->operation.op_type, a_type,
-									  {a_type, a_type, i_type}, kernel_name);
-				all_kernels.push_back({OCLCompilerThread::generateKernelHash(
-										   node->operation.op_type, a_type,
-										   {a_type, a_type, i_type}),
-									   kernel_name});
-				if (a_type == node->operation.data_type)
-					our_kernel = kernel_name;
-			}
-		}
-	} break;
-	case FINDEX: {
-		for (FType a_type : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
-			for (FType i_type : {F_INT32, F_INT64}) {
-				std::string kernel_name;
-				code += generateEagerCode(node->operation.op_type, a_type,
-										  {a_type, i_type}, kernel_name);
-				all_kernels.push_back(
-					{OCLCompilerThread::generateKernelHash(
-						 node->operation.op_type, a_type, {a_type, i_type}),
-					 kernel_name});
-				if (a_type == node->operation.data_type)
-					our_kernel = kernel_name;
-			}
-		}
-	} break;
-	case FSIGN:
-	case FEQUAL:
-	case FLESS:
-	case FGREATER: { // result is always FINT32
-		std::vector<std::vector<FType>> par_poss =
-			allTypePermutations(node->num_predecessor);
-		for (std::vector<FType> &params : par_poss) {
-			std::string kernel_name;
-			code += generateEagerCode(node->operation.op_type, F_INT32, params,
-									  kernel_name);
-			bool correct_one = true;
-			for (int i = 0; i < node->num_predecessor; i++)
-				if (params[i] != node->predecessors[i]->operation.data_type) {
-					correct_one = false;
-					break;
-				}
-			if (correct_one)
-				our_kernel = kernel_name;
-			all_kernels.push_back(
-				{OCLCompilerThread::generateKernelHash(node->operation.op_type,
-													   F_INT32, params),
-				 kernel_name});
-		}
-	} break;
-	case FSQRT:
-	case FEXP:
-	case FLOG:
-	case FLOG2:
-	case FLOG10:
-	case FSIN:
-	case FCOS:
-	case FTAN:
-	case FASIN:
-	case FACOS:
-	case FATAN: {
-		for (FType param : {F_FLOAT32, F_FLOAT64}) {
-			std::string kernel_name;
-			code += generateEagerCode(node->operation.op_type, param, {param},
-									  kernel_name);
-			bool correct_one = true;
-			for (int i = 0; i < node->num_predecessor; i++)
-				if (param != node->predecessors[i]->operation.data_type) {
-					correct_one = false;
-					break;
-				}
-			if (correct_one)
-				our_kernel = kernel_name;
-			all_kernels.push_back({OCLCompilerThread::generateKernelHash(
-									   node->operation.op_type, param, {param}),
-								   kernel_name});
-		}
-		break;
-	case FGRADIENT_POOLING_MAX: {
-		std::string kernel_name;
-		for (FType param : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
-			code += generateEagerCode(node->operation.op_type, F_FLOAT64,
-										{param, F_FLOAT64, param}, kernel_name);
-			if (param == node->predecessors[0]->operation.data_type)
-				our_kernel = kernel_name;
-			all_kernels.push_back(
-				{OCLCompilerThread::generateKernelHash(
-					 node->operation.op_type, F_FLOAT64, {param, F_FLOAT64, param}),
-				 kernel_name});
-		}
-	} break;
+	const vector<vector<FType>> type_comb =
+		OperationImplementation::implementations[node->operation.op_type]
+			->kernel_type_combinations(node);
+	for (vector<FType> types : type_comb) {
+		const FType ret = types[0];
+		types.erase(types.begin());
+		string kernel_name;
+		code +=
+			generateEagerCode(node->operation.op_type, ret, types, kernel_name);
+		bool correct = ret == node->operation.data_type;
+		for (int i = 0; i < types.size(); i++)
+			correct &= types[i] == node->predecessors[i]->operation.data_type;
+		if (correct)
+			our_kernel = kernel_name;
+		all_kernels.push_back({OCLCompilerThread::generateKernelHash(
+								   node->operation.op_type, ret, types),
+							   kernel_name});
 	}
-	case FGRADIENT_CONVOLVE1: {
-		std::string kernel_name;
-		for (FType param : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
-			code += generateEagerCode(node->operation.op_type, F_FLOAT64,
-									  {param, F_FLOAT64}, kernel_name);
-			if (param == node->predecessors[0]->operation.data_type)
-				our_kernel = kernel_name;
-			all_kernels.push_back(
-				{OCLCompilerThread::generateKernelHash(
-					 node->operation.op_type, F_FLOAT64, {param, F_FLOAT64}),
-				 kernel_name});
-		}
-	} break;
-	case FCONCAT: {
-		std::string kernel_name;
-		for (FType param : {F_INT32, F_INT64, F_FLOAT32, F_FLOAT64}) {
-			code += generateEagerCode(node->operation.op_type, param,
-									  {param, param}, kernel_name);
-			if (param == node->predecessors[0]->operation.data_type)
-				our_kernel = kernel_name;
-			all_kernels.push_back(
-				{OCLCompilerThread::generateKernelHash(node->operation.op_type,
-													   param, {param, param}),
-				 kernel_name});
-		}
-	} break;
-	default: {
-		std::vector<std::vector<FType>> par_poss =
-			allTypePermutations(node->num_predecessor);
-		for (std::vector<FType> &params : par_poss) {
-			std::string kernel_name;
-			FType highest = F_INT32;
-			bool correct_one = true;
-			for (int i = 0; i < node->num_predecessor; i++) {
-				if (params[i] != node->predecessors[i]->operation.data_type)
-					correct_one = false;
-				highest = higherType(params[i], highest);
-			}
-			code += generateEagerCode(node->operation.op_type, highest, params,
-									  kernel_name);
-			if (correct_one)
-				our_kernel = kernel_name;
-			all_kernels.push_back(
-				{OCLCompilerThread::generateKernelHash(node->operation.op_type,
-													   highest, params),
-				 kernel_name});
-		}
-	} break;
-	}
-	flogging(F_DEBUG, std::string("Eager Kernel Generation for ") +
-						  fop_to_string[node->operation.op_type] + ": " + code);
+	const string final_code = (string)code;
+	flogging(F_DEBUG, string("Eager Kernel Generation for ") +
+						  fop_to_string[node->operation.op_type] + ": " +
+						  final_code);
 	// generate kernel
-	const char *code_data = code.data();
-	const size_t code_length = code.length();
+	const char *code_data = final_code.data();
+	const size_t code_length = final_code.length();
 	cl_program prog = clCreateProgramWithSource(context, 1, &code_data,
 												&code_length, &err_code);
 	if (err_code == CL_OUT_OF_RESOURCES) {
@@ -428,7 +270,7 @@ cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
 		setErrorType(OCL_ERROR);
 		flogging(
 			F_ERROR,
-			"Invalid Program was generated! Generated code: \"\n" + code +
+			"Invalid Program was generated! Generated code: \"\n" + final_code +
 				"\"\nPlease contact a developer and/or file a bug report.");
 		return nullptr;
 	} else if (err_code == CL_COMPILER_NOT_AVAILABLE) {
@@ -448,7 +290,7 @@ cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
 		flogging(
 			F_ERROR,
 			"Unknown Error during program compilation! Generated code: \"\n" +
-				code + "\nBuild Log:\n" + std::string(&build_log[0]) +
+				final_code + "\nBuild Log:\n" + string(&build_log[0]) +
 				"\"\nPlease contact a developer and/or file a bug report.");
 		return nullptr;
 	}
@@ -460,7 +302,7 @@ cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
 			setErrorType(OCL_ERROR);
 			flogging(F_ERROR, "kernel compilation failed! Kernel name: " +
 								  kernel_name.second +
-								  ", error_code: " + std::to_string(err_code));
+								  ", error_code: " + to_string(err_code));
 			return nullptr;
 		}
 		OCLCompilerThread::eager_cache.insert({kernel_name.first, curr});
@@ -470,18 +312,16 @@ cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
 	}
 	if (!kernel) {
 		setErrorType(OCL_ERROR);
-		flogging(
-			F_ERROR,
-			"something went horrible wrong for operation: " +
-				std::string(fop_to_string[node->operation.op_type]) +
-				" result type: " + std::to_string(node->operation.data_type));
+		flogging(F_ERROR,
+				 "something went horrible wrong for operation: " +
+					 string(fop_to_string[node->operation.op_type]) +
+					 " result type: " + to_string(node->operation.data_type));
 		return nullptr;
 	}
 	OCLCompilerThread::eager_programs.push_back(prog);
-	const std::chrono::duration<double, std::milli> elapsed =
-		std::chrono::high_resolution_clock::now() - start;
-	flogging(F_DEBUG,
-			 "Compilation took " + std::to_string(elapsed.count()) + "ms");
+	const chrono::duration<double, milli> elapsed =
+		chrono::high_resolution_clock::now() - start;
+	flogging(F_DEBUG, "Compilation took " + to_string(elapsed.count()) + "ms");
 	return kernel;
 }
 // pushes additional per-parameter parameters to a opencl function
@@ -538,7 +378,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		calculateDivisorForInverseBroadcasting(
 			node->predecessors[0], inv_broad[0], node->predecessors[1],
 			inv_broad[1]);
-	std::vector<FType> params_types(node->num_predecessor);
+	vector<FType> params_types(node->num_predecessor);
 	for (int i = 0; i < node->num_predecessor; i++)
 		params_types[i] = node->predecessors[i]->operation.data_type;
 	// because the operation type should be at the same position
@@ -547,7 +387,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 	const auto prog = OCLCompilerThread::eager_cache.find(hash);
 	cl_kernel kernel = nullptr;
 	cl_int err_code;
-	std::list<cl_mem> to_free;
+	list<cl_mem> to_free;
 	// check if the kernel already exists or if it has to be generated
 	if (prog == OCLCompilerThread::eager_cache.end()) {
 		kernel = OCLCompilerThread::eagerCompile(node, hash);
@@ -564,7 +404,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 	node->result_data->num_entries = total_size_node;
 	node->result_data->data = nullptr;
 	// load parameters
-	std::vector<cl_event> write_events;
+	vector<cl_event> write_events;
 	int par_index = 0;
 	if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&res_mem) !=
 		CL_SUCCESS) {
@@ -615,23 +455,21 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 			if (!data) {
 				flogging(F_WARNING,
 						 "No gpu memory is found, but no cpu either! " +
-							 std::to_string((long)pred->result_data->data) +
-							 ", " +
-							 std::to_string((long)pred->result_data->mem_id) +
-							 ", " + fop_to_string[op.op_type]);
+							 to_string((long)pred->result_data->data) + ", " +
+							 to_string((long)pred->result_data->mem_id) + ", " +
+							 fop_to_string[op.op_type]);
 			}
 			err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_TRUE, 0,
 											total_size * type_size, data, 0,
 											nullptr, nullptr);
 			if (err_code != CL_SUCCESS) {
-				std::string msg =
-					"Unknown Error while loading data to GPU! Error: ";
+				string msg = "Unknown Error while loading data to GPU! Error: ";
 				setErrorType(OCL_ERROR);
 				if (err_code == CL_OUT_OF_HOST_MEMORY) {
 					msg = "Not enough memory to load data to GPU! ";
 					setErrorType(OUT_OF_MEMORY);
 				}
-				flogging(F_ERROR, msg + std::to_string(err_code));
+				flogging(F_ERROR, msg + to_string(err_code));
 				return nullptr;
 			}
 		}
@@ -649,10 +487,14 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 			return nullptr;
 		}
 		// push per-parameter values
-		pushParameterVals(node, pred, kernel, context, par_index, to_free);
+		OperationImplementation::implementations[node->operation.op_type]
+			->push_parameter_kernel_parameters(node, pred, kernel, context,
+											   par_index, to_free);
 	}
 	// parameters for functions that dont set them per parent
-	pushAdditonalVals(node, kernel, context, par_index, to_free);
+	OperationImplementation::implementations[node->operation.op_type]
+		->push_additional_kernel_parameters(node, kernel, context, par_index,
+											to_free);
 	// broadcasting values
 	if (node->num_predecessor == 2) {
 		for (int i = 0; i < node->num_predecessor; i++) {
@@ -672,7 +514,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		clReleaseEvent(ev);
 	if (err_code != CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
-		std::string msg;
+		string msg;
 		switch (err_code) {
 		case CL_OUT_OF_HOST_MEMORY:
 			setErrorType(OUT_OF_MEMORY);
@@ -684,7 +526,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 			break;
 		default:
 			msg = "Unknown Error during kernel execution! code: " +
-				  std::to_string(err_code);
+				  to_string(err_code);
 			break;
 		}
 		flogging(F_ERROR, msg);
@@ -694,7 +536,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		clReleaseMemObject(tfn);
 	return node;
 }
-cl_kernel OCLCompilerThread::lazyCompile(FGraphNode *node, std::string code) {
+cl_kernel OCLCompilerThread::lazyCompile(FGraphNode *node, string code) {
 	using namespace std;
 	cl_kernel kernel;
 	cl_int err_code;
@@ -756,7 +598,7 @@ cl_kernel OCLCompilerThread::lazyCompile(FGraphNode *node, std::string code) {
 		if (err_code != CL_SUCCESS) {
 			setErrorType(OCL_ERROR);
 			flogging(F_ERROR, "kernel compilation failed (lazy)! " +
-								  std::to_string(err_code));
+								  to_string(err_code));
 			return nullptr;
 		}
 	}
@@ -799,9 +641,9 @@ FResultData *fSyncMemory(FGraphNode *node) {
 											  res->data, 0, nullptr, nullptr);
 		if (err_code != CL_SUCCESS) {
 			setErrorType(OCL_ERROR);
-			std::string msg =
+			string msg =
 				"Unknown Error while reading the result! Error Code: " +
-				std::to_string(err_code);
+				to_string(err_code);
 			if (err_code == CL_OUT_OF_HOST_MEMORY) {
 				setErrorType(OUT_OF_MEMORY);
 				msg = "Not enough memory to read result!";
@@ -827,7 +669,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		if (node->result_data)
 			return node;
 	}
-	auto start = std::chrono::high_resolution_clock::now();
+	auto start = chrono::high_resolution_clock::now();
 	FResultData *resultData = new FResultData(); // TODO mem leak
 	const FOperation node_op = node->operation;
 	size_t total_size_node = 1;
@@ -855,7 +697,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	auto cache_val = OCLCompilerThread::kernel_cache.find(code);
 	cl_kernel kernel = nullptr;
 	cl_int err_code;
-	chrono::duration<double, std::milli> elapsed =
+	chrono::duration<double, milli> elapsed =
 		chrono::high_resolution_clock::now() - start;
 	if (cache_val == OCLCompilerThread::kernel_cache.end()) {
 		flogging(F_DEBUG, "code generation finished (in " +
@@ -865,9 +707,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		flogging(F_DEBUG, "code from cache");
 		kernel = cache_val->second.second;
 	}
-	chrono::duration<double, std::milli> compilation_time =
+	chrono::duration<double, milli> compilation_time =
 		chrono::high_resolution_clock::now() - start;
-	start = std::chrono::high_resolution_clock::now();
+	start = chrono::high_resolution_clock::now();
 	// result buffer
 	size_t type_size_node = typeSize(node_op.data_type);
 	cl_mem result_mem =
@@ -880,7 +722,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		return nullptr;
 	}
 	int index = 1;
-	std::vector<cl_event> writeEvents;
+	vector<cl_event> writeEvents;
 	// upload or link parameters
 	for (auto &[gn, name] : parameters) {
 		const FOperation op = gn->operation;
@@ -976,8 +818,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			setErrorType(OUT_OF_MEMORY);
 			break;
 		default:
-			msg = "Unknown Error during kernel execution! " +
-				  std::to_string(err_code);
+			msg =
+				"Unknown Error during kernel execution! " + to_string(err_code);
 			break;
 		}
 		flogging(F_ERROR, msg);
