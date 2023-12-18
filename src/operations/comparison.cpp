@@ -263,3 +263,19 @@ void DropoutImpl::execute_cpu(const FGraphNode *node,
 							  size_t size) {
 	UNARY_EXECUTE_MONOTON_IMPL
 }
+int DropoutImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+								   OCLLazyCodegenState &compiler_state) {
+
+	const string type = typeString(node->operation.data_type);
+	const double seed = ((double *)node->operation.additional_data)[0];
+	const double prob = ((double *)node->operation.additional_data)[0];
+	compiler_state.code.prepend(
+		type + " " + name + " = 0;\n{\n " + name + " = sin(index + " +
+		std::to_string(seed) + ") * 43758.5453123;\n " + name + " = min(" +
+		name + " - floor(" + name + "), 0.99999);\n" + name + " = " + name +
+		" > " + to_string(prob) + "?v" +
+		to_string(compiler_state.variable_index + 1) +
+		" : 0;\n"
+		"}\n");
+	return 0;
+}
