@@ -13,6 +13,7 @@
  * limitations under the License. */
 #include "comparison.hpp"
 #include "../utils.hpp"
+#include <random>
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
@@ -148,12 +149,10 @@ std::string LessImpl::generate_ocl_eager(FType res_type,
 void LessImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
-						   size_t size) {
-	DISPATCH_BINARY_OPERATION(int)
-}
+						   size_t size){DISPATCH_BINARY_OPERATION(int)}
 
 FGraphNode *GreaterImpl::local_gradient(FGraphNode *y, int dx_i,
-									 FGraphNode *prev_adj) {
+										FGraphNode *prev_adj) {
 	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
 						   y->operation.dimensions);
 }
@@ -192,12 +191,10 @@ GreaterImpl::generate_ocl_eager(FType res_type,
 void GreaterImpl::execute_cpu(const FGraphNode *node,
 							  std::vector<CPUResultData> predecessor_data,
 							  void *__restrict__ result, size_t from,
-							  size_t size) {
-	DISPATCH_BINARY_OPERATION(int)
-}
+							  size_t size){DISPATCH_BINARY_OPERATION(int)}
 
 FGraphNode *EqualImpl::local_gradient(FGraphNode *y, int dx_i,
-									 FGraphNode *prev_adj) {
+									  FGraphNode *prev_adj) {
 	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
 						   y->operation.dimensions);
 }
@@ -246,4 +243,23 @@ void EqualImpl::execute_cpu(const FGraphNode *node,
 							void *__restrict__ result, size_t from,
 							size_t size) {
 	DISPATCH_BINARY_OPERATION(int)
+}
+template <typename T>
+void DropoutImpl::unary_expression(T *__restrict__ result,
+								   const T *__restrict__ data1, size_t from,
+								   size_t size, const FGraphNode *curr) {
+
+	const double seed = ((double *)curr->operation.additional_data)[0];
+	const double prob = ((double *)curr->operation.additional_data)[0];
+	std::minstd_rand0 g1(seed * 1000 + from);
+	for (size_t i = from; i < from + size; i++) {
+		((double *)result)[i] =
+			((g1() % 100000000) / 100000000.0) > prob ? data1[i] : 0;
+	}
+}
+void DropoutImpl::execute_cpu(const FGraphNode *node,
+							  std::vector<CPUResultData> predecessor_data,
+							  void *__restrict__ result, size_t from,
+							  size_t size) {
+	UNARY_EXECUTE_MONOTON_IMPL
 }

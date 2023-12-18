@@ -78,7 +78,8 @@ const char *fop_to_string[] = {"FSTORE",
 							   "FUNSLIDE_WINDOW",
 							   "FPOOLING_MAX",
 							   "FPOOLING_SUM",
-							   "FGRADIENT_POOLING_MAX"};
+							   "FGRADIENT_POOLING_MAX",
+							   "FDROPOUT"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
@@ -1489,6 +1490,36 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
 	node->result_data = nullptr;
 	node->predecessors = nullptr;
 	node->num_predecessor = 0;
+	node->gradient_data = nullptr;
+	node->reference_counter = 0;
+	return eager_execution ? execute_eagerly(node) : node;
+}
+FGraphNode *fdropout(FGraphNode *g, const double p) {
+	FGraphNode *node = new FGraphNode();
+	FOperation op;
+	op.broadcasting_mode = 0;
+	op.op_type = FDROPOUT;
+	op.dimensions = g->operation.dimensions;
+	op.shape = safe_mal<size_t>(g->operation.dimensions);
+	if (!op.shape)
+		return nullptr;
+	memcpy(op.shape, g->operation.shape, g->operation.dimensions * sizeof(size_t));
+	op.data_type = g->operation.data_type;
+	// Store current time in additional data
+	std::chrono::duration<double, std::nano> tm =
+		std::chrono::high_resolution_clock::now().time_since_epoch();
+	double t = ((unsigned long)tm.count() % 1000000) / 100.0;
+	op.additional_data = safe_mal<double>(2);
+	if (!op.additional_data)
+		return nullptr;
+	((double *)op.additional_data)[0] = t;
+	((double *)op.additional_data)[1] = p;
+	node->operation = op;
+	node->result_data = nullptr;
+	node->num_predecessor = 1;
+	node->predecessors = safe_mal<FGraphNode*>(1);
+	node->predecessors[0] = g;
+	g->reference_counter++;
 	node->gradient_data = nullptr;
 	node->reference_counter = 0;
 	return eager_execution ? execute_eagerly(node) : node;
