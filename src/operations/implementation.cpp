@@ -30,9 +30,6 @@ std::ostream &operator<<(std::ostream &out, const Twine &twine) {
 	out << "{";
 	for (auto i = twine.strings.begin(); i != twine.strings.end(); i++) {
 		const std::string s = *i;
-		if (s[0] < ' ' || s[0] > '~') {
-			out << "<broken string>" << std::endl;
-		}
 		out << "\"" << s << "\"";
 		if (i != --twine.strings.end())
 			out << ", ";
@@ -146,7 +143,8 @@ std::vector<OperationImplementation *>
 												new UnslideWindowImpl(),
 												new PoolingMaxImpl(),
 												new PoolingSumImpl(),
-												new GradientPoolingMax()};
+												new GradientPoolingMax(),
+												new DropoutImpl()};
 
 std::string OperationImplementation::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {

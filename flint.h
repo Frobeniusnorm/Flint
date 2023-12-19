@@ -256,7 +256,8 @@ enum FOperationType {
 	FUNSLIDE_WINDOW,
 	FPOOLING_MAX,
 	FPOOLING_SUM,
-	FGRADIENT_POOLING_MAX, // only for internal use!
+	FGRADIENT_POOLING_MAX, // only for internal use
+	FDROPOUT,
 	FNUM_OPERATION_TYPES
 };
 /**
@@ -1067,7 +1068,6 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
  */
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
 /**
- * TODO not yet implemented
  * Slides a window along the Tensor and reduces all elements inside that window
  * to their sum (just that one remains in the result tensor), and
  * then slides the window in each dimension by `step_size` forward (like
@@ -1084,7 +1084,6 @@ FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
 FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
 						 const unsigned int *step_size);
 /**
- * TODO not yet implemented
  * Slides a window along the Tensor and reduces all elements inside that window
  * to their maximum element (just that one remains in the result tensor), and
  * then slides the window in each dimension by `step_size` forward (like
@@ -1100,6 +1099,11 @@ FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
  */
 FGraphNode *fpooling_max(FGraphNode *a, const size_t *window_size,
 						 const unsigned int *step_size);
+/**
+ * Sets random selected elements in `g` to 0 by the chance `p` (i.e. if `p` is
+ * 0.4. each element has a 40% probability of beeing set to 0).
+ */
+FGraphNode *fdropout(FGraphNode *g, const double p);
 #ifdef __cplusplus
 }
 

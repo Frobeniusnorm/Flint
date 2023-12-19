@@ -13,17 +13,16 @@
  * limitations under the License. */
 #include "gen_data.hpp"
 #include "../utils.hpp"
-
+#include <random>
 using namespace std;
-
 void GenRandomImpl::execute_cpu(const FGraphNode *node,
 								std::vector<CPUResultData> predecessor_data,
 								void *__restrict__ result, size_t from,
 								size_t size) {
 	double seed = ((double *)node->operation.additional_data)[0];
+  std::minstd_rand0 g1 (seed * 1000 + from);
 	for (size_t i = from; i < from + size; i++) {
-		double v = sin(i + seed) * 43758.5453123;
-		((double *)result)[i] = std::min(v - floor(v), 0.99999);
+		((double *)result)[i] = (g1() % 100000000) / 100000000.0;
 	}
 }
 int GenRandomImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,

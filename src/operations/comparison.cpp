@@ -13,6 +13,9 @@
  * limitations under the License. */
 #include "comparison.hpp"
 #include "../utils.hpp"
+#include "flint.h"
+#include <cstring>
+#include <random>
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
@@ -148,12 +151,10 @@ std::string LessImpl::generate_ocl_eager(FType res_type,
 void LessImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
-						   size_t size) {
-	DISPATCH_BINARY_OPERATION(int)
-}
+						   size_t size){DISPATCH_BINARY_OPERATION(int)}
 
 FGraphNode *GreaterImpl::local_gradient(FGraphNode *y, int dx_i,
-									 FGraphNode *prev_adj) {
+										FGraphNode *prev_adj) {
 	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
 						   y->operation.dimensions);
 }
@@ -192,12 +193,10 @@ GreaterImpl::generate_ocl_eager(FType res_type,
 void GreaterImpl::execute_cpu(const FGraphNode *node,
 							  std::vector<CPUResultData> predecessor_data,
 							  void *__restrict__ result, size_t from,
-							  size_t size) {
-	DISPATCH_BINARY_OPERATION(int)
-}
+							  size_t size){DISPATCH_BINARY_OPERATION(int)}
 
 FGraphNode *EqualImpl::local_gradient(FGraphNode *y, int dx_i,
-									 FGraphNode *prev_adj) {
+									  FGraphNode *prev_adj) {
 	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
 						   y->operation.dimensions);
 }
@@ -246,4 +245,88 @@ void EqualImpl::execute_cpu(const FGraphNode *node,
 							void *__restrict__ result, size_t from,
 							size_t size) {
 	DISPATCH_BINARY_OPERATION(int)
+}
+template <typename T>
+void DropoutImpl::unary_expression(T *__restrict__ result,
+								   const T *__restrict__ data1, size_t from,
+								   size_t size, const FGraphNode *curr) {
+
+	const double seed = ((double *)curr->operation.additional_data)[0];
+	const double prob = ((double *)curr->operation.additional_data)[1];
+	std::minstd_rand0 g1(seed * 1000 + from);
+	for (size_t i = from; i < from + size; i++) {
+		result[i] = ((g1() % 100000000) / 100000000.0) > prob ? data1[i] : 0;
+	}
+}
+void DropoutImpl::execute_cpu(const FGraphNode *node,
+							  std::vector<CPUResultData> predecessor_data,
+							  void *__restrict__ result, size_t from,
+							  size_t size) {
+	UNARY_EXECUTE_MONOTON_IMPL
+}
+int DropoutImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
+								   OCLLazyCodegenState &compiler_state) {
+
+	const string type = typeString(node->operation.data_type);
+	const double seed = ((double *)node->operation.additional_data)[0];
+	const double prob = ((double *)node->operation.additional_data)[1];
+	compiler_state.code.prepend(
+		type + " " + name + " = 0;\n{\n double _random = sin(index + " +
+		std::to_string(seed) +
+		") * 43758.5453123;\n _random = min(_random - floor(_random), "
+		"0.99999);\n" +
+		name +
+		" = "
+		"_random > " +
+		to_string(prob) + "?v" + to_string(compiler_state.variable_index + 1) +
+		" : 0;\n"
+		"}\n");
+	return 0;
+}
+std::string
+DropoutImpl::generate_ocl_eager(FType res_type,
+								std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "const double v = sin(index + time) * 43758.5453123;\n"
+		   "const double r = min(v - floor(v), 0.99999);\n"
+		   "R[index] = r > prob ? P0[index] : 0;\n";
+}
+FGraphNode *DropoutImpl::local_gradient(FGraphNode *y, int dx_i,
+										FGraphNode *prev_adj) {
+	const double *orig_data = (double *)y->operation.additional_data;
+	const bool was_eager = fIsEagerExecution();
+	if (was_eager)
+		fDisableEagerExecution();
+	FGraphNode *grad = fdropout(prev_adj, orig_data[1]);
+	((double *)grad->operation.additional_data)[0] = orig_data[0];
+	if (was_eager) {
+		fEnableEagerExecution();
+		fExecuteGraph(grad);
+	}
+	return grad;
+}
+std::string
+DropoutImpl::generate_ocl_parameters_eager(FType res_type,
+										   std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0, const long num_entries0, const double "
+		   "time, const double prob";
+}
+void DropoutImpl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	const double seed = ((double *)node->operation.additional_data)[0];
+	const double prob = ((double *)node->operation.additional_data)[1];
+	if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&seed) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&prob) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
 }
