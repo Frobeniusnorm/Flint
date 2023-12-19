@@ -85,10 +85,9 @@ static void threadRoutine() {
 	}
 }
 #define PARALLEL_EXECUTION_SIZE 256 // for debugging
-template <typename T>
 static void chooseExecutionMethod(FGraphNode *node,
 								  std::vector<CPUResultData> pred_data,
-								  T *result, size_t size) {
+								  void *result, size_t size) {
 	const auto start = std::chrono::high_resolution_clock::now();
 	const size_t score =
 		size * OperationImplementation::implementations[node->operation.op_type]
@@ -127,6 +126,7 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 		return node;
 	bool is_data_node = node->operation.op_type == FSTORE;
 	std::vector<CPUResultData> pred_data(node->num_predecessor);
+	std::cout << "predecessors: " << pred_data.size() << std::endl;
 	size_t total = 1;
 	for (int i = 0; i < node->operation.dimensions; i++)
 		total *= node->operation.shape[i];
@@ -160,27 +160,24 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 			data = safe_mal<int>(total);
 			if (!data)
 				return nullptr;
-			chooseExecutionMethod(node, pred_data, (int *)data, total);
 			break;
 		case F_INT64:
 			data = safe_mal<long>(total);
 			if (!data)
 				return nullptr;
-			chooseExecutionMethod(node, pred_data, (long *)data, total);
 			break;
 		case F_FLOAT32:
 			data = safe_mal<float>(total);
 			if (!data)
 				return nullptr;
-			chooseExecutionMethod(node, pred_data, (float *)data, total);
 			break;
 		case F_FLOAT64:
 			data = safe_mal<double>(total);
 			if (!data)
 				return nullptr;
-			chooseExecutionMethod(node, pred_data, (double *)data, total);
 			break;
 		}
+		chooseExecutionMethod(node, pred_data, (double *)data, total);
 	} else {
 		data = ((FStore *)node->operation.additional_data)->data;
 	}

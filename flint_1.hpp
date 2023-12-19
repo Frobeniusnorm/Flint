@@ -827,6 +827,12 @@ template <typename T> struct Tensor<T, 1> {
 						sizeof(size_t) * 2);
 			return Tensor<T, 2>(nn, new_shape);
 		}
+		/**
+		 * Randomly sets elements in the tensor by probability `p` to 0.
+		 */
+		Tensor<T, 1> dropout(double p) const {
+			return Tensor<T, 1>(fdropout(node, p), shape);
+		}
 		/** Returns the underlying `FGraphNode` for use with the C-Frontend. It
 		 * is still memory managed by this Tensor instance, so be carefull about
 		 * variable lifetimes. */

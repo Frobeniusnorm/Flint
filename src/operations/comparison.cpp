@@ -250,11 +250,10 @@ void DropoutImpl::unary_expression(T *__restrict__ result,
 								   size_t size, const FGraphNode *curr) {
 
 	const double seed = ((double *)curr->operation.additional_data)[0];
-	const double prob = ((double *)curr->operation.additional_data)[0];
+	const double prob = ((double *)curr->operation.additional_data)[1];
 	std::minstd_rand0 g1(seed * 1000 + from);
 	for (size_t i = from; i < from + size; i++) {
-		((double *)result)[i] =
-			((g1() % 100000000) / 100000000.0) > prob ? data1[i] : 0;
+		result[i] = ((g1() % 100000000) / 100000000.0) > prob ? data1[i] : 0;
 	}
 }
 void DropoutImpl::execute_cpu(const FGraphNode *node,
@@ -268,14 +267,57 @@ int DropoutImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 
 	const string type = typeString(node->operation.data_type);
 	const double seed = ((double *)node->operation.additional_data)[0];
-	const double prob = ((double *)node->operation.additional_data)[0];
+	const double prob = ((double *)node->operation.additional_data)[1];
 	compiler_state.code.prepend(
-		type + " " + name + " = 0;\n{\n " + name + " = sin(index + " +
-		std::to_string(seed) + ") * 43758.5453123;\n " + name + " = min(" +
-		name + " - floor(" + name + "), 0.99999);\n" + name + " = " + name +
-		" > " + to_string(prob) + "?v" +
-		to_string(compiler_state.variable_index + 1) +
+		type + " " + name + " = 0;\n{\n double _random = sin(index + " +
+		std::to_string(seed) +
+		") * 43758.5453123;\n _random = min(_random - floor(_random), "
+		"0.99999);\n" +
+		name +
+		" = "
+		"_random > " +
+		to_string(prob) + "?v" + to_string(compiler_state.variable_index + 1) +
 		" : 0;\n"
 		"}\n");
 	return 0;
+}
+std::string
+DropoutImpl::generate_ocl_eager(FType res_type,
+								std::vector<FType> parameter_types) {
+	return "if(index >= num_entriesR) return;\n"
+		   "const double v = sin(index + time) * 43758.5453123;\n"
+		   "const double r = min(v - floor(v), 0.99999);\n"
+		   "R[index] = r > prob ? P0[index] : 0;\n";
+}
+FGraphNode *DropoutImpl::local_gradient(FGraphNode *y, int dx_i,
+										FGraphNode *prev_adj) {
+	const double *orig_data = (double *)y->operation.additional_data;
+	FGraphNode *grad = fdropout(prev_adj, orig_data[1]);
+	((double *)grad->operation.additional_data)[0] = orig_data[0];
+	return grad;
+}
+std::string
+DropoutImpl::generate_ocl_parameters_eager(FType res_type,
+										   std::vector<FType> parameter_types) {
+	return ", const __global " + typeString(parameter_types[0]) +
+		   "* P0, const long num_entries0, const double "
+		   "time, const double prob";
+}
+void DropoutImpl::push_additional_kernel_parameters(
+	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
+	std::list<cl_mem> &to_free) {
+	const double seed = ((double *)node->operation.additional_data)[0];
+	const double prob = ((double *)node->operation.additional_data)[1];
+	if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&seed) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&prob) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
 }

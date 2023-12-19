@@ -79,7 +79,7 @@ struct LessImpl : OperationImplementation {
 		kernel_type_combinations(const FGraphNode *node) override {
 			using namespace std;
 			vector<vector<FType>> all_comb = allTypePermutations(2);
-			for (vector<FType>& comb : all_comb)
+			for (vector<FType> &comb : all_comb)
 				comb.insert(comb.begin(), F_INT32);
 			return all_comb;
 		}
@@ -107,7 +107,7 @@ struct GreaterImpl : OperationImplementation {
 		kernel_type_combinations(const FGraphNode *node) override {
 			using namespace std;
 			vector<vector<FType>> all_comb = allTypePermutations(2);
-			for (vector<FType>& comb : all_comb)
+			for (vector<FType> &comb : all_comb)
 				comb.insert(comb.begin(), F_INT32);
 			return all_comb;
 		}
@@ -135,7 +135,7 @@ struct EqualImpl : OperationImplementation {
 		kernel_type_combinations(const FGraphNode *node) override {
 			using namespace std;
 			vector<vector<FType>> all_comb = allTypePermutations(2);
-			for (vector<FType>& comb : all_comb)
+			for (vector<FType> &comb : all_comb)
 				comb.insert(comb.begin(), F_INT32);
 			return all_comb;
 		}
@@ -154,8 +154,24 @@ struct DropoutImpl : OperationImplementation {
 		std::string
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override;
 		virtual int operation_score(FGraphNode *node) override { return 2; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		void free_additional_data(FGraphNode *gn) override {
+			free(gn->operation.additional_data);
+		}
+		std::vector<std::vector<FType>>
+		kernel_type_combinations(const FGraphNode *node) override {
+			return {{F_INT32, F_INT32},
+					{F_INT64, F_INT64},
+					{F_FLOAT32, F_FLOAT32},
+					{F_FLOAT64, F_FLOAT64}};
+		}
 };
 #endif

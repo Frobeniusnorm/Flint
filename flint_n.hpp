@@ -1767,6 +1767,12 @@ template <typename T, unsigned int n> struct Tensor {
 		Tensor<T, n> permutate(unsigned int ax) const {
 			return Tensor<T, n>(fpermutate(node, ax), shape);
 		}
+		/**
+		 * Randomly sets elements in the tensor by probability `p` to 0.
+		 */
+		Tensor<T, n> dropout(double p) const {
+			return Tensor<T, n>(fdropout(node, p));
+		}
 		/** Returns the underlying `FGraphNode` for use with the C-Frontend. It
 		 * is still memory managed by this Tensor instance, so be carefull about
 		 * variable lifetimes. */

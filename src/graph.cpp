@@ -1495,7 +1495,6 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
 	return eager_execution ? execute_eagerly(node) : node;
 }
 FGraphNode *fdropout(FGraphNode *g, const double p) {
-	FGraphNode *node = new FGraphNode();
 	FOperation op;
 	op.broadcasting_mode = 0;
 	op.op_type = FDROPOUT;
@@ -1514,15 +1513,7 @@ FGraphNode *fdropout(FGraphNode *g, const double p) {
 		return nullptr;
 	((double *)op.additional_data)[0] = t;
 	((double *)op.additional_data)[1] = p;
-	node->operation = op;
-	node->result_data = nullptr;
-	node->num_predecessor = 1;
-	node->predecessors = safe_mal<FGraphNode*>(1);
-	node->predecessors[0] = g;
-	g->reference_counter++;
-	node->gradient_data = nullptr;
-	node->reference_counter = 0;
-	return eager_execution ? execute_eagerly(node) : node;
+	return addNode(op, {g});
 }
 FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
 	if (indices->operation.dimensions > a->operation.dimensions) {

@@ -1213,6 +1213,25 @@ TEST_CASE("Pooling") {
 						}
 			}
 }
+TEST_CASE("Dropout") {
+	Tensor<long, 1> c1 = Flint::constant(1l, 10000);
+	Tensor<long, 1> d1 = c1.dropout(0.5);
+	Tensor<long, 1> r1 = d1.reduce_sum();
+	int val = r1[0];
+	CHECK(val >= 3000);
+	CHECK(val <= 7000);
+	Tensor<double, 1> a = Flint::random(200);
+	CHECK_EQ(
+		doctest::Approx((a - a.dropout(0.0)).reduce_sum()[0]).epsilon(0.001),
+		0);
+	CHECK_EQ(doctest::Approx((a.dropout(1.0)).reduce_sum()[0]).epsilon(0.001),
+			 0);
+	Tensor<double, 1> b = a.dropout(0.25);
+	for (int i = 0; i < 200; i++) {
+		if (a[i] != b[i])
+			CHECK_EQ(b[i], 0);
+	}
+}
 TEST_CASE("Test Example 1") {
 	Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
 	Tensor<float, 1> c1{4.0f, 4.0f};
