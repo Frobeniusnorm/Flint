@@ -13,6 +13,8 @@
  * limitations under the License. */
 #include "comparison.hpp"
 #include "../utils.hpp"
+#include "flint.h"
+#include <cstring>
 #include <random>
 
 #define MIN_VAL(x, y) (x < y ? x : y)
@@ -292,8 +294,15 @@ DropoutImpl::generate_ocl_eager(FType res_type,
 FGraphNode *DropoutImpl::local_gradient(FGraphNode *y, int dx_i,
 										FGraphNode *prev_adj) {
 	const double *orig_data = (double *)y->operation.additional_data;
+	const bool was_eager = fIsEagerExecution();
+	if (was_eager)
+		fDisableEagerExecution();
 	FGraphNode *grad = fdropout(prev_adj, orig_data[1]);
 	((double *)grad->operation.additional_data)[0] = orig_data[0];
+	if (was_eager) {
+		fEnableEagerExecution();
+		fExecuteGraph(grad);
+	}
 	return grad;
 }
 std::string

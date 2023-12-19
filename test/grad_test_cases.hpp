@@ -856,4 +856,19 @@ TEST_SUITE("Autodiff") {
 								}
 				}
 	}
+	TEST_CASE("Dropout") {
+		GradientContext _;
+		Tensor<int, 2> a = Flint::constant(3, 10, 10);
+		a.watch();
+		Tensor<int, 2> b = a.dropout(0.5);
+		Tensor<double, 2> db = b.gradient(a);
+		for (int i = 0; i < 10; i++)
+			for (int j = 0; j < 10; j++) {
+				if (b[i][j] == 0) {
+					CHECK_EQ(db[i][j], 0.0);
+				} else {
+					CHECK_EQ(db[i][j], 1.0);
+				}
+			}
+	}
 }
