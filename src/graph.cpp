@@ -908,11 +908,12 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
 }
 
 FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
+	// TODO: lazy matmul
 	if (!x->result_data && x->operation.op_type != FSTORE) {
 		x = fExecuteGraph(x);
 	}
 	if (!y->result_data && y->operation.op_type != FSTORE) {
-		y = fExecuteGraph(y); // TODO mem leak
+		y = fExecuteGraph(y);
 	}
 	const FOperation ao = x->operation;
 	const FOperation bo = y->operation;
@@ -1502,7 +1503,8 @@ FGraphNode *fdropout(FGraphNode *g, const double p) {
 	op.shape = safe_mal<size_t>(g->operation.dimensions);
 	if (!op.shape)
 		return nullptr;
-	memcpy(op.shape, g->operation.shape, g->operation.dimensions * sizeof(size_t));
+	memcpy(op.shape, g->operation.shape,
+		   g->operation.dimensions * sizeof(size_t));
 	op.data_type = g->operation.data_type;
 	// Store current time in additional data
 	std::chrono::duration<double, std::nano> tm =

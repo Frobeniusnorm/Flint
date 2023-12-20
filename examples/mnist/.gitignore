@@ -2,4 +2,5 @@ mnist
 train-*
 test-*
 t10k-*
-
+mnist_train
+*.flint

@@ -94,7 +94,7 @@ TEST_SUITE("Graph implementation") {
 			fCreateGraph(v1.data(), v1.size(), F_FLOAT64, shape.data(), 2);
 		char *data = fserialize(gn1, nullptr);
 		fFreeGraph(gn1);
-		FGraphNode *gnp2 = fdeserialize(data);
+		FGraphNode *gnp2 = fdeserialize(data, nullptr);
 		free(data);
 		fCalculateResult(gnp2);
 		for (int i = 0; i < 6; i++)

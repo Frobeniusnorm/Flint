@@ -46,7 +46,8 @@ static Tensor<T, n> applyPadding(Tensor<T, n> &input,
 			long remainder = 0;
 			if (input.get_shape()[i] % step_size[i] == 0) {
 				// get last iteration
-				long remaining = step_size[i] * (input.get_shape()[i] / step_size[i] - 1);
+				long remaining =
+					step_size[i] * (input.get_shape()[i] / step_size[i] - 1);
 				// add as many kernels as needed to be larger then input
 				while (remaining < input.get_shape()[i])
 					remaining += kernel_size;
@@ -54,7 +55,8 @@ static Tensor<T, n> applyPadding(Tensor<T, n> &input,
 				remainder = remaining - input.get_shape()[i];
 			} else {
 				// get last iteration
-				long remaining = step_size[i] * (input.get_shape()[i] / step_size[i]);
+				long remaining =
+					step_size[i] * (input.get_shape()[i] / step_size[i]);
 				// add as many kernels as needed to be larger then input
 				while (remaining < input.get_shape()[i])
 					remaining += kernel_size;
@@ -211,6 +213,7 @@ template <int n> class Convolution : public Layer<n, 1> {
 		}
 		template <typename T, unsigned int k>
 		Tensor<double, k> forward(Tensor<T, k> &in) {
+			in.execute();
 			const unsigned int filters =
 				Layer<n, 1>::template get_weight<0>().get_shape()[0];
 			// actual convolve
@@ -219,7 +222,8 @@ template <int n> class Convolution : public Layer<n, 1> {
 			Tensor<double, n + 1> filter =
 				Layer<n, 1>::template get_weight<0>().expand(1, 1);
 			std::array<unsigned int, n> padding_stride;
-			memcpy(padding_stride.data(), act_stride.data(), sizeof(unsigned int) * (n - 1));
+			memcpy(padding_stride.data(), act_stride.data(),
+				   sizeof(unsigned int) * (n - 1));
 			padding_stride[n - 1] = in.get_shape()[k - 1];
 			Tensor<double, n> res =
 				(padding_mode != NO_PADDING
@@ -242,8 +246,7 @@ template <int n> class Convolution : public Layer<n, 1> {
 				bias_repeat[i] = res.get_shape()[i + 1] - 1;
 			bias = bias.repeat_array(bias_repeat);
 			res = res + bias;
-			res.execute();
-			return res;
+			return res();
 		}
 };
 /** For inputs of images with shape `(batch_size, width, height, channels)` */
@@ -288,6 +291,7 @@ template <int n> class Pooling : public UntrainableLayer {
 
 		template <typename T, unsigned int k>
 		Tensor<T, k> forward(Tensor<T, k> &in) {
+			in.execute();
 			Tensor<T, k> p = in;
 			if (padding_mode != NO_PADDING) {
 				p = applyPadding(in, window_size, step_size, padding_mode);

@@ -21,6 +21,7 @@
 #include <flint/flint.h>
 #include <flint/flint_helper.hpp>
 #include <iomanip>
+#include <list>
 #include <math.h>
 #include <memory>
 #include <tuple>
@@ -123,6 +124,45 @@ template <GenericLayer... T> struct SequentialModel {
 		template <typename K, unsigned int n>
 		void optimize(const Tensor<K, n> &error) {
 			backward<0>(error);
+		}
+		void load(const std::string path) {
+			using namespace std;
+			ifstream file(path, ios::binary);
+			vector<char> data;
+			{
+				list<char> file_cont;
+				while (!file.eof())
+					file_cont.push_back(file.get());
+				file.close();
+				data = vector<char>(file_cont.begin(), file_cont.end());
+			}
+			// collect weights to know how many weights each layer has
+			std::vector<std::vector<FGraphNode *>> vars;
+			collect_weights<0>(vars);
+			size_t index = 0;
+			for (int i = 0; i < vars.size(); i++)
+				for (int j = 0; j < vars[i].size(); j++) {
+					size_t read;
+					vars[i][j] = fdeserialize(data.data() + index, &read);
+					index += read;
+				}
+			set_weights<0>(vars);
+			flogging(F_VERBOSE, "loaded weights, " + to_string(index) + " bytes");
+		}
+		void save(const std::string path) {
+			using namespace std;
+			ofstream file(path, ios::binary);
+			std::vector<std::vector<FGraphNode *>> vars;
+			collect_weights<0>(vars);
+			for (const vector<FGraphNode *> layer : vars) {
+				for (FGraphNode *weight : layer) {
+					size_t length;
+					const char *data = fserialize(weight, &length);
+					file.write(data, length);
+				}
+			}
+			file.close();
+			flogging(F_VERBOSE, "stored weights");
 		}
 		/**
 		 * Trains the model with input data and the desired output.
@@ -270,26 +310,35 @@ template <GenericLayer... T> struct SequentialModel {
 
 	private:
 		template <int n, typename K, unsigned int k>
-		void backward(const Tensor<K, k> &error) {
+		inline void backward(const Tensor<K, k> &error) {
 			if constexpr (n < sizeof...(T)) {
 				std::get<n>(layers).optimize_weights(error);
 				backward<n + 1>(error);
 			}
 		}
 		template <int n>
-		void backward(const std::vector<std::vector<FGraphNode *>> grads) {
+		inline void
+		backward(const std::vector<std::vector<FGraphNode *>> grads) {
 			if constexpr (n < sizeof...(T)) {
 				std::get<n>(layers).optimize_weights(grads[n]);
 				backward<n + 1>(grads);
 			}
 		}
-		template <int n, OptimizerFactory Fac> void gen_opt(Fac fac) {
+		template <int n>
+		inline void
+		set_weights(const std::vector<std::vector<FGraphNode *>> weights) {
+			if constexpr (n < sizeof...(T)) {
+				std::get<n>(layers).set_weights(weights[n]);
+				set_weights<n + 1>(weights);
+			}
+		}
+		template <int n, OptimizerFactory Fac> inline void gen_opt(Fac fac) {
 			if constexpr (n < sizeof...(T)) {
 				std::get<n>(layers).generate_optimizer(fac);
 				gen_opt<n + 1>(fac);
 			}
 		}
-		template <int n> void set_training(bool b) {
+		template <int n> inline void set_training(bool b) {
 			if constexpr (n < sizeof...(T)) {
 				std::get<n>(layers).training = b;
 				set_training<n + 1>(b);
@@ -303,7 +352,8 @@ template <GenericLayer... T> struct SequentialModel {
 			return "";
 		}
 		template <int n>
-		void collect_weights(std::vector<std::vector<FGraphNode *>> &vars) {
+		inline void
+		collect_weights(std::vector<std::vector<FGraphNode *>> &vars) {
 			if constexpr (n < sizeof...(T)) {
 				vars.push_back(std::get<n>(layers).collect_weights());
 				collect_weights<n + 1>(vars);
@@ -311,25 +361,15 @@ template <GenericLayer... T> struct SequentialModel {
 		}
 		template <int layer, typename T2, unsigned int n2, typename T1,
 				  unsigned int n1>
-		Tensor<T2, n2> forward_helper(FGraphNode *in) {
+		inline Tensor<T2, n2> forward_helper(FGraphNode *in) {
 			FGraphNode *out;
 			{
 				Tensor<T1, n1> it(in);
-#ifdef FLINT_DL_PROFILE
-				auto start = std::chrono::high_resolution_clock::now();
-#endif
 				// now in is no longer needed (reference counter has been
 				// artifically incremented) will be freed with it at the end of
 				// the block
 				in->reference_counter--;
 				auto ot = std::get<layer>(layers).forward(it);
-				ot.execute();
-#ifdef FLINT_DL_PROFILE
-				std::chrono::duration<double, std::milli> elapsed =
-					std::chrono::high_resolution_clock::now() - start;
-				std::cout << std::get<layer>(layers).name() << " "
-						  << elapsed.count() << std::endl;
-#endif
 				// out is still needed -> save the GraphNode handle from
 				// destruction with
 				out = ot.get_graph_node();

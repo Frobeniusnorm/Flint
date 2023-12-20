@@ -72,7 +72,7 @@ char *fserialize(FGraphNode *node, size_t *bytes_written) {
 	return data;
 }
 
-FGraphNode *fdeserialize(char *data) {
+FGraphNode *fdeserialize(char *data, size_t *bytes_read) {
 	int m = (data[0] << (3 * 8)) | (data[1] << (2 * 8)) | (data[2] << (1 * 8)) |
 			(data[3]);
 	if (m != MAGIC_NUMBER) {
@@ -101,6 +101,9 @@ FGraphNode *fdeserialize(char *data) {
 	FGraphNode *node = fCreateGraph((void *)res, total_size, (FType)data_type,
 									shape.data(), shape.size());
 	free(res);
+	if (bytes_read) {
+		*bytes_read = index + total_size * typeSize((FType)data_type);
+	}
 	return node;
 }
 FGraphNode *fload_image(const char *path) {

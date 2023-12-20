@@ -79,7 +79,7 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // http://yann.lecun.com/exdb/mnist/
 int main() {
 	FlintContext _(FLINT_BACKEND_BOTH);
-	fSetLoggingLevel(F_INFO);
+	fSetLoggingLevel(F_VERBOSE);
 	Tensor<float, 3> X = load_mnist_images("train-images-idx3-ubyte");
 	Tensor<double, 2> Y =
 		load_mnist_labels("train-labels-idx1-ubyte").convert<double>();
@@ -109,6 +109,7 @@ int main() {
 		Conv2D(1, 32, 8, std::array<unsigned int, 2>{3, 3}, SAME_PADDING),
 		Relu(),
 		Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}, SAME_PADDING),
+		Dropout(0.1),
 		Flatten(),
 		Connected(800, 80),
 		Relu(),
@@ -118,4 +119,5 @@ int main() {
 	AdamFactory opt(0.003);
 	m.generate_optimizer(opt);
 	m.train(data, CrossEntropyLoss(), 25, 4000);
+	m.save("mnist_model.flint");
 }

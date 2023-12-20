@@ -126,7 +126,6 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 		return node;
 	bool is_data_node = node->operation.op_type == FSTORE;
 	std::vector<CPUResultData> pred_data(node->num_predecessor);
-	std::cout << "predecessors: " << pred_data.size() << std::endl;
 	size_t total = 1;
 	for (int i = 0; i < node->operation.dimensions; i++)
 		total *= node->operation.shape[i];

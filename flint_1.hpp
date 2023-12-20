@@ -219,10 +219,10 @@ template <typename T> struct Tensor<T, 1> {
 		}
 		/**
 		 * Deserializes the binary representation of Tensor data back to a
-		 * Tensor object.
+		 * Tensor object. The number of bytes read is stored in `bytes_read`.
 		 */
-		static Tensor<T, 1> deserialize(char *data) {
-			FGraphNode *node = fdeserialize(data);
+		static Tensor<T, 1> deserialize(char *data, size_t* bytes_read) {
+			FGraphNode *node = fdeserialize(data, bytes_read);
 			if (1 != node->operation.dimensions)
 				flogging(F_ERROR,
 						 "Deserializing data of a " +
