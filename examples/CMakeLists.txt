@@ -17,3 +17,11 @@ target_link_libraries(mnist_train OpenCL::OpenCL)
 add_custom_command(TARGET mnist_train
                    POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:mnist_train> ${PROJECT_SOURCE_DIR}/mnist/mnist_train)
+
+add_executable(mnist_test mnist/mnist_test.cpp)
+set_property(TARGET mnist_test PROPERTY CXX_STANDARD 20)
+target_link_libraries(mnist_test -lflint)
+target_link_libraries(mnist_test OpenCL::OpenCL)
+add_custom_command(TARGET mnist_test
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:mnist_test> ${PROJECT_SOURCE_DIR}/mnist/mnist_test)

@@ -292,9 +292,14 @@ struct GradientContext {
 struct FlintContext {
 		/** Initializes both backends */
 		FlintContext() { flintInit(FLINT_BACKEND_BOTH); }
-		/** Received a value of `FLINT_BACKEND_BOTH`, `FLINT_BACKEND_CPU` and
-		 * `FLINT_BACKEND_GPU` */
-		FlintContext(int backends) { flintInit(backends); }
+		/** Received a value of `FLINT_BACKEND_BOTH`, `FLINT_BACKEND_CPU` or
+		 * `FLINT_BACKEND_GPU` that denotes the backend to be used and a logging
+		 * level of `F_DEBUG`, `F_VERBOSE`, `F_INFO`, `F_WARNING`, `F_ERROR`
+		 * (default is `F_INFO`). */
+		FlintContext(int backends, FLogType logging = F_INFO) {
+			flintInit(backends);
+      fSetLoggingLevel(logging);
+		}
 		~FlintContext() { flintCleanup(); }
 };
 #endif

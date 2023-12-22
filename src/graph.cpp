@@ -476,7 +476,7 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
 			// all parents that are only referenced by this node can be freed
 			for (int i = 0; i < node->num_predecessor; i++) {
 				FGraphNode *parent = node->predecessors[i];
-				if (parent->result_data && parent->reference_counter == 1 &&
+				if (parent->result_data && parent->reference_counter <= 2 &&
 					parent->operation.op_type != FSTORE) {
 					FResultData *rd = parent->result_data;
 					if (rd->data)
@@ -488,9 +488,9 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
 					parent->result_data = nullptr;
 				}
 			}
-		default:
-			break;
-		}
+		 default:
+		 	break;
+  	 }
 	}
 	return node;
 }

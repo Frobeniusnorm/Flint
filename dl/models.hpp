@@ -100,14 +100,14 @@ template <GenericLayer... T> struct SequentialModel {
 			gen_opt<0>(fac);
 		}
 		/**
-		 * Passes a input tensor through all layers and returns the output of
-		 * the last layer.
+		 * Passes a batch of input tensors through all layers and returns the
+		 * output of the last layer.
 		 */
 		template <typename K, unsigned int n>
 		Tensor<LayerHelper::FlintTypeToCpp<
 				   get_output_type<toFlintType<K>(), T...>()>,
 			   get_output_dim<n, T...>()>
-		forward(Tensor<K, n> &in) {
+		forward_batch(Tensor<K, n> &in) {
 			in.get_graph_node()->reference_counter++;
 			auto out =
 				forward_helper<0,
@@ -115,6 +115,27 @@ template <GenericLayer... T> struct SequentialModel {
 								   get_output_type<toFlintType<K>(), T...>()>,
 							   get_output_dim<n, T...>(), K, n>(
 					in.get_graph_node());
+			return out;
+		}
+		/**
+		 * Passes an input tensor through all layers and returns the output of
+		 * the last layer.
+		 */
+		template <typename K, unsigned int n>
+		Tensor<LayerHelper::FlintTypeToCpp<
+				   get_output_type<toFlintType<K>(), T...>()>,
+			   get_output_dim<n, T...>()>
+		forward(Tensor<K, n> &in) {
+			// because layers expect batches
+			Tensor<K, n + 1> expanded = in.expand(0, 1);
+			std::cout << expanded << std::endl;
+			expanded.get_graph_node()->reference_counter++;
+			auto out =
+				forward_helper<0,
+							   LayerHelper::FlintTypeToCpp<
+								   get_output_type<toFlintType<K>(), T...>()>,
+							   get_output_dim<n + 1, T...>(), K, n + 1>(
+					expanded.get_graph_node());
 			return out;
 		}
 		/**
@@ -147,7 +168,8 @@ template <GenericLayer... T> struct SequentialModel {
 					index += read;
 				}
 			set_weights<0>(vars);
-			flogging(F_VERBOSE, "loaded weights, " + to_string(index) + " bytes");
+			flogging(F_VERBOSE,
+					 "loaded weights, " + to_string(index) + " bytes");
 		}
 		void save(const std::string path) {
 			using namespace std;
@@ -229,7 +251,7 @@ template <GenericLayer... T> struct SequentialModel {
 #ifdef FLINT_DL_PROFILE
 					auto start = std::chrono::high_resolution_clock::now();
 #endif
-					auto output = forward(input);
+					auto output = forward_batch(input);
 					auto error = loss.calculate_error(output, expected);
 #ifdef FLINT_DL_PROFILE
 					std::chrono::duration<double, std::milli> elapsed =
@@ -263,7 +285,7 @@ template <GenericLayer... T> struct SequentialModel {
 						for (unsigned int j = 0; j < vars[i].size(); j++) {
 							FGraphNode *curr_grad = grads[index++];
 							plgrads[i][j] =
-								curr_grad ? fExecuteGraph(curr_grad) : nullptr;
+								curr_grad ? fOptimizeMemory(fExecuteGraph(curr_grad)) : nullptr;
 						}
 					}
 #ifdef FLINT_DL_PROFILE
@@ -293,7 +315,7 @@ template <GenericLayer... T> struct SequentialModel {
 				// validate
 				std::string validation_msg = "";
 				if (data.vX.has_value() && data.vY.has_value()) {
-					auto output = forward(data.vX.value());
+					auto output = forward_batch(data.vX.value());
 					auto error = loss.calculate_error(output, data.vY.value());
 					validation_msg = " validation error: " +
 									 std::to_string(error.reduce_sum()[0]);
@@ -307,6 +329,14 @@ template <GenericLayer... T> struct SequentialModel {
 		}
 		/** Returns a small summary of the model. */
 		std::string summary() { return summary_helper<0>(); }
+		/**
+		 * Returns a per-layer vector of all weight-tensors of that layer
+		 */
+		std::vector<std::vector<FGraphNode *>> collect_weights() {
+			std::vector<std::vector<FGraphNode *>> vars;
+			collect_weights<0>(vars);
+			return vars;
+		}
 
 	private:
 		template <int n, typename K, unsigned int k>
