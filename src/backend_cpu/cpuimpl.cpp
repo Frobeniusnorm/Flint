@@ -238,8 +238,49 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 	for (FGraphNode *curr : toExecute) {
 		// collect predecessor results
 		vector<CPUResultData> predData(curr->num_predecessor);
+		void *data_to_recycle = nullptr;
 		for (int i = 0; i < curr->num_predecessor; i++) {
-			predData[i] = results[curr->predecessors[i]];
+			FGraphNode *pred = curr->predecessors[i];
+			predData[i] = results[pred];
+			// recycle result data of that parent if it is no longer used
+			// elsewhere
+			// TODO per operation information if this is possible
+			if (!data_to_recycle && curr->num_predecessor == 1 &&
+				pred->reference_counter == 1 &&
+				curr->operation.op_type != FTRANSPOSE &&
+				(pred->operation.op_type != FSTORE ||
+				 (!curr->gradient_data && !pred->gradient_data))) {
+				bool same_shape =
+					typeSize(pred->operation.data_type) ==
+						typeSize(curr->operation.data_type) &&
+					curr->operation.dimensions == pred->operation.dimensions;
+				for (int j = 0; j < curr->operation.dimensions && same_shape;
+					 j++) {
+					same_shape =
+						curr->operation.shape[j] == pred->operation.shape[j];
+				}
+				if (same_shape) {
+					if (pred->result_data) {
+						FResultData *data = pred->result_data;
+						if (data->mem_id)
+							clReleaseMemObject(data->mem_id);
+						delete data;
+						pred->result_data = nullptr;
+					}
+					if (pred->operation.op_type == FSTORE &&
+						pred->operation.additional_data) {
+						FStore *store =
+							(FStore *)pred->operation.additional_data;
+						if (store->mem_id)
+							clReleaseMemObject(store->mem_id);
+						delete store;
+						pred->operation.additional_data = nullptr;
+					}
+          predData[i].multi_use = true;
+          results[pred].multi_use = true;
+					data_to_recycle = predData[i].data;
+				}
+			}
 		}
 		// calculate total size
 		size_t size = 1;
@@ -270,10 +311,11 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 												curr->operation.dimensions);
 			results.insert({curr, npd});
 		} else {
-			// allocate result data and execute
+			// allocate result data and execute // TODO refactor
 			switch (curr->operation.data_type) {
 			case F_INT32: {
-				int *result = safe_mal<int>(size);
+				int *result = data_to_recycle ? (int *)data_to_recycle
+											  : safe_mal<int>(size);
 				if (!result)
 					return nullptr;
 				chooseExecutionMethod(curr, predData, result, size);
@@ -287,7 +329,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 										 curr->operation.dimensions)}});
 			} break;
 			case F_INT64: {
-				long *result = safe_mal<long>(size);
+				long *result = data_to_recycle ? (long *)data_to_recycle
+											   : safe_mal<long>(size);
 				if (!result)
 					return nullptr;
 				chooseExecutionMethod(curr, predData, result, size);
@@ -301,7 +344,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 										 curr->operation.dimensions)}});
 			} break;
 			case F_FLOAT32: {
-				float *result = safe_mal<float>(size);
+				float *result = data_to_recycle ? (float *)data_to_recycle
+												: safe_mal<float>(size);
 				if (!result)
 					return nullptr;
 				chooseExecutionMethod(curr, predData, result, size);
@@ -315,7 +359,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 										 curr->operation.dimensions)}});
 			} break;
 			case F_FLOAT64: {
-				double *result = safe_mal<double>(size);
+				double *result = data_to_recycle ? (double *)data_to_recycle
+												 : safe_mal<double>(size);
 				if (!result)
 					return nullptr;
 				chooseExecutionMethod(curr, predData, result, size);
@@ -335,14 +380,15 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 	if (!fIsEagerExecution()) {
 		// free all other data
 		for (auto &[gn, rd] : results) {
-			if (gn != node && gn->operation.op_type != FSTORE &&
-				!gn->result_data && gn->operation.op_type != FRESHAPE)
+			if (gn != node && gn->operation.op_type != FSTORE && !gn->result_data &&
+				gn->operation.op_type != FRESHAPE && !rd.multi_use)
 				free(rd.data);
 		}
 	} else {
+		// construt a result for each node
 		for (auto &[gn, rd] : results) {
 			if (gn != node && gn->operation.op_type != FSTORE &&
-				!gn->result_data) {
+				!gn->result_data && !rd.multi_use) {
 				FResultData *result = new FResultData();
 				result->data = rd.data;
 				result->num_entries = rd.num_entries;
