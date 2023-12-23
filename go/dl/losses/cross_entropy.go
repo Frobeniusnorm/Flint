@@ -1,6 +1,7 @@
 package losses
 
 import (
+	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/tensor"
 )
 
@@ -23,6 +24,8 @@ The last one might being useful for higher dimension inputs, such images.
 param labels should be a tensor with one of the following structures:
 */
 func CrossEntropyLossExtended(predictions tensor.Tensor, target tensor.Tensor, weight tensor.Tensor, reduce reduction, labelSmoothing float32) tensor.Tensor {
+	fmt.Println("Cross entropy loss extended")
+
 	shape := predictions.Shape()
 	//C := shape[1] // number of classes
 	N := shape[0] // batch size

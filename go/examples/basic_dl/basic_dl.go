@@ -43,6 +43,7 @@ func main() {
 
 	for epoch := 0; epoch < 3; epoch++ {
 		train(model, trainDataloader, &optim)
+		break // FIXME: remove
 		test(model, trainDataloader)
 		scheduler.Step()
 		trainDataloader.Reset()
@@ -69,11 +70,14 @@ func train(model layers.Layer, trainDl *dataloader.Dataloader[datasets.MnistData
 		output := model.Forward(batch.Data)
 		target := batch.Label.OneHot(10)
 		loss := losses.MSELoss(output, target)
+		fmt.Println("still fine")
 		flint.StopGradientContext()
-		optim.Step(loss)
+		fmt.Println("loss", loss)
+		// optim.Step(loss)
 		// flint.OptimizeMemory(loss)
 		// flint.FreeGraph(loss.node)
 		target.Close()
+		break
 	}
 }
 

@@ -129,6 +129,7 @@ This fixes memory management issues, as the node can be cleared on subsequent ca
 */
 func (x Tensor) Close() {
 	if !x.isLight() {
+		fmt.Println("closing a tensor ...", x.Shape())
 		runtime.SetFinalizer(&x, nil) // remove any finalizer for this tensor
 		flint.SetRefCounter(*x.node, 0)
 		runtime.KeepAlive(x)

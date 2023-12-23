@@ -1,6 +1,7 @@
 package layers
 
 import (
+	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/tensor"
 )
 
@@ -8,6 +9,7 @@ import (
 
 // Softmax applies the softmax function to the input [x]
 func Softmax(x tensor.Tensor) tensor.Tensor {
+	fmt.Println("Softmax")
 	// shift by the maximum value to avoid exploding values
 	// thus avoiding inaccuracies when using floating point types.
 	defer x.Close() // FIXME: is this needed? I mean the caller could still hold the graph node reference...
