@@ -2,13 +2,13 @@ package layers
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/tensor"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 )
 
 // TODO: add parameter dim (int) – A dimension along which Softmax will be computed (so every slice along dim will sum to 1).
 
 // Softmax applies the softmax function to the input [x]
-func Softmax(x tensor.Tensor) tensor.Tensor {
+func Softmax(x flint.Tensor) flint.Tensor {
 	fmt.Println("Softmax")
 	// shift by the maximum value to avoid exploding values
 	// thus avoiding inaccuracies when using floating point types.
@@ -27,11 +27,11 @@ func NewSoftmax() SoftmaxLayer {
 	return SoftmaxLayer{}
 }
 
-func (l SoftmaxLayer) Parameters(_ bool) []tensor.Parameter {
-	return []tensor.Parameter{}
+func (l SoftmaxLayer) Parameters(_ bool) []flint.Parameter {
+	return []flint.Parameter{}
 }
 
-func (l SoftmaxLayer) Forward(x tensor.Tensor) tensor.Tensor {
+func (l SoftmaxLayer) Forward(x flint.Tensor) flint.Tensor {
 	return Softmax(x)
 }
 

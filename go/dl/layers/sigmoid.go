@@ -1,7 +1,7 @@
 package layers
 
 import (
-	"github.com/Frobeniusnorm/Flint/go/tensor"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 )
 
 type Sigmoid struct{}
@@ -10,15 +10,15 @@ func NewSigmoid() Sigmoid {
 	return Sigmoid{}
 }
 
-func (l Sigmoid) Parameters(_ bool) []tensor.Parameter {
-	return []tensor.Parameter{}
+func (l Sigmoid) Parameters(_ bool) []flint.Parameter {
+	return []flint.Parameter{}
 }
 
-func (l Sigmoid) Forward(x tensor.Tensor) tensor.Tensor {
+func (l Sigmoid) Forward(x flint.Tensor) flint.Tensor {
 	// FIXME: what to do with x? call x.Close?
-	// Or change the tensor in a way that it is reused with the result of this layer?
+	// Or change the flint in a way that it is reused with the result of this layer?
 	exp := x.Neg().Exp()
-	res := tensor.Scalar(int32(1)).Div(exp.Add(tensor.Scalar(int32(1))))
+	res := flint.Scalar(int32(1)).Div(exp.Add(flint.Scalar(int32(1))))
 	return res
 }
 

@@ -2,17 +2,17 @@ package losses
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/tensor"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 )
 
 // NLLLoss computes the negative log likelihood loss.
 // Best suited for classification problems.
-// returns: a new tensor with the result
-func NLLLoss(x tensor.Tensor) tensor.Tensor {
+// returns: a new flint with the result
+func NLLLoss(x flint.Tensor) flint.Tensor {
 	return x // TODO
 }
 
-func NLLLossExtended(x tensor.Tensor, weight tensor.Tensor, reduce reduction) tensor.Tensor {
+func NLLLossExtended(x flint.Tensor, weight flint.Tensor, reduce reduction) flint.Tensor {
 	shape := x.Shape()
 	C := shape[1] // number of classes
 	fmt.Println(C)

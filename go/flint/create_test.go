@@ -1,4 +1,4 @@
-package tensor
+package flint
 
 import (
 	"fmt"

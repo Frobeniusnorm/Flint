@@ -1,7 +1,7 @@
-package tensor
+package flint
 
 import (
-	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/Frobeniusnorm/Flint/go/wrapper"
 )
 
 // flatten is a recursive function to flatten a slice of any type
@@ -40,10 +40,10 @@ func isScalar(x any) bool {
 /*
 Create a Tensor from a wide range of data types.
 
-- if scalar type just keep it, don't turn into tensor yet!
+- if scalar type just keep it, don't turn into flint yet!
 - if nd array flatten it a generate
 - if 1d array generate normally
-- if [flint.GraphNode], just set reference counter
+- if [wrapper.GraphNode], just set reference counter
 
 TODO: what if a pointer is passed?
 */
@@ -54,7 +54,7 @@ func Create(data any) Tensor {
 	if isScalar(data) {
 		return Tensor{} // FIXME: Scalar(data)
 	}
-	if node, ok := data.(flint.GraphNode); ok {
+	if node, ok := data.(wrapper.GraphNode); ok {
 		return FromNode(node)
 	}
 	panic("invalid data type")
@@ -64,31 +64,31 @@ func Create(data any) Tensor {
 //	x := flatten(data)
 //	shape := Shape{1, 2} // TODO
 //
-//	flintNode, err := flint.CreateGraph(flatten(x), shape)
+//	flintNode, err := wrapper.CreateGraph(flatten(x), shape)
 //	if err != nil {
 //		panic(err)
 //	}
-//	tensor.node = &flintNode
+//	flint.node = &flintNode
 //
-//	tensor.init()
-//	return tensor
+//	flint.init()
+//	return flint
 //}
 
 func CreateFromSliceAndShape[T Numeric](data []T, shape Shape) Tensor {
 	//data = flatten(data)
-	flintNode, err := flint.CreateGraph(data, shape)
+	flintNode, err := wrapper.CreateGraph(data, shape)
 	tensor := Tensor{node: &flintNode, err: err}
 	tensor.init()
 	return tensor
 }
 
-func FromNode(node flint.GraphNode) Tensor {
+func FromNode(node wrapper.GraphNode) Tensor {
 	res := Tensor{node: &node, dataType: node.GetType()}
 	res.init()
 	return res
 }
 
-func FromNodeWithErr(node flint.GraphNode, err error) Tensor {
+func FromNodeWithErr(node wrapper.GraphNode, err error) Tensor {
 	res := FromNode(node)
 	res.err = err
 	return res
@@ -100,36 +100,36 @@ func Scalar[T Numeric](val T) Tensor {
 	case int32:
 		var typedVal = any(val).(int32)
 		res.dataInt32 = &typedVal
-		res.dataType = flint.F_INT32
+		res.dataType = wrapper.F_INT32
 	case int64:
 		var typedVal = any(val).(int64)
 		res.dataInt64 = &typedVal
-		res.dataType = flint.F_INT64
+		res.dataType = wrapper.F_INT64
 	case float32:
 		var typedVal = any(val).(float32)
 		res.dataFloat32 = &typedVal
-		res.dataType = flint.F_FLOAT32
+		res.dataType = wrapper.F_FLOAT32
 	case float64:
 		var typedVal = any(val).(float64)
 		res.dataFloat64 = &typedVal
-		res.dataType = flint.F_FLOAT64
+		res.dataType = wrapper.F_FLOAT64
 	}
 	res.init()
 	return res
 }
 
 func Constant[T Numeric](val T, shape Shape) Tensor {
-	return FromNodeWithErr(flint.CreateGraphConstant(val, shape))
+	return FromNodeWithErr(wrapper.CreateGraphConstant(val, shape))
 }
 
 func Random(shape Shape) Tensor {
-	return FromNodeWithErr(flint.CreateGraphRandom(shape))
+	return FromNodeWithErr(wrapper.CreateGraphRandom(shape))
 }
 
 func Arrange(shape Shape, axis int) Tensor {
-	return FromNodeWithErr(flint.CreateGraphArrange(shape, axis))
+	return FromNodeWithErr(wrapper.CreateGraphArrange(shape, axis))
 }
 
 func Identity[T Numeric](size T) Tensor {
-	return FromNodeWithErr(flint.CreateGraphIdentity(uint(size)))
+	return FromNodeWithErr(wrapper.CreateGraphIdentity(uint(size)))
 }

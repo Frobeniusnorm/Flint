@@ -1,4 +1,4 @@
-package flint
+package wrapper
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ func TestLoadImage(t *testing.T) {
 	assert.ErrorIs(t, err, ErrIO)
 	fmt.Println("node:", node, ", err:", err)
 
-	node, err = LoadImage(path.Join("..", "..", "flint.png"))
+	node, err = LoadImage(path.Join("..", "..", "wrapper.png"))
 	assert.NotEmpty(t, node)
 	assert.NoError(t, err)
 	fmt.Println("node:", node, ", err:", err)

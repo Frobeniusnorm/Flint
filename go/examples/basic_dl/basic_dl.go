@@ -8,14 +8,14 @@ import (
 	"github.com/Frobeniusnorm/Flint/go/dl/layers"
 	"github.com/Frobeniusnorm/Flint/go/dl/losses"
 	"github.com/Frobeniusnorm/Flint/go/dl/optimize"
-	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/Frobeniusnorm/Flint/go/wrapper"
 	"log"
 	"path"
 )
 
 func main() {
-	flint.Init(flint.BACKEND_ONLY_GPU)
-	flint.SetLoggingLevel(flint.INFO)
+	wrapper.Init(wrapper.BACKEND_ONLY_GPU)
+	wrapper.SetLoggingLevel(wrapper.LOG_INFO)
 
 	trainDataset, testDataset, err := datasets.NewMnistDataset(path.Join("..", "..", "_data", "mnist"))
 	if err != nil {
@@ -50,7 +50,7 @@ func main() {
 		testDataloader.Reset()
 	}
 
-	flint.Cleanup()
+	wrapper.Cleanup()
 }
 
 // train for one epoch
@@ -66,16 +66,16 @@ func train(model layers.Layer, trainDl *dataloader.Dataloader[datasets.MnistData
 			break
 		}
 
-		flint.StartGradientContext()
+		wrapper.StartGradientContext()
 		output := model.Forward(batch.Data)
 		target := batch.Label.OneHot(10)
 		loss := losses.MSELoss(output, target)
 		fmt.Println("still fine")
-		flint.StopGradientContext()
+		wrapper.StopGradientContext()
 		fmt.Println("loss", loss)
 		// optim.Step(loss)
-		// flint.OptimizeMemory(loss)
-		// flint.FreeGraph(loss.node)
+		// wrapper.OptimizeMemory(loss)
+		// wrapper.FreeGraph(loss.node)
 		target.Close()
 		break
 	}

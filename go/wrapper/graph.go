@@ -1,4 +1,4 @@
-package flint
+package wrapper
 
 // #include <flint/flint.h>
 import "C"
@@ -14,7 +14,7 @@ Params:
   - [data]: the flattened data array that should be loaded into the [GraphNode]
   - Type params [T]: the datatype of [data]
   - [shape]: Each entry describing the size of the corresponding dimension.
-  - [datatype]: Specifying a valid flint [dataType]
+  - [datatype]: Specifying a valid wrapper [dataType]
 */
 func CreateGraph[T completeNumeric](data []T, shape Shape) (GraphNode, error) {
 	if len(data) != int(shape.NumItems()) {
@@ -59,12 +59,12 @@ func CreateScalar[T completeNumeric](value T) (GraphNode, error) {
 }
 
 /*
-CreateGraphConstant creates a tensor in a specified [dataType] that contains the single given values in all entries.
+CreateGraphConstant creates a flint in a specified [dataType] that contains the single given values in all entries.
 
 Params:
-  - [value]: the value this tensor should consist of
+  - [value]: the value this flint should consist of
   - [shape]: Each entry describing the size of the corresponding dimension.
-  - [datatype]: Specifying a valid flint [dataType]
+  - [datatype]: Specifying a valid wrapper [dataType]
 */
 func CreateGraphConstant[T completeNumeric](value T, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
@@ -92,7 +92,7 @@ func CreateGraphConstant[T completeNumeric](value T, shape Shape) (GraphNode, er
 }
 
 /*
-CreateGraphRandom creates a [F_FLOAT64] tensor that contains randomly distributed values in the range of [0, 1)
+CreateGraphRandom creates a [F_FLOAT64] flint that contains randomly distributed values in the range of [0, 1)
 
 Params:
   - [shape]: Each entry describing the size of the corresponding dimension.
@@ -108,7 +108,7 @@ func CreateGraphRandom(shape Shape) (GraphNode, error) {
 }
 
 /*
-CreateGraphArrange creates a [F_INT64] tensor that contains the indices relative to a given dimension [axis] for each element.
+CreateGraphArrange creates a [F_INT64] flint that contains the indices relative to a given dimension [axis] for each element.
 i.e. each entry is its index in that corresponding dimension.
 If you need to index more than one dimension, create multiple such tensors with [CreateGraphArrange].
 */

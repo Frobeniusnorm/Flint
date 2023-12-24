@@ -1,4 +1,4 @@
-package flint
+package wrapper
 
 /*
 #cgo LDFLAGS: -lflint -lOpenCL -lstdc++ -lm
@@ -18,7 +18,7 @@ import (
 	"syscall"
 )
 
-// Error offers a generic error struct in flint
+// Error offers a generic error struct in wrapper
 type Error struct {
 	Message string
 	Err     error
@@ -36,7 +36,7 @@ func (err *Error) Unwrap() error {
 	return errors.Join(err.Err, err.Errno)
 }
 
-// Defines all the possible errors of flint
+// Defines all the possible errors of wrapper
 var (
 	ErrWrongType             = errors.New("wrong type")
 	ErrIllegalDimension      = errors.New("illegal dimension")
@@ -44,11 +44,13 @@ var (
 	ErrIncompatibleShapes    = errors.New("incompatible shapes")
 	ErrInvalidSelect         = errors.New("invalid select")
 	ErrOpenCL                = errors.New("OpenCL error")
-	ErrInternal              = errors.New("internal error. probably a bug in the code")
+	ErrInternal              = errors.New("internal error of flint")
 	ErrOOM                   = errors.New("out of memory")
 	ErrIllegalDerive         = errors.New("impossible to derive")
 	ErrIO                    = errors.New("io error")
 )
+
+type errorCode int
 
 const (
 	noError errorCode = iota
@@ -143,11 +145,9 @@ func buildErrorFromCode(err error, errCode errorCode) error {
 }
 
 func buildError(err error) error {
-	errT := errorType()
-	return buildErrorFromCode(err, errT)
+	errCode := errorType()
+	return buildErrorFromCode(err, errCode)
 }
-
-type errorCode int
 
 // errorType fetches the error type for the last recorded error.
 // This should only be queried when an error is certain (e.g. nullptr returned from C)

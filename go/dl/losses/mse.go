@@ -2,11 +2,11 @@ package losses
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/tensor"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 	"log"
 )
 
-func MSELoss(prediction tensor.Tensor, target tensor.Tensor) tensor.Tensor {
+func MSELoss(prediction flint.Tensor, target flint.Tensor) flint.Tensor {
 	return MSELossExtended(prediction, target, REDUCE_MEAN)
 }
 
@@ -16,8 +16,8 @@ func MSELoss(prediction tensor.Tensor, target tensor.Tensor) tensor.Tensor {
 // param predictions: [dl.Tensor] of any shape
 // param target: [dl.Tensor] with same shape as [predictions]
 //
-// returns: new tensor with a single value - the loss
-func MSELossExtended(predictions tensor.Tensor, target tensor.Tensor, reduce reduction) tensor.Tensor {
+// returns: new flint with a single value - the loss
+func MSELossExtended(predictions flint.Tensor, target flint.Tensor, reduce reduction) flint.Tensor {
 	fmt.Println("MSELossExtended")
 	shapePredictions := predictions.Shape()
 	shapeTarget := target.Shape()
@@ -34,7 +34,7 @@ func MSELossExtended(predictions tensor.Tensor, target tensor.Tensor, reduce red
 	}
 	if reduce == REDUCE_MEAN {
 		fmt.Println("x shape", x.Shape().String())
-		x = x.Div(tensor.Scalar(int32(N)))
+		x = x.Div(flint.Scalar(int32(N)))
 	}
 	return x
 }

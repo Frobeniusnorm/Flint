@@ -1,39 +1,39 @@
 package datasets
 
 import (
-	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/Frobeniusnorm/Flint/go/wrapper"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"testing"
 )
 
 func TestNewFakeDataset(t *testing.T) {
-	dataset := NewFakeDataset(5, flint.Shape{10, 10}, 100)
+	dataset := NewFakeDataset(5, wrapper.Shape{10, 10}, 100)
 
 	assert.Equal(t, "fake", dataset.Name)
-	assert.Equal(t, flint.Shape{10, 10}, dataset.itemShape)
+	assert.Equal(t, wrapper.Shape{10, 10}, dataset.itemShape)
 	assert.Equal(t, uint(5), dataset.categories)
 	assert.Equal(t, uint(100), dataset.numItems)
 }
 
 func TestFakeDataset_Count(t *testing.T) {
-	dataset := NewFakeDataset(5, flint.Shape{10, 10}, 100)
+	dataset := NewFakeDataset(5, wrapper.Shape{10, 10}, 100)
 
 	assert.Equal(t, uint(100), dataset.Count())
 }
 
 func TestFakeDataset_Get(t *testing.T) {
-	dataset := NewFakeDataset(5, flint.Shape{10, 10}, 100)
+	dataset := NewFakeDataset(5, wrapper.Shape{10, 10}, 100)
 	entry := dataset.Get(1)
 
 	assert.NotNil(t, entry.Label)
 	assert.NotNil(t, entry.Data)
 
-	data := flint.CalculateResult[float64](entry.Data.node)
-	label := flint.CalculateResult[int32](entry.Label.node)
+	data := wrapper.CalculateResult[float64](entry.Data.node)
+	label := wrapper.CalculateResult[int32](entry.Label.node)
 
-	assert.Equal(t, flint.Shape{10, 10}, data.Shape)
-	assert.Equal(t, flint.Shape{1}, label.Shape)
+	assert.Equal(t, wrapper.Shape{10, 10}, data.Shape)
+	assert.Equal(t, wrapper.Shape{1}, label.Shape)
 
 	// assert data in [0, 1)
 	for _, x := range []float64(data.Data) {
@@ -49,13 +49,13 @@ func TestFakeDataset_Get(t *testing.T) {
 }
 
 func TestFakeDataset_Collate(t *testing.T) {
-	dataset := NewFakeDataset(5, flint.Shape{10, 10}, 100)
+	dataset := NewFakeDataset(5, wrapper.Shape{10, 10}, 100)
 	entries := make([]FakeDatasetEntry, 32)
 	for i := 0; i < len(entries); i++ {
 		entries[i] = dataset.Get(uint(rand.Intn(100)))
 	}
 
 	collated := dataset.Collate(entries)
-	assert.Equal(t, flint.Shape{32, 10, 10}, collated.Data.node.GetShape())
-	assert.Equal(t, flint.Shape{32}, collated.Label.node.GetShape())
+	assert.Equal(t, wrapper.Shape{32, 10, 10}, collated.Data.node.GetShape())
+	assert.Equal(t, wrapper.Shape{32}, collated.Label.node.GetShape())
 }

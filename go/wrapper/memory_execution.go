@@ -1,4 +1,4 @@
-package flint
+package wrapper
 
 // #include <flint/flint.h>
 import "C"

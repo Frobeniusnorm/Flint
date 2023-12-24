@@ -6,15 +6,15 @@ const (
 )
 
 //func TestCrossEntropyLoss(t *testing.T) {
-//	flint.Init(flint.BACKEND_BOTH)
-//	flint.SetLoggingLevel(flint.INFO)
+//	wrapper.Init(wrapper.BACKEND_BOTH)
+//	wrapper.SetLoggingLevel(wrapper.INFO)
 //
 //	t.Run("test_zero_loss", func(t *testing.T) {
 //		labelData := make([]float32, batchSize*labels)
-//		labelNode := flint.CreateGraph(labelData, flint.Shape{batchSize, labels})
+//		labelNode := wrapper.CreateGraph(labelData, wrapper.Shape{batchSize, labels})
 //		resNode := CrossEntropyLoss(labelNode, labelNode)
-//		fmt.Println("label node:", flint.CalculateResult[float32](labelNode))
-//		res := flint.CalculateResult[float32](resNode)
+//		fmt.Println("label node:", wrapper.CalculateResult[float32](labelNode))
+//		res := wrapper.CalculateResult[float32](resNode)
 //		fmt.Println(res)
 //	})
 //
@@ -23,18 +23,18 @@ const (
 //		for i := 1; i < batchSize*labels; i += batchSize {
 //			labelData[i] = 1
 //		}
-//		labelNode := flint.CreateGraph(labelData, flint.Shape{batchSize, labels})
-//		fmt.Println("label node:", flint.CalculateResult[float32](labelNode))
+//		labelNode := wrapper.CreateGraph(labelData, wrapper.Shape{batchSize, labels})
+//		fmt.Println("label node:", wrapper.CalculateResult[float32](labelNode))
 //
 //		inputData := make([]float32, batchSize*labels)
 //		for i := 2; i < batchSize*labels; i += batchSize {
 //			inputData[i] = 1
 //		}
-//		inputNode := flint.CreateGraph(inputData, flint.Shape{batchSize, labels})
-//		fmt.Println("input node:", flint.CalculateResult[float32](inputNode))
+//		inputNode := wrapper.CreateGraph(inputData, wrapper.Shape{batchSize, labels})
+//		fmt.Println("input node:", wrapper.CalculateResult[float32](inputNode))
 //
 //		resNode := CrossEntropyLoss(labelNode, inputNode)
-//		res := flint.CalculateResult[float32](resNode)
+//		res := wrapper.CalculateResult[float32](resNode)
 //		fmt.Println(res)
 //	})
 //}

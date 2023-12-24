@@ -1,7 +1,7 @@
 package datasets
 
 import (
-	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/Frobeniusnorm/Flint/go/wrapper"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"path"
@@ -52,11 +52,11 @@ func TestMnistDataset_Get(t *testing.T) {
 	assert.NotNil(t, entry.Label)
 	assert.NotNil(t, entry.Data)
 
-	data := flint.CalculateResult[float64](entry.Data.node)
-	label := flint.CalculateResult[int32](entry.Label.node)
+	data := wrapper.CalculateResult[float64](entry.Data.node)
+	label := wrapper.CalculateResult[int32](entry.Label.node)
 
-	assert.Equal(t, flint.Shape{28, 28}, data.Shape)
-	assert.Equal(t, flint.Shape{1}, label.Shape)
+	assert.Equal(t, wrapper.Shape{28, 28}, data.Shape)
+	assert.Equal(t, wrapper.Shape{1}, label.Shape)
 
 	// assert data in [0, 256)
 	for _, x := range []float64(data.Data) {
@@ -80,6 +80,6 @@ func TestMnistDataset_Collate(t *testing.T) {
 	}
 
 	collated := dataset.Collate(entries)
-	assert.Equal(t, flint.Shape{32, 28, 28}, collated.Data.node.GetShape())
-	assert.Equal(t, flint.Shape{32}, collated.Label.node.GetShape())
+	assert.Equal(t, wrapper.Shape{32, 28, 28}, collated.Data.node.GetShape())
+	assert.Equal(t, wrapper.Shape{32}, collated.Label.node.GetShape())
 }

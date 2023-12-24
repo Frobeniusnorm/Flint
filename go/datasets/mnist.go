@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/flint"
-	"github.com/Frobeniusnorm/Flint/go/tensor"
+	"github.com/Frobeniusnorm/Flint/go/wrapper"
 	"io"
 	"log"
 	"os"
@@ -20,8 +20,8 @@ type MnistDataset struct {
 }
 
 type MnistDatasetEntry struct {
-	Label tensor.Tensor
-	Data  tensor.Tensor
+	Label flint.Tensor
+	Data  flint.Tensor
 }
 
 const (
@@ -92,9 +92,9 @@ func loadMnistDataset(imagePath string, labelPath string) (MnistDataset, error) 
 		imageOffset := i * imageByteSize
 		imageData := images.data[imageOffset : imageOffset+imageByteSize]
 
-		image := tensor.FromNodeWithErr(flint.CreateGraph(imageData, flint.Shape{uint(images.height), uint(images.width)}))
+		image := flint.FromNodeWithErr(wrapper.CreateGraph(imageData, wrapper.Shape{uint(images.height), uint(images.width)}))
 		class := labels.data[i]
-		label := tensor.Scalar(int32(class))
+		label := flint.Scalar(int32(class))
 		data[i] = MnistDatasetEntry{
 			Label: label,
 			Data:  image,
@@ -243,8 +243,8 @@ func (d MnistDataset) Collate(items []MnistDatasetEntry) MnistDatasetEntry {
 	if len(items) <= 0 {
 		log.Panicf("cannot collate items - invalid batch size (%d)", len(items))
 	}
-	labels := make([]tensor.Tensor, len(items))
-	images := make([]tensor.Tensor, len(items))
+	labels := make([]flint.Tensor, len(items))
+	images := make([]flint.Tensor, len(items))
 	for idx, val := range items {
 		labels[idx] = val.Label
 		images[idx] = val.Data

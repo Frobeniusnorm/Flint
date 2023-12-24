@@ -3,7 +3,7 @@ package dataloader
 import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/datasets"
-	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/Frobeniusnorm/Flint/go/wrapper"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -11,32 +11,32 @@ import (
 
 func TestDataloader_Count(t *testing.T) {
 	t.Run("drop last", func(t *testing.T) {
-		dataset := datasets.NewFakeDataset(2, flint.Shape{10, 10}, 10)
+		dataset := datasets.NewFakeDataset(2, wrapper.Shape{10, 10}, 10)
 		dataload := NewDataloader[datasets.FakeDatasetEntry](dataset, 3, 3, true, nil, 0, false)
 		assert.Equal(t, dataload.Count(), uint(3))
 	})
 
 	t.Run("drop last edge case", func(t *testing.T) {
-		dataset := datasets.NewFakeDataset(2, flint.Shape{10, 10}, 9)
+		dataset := datasets.NewFakeDataset(2, wrapper.Shape{10, 10}, 9)
 		dataload := NewDataloader[datasets.FakeDatasetEntry](dataset, 3, 3, true, nil, 0, false)
 		assert.Equal(t, dataload.Count(), uint(3))
 	})
 
 	t.Run("don't drop last", func(t *testing.T) {
-		dataset := datasets.NewFakeDataset(2, flint.Shape{10, 10}, 10)
+		dataset := datasets.NewFakeDataset(2, wrapper.Shape{10, 10}, 10)
 		dataload := NewDataloader[datasets.FakeDatasetEntry](dataset, 3, 3, false, nil, 0, false)
 		assert.Equal(t, dataload.Count(), uint(4))
 	})
 
 	t.Run("drop last edge case", func(t *testing.T) {
-		dataset := datasets.NewFakeDataset(2, flint.Shape{10, 10}, 9)
+		dataset := datasets.NewFakeDataset(2, wrapper.Shape{10, 10}, 9)
 		dataload := NewDataloader[datasets.FakeDatasetEntry](dataset, 3, 3, false, nil, 0, false)
 		assert.Equal(t, dataload.Count(), uint(3))
 	})
 }
 
 func TestNewDataloader(t *testing.T) {
-	dataset := datasets.NewFakeDataset(10, flint.Shape{10, 10}, 1000)
+	dataset := datasets.NewFakeDataset(10, wrapper.Shape{10, 10}, 1000)
 	numWorkers := uint(3)
 	batchSize := uint(32)
 	prefetchFactor := uint(2)
@@ -56,7 +56,7 @@ func TestNewDataloader(t *testing.T) {
 }
 
 func TestNewDataloaderFromSampler(t *testing.T) {
-	dataset := datasets.NewFakeDataset(10, flint.Shape{10, 10}, 1000)
+	dataset := datasets.NewFakeDataset(10, wrapper.Shape{10, 10}, 1000)
 	numWorkers := uint(3)
 	batchSize := uint(32)
 	prefetchFactor := uint(2)
@@ -76,7 +76,7 @@ func TestNewDataloaderFromSampler(t *testing.T) {
 }
 
 func TestNewDataloaderFromBatchSampler(t *testing.T) {
-	dataset := datasets.NewFakeDataset(10, flint.Shape{10, 10}, 1000)
+	dataset := datasets.NewFakeDataset(10, wrapper.Shape{10, 10}, 1000)
 	numWorkers := uint(3)
 	batchSize := uint(32)
 	prefetchFactor := uint(2)
@@ -96,7 +96,7 @@ func TestNewDataloaderFromBatchSampler(t *testing.T) {
 }
 
 func TestNewDataloaderSmart(t *testing.T) {
-	dataset := datasets.NewFakeDataset(10, flint.Shape{10, 10}, 1000)
+	dataset := datasets.NewFakeDataset(10, wrapper.Shape{10, 10}, 1000)
 	batchSize := uint(32)
 	dl := NewDataloaderSmart[datasets.FakeDatasetEntry](dataset, batchSize, false)
 
@@ -114,7 +114,7 @@ func TestNewDataloaderSmart(t *testing.T) {
 }
 
 func TestDataloader_Next(t *testing.T) {
-	dataset := datasets.NewFakeDataset(10, flint.Shape{10, 10}, 5)
+	dataset := datasets.NewFakeDataset(10, wrapper.Shape{10, 10}, 5)
 	numWorkers := uint(2)
 	batchSize := uint(2)
 	prefetchFactor := uint(1)
@@ -141,7 +141,7 @@ func TestDataloader_Next(t *testing.T) {
 }
 
 func TestDataloader_Reset(t *testing.T) {
-	dataset := datasets.NewFakeDataset(10, flint.Shape{10, 10}, 10)
+	dataset := datasets.NewFakeDataset(10, wrapper.Shape{10, 10}, 10)
 	numWorkers := uint(1)
 	batchSize := uint(3)
 	prefetchFactor := uint(0)

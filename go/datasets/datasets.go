@@ -3,7 +3,7 @@ package datasets
 import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/flint"
-	"github.com/Frobeniusnorm/Flint/go/tensor"
+	"github.com/Frobeniusnorm/Flint/go/wrapper"
 	"log"
 )
 
@@ -30,12 +30,12 @@ func TrainTestSplitRelative[T any](dataset Dataset[T], trainPercentage float32, 
 	return dataset, dataset // TODO (implement. don't forget all the assertions about size)
 }
 
-func TrivialCollate(items []tensor.Tensor) tensor.Tensor {
+func TrivialCollate(items []flint.Tensor) flint.Tensor {
 	if len(items) <= 0 {
 		log.Panicf("cannot collate items - invalid batch size (%d)", len(items))
 	}
 
-	newShape := flint.Shape{1}
+	newShape := wrapper.Shape{1}
 	for _, val := range items[0].Shape() {
 		newShape = append(newShape, val)
 	}
@@ -50,7 +50,7 @@ func TrivialCollate(items []tensor.Tensor) tensor.Tensor {
 }
 
 // (debugging utility)
-func printImage(image []int32, shape flint.Shape) {
+func printImage(image []int32, shape wrapper.Shape) {
 	height, width := shape[0], shape[1]
 	for row := uint(0); row < height; row++ {
 		for col := uint(0); col < width; col++ {

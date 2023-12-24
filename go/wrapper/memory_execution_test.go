@@ -1,4 +1,4 @@
-package flint
+package wrapper
 
 import (
 	"fmt"

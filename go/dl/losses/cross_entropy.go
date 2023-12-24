@@ -2,7 +2,7 @@ package losses
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/tensor"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 )
 
 const eps float32 = 1e-10
@@ -10,8 +10,8 @@ const eps float32 = 1e-10
 // CrossEntropyLoss calculates the cross entropy loss between a set of two tensors
 // predictions are the logits (thus one hot encoded). They do not have to be normalized, nor sum to one for this to work.
 // target is the expected value, NOT one hot encoded
-func CrossEntropyLoss(predictions tensor.Tensor, target tensor.Tensor) tensor.Tensor {
-	return CrossEntropyLossExtended(predictions, target, tensor.Tensor{}, REDUCE_MEAN, 0.0)
+func CrossEntropyLoss(predictions flint.Tensor, target flint.Tensor) flint.Tensor {
+	return CrossEntropyLossExtended(predictions, target, flint.Tensor{}, REDUCE_MEAN, 0.0)
 }
 
 /*
@@ -21,9 +21,9 @@ param predictions: predictions are the logits (thus one hot encoded). They do no
 predictions has to be a Tensor of size (C) for unbatched input, (minibatch,C) for the typical logits or (minibatch,C,d1,d2,...,dK).
 The last one might being useful for higher dimension inputs, such images.
 
-param labels should be a tensor with one of the following structures:
+param labels should be a flint with one of the following structures:
 */
-func CrossEntropyLossExtended(predictions tensor.Tensor, target tensor.Tensor, weight tensor.Tensor, reduce reduction, labelSmoothing float32) tensor.Tensor {
+func CrossEntropyLossExtended(predictions flint.Tensor, target flint.Tensor, weight flint.Tensor, reduce reduction, labelSmoothing float32) flint.Tensor {
 	fmt.Println("Cross entropy loss extended")
 
 	shape := predictions.Shape()
@@ -32,11 +32,11 @@ func CrossEntropyLossExtended(predictions tensor.Tensor, target tensor.Tensor, w
 
 	// find out if the labels contain class indices (discrete) or probabilities (continuous)
 
-	// TODO: take a look at flint.Equal
+	// TODO: take a look at wrapper.Equal
 	// FIXME: everything basically lol (see pt)
 	// FIXME: given one hot encoding we can also do: L(y, ŷ) = − log(ŷ_k)|y_k =1
 
-	offset := tensor.Constant(eps, shape)
+	offset := flint.Constant(eps, shape)
 	l := offset.Add(predictions).Log().Mul(target).Neg()
 	for len(l.Shape()) > 1 {
 		l = l.ReduceSum(0)
@@ -46,7 +46,7 @@ func CrossEntropyLossExtended(predictions tensor.Tensor, target tensor.Tensor, w
 		l = l.Sum()
 	}
 	if reduce == REDUCE_MEAN {
-		l = l.Div(tensor.Scalar(int32(N)))
+		l = l.Div(flint.Scalar(int32(N)))
 	}
 	return l
 }

@@ -54,7 +54,7 @@ func mustParse(fset *token.FileSet, filename string) *ast.File {
 }
 
 func buildHtml(p *doc.Package) string {
-	tmpl, err := template.New("flint.ahtml").Parse("hi")
+	tmpl, err := template.New("wrapper.ahtml").Parse("hi")
 	if err != nil {
 		panic(err)
 	}

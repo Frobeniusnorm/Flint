@@ -1,6 +1,6 @@
 /*
-Package flint contains all basic types and functions
-as it is only the low-level wrapper, declarations similar to [../flint.h]
+Package wrapper contains all basic types and functions
+as it is only the low-level wrapper, declarations similar to [../wrapper.h]
 
 This wrapper is features complete, but should only be used as a basis for higher level software,
 as there is no memory management or similar things.
@@ -10,7 +10,7 @@ NOTE: important rules for writing robust CGo code:
 - don't pass data from Go's stack memory to C. include stdlib and use C.malloc!
 - only pass unsafe.Pointer and C pointer to cgo!
 */
-package flint
+package wrapper
 
 /*
 #cgo LDFLAGS: -lflint -lOpenCL -lstdc++ -lm
@@ -38,7 +38,7 @@ type GraphNode struct {
 
 // Valid tells if a GraphNode has a valid structure.
 // This can be useful, as a precondition to decide whether to check errno or not.
-// BUG: FIXME for now this is not possible as flint does not return "invalid" GraphNodes yet.
+// BUG: FIXME for now this is not possible as wrapper does not return "invalid" GraphNodes yet.
 func (node GraphNode) Valid() bool {
 	return true
 }
@@ -58,7 +58,7 @@ func (a ResultData[T]) String() string {
 }
 
 // Stride defines the steps for sliding operations
-// needs to have one entry for each dimension of tensor
+// needs to have one entry for each dimension of flint
 type Stride []int
 
 func (a Stride) String() string {
@@ -66,7 +66,7 @@ func (a Stride) String() string {
 }
 
 // Axes indicate changes in dimensions (i.e. transpose)
-// needs to have one entry for each dimension of tensor
+// needs to have one entry for each dimension of flint
 // and each entry should not be higher than the number of dimensions
 type Axes []uint
 
@@ -74,8 +74,8 @@ func (a Axes) String() string {
 	return fmt.Sprintf("%v", []uint(a))
 }
 
-// Shape represents the size of a tensor.
-// needs to have one entry for each dimension of tensor
+// Shape represents the size of a flint.
+// needs to have one entry for each dimension of flint
 type Shape []uint
 
 func (a Shape) NumItems() uint {
@@ -102,7 +102,7 @@ func (a Shape) Equal(b Shape) bool {
 	return true
 }
 
-// DataType represents the valid datatypes for the flint backend
+// DataType represents the valid datatypes for the wrapper backend
 type DataType uint32 // equal type so it is comparable
 
 // the order is important as it defines the type coercion
@@ -137,7 +137,7 @@ type baseNumeric interface {
 	~int32 | ~int64 | ~float32 | ~float64
 }
 
-// completeNumeric is a constraint interface representing all numeric types that can be used in flint!
+// completeNumeric is a constraint interface representing all numeric types that can be used in wrapper!
 // NOTE: cant support uint64 as casting it to int64 might cause overflows
 type completeNumeric interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~float32 | ~float64
