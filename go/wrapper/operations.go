@@ -322,7 +322,7 @@ func Neg(x GraphNode) (GraphNode, error) {
 /*
 Sign applies the sign function to each element.
 i.e. x[i] = 1 if x[i] >= 0 else x[i] = -1
-The input flint [x] must have an integer type.
+The input flint_old [x] must have an integer type.
 This function returns a [F_INT32] [GraphNode].
 */
 func Sign(x GraphNode) (GraphNode, error) {
@@ -347,7 +347,7 @@ func Even(x GraphNode) (GraphNode, error) {
 }
 
 /*
-Equal compares a flint and a constant elementwise by [a] = [b] and returns a 0,1 [F_INT32] [GraphNode].
+Equal compares a flint_old and a constant elementwise by [a] = [b] and returns a 0,1 [F_INT32] [GraphNode].
 */
 func Equal[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 	var flintNode *C.FGraphNode = nil
@@ -375,7 +375,7 @@ func Equal[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 }
 
 /*
-Greater compares a flint and a constant elementwise by [a] > [b] and returns a 0,1 [F_INT32] [GraphNode].
+Greater compares a flint_old and a constant elementwise by [a] > [b] and returns a 0,1 [F_INT32] [GraphNode].
 */
 func Greater[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 	var flintNode *C.FGraphNode = nil
@@ -403,7 +403,7 @@ func Greater[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 }
 
 /*
-Less compares a flint and a constant elementwise by [a] < [b] and returns a 0,1 [F_INT32] [GraphNode].
+Less compares a flint_old and a constant elementwise by [a] < [b] and returns a 0,1 [F_INT32] [GraphNode].
 */
 func Less[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 	var flintNode *C.FGraphNode = nil
@@ -432,8 +432,8 @@ func Less[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 /*
 Matmul carries out matrix multiplication on the last two dimensions of the tensors.
 
-E.g. a matrix multiplication of two tensors with shapes (64, 32, 16) and (16, 24) will yield a flint with shape (64, 32, 24).
-Since for one entry of the flint multiple other previous entries are needed, the operand tensors need to be executed first.
+E.g. a matrix multiplication of two tensors with shapes (64, 32, 16) and (16, 24) will yield a flint_old with shape (64, 32, 24).
+Since for one entry of the flint_old multiple other previous entries are needed, the operand tensors need to be executed first.
 Therefor the method will implicitly (or eagerly) execute the two parameter nodes [a] and [b] if their data is not already present.
 */
 func Matmul(a GraphNode, b GraphNode) (GraphNode, error) {
@@ -445,7 +445,7 @@ func Matmul(a GraphNode, b GraphNode) (GraphNode, error) {
 }
 
 /*
-Flatten the complete flint to a flint with one dimension.
+Flatten the complete flint_old to a flint_old with one dimension.
 E.g:
 
 	Flatten([[[3, 1, 4], [2, 1, 5]], [[0, 4, 2], [4, 7, 9]]]) =
@@ -460,8 +460,8 @@ func Flatten(a GraphNode) (GraphNode, error) {
 }
 
 /*
-FlattenDim flattens a flint [a] with n dimensions along dimension [dim], resulting in a flint with n-1 dimensions.
-Flattening a dimension will remove it from the shape of the flint, therefor it's not possible to flatten the dimension 0.
+FlattenDim flattens a flint_old [a] with n dimensions along dimension [dim], resulting in a flint_old with n-1 dimensions.
+Flattening a dimension will remove it from the shape of the flint_old, therefor it's not possible to flatten the dimension 0.
 
 E.g:
 
@@ -488,9 +488,9 @@ func Convert(a GraphNode, newType DataType) (GraphNode, error) {
 }
 
 /*
-Reshape the underlying data of the flint to the new shape.
+Reshape the underlying data of the flint_old to the new shape.
 The product of each dimension of the new shape must be the same as the product of the dimensions of the previous shape.
-This means it must describe the same number of entries of the flint.
+This means it must describe the same number of entries of the flint_old.
 */
 func Reshape(a GraphNode, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
@@ -503,7 +503,7 @@ func Reshape(a GraphNode, shape Shape) (GraphNode, error) {
 }
 
 /*
-Minimum takes the minimum of two tensors (or a flint and value) element wise along the last dimension of each.
+Minimum takes the minimum of two tensors (or a flint_old and value) element wise along the last dimension of each.
 */
 func Minimum[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 	var flintNode *C.FGraphNode = nil
@@ -530,7 +530,7 @@ func Minimum[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 }
 
 /*
-Maximum takes the maximum of two tensors (or a flint and value) element wise along the last dimension of each.
+Maximum takes the maximum of two tensors (or a flint_old and value) element wise along the last dimension of each.
 */
 func Maximum[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 	var flintNode *C.FGraphNode = nil
@@ -557,7 +557,7 @@ func Maximum[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
 }
 
 /*
-ReduceSum reduces one dimension of the flint by additive folding.
+ReduceSum reduces one dimension of the flint_old by additive folding.
 
 E.g:
 
@@ -576,7 +576,7 @@ func ReduceSum(a GraphNode, dim int) (GraphNode, error) {
 }
 
 /*
-ReduceMul reduces one dimension of the flint by multiplicative folding.
+ReduceMul reduces one dimension of the flint_old by multiplicative folding.
 
 E.g:
 
@@ -594,7 +594,7 @@ func ReduceMul(a GraphNode, dim int) (GraphNode, error) {
 }
 
 /*
-ReduceMin reduces one dimension of the flint by keeping the minimum.
+ReduceMin reduces one dimension of the flint_old by keeping the minimum.
 
 E.g:
 
@@ -612,7 +612,7 @@ func ReduceMin(a GraphNode, dim int) (GraphNode, error) {
 }
 
 /*
-ReduceMax reduces one dimension of the flint by keeping the maximum.
+ReduceMax reduces one dimension of the flint_old by keeping the maximum.
 
 E.g:
 
@@ -630,9 +630,9 @@ func ReduceMax(a GraphNode, dim int) (GraphNode, error) {
 }
 
 /*
-Slice selects a slice of the flint with a dimension wise start and end index.
-[start] and [end] are arrays with as many entries as the flint has dimensions.
-They may contain negative values, which are then subtracted from the end of the flint
+Slice selects a slice of the flint_old with a dimension wise start and end index.
+[start] and [end] are arrays with as many entries as the flint_old has dimensions.
+They may contain negative values, which are then subtracted from the end of the flint_old
 (e.g. -1 means the element before the last element).
 [start] is inclusive and describes the start index of the selection per dimension and [end] describes the end index per dimension and is exclusive.
 */
@@ -648,9 +648,9 @@ func Slice(a GraphNode, start Axes, end Axes) (GraphNode, error) {
 }
 
 /*
-SliceWithStride selects a slice of the flint [node] with a dimension wise start index, end index and stride.
-[start], [end] and [stride] are arrays with as many entries as the flint has dimensions.
-[start] and [end] may contain negative values, which are then subtracted from the end of the flint
+SliceWithStride selects a slice of the flint_old [node] with a dimension wise start index, end index and stride.
+[start], [end] and [stride] are arrays with as many entries as the flint_old has dimensions.
+[start] and [end] may contain negative values, which are then subtracted from the end of the flint_old
 (e.g. -1 means the element before the last element).
 [start] is inclusive and describes the start index of the selection per dimension and [end] describes the end index per dimension and is exclusive.
 [stride] contains the per dimension step size (e.g. 2 meaning every second element will be selected etc.) and may be negative as well,
@@ -671,11 +671,11 @@ func SliceWithStride(node GraphNode, start Axes, end Axes, stride Stride) (Graph
 }
 
 /*
-Extend creates a new flint of zeroes with the requested shape.
-The original flint is embedded at the given indices.
-  - [node]: original flint which shape is to be extended
+Extend creates a new flint_old of zeroes with the requested shape.
+The original flint_old is embedded at the given indices.
+  - [node]: original flint_old which shape is to be extended
   - [shape]: array of new sizes per dimension. Has the same number of entries and the shape of [node].
-  - [insertAt]: array with indices per dimension of [node], denoting where [node] is to be placed in the resulting flint
+  - [insertAt]: array with indices per dimension of [node], denoting where [node] is to be placed in the resulting flint_old
 */
 func Extend(node GraphNode, shape Shape, insertAt Axes) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
@@ -689,11 +689,11 @@ func Extend(node GraphNode, shape Shape, insertAt Axes) (GraphNode, error) {
 }
 
 /*
-ExtendWithStride creates a new flint of zeroes with the requested shape.
-The original flint is embedded at the given indices.
-  - [node]: original flint which shape is to be extended,
+ExtendWithStride creates a new flint_old of zeroes with the requested shape.
+The original flint_old is embedded at the given indices.
+  - [node]: original flint_old which shape is to be extended,
   - [shape]: array of new sizes per dimension. Has the same number of entries as [node] has dimensions.
-  - [insertAt]: array with indices per dimension denoting where [node] is to be placed in the resulting flint. Has a value per dimension of [node].
+  - [insertAt]: array with indices per dimension denoting where [node] is to be placed in the resulting flint_old. Has a value per dimension of [node].
   - [stride]: allows to pull apart [node], em-placing zeros between each value of [node]. Has a value per dimension.
 */
 func ExtendWithStride(node GraphNode, shape Shape, insertAt Axes, stride Stride) (GraphNode, error) {
@@ -727,7 +727,7 @@ func Concat(nodeA GraphNode, nodeB GraphNode, axis uint) (GraphNode, error) {
 }
 
 /*
-Expand adds a new dimension at an arbitrary position to the flint and repeats the following dimensions to match a given shape.
+Expand adds a new dimension at an arbitrary position to the flint_old and repeats the following dimensions to match a given shape.
   - [axis]: the dimension prior to which the new dimension will be inserted (0 means a new dimension in the front, n means as a new last dimension).
   - [size]: the new size of that dimension (repeats the following dimensions ax_size - 1 times).
 */
@@ -751,9 +751,9 @@ func Abs(node GraphNode) (GraphNode, error) {
 }
 
 /*
-Repeat dimensions of a flint multiple times.
+Repeat dimensions of a flint_old multiple times.
   - [node]: the node in which dimensions are to be repeated
-  - [axes]: array with the same number of entries as the flint has dimensions
+  - [axes]: array with the same number of entries as the flint_old has dimensions
 
 E.g:
 
@@ -771,10 +771,10 @@ func Repeat(node GraphNode, repetitions Axes) (GraphNode, error) {
 }
 
 /*
-Transpose flint [node] along multiple dimensions.
+Transpose flint_old [node] along multiple dimensions.
 The array [axes] has the same number of entries as [node] has dimensions, which gives the permutations of dimensions.
 
-The flint will have a resulting shape in which the size each dimension corresponds to the former size in dimension in [axes].
+The flint_old will have a resulting shape in which the size each dimension corresponds to the former size in dimension in [axes].
 */
 func Transpose(node GraphNode, axes Axes) (GraphNode, error) {
 	newAxes := convertArray[uint, C.int](axes)
@@ -787,7 +787,7 @@ func Transpose(node GraphNode, axes Axes) (GraphNode, error) {
 }
 
 /*
-Convolve the n-dimensional input flint [node] with an n-dimensional filter
+Convolve the n-dimensional input flint_old [node] with an n-dimensional filter
 [kernel] and a per dimensional [stride] with size of n-1.
 It is expected that [node] and [kernel] have the same size in their last dimension (which will be completely reduced by the convolution).
 In all other dimensions the size of [node] should be larger or equal to the size of [kernel].
@@ -837,9 +837,9 @@ func Slide(node GraphNode, kernel GraphNode, stride Stride) (GraphNode, error) {
 }
 
 /*
-Index selects single elements with an index-flint (integer flint containing indices for the selected dimension).
-It indexes a dimension of the input flint and the result has the shape of the input flint except for the indexed dimension.
-It is assumed that except for the last entry its shape is a prefix of the shape of the input flint and the indexing will occur in the matched subsets.
+Index selects single elements with an index-flint_old (integer flint_old containing indices for the selected dimension).
+It indexes a dimension of the input flint_old and the result has the shape of the input flint_old except for the indexed dimension.
+It is assumed that except for the last entry its shape is a prefix of the shape of the input flint_old and the indexing will occur in the matched subsets.
 The last dimension of indices is the one indexed in node.
 
 Take the "subset" of the matrix where the first two slices are swapped:
@@ -948,7 +948,7 @@ func SlidingWindow(node GraphNode, size Shape, stride Stride) (GraphNode, error)
 }
 
 /*
-Permute randomly permutes (= swaps multiple elements with each other without creating, copying or deleting new ones) one axis of the input flint.
+Permute randomly permutes (= swaps multiple elements with each other without creating, copying or deleting new ones) one axis of the input flint_old.
 */
 func Permute(a GraphNode, axis uint) (GraphNode, error) {
 	flintNode, errno := C.fpermutate(a.ref, C.uint(axis))
@@ -991,7 +991,7 @@ func Min(node GraphNode) (GraphNode, error) {
 	return node, nil
 }
 
-// Sum sums up all values in the flattened flint
+// Sum sums up all values in the flattened flint_old
 func Sum(node GraphNode) (GraphNode, error) {
 	node, err := Flatten(node)
 	if err != nil {

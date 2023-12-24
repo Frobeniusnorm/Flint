@@ -2,7 +2,7 @@ package layers
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/Frobeniusnorm/Flint/go/flint_old"
 	"github.com/Frobeniusnorm/Flint/go/wrapper"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -14,7 +14,7 @@ func TestNewSoftmax(t *testing.T) {
 }
 
 func TestSoftmax_Forward(t *testing.T) {
-	data := flint.NewTensor(wrapper.CreateGraphConstant(float32(2), wrapper.Shape{4}))
+	data := flint_old.NewTensor(wrapper.CreateGraphConstant(float32(2), wrapper.Shape{4}))
 	softmax := NewSoftmax()
 	out := softmax.Forward(data)
 	res := wrapper.CalculateResult[float32](out.node)

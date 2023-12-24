@@ -27,11 +27,11 @@ type Error struct {
 
 // TODO: is a custom .Is and .As function needed? as seen in: https://go.dev/blog/go1.13-errors
 
-func (err *Error) Error() string {
+func (err Error) Error() string {
 	return fmt.Sprintf("%v (%v) - %s", err.Err, err.Errno, err.Message)
 }
 
-func (err *Error) Unwrap() error {
+func (err Error) Unwrap() error {
 	// return err.Err
 	return errors.Join(err.Err, err.Errno)
 }
@@ -44,7 +44,7 @@ var (
 	ErrIncompatibleShapes    = errors.New("incompatible shapes")
 	ErrInvalidSelect         = errors.New("invalid select")
 	ErrOpenCL                = errors.New("OpenCL error")
-	ErrInternal              = errors.New("internal error of flint")
+	ErrInternal              = errors.New("internal error of flint_old")
 	ErrOOM                   = errors.New("out of memory")
 	ErrIllegalDerive         = errors.New("impossible to derive")
 	ErrIO                    = errors.New("io error")
@@ -80,61 +80,61 @@ func buildErrorFromCode(err error, errCode errorCode) error {
 	case noError:
 		return nil
 	case wrongType:
-		return &Error{
+		return Error{
 			Message: errM,
 			Err:     ErrWrongType,
 			Errno:   errno,
 		}
 	case illegalDimension:
-		return &Error{
+		return Error{
 			Message: errM,
 			Err:     ErrIllegalDimension,
 			Errno:   errno,
 		}
 	case illegalDimensionality:
-		return &Error{
+		return Error{
 			Message: errM,
 			Err:     ErrIllegalDimensionality,
 			Errno:   errno,
 		}
 	case incompatibleShapes:
-		return &Error{
+		return Error{
 			Message: errM,
 			Err:     ErrIncompatibleShapes,
 			Errno:   errno,
 		}
 	case invalidSelect:
-		return &Error{
+		return Error{
 			Message: errM,
 			Err:     ErrInvalidSelect,
 			Errno:   errno,
 		}
 	case oclError:
-		return &Error{
+		return Error{
 			Message: errM,
 			Err:     ErrOpenCL,
 			Errno:   errno,
 		}
 	case internalError:
-		return &Error{
+		return Error{
 			Message: errM,
 			Err:     ErrInternal,
 			Errno:   errno,
 		}
 	case outOfMemory:
-		return &Error{
+		return Error{
 			Message: errM,
 			Err:     ErrOOM,
 			Errno:   errno,
 		}
 	case illegalDerive:
-		return &Error{
+		return Error{
 			Message: errM,
 			Err:     ErrIllegalDerive,
 			Errno:   errno,
 		}
 	case ioError:
-		return &Error{
+		return Error{
 			Message: errM,
 			Err:     ErrIO,
 			Errno:   errno,

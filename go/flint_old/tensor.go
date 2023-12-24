@@ -1,10 +1,10 @@
 /*
-Package flint serves as a wrapper around the specific flint library.
+Package flint_old serves as a wrapper around the specific flint_old library.
 It abstracts away all technicalities like memory management and error handling.
 
-This package should be used to handle all flint operations instead of relying on the underlying Library alone and risking memory issues.
+This package should be used to handle all flint_old operations instead of relying on the underlying Library alone and risking memory issues.
 */
-package flint
+package flint_old
 
 import "C"
 import (
@@ -47,8 +47,8 @@ type Tensor struct {
 	dataType    DataType
 }
 
-// String prints the contents of the flint.
-// NOTE: If not a isLight flint, this causes the node's graph to be executed!
+// String prints the contents of the flint_old.
+// NOTE: If not a isLight flint_old, this causes the node's graph to be executed!
 // Use carefully! (best only in debugging)
 func (x Tensor) String() string {
 	if x.isLight() {
@@ -114,7 +114,7 @@ However, this may change in the future as we have a massive [finalizer overhead]
 */
 func (x Tensor) init() {
 	if x.err != nil {
-		log.Panicf("cannot initialize a errornous flint: %s", x.err)
+		log.Panicf("cannot initialize a errornous flint_old: %s", x.err)
 	}
 	if !x.isLight() {
 		wrapper.SetRefCounter(*x.node, 1)
@@ -129,8 +129,8 @@ This fixes memory management issues, as the node can be cleared on subsequent ca
 */
 func (x Tensor) Close() {
 	if !x.isLight() {
-		fmt.Println("closing a flint ...", x.Shape())
-		runtime.SetFinalizer(&x, nil) // remove any finalizer for this flint
+		fmt.Println("closing a flint_old ...", x.Shape())
+		runtime.SetFinalizer(&x, nil) // remove any finalizer for this flint_old
 		wrapper.SetRefCounter(*x.node, 0)
 		runtime.KeepAlive(x)
 	}
@@ -144,7 +144,7 @@ func (x Tensor) Shape() Shape {
 	}
 }
 
-// Value returns the data of a flint.
+// Value returns the data of a flint_old.
 // WARNING: this will cause the graph to be executed and data transferred from the GPU to the CPU!
 func (x Tensor) Value() (Shape, any) {
 	if x.err != nil {
@@ -221,7 +221,7 @@ func (x Tensor) isLight() bool {
 
 func lightVal[T Numeric](x Tensor) T {
 	if !x.isLight() {
-		panic("can't get light value of node flint")
+		panic("can't get light value of node flint_old")
 	}
 
 	switch x.dataType {
@@ -238,7 +238,7 @@ func lightVal[T Numeric](x Tensor) T {
 	}
 }
 
-// To converts the flint's data type
+// To converts the flint_old's data type
 func (x Tensor) To(tt DataType) Tensor {
 	if x.isLight() {
 		switch tt {

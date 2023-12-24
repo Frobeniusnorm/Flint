@@ -2,7 +2,7 @@ package datasets
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/Frobeniusnorm/Flint/go/flint_old"
 	"github.com/Frobeniusnorm/Flint/go/wrapper"
 	"log"
 )
@@ -30,7 +30,7 @@ func TrainTestSplitRelative[T any](dataset Dataset[T], trainPercentage float32, 
 	return dataset, dataset // TODO (implement. don't forget all the assertions about size)
 }
 
-func TrivialCollate(items []flint.Tensor) flint.Tensor {
+func TrivialCollate(items []flint_old.Tensor) flint_old.Tensor {
 	if len(items) <= 0 {
 		log.Panicf("cannot collate items - invalid batch size (%d)", len(items))
 	}

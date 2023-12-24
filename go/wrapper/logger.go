@@ -17,6 +17,9 @@ const (
 
 // SetLoggingLevel sets the threshold for logging. Only message with a level higher or equal than [level] will be printed.
 func SetLoggingLevel(level loggingLevel) {
+	if level < LOG_OFF || level > LOG_DEBUG {
+		panic("invalid logging level")
+	}
 	C.fSetLoggingLevel(C.enum_FLogType(level))
 }
 

@@ -2,7 +2,7 @@ package layers
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/flint"
+	"github.com/Frobeniusnorm/Flint/go/flint_old"
 )
 
 type Dropout struct {
@@ -15,11 +15,11 @@ func NewDropout(prob float32) Dropout {
 	}
 }
 
-func (d Dropout) Parameters(_ bool) []flint.Parameter {
-	return []flint.Parameter{}
+func (d Dropout) Parameters(_ bool) []flint_old.Parameter {
+	return []flint_old.Parameter{}
 }
 
-func (d Dropout) Forward(x flint.Tensor) flint.Tensor {
+func (d Dropout) Forward(x flint_old.Tensor) flint_old.Tensor {
 	return x // TODO
 }
 

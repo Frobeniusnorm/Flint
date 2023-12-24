@@ -1,4 +1,4 @@
-package flint
+package flint_old
 
 // This file exports some unexported functions to go test, so they can be tested.
 

@@ -1,4 +1,4 @@
-package flint
+package flint_old
 
 import (
 	"github.com/Frobeniusnorm/Flint/go/wrapper"
@@ -40,7 +40,7 @@ func isScalar(x any) bool {
 /*
 Create a Tensor from a wide range of data types.
 
-- if scalar type just keep it, don't turn into flint yet!
+- if scalar type just keep it, don't turn into flint_old yet!
 - if nd array flatten it a generate
 - if 1d array generate normally
 - if [wrapper.GraphNode], just set reference counter
@@ -68,10 +68,10 @@ func Create(data any) Tensor {
 //	if err != nil {
 //		panic(err)
 //	}
-//	flint.node = &flintNode
+//	flint_old.node = &flintNode
 //
-//	flint.init()
-//	return flint
+//	flint_old.init()
+//	return flint_old
 //}
 
 func CreateFromSliceAndShape[T Numeric](data []T, shape Shape) Tensor {

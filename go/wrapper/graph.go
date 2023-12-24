@@ -3,7 +3,6 @@ package wrapper
 // #include <flint/flint.h>
 import "C"
 import (
-	"fmt"
 	"unsafe"
 )
 
@@ -17,12 +16,12 @@ Params:
   - [datatype]: Specifying a valid wrapper [dataType]
 */
 func CreateGraph[T completeNumeric](data []T, shape Shape) (GraphNode, error) {
-	if len(data) != int(shape.NumItems()) {
-		return GraphNode{}, &Error{
-			Message: fmt.Sprintf("data (len: %d) and shape (numItems: %d) do not match", len(data), int(shape.NumItems())),
-			Err:     ErrIncompatibleShapes,
-		}
-	}
+	//if len(data) != int(shape.NumItems()) {
+	//	return GraphNode{}, Error{
+	//		Message: fmt.Sprintf("data (len: %d) and shape (numItems: %d) do not match", len(data), int(shape.NumItems())),
+	//		Err:     ErrIncompatibleShapes,
+	//	}
+	//}
 	datatype := closestType(data[0])
 
 	// The C function does not perform casts. The data for the void pointer must match the FType!
@@ -59,10 +58,10 @@ func CreateScalar[T completeNumeric](value T) (GraphNode, error) {
 }
 
 /*
-CreateGraphConstant creates a flint in a specified [dataType] that contains the single given values in all entries.
+CreateGraphConstant creates a flint_old in a specified [dataType] that contains the single given values in all entries.
 
 Params:
-  - [value]: the value this flint should consist of
+  - [value]: the value this flint_old should consist of
   - [shape]: Each entry describing the size of the corresponding dimension.
   - [datatype]: Specifying a valid wrapper [dataType]
 */
@@ -92,7 +91,7 @@ func CreateGraphConstant[T completeNumeric](value T, shape Shape) (GraphNode, er
 }
 
 /*
-CreateGraphRandom creates a [F_FLOAT64] flint that contains randomly distributed values in the range of [0, 1)
+CreateGraphRandom creates a [F_FLOAT64] flint_old that contains randomly distributed values in the range of [0, 1)
 
 Params:
   - [shape]: Each entry describing the size of the corresponding dimension.
@@ -108,14 +107,14 @@ func CreateGraphRandom(shape Shape) (GraphNode, error) {
 }
 
 /*
-CreateGraphArrange creates a [F_INT64] flint that contains the indices relative to a given dimension [axis] for each element.
+CreateGraphArrange creates a [F_INT64] flint_old that contains the indices relative to a given dimension [axis] for each element.
 i.e. each entry is its index in that corresponding dimension.
 If you need to index more than one dimension, create multiple such tensors with [CreateGraphArrange].
 */
 func CreateGraphArrange(shape Shape, axis int) (GraphNode, error) {
 	validAxis := axis
 	if validAxis < 0 || validAxis >= len(shape) {
-		return GraphNode{}, &Error{
+		return GraphNode{}, Error{
 			Message: "invalid axis",
 			Err:     ErrIllegalDimensionality,
 		}
