@@ -16,6 +16,8 @@
 #include "../backend_ocl/utils.hpp"
 #include "implementation.hpp"
 struct AddImpl : OperationImplementation {
+		static std::vector<bool>
+		reuse_parameter_binary_impl(const FGraphNode *node);
 		template <typename T, typename A, typename B>
 		static void binary_expression(T *__restrict__ result,
 									  const A *__restrict__ data1,
@@ -34,7 +36,11 @@ struct AddImpl : OperationImplementation {
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return reuse_parameter_binary_impl(node);
+		}
 };
 struct SubImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -55,7 +61,11 @@ struct SubImpl : OperationImplementation {
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return AddImpl::reuse_parameter_binary_impl(node);
+		}
 };
 struct MulImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -76,7 +86,11 @@ struct MulImpl : OperationImplementation {
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return AddImpl::reuse_parameter_binary_impl(node);
+		}
 };
 struct DivImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -97,7 +111,11 @@ struct DivImpl : OperationImplementation {
 		generate_ocl_eager(FType res_type,
 						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return AddImpl::reuse_parameter_binary_impl(node);
+		}
 };
 struct PowImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -119,7 +137,11 @@ struct PowImpl : OperationImplementation {
 						   std::vector<FType> parameter_types) override;
 		int operation_score(FGraphNode *node) override { return 1; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return AddImpl::reuse_parameter_binary_impl(node);
+		}
 };
 struct MatMulImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -157,6 +179,6 @@ struct MatMulImpl : OperationImplementation {
 			return 5 * a->operation.shape[a->operation.dimensions - 1];
 		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) override;
+								   FGraphNode *prev_adj) override;
 };
 #endif

@@ -15,7 +15,6 @@
 #include "../utils.hpp"
 
 using namespace std;
-
 FGraphNode *AddImpl::local_gradient(FGraphNode *y, int dx_i,
 									FGraphNode *prev_adj) {
 	return (dx_i == 0 || dx_i == 1) ? prev_adj : nullptr;
@@ -47,6 +46,24 @@ std::string AddImpl::generate_ocl_eager(FType res_type,
 		   " return;\n"
 		   "R[index] = P0[(index/inv_broad0)%num_entries0] + "
 		   "P1[(index/inv_broad1)%num_entries1];";
+}
+std::vector<bool> AddImpl::reuse_parameter_binary_impl(const FGraphNode *node) {
+	const FOperation op = node->operation;
+	std::vector<bool> result(node->num_predecessor, false);
+	for (int i = 0; i < node->num_predecessor; i++) {
+		const FOperation pred = node->predecessors[i]->operation;
+		if (op.dimensions == pred.dimensions &&
+			typeSize(op.data_type) == typeSize(pred.data_type)) {
+			result[i] = true;
+			for (int j = 0; j < pred.dimensions; j++) {
+				if (op.shape[j] != pred.shape[j]) {
+					result[i] = false;
+					break;
+				}
+			}
+		}
+	}
+	return result;
 }
 FGraphNode *SubImpl::local_gradient(FGraphNode *y, int dx_i,
 									FGraphNode *prev_adj) {

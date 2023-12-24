@@ -203,89 +203,48 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 	}
 	using namespace std;
 	unordered_map<FGraphNode *, CPUResultData> results;
-	unordered_set<FGraphNode *> inExecuteList;
-	list<FGraphNode *> workList;  // traverse bottom up
 	list<FGraphNode *> toExecute; // in top down order
-	workList.push_front(node);
-	const bool is_gpu_backend =
-		flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU;
-	// collect nodes
-	while (!workList.empty()) {
-		FGraphNode *curr = workList.front();
-		workList.pop_front();
-		if (inExecuteList.find(curr) != inExecuteList.end())
-			toExecute.remove(curr);
-		inExecuteList.insert(curr);
-		toExecute.push_front(curr);
-		for (int i = 0; i < curr->num_predecessor; i++) {
-			// execute on GPU if it makes more sense
-			if (is_gpu_backend) {
-				FGraphNode *p = curr->predecessors[i];
-				const size_t score = computeScore(p, true);
-				if (score >= 1024) {
-					if (inExecuteList.find(p) != inExecuteList.end())
-						toExecute.remove(p);
-					fSyncMemory(fExecuteGraph_gpu(p));
-					toExecute.push_front(p);
-					inExecuteList.insert(p);
-					continue;
+	{
+		list<FGraphNode *> workList; // traverse bottom up
+		unordered_set<FGraphNode *> inExecuteList;
+		workList.push_front(node);
+		const bool is_gpu_backend =
+			flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU;
+		// collect nodes
+		while (!workList.empty()) {
+			FGraphNode *curr = workList.front();
+			workList.pop_front();
+			if (inExecuteList.find(curr) != inExecuteList.end())
+				toExecute.remove(curr);
+			inExecuteList.insert(curr);
+			toExecute.push_front(curr);
+			for (int i = 0; i < curr->num_predecessor; i++) {
+				// execute on GPU if it makes more sense
+				if (is_gpu_backend) {
+					FGraphNode *p = curr->predecessors[i];
+					const size_t score = computeScore(p, true);
+					if (score >= 1024) {
+						if (inExecuteList.find(p) != inExecuteList.end())
+							toExecute.remove(p);
+						fSyncMemory(fExecuteGraph_gpu(p));
+						toExecute.push_front(p);
+						inExecuteList.insert(p);
+						continue;
+					}
 				}
+				workList.push_back(curr->predecessors[i]);
 			}
-			workList.push_back(curr->predecessors[i]);
 		}
 	}
 	// work them in correct oder
 	for (FGraphNode *curr : toExecute) {
 		// collect predecessor results
-		vector<CPUResultData> predData(curr->num_predecessor);
-		void *data_to_recycle = nullptr;
-		for (int i = 0; i < curr->num_predecessor; i++) {
-			FGraphNode *pred = curr->predecessors[i];
-			predData[i] = results[pred];
-			// recycle result data of that parent if it is no longer used
-			// elsewhere
-			// TODO per operation information if this is possible
-			if (!data_to_recycle && curr->num_predecessor == 1 &&
-				pred->reference_counter == 1 &&
-				curr->operation.op_type != FTRANSPOSE &&
-				(pred->operation.op_type != FSTORE ||
-				 (!curr->gradient_data && !pred->gradient_data))) {
-				bool same_shape =
-					typeSize(pred->operation.data_type) ==
-						typeSize(curr->operation.data_type) &&
-					curr->operation.dimensions == pred->operation.dimensions;
-				for (int j = 0; j < curr->operation.dimensions && same_shape;
-					 j++) {
-					same_shape =
-						curr->operation.shape[j] == pred->operation.shape[j];
-				}
-				if (same_shape) {
-					if (pred->result_data) {
-						FResultData *data = pred->result_data;
-						if (data->mem_id)
-							clReleaseMemObject(data->mem_id);
-						delete data;
-						pred->result_data = nullptr;
-					}
-					if (pred->operation.op_type == FSTORE &&
-						pred->operation.additional_data) {
-						FStore *store =
-							(FStore *)pred->operation.additional_data;
-						if (store->mem_id)
-							clReleaseMemObject(store->mem_id);
-						delete store;
-						pred->operation.additional_data = nullptr;
-					}
-          predData[i].multi_use = true;
-          results[pred].multi_use = true;
-					data_to_recycle = predData[i].data;
-				}
-			}
-		}
 		// calculate total size
 		size_t size = 1;
 		for (int j = 0; j < curr->operation.dimensions; j++)
 			size *= curr->operation.shape[j];
+		if (size == 0)
+			flogging(F_ERROR, "Illegal number of entries!");
 		if (curr->operation.op_type == FSTORE || curr->result_data) {
 			CPUResultData foo;
 			foo.shape = vector<size_t>(curr->operation.shape,
@@ -297,20 +256,62 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 				if (!rd->data)
 					fSyncMemory(curr);
 				foo.num_entries = rd->num_entries;
+				if (foo.num_entries != size)
+					flogging(F_ERROR, "Wrong number of entries!");
 				foo.data = rd->data;
 			} else {
 				FStore *store = (FStore *)curr->operation.additional_data;
 				foo.num_entries = store->num_entries;
+				if (foo.num_entries != size)
+					flogging(F_ERROR, "Wrong number of entries!");
 				foo.data = store->data;
 			}
 			results.insert({curr, foo});
-		} else if (curr->operation.op_type == FRESHAPE && curr != node) {
-			CPUResultData npd = predData[0];
-			npd.shape = std::vector<size_t>(curr->operation.shape,
-											curr->operation.shape +
-												curr->operation.dimensions);
-			results.insert({curr, npd});
+			//	} else if (curr->operation.op_type == FRESHAPE && curr != node)
+			//{ 		CPUResultData npd = predData[0]; 		npd.shape =
+			//std::vector<size_t>(curr->operation.shape, 										curr->operation.shape +
+			//											curr->operation.dimensions);
+			//		results.insert({curr, npd});
 		} else {
+			vector<CPUResultData> predData(curr->num_predecessor);
+			void *data_to_recycle = nullptr;
+			const vector<bool> reusage =
+				OperationImplementation::implementations[curr->operation
+															 .op_type]
+					->reuse_parameter_result(curr);
+			for (int i = 0; i < curr->num_predecessor; i++) {
+				FGraphNode *pred = curr->predecessors[i];
+				predData[i] = results[pred];
+				// recycle result data of that parent if it is no longer used
+				// elsewhere
+				if (!data_to_recycle && pred->reference_counter == 1 &&
+					!reusage.empty() && reusage[i] &&
+					pred->operation.op_type != FSTORE && pred != node) {
+					if (pred->result_data) {
+						FResultData *data = pred->result_data;
+						if (data->mem_id)
+							clReleaseMemObject(data->mem_id);
+						delete data;
+						pred->result_data = nullptr;
+					}
+					//	if (pred->operation.op_type == FSTORE &&
+					//		pred->operation.additional_data) {
+					//		FStore *store = (FStore
+					//*)pred->operation.additional_data; 		if
+					//(store->mem_id) 			clReleaseMemObject(store->mem_id);
+					//delete store; 		pred->operation.additional_data =
+					// nullptr;
+					//	}
+					results[pred].multi_use = true;
+					predData[i].multi_use = true;
+					data_to_recycle = predData[i].data;
+					//	std::cout << "reuse " <<
+					// fop_to_string[pred->operation.op_type]
+					//			  << " in " <<
+					// fop_to_string[curr->operation.op_type]
+					//			  << std::endl;
+				}
+			}
 			// allocate result data and execute // TODO refactor
 			switch (curr->operation.data_type) {
 			case F_INT32: {
@@ -380,8 +381,9 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 	if (!fIsEagerExecution()) {
 		// free all other data
 		for (auto &[gn, rd] : results) {
-			if (gn != node && gn->operation.op_type != FSTORE && !gn->result_data &&
-				gn->operation.op_type != FRESHAPE && !rd.multi_use)
+			if (gn != node && gn->operation.op_type != FSTORE &&
+				!gn->result_data && gn->operation.op_type != FRESHAPE &&
+				!rd.multi_use)
 				free(rd.data);
 		}
 	} else {

@@ -395,6 +395,7 @@ FGraphNode *fCreateGraph(const void *data, const int num_entries,
  */
 FGraphNode *fconstant_i(const int value, const size_t *shape,
 						const int dimensions);
+
 /** Creates a tensor that contains the single given values in all entries
  *
  * - `value`: the value this tensor should consist of
@@ -404,6 +405,7 @@ FGraphNode *fconstant_i(const int value, const size_t *shape,
  */
 FGraphNode *fconstant_l(const long value, const size_t *shape,
 						const int dimensions);
+
 /** Creates a tensor that contains the single given values in all entries
  *
  * - `value`: the value this tensor should consist of
@@ -413,6 +415,7 @@ FGraphNode *fconstant_l(const long value, const size_t *shape,
  */
 FGraphNode *fconstant_f(const float value, const size_t *shape,
 						const int dimensions);
+
 /** Creates a tensor that contains the single given values in all entries
  *
  * - `value`: the value this tensor should consist of
@@ -422,6 +425,7 @@ FGraphNode *fconstant_f(const float value, const size_t *shape,
  */
 FGraphNode *fconstant_d(const double value, const size_t *shape,
 						const int dimensions);
+
 /** Creates a tensor that contains randomly distributed values in the range of
  * [0, 1)
  *
@@ -430,12 +434,14 @@ FGraphNode *fconstant_d(const double value, const size_t *shape,
  * - `dimensions`: the number of dimensions
  */
 FGraphNode *frandom(const size_t *shape, const int dimensions);
+
 /** Creates a int64 tensor that contains the indices relative to a given
  * dimension `ax` for each element, i.e. each entry is its index in that
  * corresponding dimension. If you need to index more than one dimension, create
  * multiple such tensors with `arange`.
  */
 FGraphNode *farange(const size_t *shape, const int dimensions, const int ax);
+
 /** Decrements `FGraphNode.reference_counter` of `graph` (for reference
  * counting) and deallocates the node and its corresponding data, if the counter
  * reaches 0. If the node is deallocated, the same process is repeated with its
@@ -443,6 +449,7 @@ FGraphNode *farange(const size_t *shape, const int dimensions, const int ax);
  * free the leaf nodes (i.e. the results), without caring about cross-reference,
  * since those are handled by the reference counting system.*/
 void fFreeGraph(FGraphNode *graph);
+
 /** Executes the graph node operations from all yet to be executed predecessors
  * to `node` and returns a node with a `FResultData` operation in
  * which the resulting data is stored.
@@ -470,10 +477,12 @@ void fFreeGraph(FGraphNode *graph);
  *
  * Also see `fEnableEagerExecution`, `fSyncMemory`*/
 FGraphNode *fExecuteGraph(FGraphNode *node);
+
 /** Executes the graph node operations from all yet to be executed predecessors
  * to `node` and returns a node with a `FResultData` operation in
  * which the resulting data is stored. */
 FGraphNode *fExecuteGraph_cpu(FGraphNode *node);
+
 /** Executes the graph node operations from all yet to be executed predecessors
  * to `node` and returns a node with a `FResultData` operation in
  * which the resulting data is stored. For the GPU
@@ -484,12 +493,14 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node);
  * necessary the same nodes, but the same combination of nodes), since then the
  * backend can reuse already compiled kernels. */
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node);
+
 /** Executes the graph node directly and assumes that predecessor data has
  * already been computed. Uses the CPU backend. Mainly used by helper functions
  * of the framework, only use it if you now what you are doing.
  *
  * Also see `fEnableEagerExecution`, `fExecuteGraph_cpu` and `fExecuteGraph`*/
 FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node);
+
 /** Executes the graph node directly and assumes that predecessor data has
  * already been computed. Uses the GPU backend where for each operation and
  * parameter type combination one eager kernel will be computed. Mainly used by
@@ -497,6 +508,7 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node);
  *
  *  Also see `fEnableEagerExecution`, `fExecuteGraph_gpu` and `fExecuteGraph`*/
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
+
 /** `fExecuteGraoh` does not guarantee that memory is present on the cpu (it may
  * be kept on the GPU for performance reasons). This method enforces all GPU
  * data to be flushed to the CPU (but never executes the node!).
@@ -504,6 +516,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
  * Also see `fCalculateResult`
  */
 FResultData *fSyncMemory(FGraphNode *data);
+
 /**
  * Convenience Method that first execute `fExecuteGraph` and then `fSyncMemory`
  * on the node.
@@ -512,7 +525,9 @@ FResultData *fSyncMemory(FGraphNode *data);
  * synchronizing for the gpu framework.
  */
 FGraphNode *fCalculateResult(FGraphNode *node);
+
 //  gradient calculation
+
 /** Calculates the overall gradient of an output node to a variable.
  * The variable must be marked as a gradient variable, see
  * `fMarkGradientVariable` and the output node `outputfct` must be constructed
@@ -526,6 +541,7 @@ FGraphNode *fCalculateResult(FGraphNode *node);
  * - `dx`: the variable for which outputfct is derived for
  */
 FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx);
+
 /** Calculates the overall gradient of an output node to multiple variables.
  * The variables must be marked as a gradient variable, see
  * `fMarkGradientVariable` and the output node `outputfct` must be constructed
@@ -543,6 +559,7 @@ FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx);
 FErrorType fCalculateGradients(FGraphNode *outputfct, FGraphNode **dx,
 							   const unsigned int num_gradients,
 							   FGraphNode **gradients);
+
 /** Starts a gradient context, gradient information will be inherited until the
  * next call to `fStopGradientContext`. A history containing information about
  * all watched nodes in the parent graph is kept up to date within a gradient
@@ -552,12 +569,15 @@ FErrorType fCalculateGradients(FGraphNode *outputfct, FGraphNode **dx,
  * a variable may be computed. Since this context introduces overhead and limits
  * `fOptimizeMemory` significantly, it should be closed as soon as possible. */
 void fStartGradientContext();
+
 /** Stops a gradient context, all inherited gradient information and watched
  * nodes will be kept, but no longer inherited to new ones. */
 void fStopGradientContext();
+
 /** Return true if the call to this function is placed within a gradient
  * context. */
 bool fIsGradientContext();
+
 /** Marks this node as a node for which a gradient might be calculated later.
  * It is only possible to calculate the gradient for this node (as a derivative)
  * in operations that occur AFTER a call to this method (all subsequent
@@ -565,11 +585,13 @@ bool fIsGradientContext();
  * variable, to enable less memory usage and faster gradient calculation).
  */
 void fMarkGradientVariable(FGraphNode *node);
+
 /** Removes the gradient mark (and subsequent memory overhead) for this node.
  * After a call to this method no subsequent gradient calculations with this
  * node as a derivative will be possible.
  */
 void fUnmarkGradientVariable(FGraphNode *node);
+
 /** Optimizes memory by freeing all parental data (operand nodes of the
  * operation of this node) and transforming this node to a storage nodes
  * if no gradient variables are present in this node and result data is
@@ -580,6 +602,7 @@ void fUnmarkGradientVariable(FGraphNode *node);
  * The C++ framework does this automatically.
  */
 FGraphNode *fOptimizeMemory(FGraphNode *node);
+
 /** Sometimes there are combinations of nodes where both normal and inverse
  * broadcasting is possible, but yields different results, e.g. multiplication
  * for two nodes with shapes [3, 5, 3, 5] and [3, 5]. The framework chooses
@@ -591,9 +614,12 @@ FGraphNode *fOptimizeMemory(FGraphNode *node);
  * broadcasting. You can "unmark" the node with `fUnenforceInverseBroadcasting`.
  */
 void fEnforceInverseBroadcasting(FGraphNode *node);
+
 /** Undos `fEnforceInverseBroadcasting` for a node.*/
 void fUnenforceInverseBroadcasting(FGraphNode *node);
+
 //  operations
+
 /** Serializes the data and shape of the node and returns an array of chars in
  * which the serialized data will be written (binary data, not a string). The
  * returned array is allocated on the systems heap with `malloc`, so you have to
@@ -602,12 +628,14 @@ void fUnenforceInverseBroadcasting(FGraphNode *node);
  * nullptr. If the node doesn't have result data, it is executed first.
  */
 char *fserialize(FGraphNode *node, size_t *bytes_written);
+
 /** Unserializes data generated by `fserialize`.
  * The size of the node is stored in the data and the complete node is read.
  * The number of bytes read is stored in `bytes_read`. Internally calls
  * `fCreateGraph`.
  */
 FGraphNode *fdeserialize(char *data, size_t *bytes_read);
+
 /** Loads an image from the given path.
  * The image will be stored in floating point data and the shape will be h, w, c
  * where w is the width, h is the height and c are the channels.
@@ -618,6 +646,7 @@ FGraphNode *fload_image(const char *path);
 
 FErrorType fstore_image(FGraphNode *node, const char *path,
 						enum FImageFormat format);
+
 /** Elementwise addition of `a` and `b`, i.e. `a[i] + b[i]`. */
 FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b);
 /** Elementwise substraction of `a` and `b`, i.e. `a[i] - b[i]`. */
@@ -894,6 +923,7 @@ FGraphNode *fslice(FGraphNode *a, const long *start, const long *end);
  */
 FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
 						const long *step);
+
 /**
  * Creates a new tensor of zeroes with the requested shape. The original tensor
  * is embedded at the given indices.
@@ -905,6 +935,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
  */
 FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
 					const size_t *insert_at);
+
 /**
  * Creates a new tensor of zeroes with the requested shape. The original tensor
  * is embedded at the given indices.
@@ -918,6 +949,7 @@ FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
  */
 FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
 						 const size_t *insert_at, const long *step_size);
+
 /**
  * Concats two nodes with each other along an axis.
  * The nodes have to have the same type and dimensions.
@@ -928,6 +960,7 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
  * 7]]`
  */
 FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis);
+
 /**
  * Adds a new dimension at an arbitrary position to the tensor and repeats the
  * following dimensions to match a given shape.
@@ -940,8 +973,10 @@ FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis);
  */
 FGraphNode *fexpand(FGraphNode *a, const unsigned int axis,
 					const unsigned int size);
+
 /** Takes the elementwise absolute value of `a`, i.e. `|a[i]|` */
 FGraphNode *fabs_g(FGraphNode *a);
+
 /** Repeats dimensions of a tensor multiple times
  *
  * - `a`: the node in which dimensions are to be repeated
@@ -951,6 +986,7 @@ FGraphNode *fabs_g(FGraphNode *a);
  * [2,3,2,3,2,3], [0,1,0,1,0,1], [2,3,2,3,2,3]]`
  */
 FGraphNode *frepeat(FGraphNode *a, int *repititions);
+
 /** Transposes this tensor along multiple dimensions
  *
  * - `a`: the node which should be transposed
@@ -960,6 +996,7 @@ FGraphNode *frepeat(FGraphNode *a, int *repititions);
  * corresponds to the former size in dimension `transpositions[i]`.
  */
 FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
+
 /** Convolves the `n`-dimensional input tensor `a` with a `n` or
  * `n+1`-dimensional filter kernel `kernel` and a per dimensional step size
  * `steps` with size of `n-1`. It is expected that `a` and `kernel` have the
@@ -998,6 +1035,7 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions);
  */
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
 					  const unsigned int *steps);
+
 /**
  * Selects single elements with a index-tensor (integer tensor containing
  * indices for the selected dimension).
@@ -1023,6 +1061,7 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
  * 11]]]`
  */
 FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
+
 /**
  * Assigns to each element in `b` one element in `a` where that element will be
  * "send" to, i.e. the place in `a` the index points to will be set to the
@@ -1043,6 +1082,7 @@ FGraphNode *findex(FGraphNode *a, FGraphNode *indices);
  *  [[5, 1], [2, 13], [9, 8], [6, 10]]`
  */
 FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
+
 /**
  * Moves a window view with size `size` along the original Tensor by starting
  * with aligning the first element of the view with the first element of the
@@ -1071,6 +1111,7 @@ FGraphNode *findex_set(FGraphNode *a, FGraphNode *b, FGraphNode *indices);
  */
 FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
 							const unsigned int *steps);
+
 /**
  * Reprojects the windows (first dimension of `a`) to a common tensor,
  * i.e. if `a = fsliding_window(x, window_size, steps)` `shape` should be the
@@ -1088,11 +1129,13 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
  */
 FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
 							const unsigned int *steps);
+
 /**
  * Randomly permutates (=swaps multiple elements with each other without
  * creating, copying or deleting new ones) one axis of the input tensor.
  */
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
+
 /**
  * Slides a window along the Tensor and reduces all elements inside that window
  * to their sum (just that one remains in the result tensor), and
@@ -1109,6 +1152,7 @@ FGraphNode *fpermutate(FGraphNode *a, unsigned int ax);
  */
 FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
 						 const unsigned int *step_size);
+
 /**
  * Slides a window along the Tensor and reduces all elements inside that window
  * to their maximum element (just that one remains in the result tensor), and
@@ -1125,6 +1169,7 @@ FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
  */
 FGraphNode *fpooling_max(FGraphNode *a, const size_t *window_size,
 						 const unsigned int *step_size);
+
 /**
  * Sets random selected elements in `g` to 0 by the chance `p` (i.e. if `p` is
  * 0.4. each element has a 40% probability of beeing set to 0).

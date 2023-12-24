@@ -328,7 +328,7 @@ struct OperationImplementation {
 		 * node request it */
 		static const int OCL_LAZY_INVERSE_BROADCASTING = 2;
 		static std::vector<OperationImplementation *> implementations;
-
+    virtual ~OperationImplementation() {}
 		/** Calculates the local gradient for the operation.
 		 * `y` is the node from which the gradient has to be calculated,
 		 * `dx_i` denotes the variable for which `y` is derived (0 means first
@@ -417,5 +417,19 @@ struct OperationImplementation {
 		 * `additional_data´ field of the Operation.
 		 */
 		virtual void free_additional_data(FGraphNode *node) {}
+		/**
+		 * Controls if a parameter result can be reused as the result array of
+		 * the operation. The return array may either be empty (if no parameter
+		 * result can be reused) or can contain a true-false value per
+		 * parameter. This optimizes memory usage.
+		 * Allowing the reusage of a parameter here only has to check if the
+		 * type and shape combination would allow that for this operation (i.e.
+		 * it does not have to check if the parameters actually have data or if
+		 * the reference counter is adequate etc.).
+		 */
+		virtual std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) {
+			return {};
+		}
 };
 #endif

@@ -14,7 +14,8 @@
 #ifndef FLINT_COMPARISON_HPP
 #define FLINT_COMPARISON_HPP
 #include "implementation.hpp"
-#include "src/utils.hpp"
+#include "../utils.hpp"
+#include "binary_arithmetic.hpp"
 
 struct MinImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -35,6 +36,10 @@ struct MinImpl : OperationImplementation {
 						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return AddImpl::reuse_parameter_binary_impl(node);
+		}
 };
 struct MaxImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -55,6 +60,10 @@ struct MaxImpl : OperationImplementation {
 						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return AddImpl::reuse_parameter_binary_impl(node);
+		}
 };
 struct LessImpl : OperationImplementation {
 		template <typename A, typename B>
@@ -82,6 +91,10 @@ struct LessImpl : OperationImplementation {
 			for (vector<FType> &comb : all_comb)
 				comb.insert(comb.begin(), F_INT32);
 			return all_comb;
+		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {typeSize(node->predecessors[0]->operation.data_type) == typeSize(F_INT32)};
 		}
 };
 struct GreaterImpl : OperationImplementation {
@@ -111,6 +124,10 @@ struct GreaterImpl : OperationImplementation {
 				comb.insert(comb.begin(), F_INT32);
 			return all_comb;
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {typeSize(node->predecessors[0]->operation.data_type) == typeSize(F_INT32)};
+		}
 };
 struct EqualImpl : OperationImplementation {
 		template <typename A, typename B>
@@ -138,6 +155,10 @@ struct EqualImpl : OperationImplementation {
 			for (vector<FType> &comb : all_comb)
 				comb.insert(comb.begin(), F_INT32);
 			return all_comb;
+		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {typeSize(node->predecessors[0]->operation.data_type) == typeSize(F_INT32)};
 		}
 };
 struct DropoutImpl : OperationImplementation {
@@ -172,6 +193,10 @@ struct DropoutImpl : OperationImplementation {
 					{F_INT64, F_INT64},
 					{F_FLOAT32, F_FLOAT32},
 					{F_FLOAT64, F_FLOAT64}};
+		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
 		}
 };
 #endif

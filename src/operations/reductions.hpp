@@ -46,6 +46,8 @@ struct ReduceSumImpl : OperationImplementation {
 		void free_additional_data(FGraphNode *gn) override {
 			free(gn->operation.additional_data);
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override; 
 };
 struct ReduceMulImpl : OperationImplementation {
 		template <typename T>
@@ -78,6 +80,8 @@ struct ReduceMulImpl : OperationImplementation {
 		void free_additional_data(FGraphNode *gn) override {
 			free(gn->operation.additional_data);
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override; 
 };
 struct ReduceMinImpl : OperationImplementation {
 		template <typename T>
@@ -110,6 +114,8 @@ struct ReduceMinImpl : OperationImplementation {
 		void free_additional_data(FGraphNode *gn) override {
 			free(gn->operation.additional_data);
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override; 
 };
 struct ReduceMaxImpl : OperationImplementation {
 		template <typename T>
@@ -142,5 +148,7 @@ struct ReduceMaxImpl : OperationImplementation {
 		void free_additional_data(FGraphNode *gn) override {
 			free(gn->operation.additional_data);
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override; 
 };
 #endif

@@ -14,6 +14,7 @@
 #ifndef FLINT_UNARY_ARITHMETIC_HPP
 #define FLINT_UNARY_ARITHMETIC_HPP
 #include "implementation.hpp"
+#include "src/utils.hpp"
 
 struct NegImpl : OperationImplementation {
 		template <typename T>
@@ -32,6 +33,10 @@ struct NegImpl : OperationImplementation {
 		virtual int operation_score(FGraphNode *node) override { return 1; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
+		}
 };
 struct LogImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -53,6 +58,10 @@ struct LogImpl : OperationImplementation {
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
+		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
 		}
 };
 struct Log2Impl : OperationImplementation {
@@ -76,6 +85,10 @@ struct Log2Impl : OperationImplementation {
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
+		}
 };
 struct Log10Impl : OperationImplementation {
 		template <typename T, typename A>
@@ -97,6 +110,10 @@ struct Log10Impl : OperationImplementation {
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
+		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
 		}
 };
 struct SignImpl : OperationImplementation {
@@ -125,6 +142,10 @@ struct SignImpl : OperationImplementation {
 					{F_INT32, F_FLOAT32},
 					{F_INT32, F_FLOAT64}};
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {typeSize(node->predecessors[0]->operation.data_type) == typeSize(F_INT32)};
+		}
 };
 struct EvenImpl : OperationImplementation {
 		void execute_cpu(const FGraphNode *node,
@@ -144,6 +165,10 @@ struct EvenImpl : OperationImplementation {
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_INT32, F_INT32}, {F_INT32, F_INT64}};
+		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {typeSize(node->predecessors[0]->operation.data_type) == typeSize(F_INT32)};
 		}
 };
 struct SinImpl : OperationImplementation {
@@ -167,6 +192,10 @@ struct SinImpl : OperationImplementation {
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
+		}
 };
 struct CosImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -188,6 +217,10 @@ struct CosImpl : OperationImplementation {
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
+		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
 		}
 };
 struct TanImpl : OperationImplementation {
@@ -211,6 +244,10 @@ struct TanImpl : OperationImplementation {
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
+		}
 };
 struct ASinImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -232,6 +269,10 @@ struct ASinImpl : OperationImplementation {
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
+		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
 		}
 };
 struct ACosImpl : OperationImplementation {
@@ -255,6 +296,10 @@ struct ACosImpl : OperationImplementation {
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
+		}
 };
 struct ATanImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -276,6 +321,10 @@ struct ATanImpl : OperationImplementation {
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
+		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
 		}
 };
 struct SqrtImpl : OperationImplementation {
@@ -299,6 +348,10 @@ struct SqrtImpl : OperationImplementation {
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
+		}
 };
 struct ExpImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -321,6 +374,10 @@ struct ExpImpl : OperationImplementation {
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
+		}
 };
 struct AbsImpl : OperationImplementation {
 		template <typename T>
@@ -339,5 +396,9 @@ struct AbsImpl : OperationImplementation {
 		virtual int operation_score(FGraphNode *node) override { return 1; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
+		}
 };
 #endif

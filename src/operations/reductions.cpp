@@ -188,6 +188,11 @@ static void reducing_push_per_parameter(FGraphNode *node, cl_kernel kernel,
 		return;
 	}
 }
+static std::vector<bool> reducing_reuse_params(const FGraphNode *node) {
+	// const int ax = ((const int *)node->operation.additional_data)[0];
+  return {false};
+	// return {node->predecessors[0]->operation.shape[ax] == 1};
+}
 FGraphNode *ReduceSumImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
@@ -244,6 +249,10 @@ void ReduceSumImpl::push_parameter_kernel_parameters(
 	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
 	int &par_index, std::list<cl_mem> &to_free) {
 	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
+}
+std::vector<bool>
+ReduceSumImpl::reuse_parameter_result(const FGraphNode *node) {
+	return reducing_reuse_params(node);
 }
 FGraphNode *ReduceMulImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
@@ -324,6 +333,10 @@ void ReduceMulImpl::push_parameter_kernel_parameters(
 	int &par_index, std::list<cl_mem> &to_free) {
 	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
 }
+std::vector<bool>
+ReduceMulImpl::reuse_parameter_result(const FGraphNode *node) {
+	return reducing_reuse_params(node);
+}
 FGraphNode *ReduceMinImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
@@ -375,6 +388,10 @@ void ReduceMinImpl::push_parameter_kernel_parameters(
 	int &par_index, std::list<cl_mem> &to_free) {
 	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
 }
+std::vector<bool>
+ReduceMinImpl::reuse_parameter_result(const FGraphNode *node) {
+	return reducing_reuse_params(node);
+}
 FGraphNode *ReduceMaxImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
@@ -422,6 +439,10 @@ void ReduceMaxImpl::push_parameter_kernel_parameters(
 	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
 	int &par_index, std::list<cl_mem> &to_free) {
 	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
+}
+std::vector<bool>
+ReduceMaxImpl::reuse_parameter_result(const FGraphNode *node) {
+	return reducing_reuse_params(node);
 }
 void ReduceSumImpl::execute_cpu(const FGraphNode *node,
 								std::vector<CPUResultData> predecessor_data,
