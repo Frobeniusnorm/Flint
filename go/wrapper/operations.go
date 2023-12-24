@@ -70,15 +70,6 @@ func Log10(x GraphNode) (GraphNode, error) {
 	return GraphNode{ref: flintNode}, nil
 }
 
-// Sin takes the element wise sinus of x.
-func Sin(x GraphNode) (GraphNode, error) {
-	flintNode, errno := C.fsin(x.ref)
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
-}
-
 // Sqrt takes the element wise square root of x.
 func Sqrt(x GraphNode) (GraphNode, error) {
 	flintNode, errno := C.fsqrt_g(x.ref)
@@ -91,6 +82,15 @@ func Sqrt(x GraphNode) (GraphNode, error) {
 // Exp takes each element as the exponent for power of base e.
 func Exp(x GraphNode) (GraphNode, error) {
 	flintNode, errno := C.fexp(x.ref)
+	if flintNode == nil {
+		return GraphNode{}, buildError(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
+}
+
+// Sin takes the element wise sinus of x.
+func Sin(x GraphNode) (GraphNode, error) {
+	flintNode, errno := C.fsin(x.ref)
 	if flintNode == nil {
 		return GraphNode{}, buildError(errno)
 	}
