@@ -16,6 +16,7 @@
 #include "../backend_ocl/utils.hpp"
 #include "flint.h"
 #include "implementation.hpp"
+#include "binary_arithmetic.hpp"
 
 struct SliceImpl : OperationImplementation {
 		template <typename T>
@@ -61,6 +62,10 @@ struct SliceImpl : OperationImplementation {
 			free(s->step);
 			delete s;
 		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return AddImpl::reuse_parameter_binary_impl(node);
+		}
 };
 struct ExtendImpl : OperationImplementation {
 		template <typename T>
@@ -89,6 +94,10 @@ struct ExtendImpl : OperationImplementation {
 			FExtend *s = (FExtend *)gn->operation.additional_data;
 			free(s->start);
 			free(s->step);
+		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return AddImpl::reuse_parameter_binary_impl(node);
 		}
 };
 struct IndexImpl : OperationImplementation {
@@ -158,5 +167,9 @@ struct SetIndexImpl : OperationImplementation {
 								   FGraphNode *prev_adj) override;
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override;
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true, false, false};
+		}
 };
 #endif

@@ -16,6 +16,7 @@
 #include "../utils.hpp"
 #include "flint.h"
 #include "implementation.hpp"
+#include "binary_arithmetic.hpp"
 
 struct FlattenImpl : OperationImplementation {
 		void execute_cpu(const FGraphNode *node,
@@ -29,6 +30,10 @@ struct FlattenImpl : OperationImplementation {
 						   std::vector<FType> parameter_types) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {true};
+		}
 };
 struct ConversionImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -50,6 +55,11 @@ struct ConversionImpl : OperationImplementation {
 		kernel_type_combinations(const FGraphNode *node) override {
 			// all combinations of parameter and return type possible
 			return allTypePermutations(2);
+		}
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return {typeSize(node->predecessors[0]->operation.data_type) ==
+					typeSize(node->operation.data_type)};
 		}
 };
 struct RepeatImpl : OperationImplementation {
@@ -75,6 +85,10 @@ struct RepeatImpl : OperationImplementation {
 										 std::list<cl_mem> &to_free) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
+		std::vector<bool>
+		reuse_parameter_result(const FGraphNode *node) override {
+			return AddImpl::reuse_parameter_binary_impl(node);
+		}
 };
 struct TransposeImpl : OperationImplementation {
 		template <typename T>

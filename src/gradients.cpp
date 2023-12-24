@@ -123,7 +123,7 @@ static void collect(FGraphNode *x, std::list<FGraphNode *> &stack,
 					std::unordered_set<FGraphNode *> &visited,
 					const std::unordered_set<const FGraphNode *> dxs) {
 	// TODO could be made more performant with explicit todo stack and a
-	// push_back before continuing on the parents
+	// push_back before continuing on the parents, see utils
 	if (visited.contains(x))
 		return;
 	visited.insert(x);

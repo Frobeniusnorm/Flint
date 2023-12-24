@@ -169,6 +169,9 @@ FGraphNode *fCalculateResult(FGraphNode *node) {
 	return node;
 }
 FErrorType flintCleanup() {
+	for (OperationImplementation *impl :
+		 OperationImplementation::implementations)
+		delete impl;
 	FErrorType e1 = flintCleanup_cpu();
 	if (e1 != NO_ERROR)
 		return e1;
@@ -488,9 +491,9 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
 					parent->result_data = nullptr;
 				}
 			}
-		 default:
-		 	break;
-  	 }
+		default:
+			break;
+		}
 	}
 	return node;
 }
