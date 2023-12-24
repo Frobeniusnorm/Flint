@@ -3,208 +3,45 @@ package wrapper
 // #include <flint/flint.h>
 import "C"
 
-/*
-Add [operand1] and [operand2].
-At least one of the parameters HAS to be a [GraphNode].
-Addition is carried out element-wise.
-*/
-func Add[T baseNumeric | GraphNode](operand1 GraphNode, operand2 T) (GraphNode, error) {
-	var flintNode *C.FGraphNode = nil
-	var errno error
+type Float float32
+type Double float64
+type Long int64
+type Int int32
 
-	switch c := any(operand2).(type) {
-	case int32:
-		flintNode, errno = C.fadd_ci(operand1.ref, C.int(c))
-	case int64:
-		flintNode, errno = C.fadd_cl(operand1.ref, C.long(c))
-	case float32:
-		flintNode, errno = C.fadd_cf(operand1.ref, C.float(c))
-	case float64:
-		flintNode, errno = C.fadd_cd(operand1.ref, C.double(c))
-	case GraphNode:
-		flintNode, errno = C.fadd_g(operand1.ref, c.ref)
-	default:
-		panic("invalid type")
-	}
-
+func AddGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
+	flintNode, errno := C.fadd_g(a.ref, b.ref)
 	if flintNode == nil {
 		return GraphNode{}, buildError(errno)
 	}
 	return GraphNode{ref: flintNode}, nil
 }
 
-/*
-Pow takes [base] to the power of [exponent].
-The [exponent] can be a constant number or another [GraphNode].
-The operation is carried out element-wise.
-*/
-func Pow[T baseNumeric | GraphNode](base GraphNode, exponent T) (GraphNode, error) {
-	var flintNode *C.FGraphNode = nil
-	var errno error
-
-	switch c := any(exponent).(type) {
-	case GraphNode:
-		flintNode, errno = C.fpow_g(base.ref, c.ref)
-	case int32:
-		flintNode, errno = C.fpow_ci(base.ref, C.int(c))
-	case int64:
-		flintNode, errno = C.fpow_cl(base.ref, C.long(c))
-	case float32:
-		flintNode, errno = C.fpow_cf(base.ref, C.float(c))
-	case float64:
-		flintNode, errno = C.fpow_cd(base.ref, C.double(c))
-	default:
-		panic("invalid type")
-	}
-
+func AddGraphInt(a GraphNode, b Int) (GraphNode, error) {
+	flintNode, errno := C.fadd_ci(a.ref, C.int(b))
 	if flintNode == nil {
 		return GraphNode{}, buildError(errno)
 	}
 	return GraphNode{ref: flintNode}, nil
 }
 
-/*
-Mul multiplies [operand1] by [operand2].
-At least one of the parameters HAS to be a [GraphNode]
-Multiplication is carried out element-wise.
-*/
-func Mul[T baseNumeric | GraphNode](operand1 GraphNode, operand2 T) (GraphNode, error) {
-	var flintNode *C.FGraphNode = nil
-	var errno error
-
-	switch c := any(operand2).(type) {
-	case GraphNode:
-		flintNode, errno = C.fmul_g(operand1.ref, c.ref)
-	case int32:
-		flintNode, errno = C.fmul_ci(operand1.ref, C.int(c))
-	case int64:
-		flintNode, errno = C.fmul_cl(operand1.ref, C.long(c))
-	case float32:
-		flintNode, errno = C.fmul_cf(operand1.ref, C.float(c))
-	case float64:
-		flintNode, errno = C.fmul_cd(operand1.ref, C.double(c))
-	default:
-		panic("invalid type")
-	}
-
+func AddGraphLong(a GraphNode, b Long) (GraphNode, error) {
+	flintNode, errno := C.fadd_cl(a.ref, C.long(b))
 	if flintNode == nil {
 		return GraphNode{}, buildError(errno)
 	}
 	return GraphNode{ref: flintNode}, nil
 }
 
-/*
-Div [numerator] by [denominator].
-At least one of the parameters HAS to be a [GraphNode]
-Division is carried out element-wise.
-*/
-func Div[T1 baseNumeric | GraphNode, T2 baseNumeric | GraphNode](numerator T1, denominator T2) (GraphNode, error) {
-	var flintNode *C.FGraphNode = nil
-	var errno error
-
-	switch x := any(numerator).(type) {
-	case GraphNode:
-		switch y := any(denominator).(type) {
-		case GraphNode:
-			flintNode, errno = C.fdiv_g(x.ref, y.ref)
-		case int32:
-			flintNode, errno = C.fdiv_ci(x.ref, C.int(y))
-		case int64:
-			flintNode, errno = C.fdiv_cl(x.ref, C.long(y))
-		case float32:
-			flintNode, errno = C.fdiv_cf(x.ref, C.float(y))
-		case float64:
-			flintNode, errno = C.fdiv_cd(x.ref, C.double(y))
-		default:
-			panic("invalid type")
-		}
-	case int32:
-		if y, isNode := any(denominator).(GraphNode); isNode == true {
-			flintNode, errno = C.fdiv_ici(C.int(x), y.ref)
-		} else {
-			panic("invalid type")
-		}
-	case int64:
-		if y, isNode := any(denominator).(GraphNode); isNode == true {
-			flintNode, errno = C.fdiv_icl(C.long(x), y.ref)
-		} else {
-			panic("invalid type")
-		}
-	case float32:
-		if y, isNode := any(denominator).(GraphNode); isNode == true {
-			flintNode, errno = C.fdiv_icf(C.float(x), y.ref)
-		} else {
-			panic("invalid type")
-		}
-	case float64:
-		if y, isNode := any(denominator).(GraphNode); isNode == true {
-			flintNode, errno = C.fdiv_icd(C.double(x), y.ref)
-		} else {
-			panic("invalid type")
-		}
-	default:
-		panic("invalid type")
-	}
-
+func AddGraphFloat(a GraphNode, b Float) (GraphNode, error) {
+	flintNode, errno := C.fadd_cf(a.ref, C.float(b))
 	if flintNode == nil {
 		return GraphNode{}, buildError(errno)
 	}
 	return GraphNode{ref: flintNode}, nil
 }
 
-/*
-Sub Subtracts [minuend] by [subtrahend].
-At least one of the parameters HAS to be a [GraphNode].
-Subtraction is carried out element-wise.
-*/
-func Sub[T1 baseNumeric | GraphNode, T2 baseNumeric | GraphNode](minuend T1, subtrahend T2) (GraphNode, error) {
-	var flintNode *C.FGraphNode = nil
-	var errno error
-
-	switch x := any(minuend).(type) {
-	case GraphNode:
-		switch y := any(subtrahend).(type) {
-		case GraphNode:
-			flintNode, errno = C.fsub_g(x.ref, y.ref)
-		case int32:
-			flintNode, errno = C.fsub_ci(x.ref, C.int(y))
-		case int64:
-			flintNode, errno = C.fsub_cl(x.ref, C.long(y))
-		case float32:
-			flintNode, errno = C.fsub_cf(x.ref, C.float(y))
-		case float64:
-			flintNode, errno = C.fsub_cd(x.ref, C.double(y))
-		default:
-			panic("invalid type")
-		}
-	case int32:
-		if y, isNode := any(subtrahend).(GraphNode); isNode == true {
-			flintNode, errno = C.fsub_ici(C.int(x), y.ref)
-		} else {
-			panic("invalid type")
-		}
-	case int64:
-		if y, isNode := any(subtrahend).(GraphNode); isNode == true {
-			flintNode, errno = C.fsub_icl(C.long(x), y.ref)
-		} else {
-			panic("invalid type")
-		}
-	case float32:
-		if y, isNode := any(subtrahend).(GraphNode); isNode == true {
-			flintNode, errno = C.fsub_icf(C.float(x), y.ref)
-		} else {
-			panic("invalid type")
-		}
-	case float64:
-		if y, isNode := any(subtrahend).(GraphNode); isNode == true {
-			flintNode, errno = C.fsub_icd(C.double(x), y.ref)
-		} else {
-			panic("invalid type")
-		}
-	default:
-		panic("invalid type")
-	}
-
+func AddGraphDouble(a GraphNode, b Double) (GraphNode, error) {
+	flintNode, errno := C.fadd_cd(a.ref, C.double(b))
 	if flintNode == nil {
 		return GraphNode{}, buildError(errno)
 	}
@@ -340,89 +177,6 @@ This function returns a [F_INT32] [GraphNode].
 */
 func Even(x GraphNode) (GraphNode, error) {
 	flintNode, errno := C.feven(x.ref)
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
-}
-
-/*
-Equal compares a flint_old and a constant elementwise by [a] = [b] and returns a 0,1 [F_INT32] [GraphNode].
-*/
-func Equal[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
-	var flintNode *C.FGraphNode = nil
-	var errno error
-
-	switch c := any(b).(type) {
-	case GraphNode:
-		flintNode, errno = C.fequal_g(a.ref, c.ref)
-	case int32:
-		flintNode, errno = C.fequal_ci(a.ref, C.int(c))
-	case int64:
-		flintNode, errno = C.fequal_cl(a.ref, C.long(c))
-	case float32:
-		flintNode, errno = C.fequal_cf(a.ref, C.float(c))
-	case float64:
-		flintNode, errno = C.fequal_cd(a.ref, C.double(c))
-	default:
-		panic("invalid type")
-	}
-
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
-}
-
-/*
-Greater compares a flint_old and a constant elementwise by [a] > [b] and returns a 0,1 [F_INT32] [GraphNode].
-*/
-func Greater[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
-	var flintNode *C.FGraphNode = nil
-	var errno error
-
-	switch c := any(b).(type) {
-	case GraphNode:
-		flintNode, errno = C.fgreater_g(a.ref, c.ref)
-	case int32:
-		flintNode, errno = C.fgreater_ci(a.ref, C.int(c))
-	case int64:
-		flintNode, errno = C.fgreater_cl(a.ref, C.long(c))
-	case float32:
-		flintNode, errno = C.fgreater_cf(a.ref, C.float(c))
-	case float64:
-		flintNode, errno = C.fgreater_cd(a.ref, C.double(c))
-	default:
-		panic("invalid type")
-	}
-
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
-}
-
-/*
-Less compares a flint_old and a constant elementwise by [a] < [b] and returns a 0,1 [F_INT32] [GraphNode].
-*/
-func Less[T baseNumeric | GraphNode](a GraphNode, b T) (GraphNode, error) {
-	var flintNode *C.FGraphNode = nil
-	var errno error
-
-	switch c := any(b).(type) {
-	case GraphNode:
-		flintNode, errno = C.fless_g(a.ref, c.ref)
-	case int32:
-		flintNode, errno = C.fless_ci(a.ref, C.int(c))
-	case int64:
-		flintNode, errno = C.fless_cl(a.ref, C.long(c))
-	case float32:
-		flintNode, errno = C.fless_cf(a.ref, C.float(c))
-	case float64:
-		flintNode, errno = C.fless_cd(a.ref, C.double(c))
-	default:
-		panic("invalid type")
-	}
 	if flintNode == nil {
 		return GraphNode{}, buildError(errno)
 	}
@@ -637,8 +391,8 @@ They may contain negative values, which are then subtracted from the end of the 
 [start] is inclusive and describes the start index of the selection per dimension and [end] describes the end index per dimension and is exclusive.
 */
 func Slice(a GraphNode, start Axes, end Axes) (GraphNode, error) {
-	newStart := convertArray[uint, C.long](start)
-	newEnd := convertArray[uint, C.long](end)
+	newStart := convertArray[int, C.long](start)
+	newEnd := convertArray[int, C.long](end)
 
 	flintNode, errno := C.fslice(a.ref, &(newStart[0]), &(newEnd[0]))
 	if flintNode == nil {
@@ -659,8 +413,8 @@ For a negative stride, [start] > [end] must hold (for a positive of course [end]
 */
 func SliceWithStride(node GraphNode, start Axes, end Axes, stride Stride) (GraphNode, error) {
 	// TODO: check that axes has the right length compared to node! (or does the C function do this?)
-	newStart := convertArray[uint, C.long](start)
-	newEnd := convertArray[uint, C.long](end)
+	newStart := convertArray[int, C.long](start)
+	newEnd := convertArray[int, C.long](end)
 	newStride := convertArray[int, C.long](stride)
 
 	flintNode, errno := C.fslice_step(node.ref, &(newStart[0]), &(newEnd[0]), &(newStride[0]))
@@ -679,7 +433,7 @@ The original flint_old is embedded at the given indices.
 */
 func Extend(node GraphNode, shape Shape, insertAt Axes) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
-	newInsertAt := convertArray[uint, C.size_t](insertAt)
+	newInsertAt := convertArray[int, C.size_t](insertAt)
 
 	flintNode, errno := C.fextend(node.ref, &(newShape[0]), &(newInsertAt[0]))
 	if flintNode == nil {
@@ -698,7 +452,7 @@ The original flint_old is embedded at the given indices.
 */
 func ExtendWithStride(node GraphNode, shape Shape, insertAt Axes, stride Stride) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
-	newInsertAt := convertArray[uint, C.size_t](insertAt)
+	newInsertAt := convertArray[int, C.size_t](insertAt)
 	newStride := convertArray[int, C.long](stride)
 
 	flintNode, errno := C.fextend_step(node.ref, &(newShape[0]), &(newInsertAt[0]), &(newStride[0]))
@@ -761,7 +515,7 @@ E.g:
 		[[0,1,0,1,0,1], [2,3,2,3,2,3], [0,1,0,1,0,1], [2,3,2,3,2,3]]
 */
 func Repeat(node GraphNode, repetitions Axes) (GraphNode, error) {
-	newRepetitions := convertArray[uint, C.int](repetitions)
+	newRepetitions := convertArray[int, C.int](repetitions)
 
 	flintNode, errno := C.frepeat(node.ref, &(newRepetitions[0]))
 	if flintNode == nil {
@@ -777,7 +531,7 @@ The array [axes] has the same number of entries as [node] has dimensions, which 
 The flint_old will have a resulting shape in which the size each dimension corresponds to the former size in dimension in [axes].
 */
 func Transpose(node GraphNode, axes Axes) (GraphNode, error) {
-	newAxes := convertArray[uint, C.int](axes)
+	newAxes := convertArray[int, C.int](axes)
 
 	flintNode, errno := C.ftranspose(node.ref, &(newAxes[0]))
 	if flintNode == nil {
@@ -956,76 +710,4 @@ func Permute(a GraphNode, axis uint) (GraphNode, error) {
 		return GraphNode{}, buildError(errno)
 	}
 	return GraphNode{ref: flintNode}, nil
-}
-
-// Max returns the maximum value across all dimensions
-// see: https://numpy.org/doc/stable/reference/generated/numpy.max.html
-// FIXME: func Max(a GraphNode, axes Axis, scalar bool, keepDims bool) {
-func Max(node GraphNode) (GraphNode, error) {
-	//for !node.GetShape().Equal(Shape{1}) { }
-	node, err := Flatten(node)
-	if err != nil {
-		return GraphNode{}, err
-	}
-
-	node, err = ReduceMax(node, 0)
-	if err != nil {
-		return GraphNode{}, err
-	}
-
-	return node, nil
-}
-
-// Min returns the minimum value across all dimensions
-func Min(node GraphNode) (GraphNode, error) {
-	node, err := Flatten(node)
-	if err != nil {
-		return GraphNode{}, err
-	}
-
-	node, err = ReduceMin(node, 0)
-	if err != nil {
-		return GraphNode{}, err
-	}
-
-	return node, nil
-}
-
-// Sum sums up all values in the flattened flint_old
-func Sum(node GraphNode) (GraphNode, error) {
-	node, err := Flatten(node)
-	if err != nil {
-		return GraphNode{}, err
-	}
-
-	node, err = ReduceSum(node, 0)
-	if err != nil {
-		return GraphNode{}, err
-	}
-
-	return node, nil
-}
-
-// TransposeFull acts like a traditional transpose where the order of all axis are reversed
-func TransposeFull(node GraphNode) (GraphNode, error) {
-	n := len(node.GetShape())
-	ax := make(Axes, n)
-	for i := 0; i < n; i++ {
-		ax[i] = uint(n - i - 1)
-	}
-	return Transpose(node, ax)
-}
-
-func OneHot(node GraphNode, numClasses uint) (GraphNode, error) {
-	id, err := CreateGraphIdentity(numClasses)
-	if err != nil {
-		return GraphNode{}, err
-	}
-
-	id, err = Index(id, node)
-	if err != nil {
-		return GraphNode{}, err
-	}
-
-	return id, nil
 }

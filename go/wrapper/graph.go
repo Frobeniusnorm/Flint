@@ -52,11 +52,6 @@ func CreateGraph[T completeNumeric](data []T, shape Shape) (GraphNode, error) {
 	return GraphNode{ref: flintNode}, nil
 }
 
-// CreateScalar creates a scalar tensors [(Shape{1})]
-func CreateScalar[T completeNumeric](value T) (GraphNode, error) {
-	return CreateGraph[T]([]T{value}, Shape{1})
-}
-
 /*
 CreateGraphConstant creates a flint_old in a specified [dataType] that contains the single given values in all entries.
 
@@ -127,16 +122,6 @@ func CreateGraphArrange(shape Shape, axis int) (GraphNode, error) {
 		return GraphNode{}, buildError(errno)
 	}
 	return GraphNode{ref: flintNode}, nil
-}
-
-// CreateGraphIdentity creates an identity matrix.
-// The datatype will be [F_INT32]
-func CreateGraphIdentity(size uint) (GraphNode, error) {
-	data := make([]int32, size*size)
-	for i := uint(0); i < size; i++ {
-		data[i+i*size] = int32(1)
-	}
-	return CreateGraph(data, Shape{size, size})
 }
 
 // GetShape returns the shape of a graph node

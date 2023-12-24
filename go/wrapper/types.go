@@ -83,6 +83,7 @@ const (
 	F_INT64
 	F_FLOAT32
 	F_FLOAT64
+	F_GRAPH
 )
 
 func (x DataType) String() string {

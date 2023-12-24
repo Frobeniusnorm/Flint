@@ -145,13 +145,13 @@ func buildErrorFromCode(err error, errCode errorCode) error {
 }
 
 func buildError(err error) error {
-	errCode := errorType()
+	errCode := lastError()
 	return buildErrorFromCode(err, errCode)
 }
 
-// errorType fetches the error type for the last recorded error.
+// lastError fetches the error type for the last recorded error.
 // This should only be queried when an error is certain (e.g. nullptr returned from C)
-func errorType() errorCode {
+func lastError() errorCode {
 	return errorCode(C.fErrorType())
 }
 
