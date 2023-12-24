@@ -1,3 +1,16 @@
+/* Copyright 2023 David Schwarzbeck
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. */
 #include "flint.h"
 #include "flint_helper.hpp"
 #include <algorithm>
@@ -237,10 +250,10 @@ template <typename T, unsigned int n> struct Tensor {
 		}
 		/**
 		 * Deserializes the binary representation of Tensor data back to a
-		 * Tensor object.
+		 * Tensor object. The number of bytes read is stored in `bytes_read`.
 		 */
-		static Tensor<T, n> deserialize(char *data) {
-			FGraphNode *node = fdeserialize(data);
+		static Tensor<T, n> deserialize(char *data, size_t* bytes_read = nullptr) {
+			FGraphNode *node = fdeserialize(data, bytes_read);
 			if (n != node->operation.dimensions)
 				flogging(F_ERROR,
 						 "Deserializing data of a " +
@@ -303,19 +316,16 @@ template <typename T, unsigned int n> struct Tensor {
 			}
 		}
 		/**
-		 * Convenience Method that calls `execute` and returns the Tensor object
-		 * (the object is `moved`, no new node is created! Dont reuse the old
-		 * object! Intended to use like this
+		 * Convenience Method that calls `execute` and returns a lightweight
+		 * copy of the Tensor
 		 * @code{
 		 *  Tensor<float, 2> t = ...;
-		 *  t = t();
+		 *  std::cout << t() << std::endl;
 		 * }
-		 * if you don't override t and use the old value again after the `()`
-		 * call, a segmentation fault will occur!).
 		 */
 		Tensor<T, n> operator()() {
 			execute();
-			return std::move(*this);
+			return *this;
 		}
 		/**
 		 * Negates the elements of this Tensor.
@@ -1550,54 +1560,6 @@ template <typename T, unsigned int n> struct Tensor {
 			return convolve_array(kernel, steps_arr);
 		}
 		/**
-		 * Slides `kernel` along the input tensor, multiplying it with the
-		 * elements of the tensor. For each element all multiplied values are
-		 * summed up, so that the result has the same shape as `kernel` (every
-		 * element in the result is the accumulated sum of the product of that
-		 * element with all elements it was slid over). `kernel` is initially
-		 * placed so that the first element of the tensor and the first element
-		 * of `kernel` overlap. It is then moved for each dimension `i` by
-		 * `steps[i]` elements forward except for the last (steps can have 1
-		 * dimension less then the tensor and `kernel`), just like it would be
-		 * by `convolve` with the difference, that everything is accumulated for
-		 * the kernel instead of the original node.
-		 *
-		 * The last dimension of the tensor and `kernel` should be equal,
-		 * therefor it has no step in that dimension since the complete kernel
-		 * is multiplied in that dimension. If you input less steps then `n-1`
-		 * the remaining will be set to 1.
-		 *
-		 * @code{
-		 * Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
-		 *                     {{5, 6}, {7, 8}, {9, 0}},
-		 *                     {{-1,-2},{-3,-4},{-5,-6}}};
-		 * Tensor<float, 3> k1{{{1, 1}, {2, 2}}};
-		 * Tensor<float, 2> r1 = t1.slide(k1, 2, 2);
-		 * // Tensor<FLOAT32, shape: [1, 2, 2]>(
-		 * // [[[-3.000000, -3.000000],
-		 * //   [-4.000000, -4.000000]]])
-		 * }
-		 */
-		template <typename K, typename... args>
-		Tensor<stronger_return<K>, n> slide(const Tensor<K, n> &kernel,
-											const args... steps) const {
-			constexpr size_t num_steps = sizeof...(args);
-			static_assert(
-				num_steps < n,
-				"A slide operation may only have n-1 number of steps (one "
-				"for each dimension except the last)!");
-			std::array<unsigned int, num_steps> steps_arr_par{
-				static_cast<unsigned int>(steps)...};
-			std::array<unsigned int, n - 1> steps_arr;
-			for (int i = 0; i < n - 1; i++)
-				steps_arr[i] = i < num_steps ? steps_arr_par[i] : 1;
-			FGraphNode *nc =
-				fslide(node, kernel.get_graph_node(), steps_arr.data());
-			std::array<size_t, n> new_shape;
-			std::copy_n(nc->operation.shape, n, new_shape.begin());
-			return Tensor<stronger_return<K>, n>(nc, new_shape);
-		}
-		/**
 		 * Selects single elements with a index-tensor (integer tensor
 		 * containing indices for the selected dimension). It indexes a
 		 * dimension of the input tensor and the result has the shape of the
@@ -1763,13 +1725,53 @@ template <typename T, unsigned int n> struct Tensor {
 						sizeof(size_t) * (n - 1));
 			return Tensor<T, n - 1>(nn, ns);
 		}
-
+		/**
+		 * Slides a window along the Tensor and reduces all elements inside that
+		 * window to their maximum value (just that one remains in the result
+		 * tensor), and then slides the window in each dimension by `step_size`
+		 * forward (like `sliding_window`). The last dimension is complety
+		 * pooled, and the result is one dimension smaller then the original
+		 * tensor.
+		 */
+		Tensor<T, n - 1>
+		pooling_max(std::array<size_t, n - 1> window_size,
+					std::array<unsigned int, n - 1> step_size = {1}) const {
+			FGraphNode *nn =
+				fpooling_max(node, window_size.data(), step_size.data());
+			std::array<size_t, n - 1> ns;
+			std::memcpy(ns.data(), nn->operation.shape,
+						sizeof(size_t) * (n - 1));
+			return Tensor<T, n - 1>(nn, ns);
+		}
+		/**
+		 * Slides a window along the Tensor and reduces all elements inside that
+		 * window to their sum, and then slides the window in each dimension by
+		 * `step_size` forward (like `sliding_window`). The last dimension is
+		 * complety pooled, and the result is one dimension smaller then the
+		 * original tensor.
+		 */
+		Tensor<T, n - 1>
+		pooling_sum(std::array<size_t, n - 1> window_size,
+					std::array<unsigned int, n - 1> step_size = {1}) const {
+			FGraphNode *nn =
+				fpooling_sum(node, window_size.data(), step_size.data());
+			std::array<size_t, n - 1> ns;
+			std::memcpy(ns.data(), nn->operation.shape,
+						sizeof(size_t) * (n - 1));
+			return Tensor<T, n - 1>(nn, ns);
+		}
 		/**
 		 * Randomly permutates (=swaps multiple elements with each other without
 		 * creating, copying or deleting new ones) one axis of the input tensor.
 		 */
 		Tensor<T, n> permutate(unsigned int ax) const {
 			return Tensor<T, n>(fpermutate(node, ax), shape);
+		}
+		/**
+		 * Randomly sets elements in the tensor by probability `p` to 0.
+		 */
+		Tensor<T, n> dropout(double p) const {
+			return Tensor<T, n>(fdropout(node, p));
 		}
 		/** Returns the underlying `FGraphNode` for use with the C-Frontend. It
 		 * is still memory managed by this Tensor instance, so be carefull about

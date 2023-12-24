@@ -24,6 +24,7 @@ cmake_install.cmake
 build/**/Makefile
 examples/**/Makefile
 dl/**/Makefile
+cmake-build-*/
 
 # Compiled Static libraries
 *.lai

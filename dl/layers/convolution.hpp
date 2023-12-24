@@ -1,3 +1,16 @@
+/* Copyright 2023 David Schwarzbeck
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. */
 #include "../layers.hpp"
 #include <array>
 #include <flint/flint.h>
@@ -19,6 +32,7 @@ enum PaddingMode { NO_PADDING, SAME_PADDING, FULL_PADDING };
 template <typename T, unsigned int n, size_t k>
 static Tensor<T, n> applyPadding(Tensor<T, n> &input,
 								 const std::array<size_t, k> &kernel_shape,
+								 const std::array<unsigned int, k> &step_size,
 								 const PaddingMode mode) {
 	switch (mode) {
 	case NO_PADDING:
@@ -29,7 +43,26 @@ static Tensor<T, n> applyPadding(Tensor<T, n> &input,
 		// skip first dimension (batches)
 		for (int i = 1; i < n; i++) {
 			const size_t kernel_size = kernel_shape[i];
-			const size_t remainder = new_shape[i] % kernel_size;
+			long remainder = 0;
+			if (input.get_shape()[i] % step_size[i] == 0) {
+				// get last iteration
+				long remaining =
+					step_size[i] * (input.get_shape()[i] / step_size[i] - 1);
+				// add as many kernels as needed to be larger then input
+				while (remaining < input.get_shape()[i])
+					remaining += kernel_size;
+				// difference must be added
+				remainder = remaining - input.get_shape()[i];
+			} else {
+				// get last iteration
+				long remaining =
+					step_size[i] * (input.get_shape()[i] / step_size[i]);
+				// add as many kernels as needed to be larger then input
+				while (remaining < input.get_shape()[i])
+					remaining += kernel_size;
+				// difference must be added
+				remainder = remaining - input.get_shape()[i];
+			}
 			insert_at[i] = remainder / 2;
 			new_shape[i] += remainder;
 		}
@@ -180,6 +213,7 @@ template <int n> class Convolution : public Layer<n, 1> {
 		}
 		template <typename T, unsigned int k>
 		Tensor<double, k> forward(Tensor<T, k> &in) {
+			in.execute();
 			const unsigned int filters =
 				Layer<n, 1>::template get_weight<0>().get_shape()[0];
 			// actual convolve
@@ -187,12 +221,16 @@ template <int n> class Convolution : public Layer<n, 1> {
 			// broadcast
 			Tensor<double, n + 1> filter =
 				Layer<n, 1>::template get_weight<0>().expand(1, 1);
+			std::array<unsigned int, n> padding_stride;
+			memcpy(padding_stride.data(), act_stride.data(),
+				   sizeof(unsigned int) * (n - 1));
+			padding_stride[n - 1] = in.get_shape()[k - 1];
 			Tensor<double, n> res =
 				(padding_mode != NO_PADDING
 					 ? applyPadding(
 						   in,
 						   Layer<n, 1>::template get_weight<0>().get_shape(),
-						   padding_mode)
+						   padding_stride, padding_mode)
 					 : in)
 					.convolve_array(filter, act_stride);
 			// repeat bias to the shape of res and add
@@ -208,8 +246,7 @@ template <int n> class Convolution : public Layer<n, 1> {
 				bias_repeat[i] = res.get_shape()[i + 1] - 1;
 			bias = bias.repeat_array(bias_repeat);
 			res = res + bias;
-			res.execute();
-			return res;
+			return res();
 		}
 };
 /** For inputs of images with shape `(batch_size, width, height, channels)` */
@@ -248,53 +285,41 @@ template <int n> class Pooling : public UntrainableLayer {
 						(n - 1) * sizeof(size_t));
 			std::memcpy(step_size.data() + 1, ss.data(),
 						(n - 1) * sizeof(unsigned int));
+			window_size[0] = 1;
+			step_size[0] = 1;
 		}
 
 		template <typename T, unsigned int k>
 		Tensor<T, k> forward(Tensor<T, k> &in) {
-			Tensor<T, n + 1> windows;
-			std::array<size_t, n> final_shape;
-			std::array<size_t, n> in_shape = in.get_shape();
-			window_size[0] = in_shape[0];
-			step_size[0] = in_shape[0];
-			final_shape[0] = in_shape[0];
-			if (padding_mode == NO_PADDING) {
-				windows = in.sliding_window(window_size, step_size);
-			} else {
-				Tensor<T, k> pi = applyPadding(in, window_size, padding_mode);
-				in_shape = pi.get_shape();
-				window_size[0] = in_shape[0];
-				step_size[0] = in_shape[0];
-				final_shape[0] = in_shape[0];
-				windows = pi.sliding_window(window_size, step_size);
+			in.execute();
+			Tensor<T, k> p = in;
+			if (padding_mode != NO_PADDING) {
+				p = applyPadding(in, window_size, step_size, padding_mode);
 			}
-			std::array<int, n + 1> transpose;
-			for (int i = n; i >= 2; i--) {
-				Tensor<T, n> red;
-				switch (mode) {
-				case MAX_POOLING:
-					red = windows.reduce_max(i);
-					break;
-				case MIN_POOLING:
-					red = windows.reduce_min(i);
-					break;
-				case AVG_POOLING:
-					red = windows.reduce_sum(i) / (long)windows.get_shape()[i];
-					break;
+			Tensor<T, k + 1> pe = p.expand(k, 1);
+			Tensor<T, n> red;
+			switch (mode) {
+			case MAX_POOLING:
+				red = pe.pooling_max(window_size, step_size);
+				break;
+			case MIN_POOLING:
+				red = -((-pe).pooling_max(window_size, step_size));
+				break;
+			case AVG_POOLING: {
+				size_t total_windows = 1;
+				for (int i = 0; i < window_size.size(); i++) {
+					total_windows *= window_size[i];
 				}
-				windows = red.expand(i, 1);
-				windows.execute();
-				size_t win = in_shape[i - 1] - window_size[i - 1] + 1;
-				win = win % step_size[i - 1] == 0 ? win / step_size[i - 1]
-												  : win / step_size[i - 1] + 1;
-				final_shape[i - 1] = win;
-				transpose[i] = i;
+				if constexpr (std::is_same<T, int>())
+					red = (pe.pooling_sum(window_size, step_size) /
+						   (long)total_windows)
+							  .template convert<int>();
+				else
+					red = pe.pooling_sum(window_size, step_size) /
+						  (long)total_windows;
+			} break;
 			}
-			transpose[0] = 1;
-			transpose[1] = 0;
-			windows = windows.transpose_array(transpose);
-			// transpose so memory order is correct
-			return windows.reshape_array(final_shape);
+			return red;
 		}
 
 		std::string name() override {

@@ -1,3 +1,16 @@
+/* Copyright 2023 David Schwarzbeck
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. */
 #include "flint.h"
 #include "flint_helper.hpp"
 #include <algorithm>
@@ -206,10 +219,10 @@ template <typename T> struct Tensor<T, 1> {
 		}
 		/**
 		 * Deserializes the binary representation of Tensor data back to a
-		 * Tensor object.
+		 * Tensor object. The number of bytes read is stored in `bytes_read`.
 		 */
-		static Tensor<T, 1> deserialize(char *data) {
-			FGraphNode *node = fdeserialize(data);
+		static Tensor<T, 1> deserialize(char *data, size_t* bytes_read) {
+			FGraphNode *node = fdeserialize(data, bytes_read);
 			if (1 != node->operation.dimensions)
 				flogging(F_ERROR,
 						 "Deserializing data of a " +
@@ -343,19 +356,16 @@ template <typename T> struct Tensor<T, 1> {
 			}
 		}
 		/**
-		 * Convenience Method that calls `execute` and returns the Tensor object
-		 * (the object is `moved`, no new node is created! Dont reuse the old
-		 * object! Intended to use like this
+		 * Convenience Method that calls `execute` and returns a lightweight
+		 * copy of the Tensor
 		 * @code{
 		 *  Tensor<float, 1> t = ...;
-		 *  t = t();
+		 *  std::cout << t() << std::endl;
 		 * }
-		 * if you don't override t and use the old value again after the `()`
-		 * call, a segmentation fault will occur!).
 		 */
 		Tensor<T, 1> operator()() {
 			execute();
-			return std::move(*this);
+			return *this;
 		}
 		/**
 		 * Negates the elements of this Tensor.
@@ -816,6 +826,12 @@ template <typename T> struct Tensor<T, 1> {
 			std::memcpy(new_shape.data(), nn->operation.shape,
 						sizeof(size_t) * 2);
 			return Tensor<T, 2>(nn, new_shape);
+		}
+		/**
+		 * Randomly sets elements in the tensor by probability `p` to 0.
+		 */
+		Tensor<T, 1> dropout(double p) const {
+			return Tensor<T, 1>(fdropout(node, p), shape);
 		}
 		/** Returns the underlying `FGraphNode` for use with the C-Frontend. It
 		 * is still memory managed by this Tensor instance, so be carefull about

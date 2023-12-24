@@ -1,21 +1,22 @@
-/* Copyright 2022 David Schwarzbeck
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-	   http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License. */
+/* Copyright 2023 David Schwarzbeck
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. */
 
 #ifndef UTILS_HPP
 #define UTILS_HPP
 #include "../flint.h"
 #include "src/errors.hpp"
+#include "src/operations/implementation.hpp"
 #include <cmath>
 #include <condition_variable>
 #include <iostream>
@@ -59,87 +60,18 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
 	}
 	return res + "]";
 }
-static inline int operationScore(const FGraphNode *g) {
-	switch (g->operation.op_type) {
-	case FPOW:
-	case FSQRT:
-		return 1;
-	case FLOG:
-	case FSIN:
-	case FCOS:
-	case FTAN:
-	case FLOG2:
-	case FLOG10:
-	case FASIN:
-	case FACOS:
-	case FATAN:
-		return 3;
-	case FREDUCE_SUM:
-	case FREDUCE_MUL: {
-		// int dim = *((int *)g->operation.additional_data);
-		// size_t total = 1;
-		// for (int i = 0; i < g->operation.dimensions; i++)
-		//   if (i != dim) total *= g->operation.shape[i];
-		return 5; //* g->predecessors[0]->operation.shape[dim];
-	}
-	case FMATMUL: {
-		const FGraphNode *a = g->predecessors[0];
-		return 5 * a->operation.shape[a->operation.dimensions - 1];
-	}
-	case FGRADIENT_CONVOLVE1:
-	case FCONVOLVE: {
-		// multiply with complete kernel size
-		size_t no_elems = 1;
-		const FGraphNode *a = g->predecessors[1];
-		for (int i = 0; i < a->operation.dimensions; i++) {
-			no_elems *= a->operation.shape[i];
-		}
-		return std::max(1, (int)(100 - 0.001 * no_elems * no_elems));
-	}
-	case FSLIDE: {
-		// no multiplication with complete source, since that would artificially
-		// distort parallelization
-		size_t no_elems = 1;
-		unsigned int *stepsize = (unsigned int *)g->operation.additional_data;
-		const FGraphNode *a = g->predecessors[0];
-		for (int i = 0; i < a->operation.dimensions; i++)
-			no_elems *= a->operation.shape[i] /
-						(i != a->operation.dimensions - 1 ? stepsize[i] : 1);
-		return (int)std::sqrt(no_elems);
-	}
-	case FSLICE: {
-		size_t sliced_away = 1;
-		const FGraphNode *p = g->predecessors[0];
-		for (int i = 0; i < g->operation.dimensions; i++) {
-			long diff = (p->operation.shape[i] - g->operation.shape[i]);
-			if (diff > 0)
-				sliced_away *= diff;
-		}
-		return sliced_away;
-	}
-	case FGEN_CONSTANT: {
-		return 10;
-	}
-	case FSLIDING_WINDOW:
-		return g->operation.shape[0];
-	case FUNSLIDE_WINDOW:
-		return g->predecessors[0]->operation.shape[0];
-	default:
-		break;
-	}
-	return 2;
-}
-static inline size_t computeScore(const FGraphNode *g, bool with_pred = true) {
-	std::queue<const FGraphNode *> todo;
+static inline size_t computeScore(FGraphNode *g, bool with_pred = true) {
+	std::queue<FGraphNode *> todo;
 	size_t no_elems = 1;
 	for (int i = 0; i < g->operation.dimensions; i++)
 		no_elems *= g->operation.shape[i];
 	size_t score = 0;
 	todo.push(g);
 	while (!todo.empty()) {
-		const FGraphNode *c = todo.front();
+		FGraphNode *c = todo.front();
 		todo.pop();
-		score += operationScore(c);
+		score += OperationImplementation::implementations[c->operation.op_type]
+					 ->operation_score(c);
 		if (with_pred) {
 			for (int i = 0; i < c->num_predecessor; i++)
 				if (!c->predecessors[i]->result_data &&
@@ -262,47 +194,6 @@ static std::string minForType(FType type) {
 		return "LONG_MIN";
 	}
 	return "0";
-}
-inline void freeAdditionalData(FGraphNode *gn) {
-	switch (gn->operation.op_type) {
-	case FSLICE: {
-		FSlice *s = (FSlice *)gn->operation.additional_data;
-		free(s->end);
-		free(s->start);
-		free(s->step);
-		delete s;
-	} break;
-	case FEXTEND: {
-		FExtend *s = (FExtend *)gn->operation.additional_data;
-		free(s->start);
-		free(s->step);
-		delete s;
-	} break;
-	case FSLIDING_WINDOW: {
-		FSlidingWindow *s = (FSlidingWindow *)gn->operation.additional_data;
-		free(s->step);
-		free(s->size);
-		delete s;
-	} break;
-	case FUNSLIDE_WINDOW:
-	case FGEN_ARANGE:
-	case FGEN_RANDOM:
-	case FGEN_CONSTANT:
-	case FCONCAT:
-	case FCONVOLVE:
-	case FSLIDE:
-	case FGRADIENT_CONVOLVE1:
-	case FGRADIENT_CONVOLVE2:
-	case FTRANSPOSE:
-	case FREDUCE_MIN:
-	case FREDUCE_MAX:
-	case FREDUCE_SUM:
-	case FREDUCE_MUL:
-		free(gn->operation.additional_data);
-		gn->operation.additional_data = nullptr;
-	default:
-		break;
-	}
 }
 template <typename T> class blocking_queue {
 	private:

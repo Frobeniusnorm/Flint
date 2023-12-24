@@ -37,14 +37,15 @@
       <div class="standalone-button button2"><a href="#trainer">trainer</a></div>
       <div style="display: block; height: 2em;"></div>
       <h1 id="models"><u>dl/models.hpp</u></h1>
-      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_GenericLayer____T__struct_SequentialModel_">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n___Tensor_LayerHelper::FlintTypeToCpp_get_output_type_toFlintType_K_____T_________________get_output_dim_n__T_________forward_Tensor_K__n__&in__">template &lt;typename K, unsigned int n&gt;
-  Tensor&lt;LayerHelper::FlintTypeToCpp&lt;get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
-         get_output_dim&lt;n, T...&gt;()&gt;
-  <b>forward</b>(Tensor<K, n> &in) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n___void_optimize_const_Tensor_K__n__&error__">template &lt;typename K, unsigned int n&gt;
-  void <b>optimize</b>(const Tensor<K, n> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T1__unsigned_int_n1__typename_T2__unsigned_int_n2_____________GenericLoss_L___void_train_TrainingData_T1__n1__T2__n2__&data__L_loss__int_epochs_=_1______________int_batch_size_=_32__">template &lt;typename T1, unsigned int n1, typename T2, unsigned int n2,
-            GenericLoss L&gt;
-  void <b>train</b>(TrainingData<T1, n1, T2, n2> &data, L loss, int epochs = 1,
-             int batch_size = 32) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-summary___">std::string <b>summary</b>() </a><br/><br/></div>
+      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_GenericLayer____T__struct_SequentialModel_">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_toFlintType_K_____T________			___get_output_dim_n__T_______		forward_Tensor_K__n__&in__">template &lt;typename K, unsigned int n&gt;
+		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
+				   get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
+			   get_output_dim&lt;n, <b>T...&gt;()&gt;
+		forward</b>(Tensor<K, n> &in) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		void_optimize_const_Tensor_K__n__&error__">template &lt;typename K, unsigned int n&gt;
+		void <b>optimize</b>(const Tensor<K, n> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T1__unsigned_int_n1__typename_T2__unsigned_int_n2_				__GenericLoss_L_		void_train_TrainingData_T1__n1__T2__n2__&data__L_loss__int_epochs_=_1_				___int_batch_size_=_32__">template &lt;typename T1, unsigned int n1, typename T2, unsigned int n2,
+				  GenericLoss L&gt;
+		void <b>train</b>(TrainingData<T1, n1, T2, n2> &data, L loss, int epochs = 1,
+				   int batch_size = 32) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-summary___">std::string <b>summary</b>() </a><br/><br/></div>
       <div style="display: block; height: 2em;"></div>
       <div id="s-_GenericLayer____T__struct_SequentialModel_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></pre></div>
 <br />
@@ -60,48 +61,47 @@
   SoftMax()
  ); <span style="color: #D0D0D0">// has type SequentialModel&lt;Connected, Relu, Dropout, Connected, SoftMax&gt;</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_K__unsigned_int_n___Tensor_LayerHelper::FlintTypeToCpp_get_output_type_toFlintType_K_____T_________________get_output_dim_n__T_________forward_Tensor_K__n__&in__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
-  Tensor&lt;LayerHelper::FlintTypeToCpp&lt;get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
-         get_output_dim&lt;n, T...&gt;()&gt;
-  <b>forward</b>(Tensor<K, n> &in) </pre></div>
+<div id="s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_toFlintType_K_____T________			___get_output_dim_n__T_______		forward_Tensor_K__n__&in__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
+		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
+				   get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
+			   get_output_dim&lt;n, <b>T...&gt;()&gt;
+		forward</b>(Tensor<K, n> &in) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Passes a input tensor through all layers and returns the output of the last
- layer.
+ Passes a input tensor through all layers and returns the output of
+ the last layer.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_K__unsigned_int_n___void_optimize_const_Tensor_K__n__&error__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
-  void <b>optimize</b>(const Tensor<K, n> &error) </pre></div>
+<div id="s-_typename_K__unsigned_int_n_		void_optimize_const_Tensor_K__n__&error__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
+		void <b>optimize</b>(const Tensor<K, n> &error) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Optimizes the weights (calculates the gradients + calls the optimizers) of
- all layer to an error.
+ Optimizes the weights (calculates the gradients + calls the
+ optimizers) of all layer to an error.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_T1__unsigned_int_n1__typename_T2__unsigned_int_n2_____________GenericLoss_L___void_train_TrainingData_T1__n1__T2__n2__&data__L_loss__int_epochs_=_1______________int_batch_size_=_32__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename T1, unsigned int n1, typename T2, unsigned int n2,
-            GenericLoss L&gt;
-  void <b>train</b>(TrainingData<T1, n1, T2, n2> &data, L loss, int epochs = 1,
-             int batch_size = 32) </pre></div>
+<div id="s-_typename_T1__unsigned_int_n1__typename_T2__unsigned_int_n2_				__GenericLoss_L_		void_train_TrainingData_T1__n1__T2__n2__&data__L_loss__int_epochs_=_1_				___int_batch_size_=_32__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename T1, unsigned int n1, typename T2, unsigned int n2,
+				  GenericLoss L&gt;
+		void <b>train</b>(TrainingData<T1, n1, T2, n2> &data, L loss, int epochs = 1,
+				   int batch_size = 32) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Trains the model with input data and the desired output.<ul><li><pre class="inline_code">data</pre> contains the input (<pre class="inline_code">X</pre>) and desired data (<pre class="inline_code">Y</pre>) and optionally
-    validation data, if it does after each epoch a validation error is
-    calculated.
-</li><li><pre class="inline_code">loss</pre> The loss function to calculate the error between the actual output
-    and the desired one from the training data. Can be an arbitrary class
-    that implements the <pre class="inline_code">GenericLoss</pre> concept, some implementations can be
-    found in "losses.hpp".
-</li><li><pre class="inline_code">epochs</pre> Number of epochs the model has to be trained. The complete
+ Trains the model with input data and the desired output.<ul><li><pre class="inline_code">data</pre> contains the input (<pre class="inline_code">X</pre>) and desired data (<pre class="inline_code">Y</pre>) and
+</li></ul> optionally validation data, if it does after each epoch a validation
+ error is calculated.<ul><li><pre class="inline_code">loss</pre> The loss function to calculate the error between the actual
+</li></ul> output and the desired one from the training data. Can be an
+ arbitrary class that implements the <pre class="inline_code">GenericLoss</pre> concept, some
+ implementations can be found in "losses.hpp".<ul><li><pre class="inline_code">epochs</pre> Number of epochs the model has to be trained. The complete
     dataset is passed through the model per epoch (It is split into
-    <pre class="inline_code">batch_size</pre> slices in the first dimension of the input data and each
-    batch has to be passed through the model once per epoch).
-</li><li><pre class="inline_code">batch_size</pre> Size of each batch. A batch is a slice of the first
-    dimension of the input data. The input is shuffeled every epoch, which
-</li></ul> is important if your batch size is smaller then your input size. The
- weights of the model are optimized per batch that was passed through the
- model. Meaning small batch sizes lead to faster convergence (since more
-    optimizations are executed) but to more noise and variance, since each
-    batch is only an approximation of the complete dataset. If training
- times don't matter we suggest full gradient descent (meaning <pre class="inline_code">batch_size =
-    input_size</pre>), else finetune this value to your usecase.
+    <pre class="inline_code">batch_size</pre> slices in the first dimension of the input data and
+</li></ul> each batch has to be passed through the model once per epoch).<ul><li><pre class="inline_code">batch_size</pre> Size of each batch. A batch is a slice of the first
+    dimension of the input data. The input is shuffeled every epoch,
+</li></ul> which is important if your batch size is smaller then your input
+ size. The weights of the model are optimized per batch that was
+ passed through the model. Meaning small batch sizes lead to faster
+ convergence (since more optimizations are executed) but to more noise
+ and variance, since each batch is only an approximation of the
+ complete dataset. If training times don't matter we suggest full
+ gradient descent (meaning <pre class="inline_code">batch_size = input_size</pre>), else finetune
+ this value to your usecase.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-summary___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::string <b>summary</b>() </pre></div>
 <br />

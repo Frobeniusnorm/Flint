@@ -29,11 +29,13 @@ class SoftMax : public UntrainableLayer {
 
 		template <typename T, unsigned int n>
 		Tensor<T, n> forward(Tensor<T, n> &in) {
+			in.execute();
 			unsigned int axis = ax < 0 ? n + ax : ax;
 			// numerical stability
 			Tensor<T, n> exp =
 				(in - in.reduce_max(axis).expand(axis, in.get_shape()[axis]))
 					.exp();
+			exp.execute();
 			Tensor<T, n - 1> sum = exp.reduce_sum(axis);
 			if (ax == 0 || n == 1)
 				return exp / sum;

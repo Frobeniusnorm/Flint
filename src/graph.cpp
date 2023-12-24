@@ -1,20 +1,21 @@
-/* Copyright 2022 David Schwarzbeck
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-	   http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License. */
+/* Copyright 2023 David Schwarzbeck
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. */
 
 #include "../flint.h"
 #include "backend_ocl/comp.hpp"
 #include "errors.hpp"
+#include "src/operations/implementation.hpp"
 #include "utils.hpp"
 #include <cmath>
 #include <cstring>
@@ -69,7 +70,6 @@ const char *fop_to_string[] = {"FSTORE",
 							   "FEQUAL",
 							   "FGREATER",
 							   "FCONVOLVE",
-							   "FSLIDE",
 							   "FGRADIENT_CONVOLVE1",
 							   "FGRADIENT_CONVOLVE2",
 							   "FINDEX",
@@ -77,7 +77,9 @@ const char *fop_to_string[] = {"FSTORE",
 							   "FSLIDING_WINDOW",
 							   "FUNSLIDE_WINDOW",
 							   "FPOOLING_MAX",
-							   "FPOOLING_SUM"};
+							   "FPOOLING_SUM",
+							   "FGRADIENT_POOLING_MAX",
+							   "FDROPOUT"};
 static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
@@ -149,6 +151,8 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
 	if (eager_execution)
 		return execute_eagerly(node);
 	if (use_gpu && use_cpu) {
+		// TODO the number of elements has to be large enough for accelerator,
+		// somehow query here
 		unsigned int gpu_score = computeScore(node, true);
 		return gpu_score >= 2048 ? fExecuteGraph_gpu(node)
 								 : fExecuteGraph_cpu(node);
@@ -313,7 +317,8 @@ void fFreeGraph(FGraphNode *graph) {
 				delete st;
 			} break;
 			default:
-				freeAdditionalData(gn);
+				OperationImplementation::implementations[gn->operation.op_type]
+					->free_additional_data(gn);
 			}
 			gn->operation.additional_data = nullptr;
 		}
@@ -426,7 +431,8 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
 		node->result_data) {
 		FResultData *rd = node->result_data;
 		// we can modify this node to a STORE operation
-		freeAdditionalData(node);
+		OperationImplementation::implementations[node->operation.op_type]
+			->free_additional_data(node);
 		node->operation.op_type = FSTORE;
 		if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU)
 			// we can do this only when all operations have been finished
@@ -470,7 +476,7 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
 			// all parents that are only referenced by this node can be freed
 			for (int i = 0; i < node->num_predecessor; i++) {
 				FGraphNode *parent = node->predecessors[i];
-				if (parent->result_data && parent->reference_counter == 1 &&
+				if (parent->result_data && parent->reference_counter <= 2 &&
 					parent->operation.op_type != FSTORE) {
 					FResultData *rd = parent->result_data;
 					if (rd->data)
@@ -482,9 +488,9 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
 					parent->result_data = nullptr;
 				}
 			}
-		default:
-			break;
-		}
+		 default:
+		 	break;
+  	 }
 	}
 	return node;
 }
@@ -902,11 +908,12 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
 }
 
 FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
+	// TODO: lazy matmul
 	if (!x->result_data && x->operation.op_type != FSTORE) {
 		x = fExecuteGraph(x);
 	}
 	if (!y->result_data && y->operation.op_type != FSTORE) {
-		y = fExecuteGraph(y); // TODO mem leak
+		y = fExecuteGraph(y);
 	}
 	const FOperation ao = x->operation;
 	const FOperation bo = y->operation;
@@ -1042,7 +1049,6 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 			switch (curr->operation.op_type) {
 			case FCONVOLVE:
 			case FMATMUL:
-			case FSLIDE:
 			case FGRADIENT_CONVOLVE1:
 			case FREDUCE_MAX:
 			case FREDUCE_MIN:
@@ -1387,10 +1393,11 @@ FGraphNode *fconcat(FGraphNode *a, FGraphNode *b, const unsigned int axis) {
 }
 FGraphNode *fexpand(FGraphNode *a, const unsigned int ax,
 					const unsigned int ax_size) {
-	int n = a->operation.dimensions;
+	unsigned int n = a->operation.dimensions;
 	std::vector<size_t> new_shape(n + 1);
 	if (ax > 0)
-		std::memcpy(new_shape.data(), a->operation.shape, sizeof(size_t) * ax);
+		std::memcpy(new_shape.data(), a->operation.shape,
+					sizeof(size_t) * std::min(n, ax));
 	new_shape[ax] = 1;
 	if (ax < n)
 		std::memcpy(new_shape.data() + ax + 1, a->operation.shape + ax,
@@ -1408,7 +1415,7 @@ static void calculateShapeAggregatingWindows(FOperation &target,
 											 const FOperation &orig,
 											 const size_t *size,
 											 const unsigned int *steps) {
-	for (int i = 0; i < (orig.dimensions - 1); i++) {
+	for (int i = 0; i < orig.dimensions - 1; i++) {
 		const size_t kernel_shape = size[i];
 		size_t window_size = orig.shape[i] - kernel_shape + 1;
 		window_size = window_size % steps[i] == 0 ? window_size / steps[i]
@@ -1461,46 +1468,6 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
 	memcpy(op.additional_data, steps, op.dimensions * sizeof(unsigned int));
 	return addNode(op, {a, kernel});
 }
-FGraphNode *fslide(FGraphNode *a, FGraphNode *kernel,
-				   const unsigned int *steps) {
-	const FOperation ao = a->operation;
-	const FOperation bo = kernel->operation;
-	if (!a->result_data && ao.op_type != FSTORE) {
-		fExecuteGraph(a);
-	}
-	if (ao.dimensions != bo.dimensions) {
-		last_error = ILLEGAL_DIMENSIONALITY;
-		flogging(F_ERROR,
-				 "For the slide operation the original Tensor and the filter "
-				 "Kernel have to have to same number of dimensions!");
-		return nullptr; // for c compatibility
-	}
-	if (ao.shape[ao.dimensions - 1] != bo.shape[bo.dimensions - 1]) {
-		last_error = INCOMPATIBLE_SHAPES;
-		flogging(
-			F_ERROR,
-			"For the slide operation the size of the last dimension of the "
-			"Tensor must match that of the kernel! " +
-				std::to_string(ao.shape[ao.dimensions - 1]) + " vs. " +
-				std::to_string(bo.shape[bo.dimensions - 1]));
-		return nullptr; // for c compatibility
-	}
-	FOperation op;
-	op.broadcasting_mode = 0;
-	op.op_type = FSLIDE;
-	op.data_type = higherType(ao.data_type, bo.data_type);
-	op.dimensions = ao.dimensions;
-	op.shape = safe_mal<size_t>(op.dimensions);
-	if (!op.shape)
-		return nullptr;
-	memcpy(op.shape, bo.shape, op.dimensions * sizeof(size_t));
-	op.additional_data = safe_mal<unsigned int>(op.dimensions - 1);
-	if (!op.additional_data)
-		return nullptr;
-	memcpy(op.additional_data, steps,
-		   (op.dimensions - 1) * sizeof(unsigned int));
-	return addNode(op, {a, kernel});
-}
 FGraphNode *frandom(const size_t *shape, const int dimensions) {
 	FGraphNode *node = new FGraphNode();
 	FOperation op;
@@ -1527,6 +1494,28 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
 	node->gradient_data = nullptr;
 	node->reference_counter = 0;
 	return eager_execution ? execute_eagerly(node) : node;
+}
+FGraphNode *fdropout(FGraphNode *g, const double p) {
+	FOperation op;
+	op.broadcasting_mode = 0;
+	op.op_type = FDROPOUT;
+	op.dimensions = g->operation.dimensions;
+	op.shape = safe_mal<size_t>(g->operation.dimensions);
+	if (!op.shape)
+		return nullptr;
+	memcpy(op.shape, g->operation.shape,
+		   g->operation.dimensions * sizeof(size_t));
+	op.data_type = g->operation.data_type;
+	// Store current time in additional data
+	std::chrono::duration<double, std::nano> tm =
+		std::chrono::high_resolution_clock::now().time_since_epoch();
+	double t = ((unsigned long)tm.count() % 1000000) / 100.0;
+	op.additional_data = safe_mal<double>(2);
+	if (!op.additional_data)
+		return nullptr;
+	((double *)op.additional_data)[0] = t;
+	((double *)op.additional_data)[1] = p;
+	return addNode(op, {g});
 }
 FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
 	if (indices->operation.dimensions > a->operation.dimensions) {
@@ -1698,7 +1687,12 @@ FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
 	calculateShapeAggregatingWindows(op, a->operation, window_size, step_size);
 	op.op_type = FPOOLING_SUM;
 	op.data_type = a->operation.data_type;
-	op.additional_data = nullptr;
+	FSlidingWindow *window = new FSlidingWindow();
+	window->size = safe_mal<size_t>(op.dimensions);
+	window->step = safe_mal<unsigned int>(op.dimensions);
+	memcpy(window->size, window_size, sizeof(size_t) * op.dimensions);
+	memcpy(window->step, step_size, sizeof(unsigned int) * op.dimensions);
+	op.additional_data = window;
 	op.broadcasting_mode = 0;
 	return addNode(op, {a});
 }
@@ -1712,7 +1706,12 @@ FGraphNode *fpooling_max(FGraphNode *a, const size_t *window_size,
 	calculateShapeAggregatingWindows(op, a->operation, window_size, step_size);
 	op.op_type = FPOOLING_MAX;
 	op.data_type = a->operation.data_type;
-	op.additional_data = nullptr;
+	FSlidingWindow *window = new FSlidingWindow();
+	window->size = safe_mal<size_t>(op.dimensions);
+	window->step = safe_mal<unsigned int>(op.dimensions);
+	memcpy(window->size, window_size, sizeof(size_t) * op.dimensions);
+	memcpy(window->step, step_size, sizeof(unsigned int) * op.dimensions);
+	op.additional_data = window;
 	op.broadcasting_mode = 0;
 	return addNode(op, {a});
 }

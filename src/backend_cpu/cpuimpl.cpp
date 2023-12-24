@@ -14,10 +14,11 @@
 
   This file includes the implementation of the CPU backend.
 */
-#include "../flint.h"
-#include "backend_cpu/execution.hpp"
-#include "errors.hpp"
-#include "utils.hpp"
+#include "../../flint.h"
+// #include "execution.hpp"
+#include "../errors.hpp"
+#include "../operations/implementation.hpp"
+#include "../utils.hpp"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -78,33 +79,22 @@ static void threadRoutine() {
 			thread_queue.pop_front();
 		if (!node)
 			break;
-		switch (node->operation.data_type) {
-		case F_FLOAT32:
-			executeNode(node, pred_data, (float *)result, from, to);
-			break;
-		case F_FLOAT64:
-			executeNode(node, pred_data, (double *)result, from, to);
-			break;
-		case F_INT32:
-			executeNode(node, pred_data, (int *)result, from, to);
-			break;
-		case F_INT64:
-			executeNode(node, pred_data, (long *)result, from, to);
-			break;
-		}
+		OperationImplementation::implementations[node->operation.op_type]
+			->execute_cpu(node, pred_data, result, from, to);
 		sem->release();
 	}
 }
-#define PARALLEL_EXECUTION_SIZE 1024 // for debugging
-template <typename T>
+#define PARALLEL_EXECUTION_SIZE 256 // for debugging
 static void chooseExecutionMethod(FGraphNode *node,
 								  std::vector<CPUResultData> pred_data,
-								  T *result, size_t size) {
-	auto start = std::chrono::high_resolution_clock::now();
-	size_t score = size * operationScore(node);
+								  void *result, size_t size) {
+	const auto start = std::chrono::high_resolution_clock::now();
+	const size_t score =
+		size * OperationImplementation::implementations[node->operation.op_type]
+				   ->operation_score(node);
 	if (score >= PARALLEL_EXECUTION_SIZE && size >= threads.size()) {
-		size_t exeUnits = std::min(size, threads.size());
-		size_t workSize = size / exeUnits;
+		const size_t exeUnits = std::min(size, threads.size());
+		const size_t workSize = size / exeUnits;
 		std::counting_semaphore<MAX_PARALLELITY> *sem =
 			new std::counting_semaphore<MAX_PARALLELITY>(0);
 		for (size_t i = 0; i < exeUnits; i++) {
@@ -116,7 +106,8 @@ static void chooseExecutionMethod(FGraphNode *node,
 			sem->acquire();
 		delete sem;
 	} else {
-		executeNode(node, pred_data, result, 0, size);
+		OperationImplementation::implementations[node->operation.op_type]
+			->execute_cpu(node, pred_data, result, 0, size);
 	}
 	std::chrono::duration<double, std::milli> elapsed =
 		std::chrono::high_resolution_clock::now() - start;
@@ -168,27 +159,24 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 			data = safe_mal<int>(total);
 			if (!data)
 				return nullptr;
-			chooseExecutionMethod(node, pred_data, (int *)data, total);
 			break;
 		case F_INT64:
 			data = safe_mal<long>(total);
 			if (!data)
 				return nullptr;
-			chooseExecutionMethod(node, pred_data, (long *)data, total);
 			break;
 		case F_FLOAT32:
 			data = safe_mal<float>(total);
 			if (!data)
 				return nullptr;
-			chooseExecutionMethod(node, pred_data, (float *)data, total);
 			break;
 		case F_FLOAT64:
 			data = safe_mal<double>(total);
 			if (!data)
 				return nullptr;
-			chooseExecutionMethod(node, pred_data, (double *)data, total);
 			break;
 		}
+		chooseExecutionMethod(node, pred_data, (double *)data, total);
 	} else {
 		data = ((FStore *)node->operation.additional_data)->data;
 	}
@@ -250,8 +238,49 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 	for (FGraphNode *curr : toExecute) {
 		// collect predecessor results
 		vector<CPUResultData> predData(curr->num_predecessor);
+		void *data_to_recycle = nullptr;
 		for (int i = 0; i < curr->num_predecessor; i++) {
-			predData[i] = results[curr->predecessors[i]];
+			FGraphNode *pred = curr->predecessors[i];
+			predData[i] = results[pred];
+			// recycle result data of that parent if it is no longer used
+			// elsewhere
+			// TODO per operation information if this is possible
+			if (!data_to_recycle && curr->num_predecessor == 1 &&
+				pred->reference_counter == 1 &&
+				curr->operation.op_type != FTRANSPOSE &&
+				(pred->operation.op_type != FSTORE ||
+				 (!curr->gradient_data && !pred->gradient_data))) {
+				bool same_shape =
+					typeSize(pred->operation.data_type) ==
+						typeSize(curr->operation.data_type) &&
+					curr->operation.dimensions == pred->operation.dimensions;
+				for (int j = 0; j < curr->operation.dimensions && same_shape;
+					 j++) {
+					same_shape =
+						curr->operation.shape[j] == pred->operation.shape[j];
+				}
+				if (same_shape) {
+					if (pred->result_data) {
+						FResultData *data = pred->result_data;
+						if (data->mem_id)
+							clReleaseMemObject(data->mem_id);
+						delete data;
+						pred->result_data = nullptr;
+					}
+					if (pred->operation.op_type == FSTORE &&
+						pred->operation.additional_data) {
+						FStore *store =
+							(FStore *)pred->operation.additional_data;
+						if (store->mem_id)
+							clReleaseMemObject(store->mem_id);
+						delete store;
+						pred->operation.additional_data = nullptr;
+					}
+          predData[i].multi_use = true;
+          results[pred].multi_use = true;
+					data_to_recycle = predData[i].data;
+				}
+			}
 		}
 		// calculate total size
 		size_t size = 1;
@@ -282,10 +311,11 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 												curr->operation.dimensions);
 			results.insert({curr, npd});
 		} else {
-			// allocate result data and execute
+			// allocate result data and execute // TODO refactor
 			switch (curr->operation.data_type) {
 			case F_INT32: {
-				int *result = safe_mal<int>(size);
+				int *result = data_to_recycle ? (int *)data_to_recycle
+											  : safe_mal<int>(size);
 				if (!result)
 					return nullptr;
 				chooseExecutionMethod(curr, predData, result, size);
@@ -299,7 +329,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 										 curr->operation.dimensions)}});
 			} break;
 			case F_INT64: {
-				long *result = safe_mal<long>(size);
+				long *result = data_to_recycle ? (long *)data_to_recycle
+											   : safe_mal<long>(size);
 				if (!result)
 					return nullptr;
 				chooseExecutionMethod(curr, predData, result, size);
@@ -313,7 +344,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 										 curr->operation.dimensions)}});
 			} break;
 			case F_FLOAT32: {
-				float *result = safe_mal<float>(size);
+				float *result = data_to_recycle ? (float *)data_to_recycle
+												: safe_mal<float>(size);
 				if (!result)
 					return nullptr;
 				chooseExecutionMethod(curr, predData, result, size);
@@ -327,7 +359,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 										 curr->operation.dimensions)}});
 			} break;
 			case F_FLOAT64: {
-				double *result = safe_mal<double>(size);
+				double *result = data_to_recycle ? (double *)data_to_recycle
+												 : safe_mal<double>(size);
 				if (!result)
 					return nullptr;
 				chooseExecutionMethod(curr, predData, result, size);
@@ -347,14 +380,15 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 	if (!fIsEagerExecution()) {
 		// free all other data
 		for (auto &[gn, rd] : results) {
-			if (gn != node && gn->operation.op_type != FSTORE &&
-				!gn->result_data && gn->operation.op_type != FRESHAPE)
+			if (gn != node && gn->operation.op_type != FSTORE && !gn->result_data &&
+				gn->operation.op_type != FRESHAPE && !rd.multi_use)
 				free(rd.data);
 		}
 	} else {
+		// construt a result for each node
 		for (auto &[gn, rd] : results) {
 			if (gn != node && gn->operation.op_type != FSTORE &&
-				!gn->result_data) {
+				!gn->result_data && !rd.multi_use) {
 				FResultData *result = new FResultData();
 				result->data = rd.data;
 				result->num_entries = rd.num_entries;

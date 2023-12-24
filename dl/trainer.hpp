@@ -29,7 +29,8 @@ struct TrainingData {
 		TrainingData(Tensor<T1, n1> X, Tensor<T2, n2> Y) : X(X), Y(Y) {}
 		TrainingData(Tensor<T1, n1> X, Tensor<T2, n2> Y, Tensor<T1, n1> vX,
 					 Tensor<T2, n2> vY)
-			: X(X), Y(Y), vX(vX), vY(vY) {}
+			: X(X), Y(Y), vX(vX), vY(vY) {
+      }
 };
 
 #endif

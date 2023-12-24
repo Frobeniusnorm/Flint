@@ -94,7 +94,7 @@ TEST_SUITE("Graph implementation") {
 			fCreateGraph(v1.data(), v1.size(), F_FLOAT64, shape.data(), 2);
 		char *data = fserialize(gn1, nullptr);
 		fFreeGraph(gn1);
-		FGraphNode *gnp2 = fdeserialize(data);
+		FGraphNode *gnp2 = fdeserialize(data, nullptr);
 		free(data);
 		fCalculateResult(gnp2);
 		for (int i = 0; i < 6; i++)
@@ -943,33 +943,6 @@ TEST_CASE("Multifilter Convolve") {
 		for (int j = 0; j < e1.get_shape()[0]; j++)
 			for (int k = 0; k < e1.get_shape()[0]; k++)
 				CHECK_EQ(r1[i][j][k], e1[i][j][k]);
-	std::cout << r1 << std::endl;
-}
-TEST_CASE("Slide") {
-	Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
-						{{5, 6}, {7, 8}, {9, 0}},
-						{{1, 2}, {3, 4}, {5, 6}}};
-	Tensor<float, 3> k1{{{1, 1}, {2, 2}}};
-	Tensor<float, 3> r1 = t1.slide(k1);
-	CHECK_EQ(17, r1[0][0][0]);
-	CHECK_EQ(23, r1[0][0][1]);
-	CHECK_EQ(56, r1[0][1][0]);
-	CHECK_EQ(48, r1[0][1][1]);
-	Tensor<float, 3> t2{{{0}, {1}, {2}, {3}, {4}}, {{4}, {3}, {2}, {1}, {0}}};
-	Tensor<float, 3> k2{{{1}, {2}}};
-	Tensor<float, 3> r2 = t2.slide(k2, 1, 2);
-	CHECK_EQ(8, r2[0][0][0]);
-	CHECK_EQ(16, r2[0][1][0]);
-	// in context
-	Tensor<float, 3> t4{{{0}, {1}}};
-	Tensor<double, 3> k4{{{1}, {0}, {1}, {0}}};
-	Tensor<double, 2> r4 =
-		((t4 + 1).repeat(1, 1, 1).slide(k4.pow(2).repeat(0, 0, 1)) + 1)
-			.reduce_sum(2);
-	CHECK_EQ(6, r4[0][0]);
-	CHECK_EQ(2, r4[0][1]);
-	CHECK_EQ(6, r4[0][2]);
-	CHECK_EQ(2, r4[0][3]);
 }
 TEST_CASE("Total Reduce") {
 	Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
@@ -1157,6 +1130,107 @@ TEST_CASE("Expand") {
 				CHECK_EQ(a[j][k], e2[j][i][k]);
 				CHECK_EQ(a[j][k], e3[j][k][i]);
 			}
+}
+TEST_CASE("Pooling") {
+	auto pooling_sum_ref_impl = [](FGraphNode *a, size_t *window_size,
+								   unsigned int *step_size) {
+		std::vector<size_t> windows(window_size,
+									window_size + a->operation.dimensions - 1);
+		std::vector<unsigned int> steps(
+			step_size, step_size + a->operation.dimensions - 1);
+		windows.push_back(a->operation.shape[a->operation.dimensions - 1]);
+		steps.push_back(a->operation.shape[a->operation.dimensions - 1]);
+		FGraphNode *res = fsliding_window(a, windows.data(), steps.data());
+		for (int i = 1; i < a->operation.dimensions; i++)
+			res = fflatten_dimension(res, 2);
+		res = freduce_sum(res, 1);
+		std::vector<size_t> no_windows(a->operation.dimensions - 1);
+		for (int i = 0; i < no_windows.size(); i++) {
+			size_t no_window = a->operation.shape[i] - window_size[i] + 1;
+			no_window = no_window % step_size[i] == 0
+							? no_window / step_size[i]
+							: no_window / step_size[i] + 1;
+			no_windows[i] = no_window;
+		}
+		return freshape(res, no_windows.data(), no_windows.size());
+	};
+	auto pooling_max_ref_impl = [](FGraphNode *a, size_t *window_size,
+								   unsigned int *step_size) {
+		std::vector<size_t> windows(window_size,
+									window_size + a->operation.dimensions - 1);
+		std::vector<unsigned int> steps(
+			step_size, step_size + a->operation.dimensions - 1);
+		windows.push_back(a->operation.shape[a->operation.dimensions - 1]);
+		steps.push_back(a->operation.shape[a->operation.dimensions - 1]);
+		FGraphNode *res = fsliding_window(a, windows.data(), steps.data());
+		for (int i = 1; i < a->operation.dimensions; i++)
+			res = fflatten_dimension(res, 2);
+		res = freduce_max(res, 1);
+		std::vector<size_t> no_windows(a->operation.dimensions - 1);
+		for (int i = 0; i < no_windows.size(); i++) {
+			size_t no_window = a->operation.shape[i] - window_size[i] + 1;
+			no_window = no_window % step_size[i] == 0
+							? no_window / step_size[i]
+							: no_window / step_size[i] + 1;
+			no_windows[i] = no_window;
+		}
+		return freshape(res, no_windows.data(), no_windows.size());
+	};
+	Tensor<int, 3> a1 = {{{1, 2}, {3, 4}, {5, 6}, {7, 8}},
+						 {{9, 10}, {11, 12}, {13, 14}, {15, 16}},
+						 {{17, 18}, {19, 20}, {21, 22}, {23, 24}}};
+	using std::array;
+	array<size_t, 2> w1 = {2, 2};
+	array<unsigned int, 2> s1 = {1, 2};
+	Tensor<int, 2> rs1 = a1.pooling_sum(w1, s1);
+	Tensor<int, 2> rm1 = a1.pooling_max(w1, s1);
+	Tensor<int, 2> es1 = Tensor<int, 2>(
+		pooling_sum_ref_impl(a1.get_graph_node(), w1.data(), s1.data()));
+	Tensor<int, 2> em1 = Tensor<int, 2>(
+		pooling_max_ref_impl(a1.get_graph_node(), w1.data(), s1.data()));
+	for (int i = 0; i < es1.get_shape()[0]; i++)
+		for (int j = 0; j < es1.get_shape()[1]; j++) {
+			CHECK_EQ(es1[i][j], rs1[i][j]);
+			CHECK_EQ(em1[i][j], rm1[i][j]);
+		}
+	for (unsigned int p = 1; p < 3; p++)
+		for (unsigned int q = 2; q < 4; q++)
+			for (unsigned int r = 2; r < 3; r++) {
+				array<size_t, 3> w2 = {2, 4, 3};
+				array<unsigned int, 3> s2 = {p, q, r};
+				Tensor<double, 4> a2 = Flint::random(15, 15, 15, 5);
+				Tensor<double, 3> rs2 = a2.pooling_sum(w2, s2);
+				Tensor<double, 3> rm2 = a2.pooling_max(w2, s2);
+				Tensor<double, 3> es2(pooling_sum_ref_impl(
+					a2.get_graph_node(), w2.data(), s2.data()));
+				Tensor<double, 3> em2(pooling_max_ref_impl(
+					a2.get_graph_node(), w2.data(), s2.data()));
+				for (int i = 0; i < es2.get_shape()[0]; i++)
+					for (int j = 0; j < es2.get_shape()[1]; j++)
+						for (int k = 0; k < es2.get_shape()[2]; k++) {
+							CHECK_EQ(es2[i][j][k], rs2[i][j][k]);
+							CHECK_EQ(em2[i][j][k], rm2[i][j][k]);
+						}
+			}
+}
+TEST_CASE("Dropout") {
+	Tensor<long, 1> c1 = Flint::constant(1l, 10000);
+	Tensor<long, 1> d1 = c1.dropout(0.5);
+	Tensor<long, 1> r1 = d1.reduce_sum();
+	int val = r1[0];
+	CHECK(val >= 3000);
+	CHECK(val <= 7000);
+	Tensor<double, 1> a = Flint::random(200);
+	CHECK_EQ(
+		doctest::Approx((a - a.dropout(0.0)).reduce_sum()[0]).epsilon(0.001),
+		0);
+	CHECK_EQ(doctest::Approx((a.dropout(1.0)).reduce_sum()[0]).epsilon(0.001),
+			 0);
+	Tensor<double, 1> b = a.dropout(0.25);
+	for (int i = 0; i < 200; i++) {
+		if (a[i] != b[i])
+			CHECK_EQ(b[i], 0);
+	}
 }
 TEST_CASE("Test Example 1") {
 	Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};

@@ -39,6 +39,10 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
 			weight = w;
 			weight.watch();
 		}
+		void set_weights(const std::vector<FGraphNode*> nodes) {
+			weight = Tensor<double, n>(nodes[index]);
+			weight.watch();
+		}
 		template <OptimizerFactory Fac> void gen_optimizer(const Fac fac) {
 			optimizer = std::unique_ptr<Optimizer<n>>(
 				fac.template generate_optimizer<n>());
@@ -91,6 +95,11 @@ struct WeightRef<index, n, wn...> {
 				weight.watch();
 			} else
 				others.template set_weight<k>(w);
+		}
+		void set_weights(const std::vector<FGraphNode*> nodes) {
+			weight = Tensor<double, n>(nodes[index]);
+			weight.watch();
+			others.template set_weights(nodes);
 		}
 		template <OptimizerFactory Fac> void gen_optimizer(const Fac fac) {
 			optimizer = std::unique_ptr<Optimizer<n>>(
@@ -186,6 +195,7 @@ concept GenericLayer =
 			a.collect_weights()
 		} -> std::convertible_to<std::vector<FGraphNode *>>;
 		a.optimize_weights(grads);
+		a.set_weights(grads);
 		a.generate_optimizer(fac);
 		a.training = true;
 		{ T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
@@ -210,6 +220,7 @@ struct UntrainableLayer {
 		void optimize_weights(const Tensor<T, dim> &error) {}
 		void optimize_weights(std::vector<FGraphNode *> grads) {}
 		std::vector<FGraphNode *> collect_weights() { return {}; }
+		void set_weights(const std::vector<FGraphNode*> weights) { }
 		static constexpr FType transform_type(FType t) { return t; }
 		static constexpr unsigned int transform_dimensionality(unsigned int n) {
 			return n;
@@ -265,6 +276,10 @@ template <int... wn> class Layer {
 		/** Sets a specific weight described by its index */
 		template <int index, int dim> void set_weight(Tensor<double, dim> t) {
 			weight_refs.template set_weight<index>(std::move(t));
+		}
+		/** Sets all weights from an array */
+		void set_weights(const std::vector<FGraphNode*> weights) {
+			weight_refs.set_weights(weights);
 		}
 		/** Returns a reference to a specific weight described by its index */
 		template <int index>

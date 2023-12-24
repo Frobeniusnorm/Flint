@@ -49,6 +49,14 @@ For Archlinux installing the dependencies for an AMD GPU would look like this:
 pacman -S gcc opencl-headers rocm-opencl-runtime make cmake
 ```
 
+## Contribution ##
+- If the documentation is unclear in any way please open an issue with a clarification request
+- If you find bugs either
+  - You can fix them yourself in a fork and open a merge request with an explanation of the bug and fix
+  - You can open an issue with information on how to recreate the bug and how it manifests itself
+- New operations are fairly simple to implement once you get the hang of the operation framework. See [src/operations/README.md](https://github.com/Frobeniusnorm/Flint/tree/operation_refactor/src/operations#readme) for a short guide.
+- Performance improvements, refactoring and new features of the rest of the framework are very welcome too, but more complex. Start by working through the code in `flint.h` and take a look at the control and data flow through `graph.cpp`, this should help getting familiar with the implementations.
+
 ## Attribution to included libraries ##
 - Benchmarking: [plf::nanotimer](https://github.com/mattreecebentley/plf_nanotimer) (zlib Licence)
 - Testing: [Doctest](https://github.com/doctest/doctest) (MIT Licence)

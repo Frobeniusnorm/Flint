@@ -1,18 +1,17 @@
-/* Copyright 2022 David Schwarzbeck
+/* Copyright 2023 David Schwarzbeck
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. */
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-	   http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-  This file contains the implementation of IO functions for the C frontend
-*/
 #include <iostream>
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -73,7 +72,7 @@ char *fserialize(FGraphNode *node, size_t *bytes_written) {
 	return data;
 }
 
-FGraphNode *fdeserialize(char *data) {
+FGraphNode *fdeserialize(char *data, size_t *bytes_read) {
 	int m = (data[0] << (3 * 8)) | (data[1] << (2 * 8)) | (data[2] << (1 * 8)) |
 			(data[3]);
 	if (m != MAGIC_NUMBER) {
@@ -102,6 +101,9 @@ FGraphNode *fdeserialize(char *data) {
 	FGraphNode *node = fCreateGraph((void *)res, total_size, (FType)data_type,
 									shape.data(), shape.size());
 	free(res);
+	if (bytes_read) {
+		*bytes_read = index + total_size * typeSize((FType)data_type);
+	}
 	return node;
 }
 FGraphNode *fload_image(const char *path) {

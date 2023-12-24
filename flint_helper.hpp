@@ -1,3 +1,16 @@
+/* Copyright 2023 David Schwarzbeck
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. */
 #ifndef FLINT_HELPER_HPP
 #define FLINT_HELPER_HPP
 #include "flint.h"
@@ -279,9 +292,14 @@ struct GradientContext {
 struct FlintContext {
 		/** Initializes both backends */
 		FlintContext() { flintInit(FLINT_BACKEND_BOTH); }
-		/** Received a value of `FLINT_BACKEND_BOTH`, `FLINT_BACKEND_CPU` and
-		 * `FLINT_BACKEND_GPU` */
-		FlintContext(int backends) { flintInit(backends); }
+		/** Received a value of `FLINT_BACKEND_BOTH`, `FLINT_BACKEND_CPU` or
+		 * `FLINT_BACKEND_GPU` that denotes the backend to be used and a logging
+		 * level of `F_DEBUG`, `F_VERBOSE`, `F_INFO`, `F_WARNING`, `F_ERROR`
+		 * (default is `F_INFO`). */
+		FlintContext(int backends, FLogType logging = F_INFO) {
+			flintInit(backends);
+      fSetLoggingLevel(logging);
+		}
 		~FlintContext() { flintCleanup(); }
 };
 #endif

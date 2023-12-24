@@ -358,7 +358,7 @@ TEST_SUITE("Autodiff") {
 		for (int j = 0; j < 3; j++)
 			CHECK_EQ(Approx(res[j]).epsilon(0.001), dy[j]);
 	}
-	TEST_CASE("CONVOLVE") {
+	TEST_CASE("Convolve") {
 		GradientContext _;
 		Tensor<int, 3> x{{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}, {0, 0, 0}},
 						 {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}, {0, 0, 0}},
@@ -438,24 +438,25 @@ TEST_SUITE("Autodiff") {
 		w.watch();
 		Tensor<double, 3> z = w.convolve(f, 1, 2, 2);
 		Tensor<double, 4> dw = z.gradient(w);
-		CHECK_EQ(3, dw[0][0][0][0]);
-		CHECK_EQ(2, dw[0][0][0][1]);
-		CHECK_EQ(1, dw[0][0][0][2]);
-		CHECK_EQ(-1, dw[0][0][1][0]);
-		CHECK_EQ(1, dw[0][0][1][1]);
-		CHECK_EQ(-1, dw[0][0][1][2]);
+		using doctest::Approx;
+		CHECK_EQ(Approx(3).epsilon(0.000001), dw[0][0][0][0]);
+		CHECK_EQ(Approx(2).epsilon(0.000001), dw[0][0][0][1]);
+		CHECK_EQ(Approx(1).epsilon(0.000001), dw[0][0][0][2]);
+		CHECK_EQ(Approx(-1).epsilon(0.000001), dw[0][0][1][0]);
+		CHECK_EQ(Approx(1).epsilon(0.000001), dw[0][0][1][1]);
+		CHECK_EQ(Approx(-1).epsilon(0.000001), dw[0][0][1][2]);
 		CHECK_EQ(0, dw[0][1][0][0]);
 		CHECK_EQ(0, dw[0][1][0][1]);
 		CHECK_EQ(0, dw[0][1][0][2]);
 		CHECK_EQ(0, dw[0][1][1][0]);
 		CHECK_EQ(0, dw[0][1][1][1]);
 		CHECK_EQ(0, dw[0][1][1][2]);
-		CHECK_EQ(3, dw[1][0][0][0]);
-		CHECK_EQ(2, dw[1][0][0][1]);
-		CHECK_EQ(1, dw[1][0][0][2]);
-		CHECK_EQ(-1, dw[1][0][1][0]);
-		CHECK_EQ(1, dw[1][0][1][1]);
-		CHECK_EQ(-1, dw[1][0][1][2]);
+		CHECK_EQ(Approx(3).epsilon(0.000001), dw[1][0][0][0]);
+		CHECK_EQ(Approx(2).epsilon(0.000001), dw[1][0][0][1]);
+		CHECK_EQ(Approx(1).epsilon(0.000001), dw[1][0][0][2]);
+		CHECK_EQ(Approx(-1).epsilon(0.000001), dw[1][0][1][0]);
+		CHECK_EQ(Approx(1).epsilon(0.000001), dw[1][0][1][1]);
+		CHECK_EQ(Approx(-1).epsilon(0.000001), dw[1][0][1][2]);
 		CHECK_EQ(0, dw[1][1][0][0]);
 		CHECK_EQ(0, dw[1][1][0][1]);
 		CHECK_EQ(0, dw[1][1][0][2]);
@@ -471,42 +472,17 @@ TEST_SUITE("Autodiff") {
 		CHECK_EQ(-1, da[0][1][0]);
 		CHECK_EQ(3, da[0][2][0]);
 		CHECK_EQ(1, da[0][3][0]);
-		CHECK_EQ(3, da[0][4][0]);
-		CHECK_EQ(1, da[0][5][0]);
+		CHECK_EQ(2, da[0][4][0]);
+		CHECK_EQ(2, da[0][5][0]);
 		CHECK_EQ(2, da[1][0][0]);
 		CHECK_EQ(3, da[1][1][0]);
 		CHECK_EQ(1, da[1][2][0]);
 		CHECK_EQ(7, da[1][3][0]);
-		CHECK_EQ(1, da[1][4][0]);
-		CHECK_EQ(7, da[1][5][0]);
+		CHECK_EQ(-1, da[1][4][0]);
+		CHECK_EQ(4, da[1][5][0]);
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 6; j++)
 				CHECK_EQ(0, da[2 + i][j][0]);
-
-		Tensor<int, 3> s1 = x.slide(k, 1, 2);
-		FGraphNode *dxs[] = {k.get_graph_node(), x.get_graph_node()};
-		FGraphNode *grads[2];
-		fCalculateGradients(s1.get_graph_node(), &dxs[0], 2, &grads[0]);
-		dk = Tensor<double, 3>(grads[0], dk.get_shape());
-		CHECK_EQ(s1[0][0][0], dk[0][0][0]);
-		CHECK_EQ(s1[0][0][1], dk[0][0][1]);
-		CHECK_EQ(s1[0][0][2], dk[0][0][2]);
-		CHECK_EQ(10, dk[1][0][0]);
-		CHECK_EQ(12, dk[1][0][2]);
-		CHECK_EQ(s1[1][1][0], dk[1][1][0]);
-		CHECK_EQ(s1[1][1][1], dk[1][1][1]);
-		CHECK_EQ(s1[1][1][2], dk[1][1][2]);
-		dx = Tensor<double, 3>(grads[1], x.get_shape());
-		for (int i = 0; i < 3; i++) {
-			CHECK_EQ(1, dx[0][0][i]);
-			CHECK_EQ(2, dx[0][1][i]);
-			CHECK_EQ(1, dx[0][2][i]);
-			for (int j = 1; j < 4; j++) {
-				CHECK_EQ(-2, dx[j][0][i]);
-				CHECK_EQ(3, dx[j][1][i]);
-				CHECK_EQ(-2, dx[j][2][i]);
-			}
-		}
 	}
 	TEST_CASE("Multifilter Convolve") {
 		GradientContext _;
@@ -772,5 +748,127 @@ TEST_SUITE("Autodiff") {
 		auto g4 = t4.gradient(in);
 		CHECK_EQ((t3.equal(t4) - 1).reduce_sum()[0], 0);
 		CHECK_EQ(((g3 - g4).abs() > 0.0001).reduce_sum()[0], 0);
+	}
+	TEST_CASE("Sum Pooling") {
+		GradientContext _;
+		Tensor<int, 3> x1{{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}},
+						  {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}},
+						  {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}},
+						  {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}};
+		x1.watch();
+		Tensor<double, 2> c1{{2, -1}, {1, 3}, {3, -2}};
+		Tensor<double, 2> y1 = x1.pooling_sum({2, 2}, {1, 1}).convert<double>();
+		y1 = y1 * c1;
+		Tensor<double, 3> dx1 = y1.gradient(x1);
+		Tensor<double, 3> ex1 = Tensor<double, 3>{
+			{{2}, {1}, {-1}},
+			{{3}, {5}, {2}},
+			{{4}, {5}, {1}},
+			{{3}, {1}, {-2}}}.repeat(0, 0, 2);
+		for (int i = 0; i < ex1.get_shape()[0]; i++) {
+			for (int j = 0; j < ex1.get_shape()[1]; j++) {
+				for (int k = 0; k < ex1.get_shape()[2]; k++) {
+					CHECK_EQ(ex1[i][j][k], dx1[i][j][k]);
+				}
+			}
+		}
+		Tensor<double, 2> c2{{2, -1}, {1, 3}};
+		Tensor<double, 2> y2 = x1.pooling_sum({2, 1}, {2, 2}).convert<double>();
+		y2 = y2 * c2;
+		Tensor<double, 3> dx2 = y2.gradient(x1);
+		Tensor<double, 3> ex2 = Tensor<double, 3>{
+			{{2}, {0}, {-1}},
+			{{2}, {0}, {-1}},
+			{{1}, {0}, {3}},
+			{{1}, {0}, {3}}}.repeat(0, 0, 2);
+		for (int i = 0; i < ex2.get_shape()[0]; i++) {
+			for (int j = 0; j < ex2.get_shape()[1]; j++) {
+				for (int k = 0; k < ex2.get_shape()[2]; k++) {
+					CHECK_EQ(ex2[i][j][k], dx2[i][j][k]);
+				}
+			}
+		}
+	}
+	TEST_CASE("Max Pooling") {
+		auto pooling_sum_ref_impl = [](FGraphNode *a, size_t *window_size,
+									   unsigned int *step_size) {
+			std::vector<size_t> windows(
+				window_size, window_size + a->operation.dimensions - 1);
+			std::vector<unsigned int> steps(
+				step_size, step_size + a->operation.dimensions - 1);
+			windows.push_back(a->operation.shape[a->operation.dimensions - 1]);
+			steps.push_back(a->operation.shape[a->operation.dimensions - 1]);
+			FGraphNode *res = fsliding_window(a, windows.data(), steps.data());
+			for (int i = 1; i < a->operation.dimensions; i++)
+				res = fflatten_dimension(res, 2);
+			res = freduce_sum(res, 1);
+			std::vector<size_t> no_windows(a->operation.dimensions - 1);
+			for (int i = 0; i < no_windows.size(); i++) {
+				size_t no_window = a->operation.shape[i] - window_size[i] + 1;
+				no_window = no_window % step_size[i] == 0
+								? no_window / step_size[i]
+								: no_window / step_size[i] + 1;
+				no_windows[i] = no_window;
+			}
+			return freshape(res, no_windows.data(), no_windows.size());
+		};
+		GradientContext _;
+		Tensor<double, 3> x1{{{0, 1, 2}, {1, 2, 3}, {2, 3, 4}},
+							 {{3, 4, 5}, {6, 7, 8}, {9, 0, -1}},
+							 {{-2, -3, -4}, {-5, -6, -7}, {-8, -9, 0}},
+							 {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}};
+		x1.watch();
+		Tensor<double, 2> c1{{2, -1}, {1, 3}, {3, -2}};
+		Tensor<double, 2> y1 = x1.pooling_max({2, 2}, {1, 1});
+		y1 = y1 * c1;
+		Tensor<double, 3> dx1 = y1.gradient(x1);
+		Tensor<double, 3> ex1 =
+			Tensor<double, 3>{{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}},
+							  {{0, 0, 0}, {0, 0, 3}, {2, 0, 0}},
+							  {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}},
+							  {{0, 0, 0}, {0, 0, 3}, {0, 0, -2}}};
+		for (int i = 0; i < ex1.get_shape()[0]; i++) {
+			for (int j = 0; j < ex1.get_shape()[1]; j++) {
+				for (int k = 0; k < ex1.get_shape()[2]; k++) {
+					CHECK_EQ(ex1[i][j][k], dx1[i][j][k]);
+				}
+			}
+		}
+		for (unsigned int p = 1; p < 3; p++)
+			for (unsigned int q = 2; q < 4; q++)
+				for (unsigned int r = 2; r < 3; r++) {
+					std::array<size_t, 3> w2 = {2, 1, 3};
+					std::array<unsigned int, 3> s2 = {p, q, r};
+					Tensor<double, 4> a2 = Flint::random(15, 15, 15, 1);
+					a2.watch();
+					Tensor<double, 3> rm2 = a2.pooling_sum(w2, s2);
+					Tensor<double, 3> em2(pooling_sum_ref_impl(
+						a2.get_graph_node(), w2.data(), s2.data()));
+					Tensor<double, 4> ex2 = em2.gradient(a2);
+					Tensor<double, 4> dx2 = rm2.gradient(a2);
+					for (int i = 0; i < ex2.get_shape()[0]; i++)
+						for (int j = 0; j < ex2.get_shape()[1]; j++)
+							for (int k = 0; k < ex2.get_shape()[2]; k++)
+								for (int l = 0; l < ex2.get_shape()[3]; l++) {
+									CHECK_EQ(doctest::Approx(ex2[i][j][k][l])
+												 .epsilon(0.000000001f),
+											 dx2[i][j][k][l]);
+								}
+				}
+	}
+	TEST_CASE("Dropout") {
+		GradientContext _;
+		Tensor<int, 2> a = Flint::constant(3, 10, 10);
+		a.watch();
+		Tensor<int, 2> b = a.dropout(0.5);
+		Tensor<double, 2> db = b.gradient(a);
+		for (int i = 0; i < 10; i++)
+			for (int j = 0; j < 10; j++) {
+				if (b[i][j] == 0) {
+					CHECK_EQ(db[i][j], 0.0);
+				} else {
+					CHECK_EQ(db[i][j], 1.0);
+				}
+			}
 	}
 }
