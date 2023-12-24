@@ -38,6 +38,11 @@ type GraphNode struct {
 	// ref *graphNode
 }
 
+type Int int32
+type Long int64
+type Float float32
+type Double float64
+
 type operation struct {
 	shape             *C.size_t
 	additional_data   unsafe.Pointer
@@ -80,22 +85,22 @@ type DataType uint32 // equal type so it is comparable
 
 // the order is important as it defines the type coercion
 const (
-	F_INT32 DataType = iota
-	F_INT64
-	F_FLOAT32
-	F_FLOAT64
-	F_GRAPH
+	INT32 DataType = iota
+	INT64
+	FLOAT32
+	FLOAT64
+	GRAPH
 )
 
 func (x DataType) String() string {
 	switch x {
-	case F_INT32:
+	case INT32:
 		return "int32"
-	case F_INT64:
+	case INT64:
 		return "int64"
-	case F_FLOAT32:
+	case FLOAT32:
 		return "float32"
-	case F_FLOAT64:
+	case FLOAT64:
 		return "float64"
 	default:
 		panic("invalid type")

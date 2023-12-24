@@ -103,7 +103,7 @@ func CalculateResult[T completeNumeric](node GraphNode) (Result[T], error) {
 	dataType := DataType(flintNode.operation.data_type)
 
 	var result = fromCToArray[T](dataPtr, dataSize, dataType)
-	var shape = Shape(fromCToArray[uint](shapePtr, shapeSize, F_INT64))
+	var shape = Shape(fromCToArray[uint](shapePtr, shapeSize, INT64))
 
 	return Result[T]{
 		nodeRef:  flintNode,

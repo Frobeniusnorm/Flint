@@ -77,13 +77,13 @@ func Create(data any) Tensor {
 func CreateFromSliceAndShape[T Numeric](data []T, shape Shape) Tensor {
 	//data = flatten(data)
 	flintNode, err := wrapper.CreateGraph(data, shape)
-	tensor := Tensor{node: &flintNode, err: err}
+	tensor := Tensor{node: flintNode, err: err}
 	tensor.init()
 	return tensor
 }
 
 func FromNode(node wrapper.GraphNode) Tensor {
-	res := Tensor{node: &node, dataType: node.GetType()}
+	res := Tensor{node: node}
 	res.init()
 	return res
 }
@@ -95,28 +95,33 @@ func FromNodeWithErr(node wrapper.GraphNode, err error) Tensor {
 }
 
 func Scalar[T Numeric](val T) Tensor {
-	var res Tensor
-	switch any(val).(type) {
-	case int32:
-		var typedVal = any(val).(int32)
-		res.dataInt32 = &typedVal
-		res.dataType = wrapper.F_INT32
-	case int64:
-		var typedVal = any(val).(int64)
-		res.dataInt64 = &typedVal
-		res.dataType = wrapper.F_INT64
-	case float32:
-		var typedVal = any(val).(float32)
-		res.dataFloat32 = &typedVal
-		res.dataType = wrapper.F_FLOAT32
-	case float64:
-		var typedVal = any(val).(float64)
-		res.dataFloat64 = &typedVal
-		res.dataType = wrapper.F_FLOAT64
-	}
-	res.init()
-	return res
+	node, err := wrapper.CreateGraphConstant(val, Shape{1})
+	return FromNodeWithErr(node, err)
 }
+
+//func Scalar[T Numeric](val T) Tensor {
+//	var res Tensor
+//	switch any(val).(type) {
+//	case int32:
+//		var typedVal = any(val).(int32)
+//		res.dataInt32 = &typedVal
+//		res.dataType = wrapper.INT32
+//	case int64:
+//		var typedVal = any(val).(int64)
+//		res.dataInt64 = &typedVal
+//		res.dataType = wrapper.INT64
+//	case float32:
+//		var typedVal = any(val).(float32)
+//		res.dataFloat32 = &typedVal
+//		res.dataType = wrapper.FLOAT32
+//	case float64:
+//		var typedVal = any(val).(float64)
+//		res.dataFloat64 = &typedVal
+//		res.dataType = wrapper.FLOAT64
+//	}
+//	res.init()
+//	return res
+//}
 
 func Constant[T Numeric](val T, shape Shape) Tensor {
 	return FromNodeWithErr(wrapper.CreateGraphConstant(val, shape))
@@ -135,7 +140,7 @@ func Random(shape Shape) Tensor {
 //}
 //
 //// CreateGraphIdentity creates an identity matrix.
-//// The datatype will be [F_INT32]
+//// The datatype will be [INT32]
 //func CreateGraphIdentity(size uint) (GraphNode, error) {
 //	data := make([]int32, size*size)
 //	for i := uint(0); i < size; i++ {

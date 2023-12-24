@@ -3,11 +3,6 @@ package wrapper
 // #include <flint/flint.h>
 import "C"
 
-type Float float32
-type Double float64
-type Long int64
-type Int int32
-
 func AddGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
 	flintNode, errno := C.fadd_g(a.ref, b.ref)
 	if flintNode == nil {

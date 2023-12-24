@@ -65,11 +65,9 @@ func (x Tensor) init() {
 	if x.err != nil {
 		log.Panicf("cannot initialize a errornous flint: %s", x.err)
 	}
-	if !x.isLight() {
-		wrapper.SetRefCounter(x.node, 1)
-		runtime.SetFinalizer(&x, func(x *Tensor) { x.Close() })
-		runtime.KeepAlive(x)
-	}
+	wrapper.SetRefCounter(x.node, 1)
+	runtime.SetFinalizer(&x, func(x *Tensor) { x.Close() })
+	runtime.KeepAlive(x)
 }
 
 /*
@@ -77,12 +75,10 @@ Close resets the ref counter to 0.
 This fixes memory management issues, as the node can be cleared on subsequent calls to [wrapper.OptimizeMemory]
 */
 func (x Tensor) Close() {
-	if !x.isLight() {
-		fmt.Println("closing a flint ...", x.Shape())
-		runtime.SetFinalizer(&x, nil) // remove any finalizer for this flint
-		wrapper.SetRefCounter(x.node, 0)
-		runtime.KeepAlive(x)
-	}
+	fmt.Println("closing a flint ...", x.Shape())
+	runtime.SetFinalizer(&x, nil) // remove any finalizer for this flint
+	wrapper.SetRefCounter(x.node, 0)
+	runtime.KeepAlive(x)
 }
 
 func (x Tensor) Shape() Shape {

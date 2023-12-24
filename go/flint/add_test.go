@@ -2,7 +2,6 @@ package flint
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/wrapper"
 	"testing"
 )
 
@@ -11,8 +10,6 @@ func TestAdd(t *testing.T) {
 	fmt.Println("x", x)
 	y := Random(Shape{2})
 	fmt.Println("y", y)
-	x = x.To(wrapper.F_INT32)
-	fmt.Println("new x", x)
 	z := x.Add(y)
 	fmt.Println("z", z)
 }

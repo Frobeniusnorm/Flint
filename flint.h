@@ -69,6 +69,7 @@ extern "C" {
 #define FLINT_BACKEND_ONLY_CPU 1
 #define FLINT_BACKEND_ONLY_GPU 2
 #define FLINT_BACKEND_BOTH 3
+
 /** Types of erros that can occur in the framework (also see `fErrorMessage`)
  * Error Types:
  * - `NO_ERROR`: no error occured up until now
@@ -117,29 +118,36 @@ typedef enum FErrorType FErrorType;
  * Returns `NO_ERROR` on success or the error type
  * */
 FErrorType flintInit(int backends);
+
 /** Don't call this function explicitly if you intent to use Flint normally. Use
  * `flintInit`. Returns `NO_ERROR` on success or the error type */
 FErrorType flintInit_cpu();
+
 /** Don't call this function explicitly if you intent to use Flint normally. Use
  * `flintInit`. Returns `NO_ERROR` on success or the error type */
 FErrorType flintInit_gpu();
+
 /** Returns an integer containing the Backend information bitwise.
  * See constants `FLINT_BACKEND_ONLY_CPU`, `FLINT_BACKEND_ONLY_GPU` and
  * `FLINT_BACKEND_BOTH`. */
 int flintInitializedBackends();
+
 /** Deallocates any resourced allocated by the corresponding backends.
 This method calls the other two (following) which are only executed if the
 framework was initialized, else they do nothing. Returns `NO_ERROR` on success
 or the error type */
 FErrorType flintCleanup();
+
 /** Deallocates any resourced allocated by the cpu backend, if it was
  * initialized, else it does nothing. Returns `NO_ERROR` on success or the error
  * type */
 FErrorType flintCleanup_cpu();
+
 /** Deallocates any resourced allocated by the gpu backend, if it was
  * initialized, else it does nothing. Returns `NO_ERROR` on success or the error
  * type */
 FErrorType flintCleanup_gpu();
+
 /**
  * See also: `flogging`, `FLogType`
  * - `F_DEBUG` (only internal debugging informations of the framework),
@@ -154,6 +162,7 @@ FErrorType flintCleanup_gpu();
  *    by missuse of functions).
  */
 enum FLogType { F_NO_LOGGING, F_ERROR, F_WARNING, F_INFO, F_VERBOSE, F_DEBUG };
+
 /** Sets the logging level of the framework. Adjust this for debugging purposes,
  * or if you release software in which Flint is contained.
  * See also: `flogging`, `FLogType`
@@ -167,11 +176,14 @@ enum FLogType { F_NO_LOGGING, F_ERROR, F_WARNING, F_INFO, F_VERBOSE, F_DEBUG };
  * - 5: Logging level `F_DEBUG` (when a bug in the library has been found)
  */
 void fSetLoggingLevel(enum FLogType type);
+
 /** Supported Image formats for fstore_image */
 enum FImageFormat { F_PNG, F_JPEG, F_BMP };
+
 /** Logs a NULL terminated string with the given logging level.
  * See also: `fSetLoggingLevel` */
 void flogging(enum FLogType type, const char *msg);
+
 /**
  * Queries the type of the last error that occured in this framework.
  * Errors cause an exception or if C-compatibility is enabled the function in
@@ -179,6 +191,7 @@ void flogging(enum FLogType type, const char *msg);
  * error.
  */
 FErrorType fErrorType();
+
 /**
  * Queries the message of the last error that occured in this framework.
  * Errors cause an exception or if C-compatibility is enabled the function in
@@ -186,18 +199,22 @@ FErrorType fErrorType();
  * of the error. If no error occured returns an empty string.
  */
 const char *fErrorMessage();
+
 /** All graph nodes that represent actual operations are after this call
  * executed eagerly, i.e. they are executed during graph construction.
  *
  * This may improve performance when only using the CPU backend, in any other
  * case disabling eager execution should be preferred. */
 void fEnableEagerExecution();
+
 /** Disable eager execution, i.e. the graph is constructed without execution of
  * the nodes until an operation makes the execution of a parent graph necessary
  * or the user calls `fExecuteGraph`. */
 void fDisableEagerExecution();
+
 /** Returns 1 if eager execution has been enabled, else 0 */
 int fIsEagerExecution();
+
 /** The 4 allowed data types:
  * - `F_INT32`(integer, 32bit)
  * - `F_INT64`(integer, 64bit)
@@ -262,6 +279,7 @@ enum FOperationType {
 	FDROPOUT,
 	FNUM_OPERATION_TYPES
 };
+
 /**
  * Describes one operation. An operation always has a shape, described by
  * `FOperation.shape` which is an array of size
@@ -823,6 +841,7 @@ FGraphNode *fmax_cd(FGraphNode *a, const double b);
  * The results of the predecessor node must be available, to
  * ensure that the method may execute the parameter node. */
 FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
+
 /** Reduces one dimension of the tensor by multiplicative folding e.g.
  *
  * `freduce_mul([[1,2,3], [4,5,6]], 0) = [4,10,18]`,
@@ -831,6 +850,7 @@ FGraphNode *freduce_sum(FGraphNode *a, const int dimension);
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node.*/
 FGraphNode *freduce_mul(FGraphNode *a, const int dimension);
+
 /** Reduces one dimension of the tensor by keeping the minimum e.g.
  *
  * `freduce_min([[1,32,3], [4,5,3]], 0) = [1,5,3]`,
@@ -839,6 +859,7 @@ FGraphNode *freduce_mul(FGraphNode *a, const int dimension);
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node.*/
 FGraphNode *freduce_min(FGraphNode *a, const int dimension);
+
 /** Reduces one dimension of the tensor by keeping the maximum e.g.
  *
  * `freduce_max([[1,32,3], [4,5,3]], 0) = [4,32,3]`,
@@ -847,6 +868,7 @@ FGraphNode *freduce_min(FGraphNode *a, const int dimension);
  * The results of the predecessor node must be available; to
  * ensure that the method may execute the parameter node.*/
 FGraphNode *freduce_max(FGraphNode *a, const int dimension);
+
 /** Selects a slice of the tensor with a dimension wise start and end index.
  * `start` and `end` are arrays with as many entries
  * as the tensor has dimensions. They may contain negative values,
@@ -856,6 +878,7 @@ FGraphNode *freduce_max(FGraphNode *a, const int dimension);
  * per dimension and is exclusive.
  */
 FGraphNode *fslice(FGraphNode *a, const long *start, const long *end);
+
 /** Selects a slice of the tensor with a dimension wise start index, end index
  * and step size. `start`, `end` and `step` are arrays with as
  * many entries as the tensor has dimensions. `start` and `end` may

@@ -45,7 +45,7 @@ func fromCToArray[T completeNumeric](dataPtr unsafe.Pointer, length int, dataTyp
 	var result = make([]T, length)
 
 	switch dataType {
-	case F_INT32:
+	case INT32:
 		var data []byte = C.GoBytes(dataPtr, C.int(length*C.sizeof_int))
 		elementSize := len(data) / length
 		for i := 0; i < length; i++ {
@@ -53,7 +53,7 @@ func fromCToArray[T completeNumeric](dataPtr unsafe.Pointer, length int, dataTyp
 			x := binary.LittleEndian.Uint32(relevantData)
 			result[i] = T(x)
 		}
-	case F_INT64:
+	case INT64:
 		var data []byte = C.GoBytes(dataPtr, C.int(length*C.sizeof_long))
 		elementSize := len(data) / length
 		for i := 0; i < length; i++ {
@@ -62,7 +62,7 @@ func fromCToArray[T completeNumeric](dataPtr unsafe.Pointer, length int, dataTyp
 			result[i] = T(x)
 		}
 
-	case F_FLOAT32:
+	case FLOAT32:
 		var data []byte = C.GoBytes(dataPtr, C.int(length*C.sizeof_float))
 		elementSize := len(data) / length
 		for i := 0; i < length; i++ {
@@ -72,7 +72,7 @@ func fromCToArray[T completeNumeric](dataPtr unsafe.Pointer, length int, dataTyp
 			result[i] = T(x)
 		}
 
-	case F_FLOAT64:
+	case FLOAT64:
 		var data []byte = C.GoBytes(dataPtr, C.int(length*C.sizeof_double))
 		elementSize := len(data) / length
 		for i := 0; i < length; i++ {
@@ -92,27 +92,27 @@ func fromCToArray[T completeNumeric](dataPtr unsafe.Pointer, length int, dataTyp
 func closestType[T completeNumeric](x T) DataType {
 	switch any(x).(type) {
 	case int:
-		return F_INT64
+		return INT64
 	case int8:
-		return F_INT32
+		return INT32
 	case int16:
-		return F_INT32
+		return INT32
 	case int32:
-		return F_INT32
+		return INT32
 	case int64:
-		return F_INT64
+		return INT64
 	case uint:
-		return F_INT64
+		return INT64
 	case uint8:
-		return F_INT32
+		return INT32
 	case uint16:
-		return F_INT32
+		return INT32
 	case uint32:
-		return F_INT64
+		return INT64
 	case float32:
-		return F_FLOAT32
+		return FLOAT32
 	case float64:
-		return F_FLOAT64
+		return FLOAT64
 	default:
 		panic("invalid type")
 	}
