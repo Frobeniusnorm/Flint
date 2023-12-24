@@ -39,6 +39,7 @@ The module will also define two cache variables::
 
 #]=======================================================================]
 
+# Modified for a more complete search (especially on nvidia-powered devices)
 # see the difference to the original:
 # diff FindOpenCL.cmake /usr/share/cmake/Modules/FindOpenCL.cmake
 
