@@ -4,8 +4,8 @@ package wrapper
 import "C"
 import "fmt"
 
-// Shape represents the size of a flint_old.
-// needs to have one entry for each dimension of flint_old
+// Shape represents the size of a flint.
+// needs to have one entry for each dimension of flint
 type Shape []uint
 
 func (a Shape) String() string {
@@ -25,7 +25,7 @@ func (a Shape) Equal(b Shape) bool {
 }
 
 // Stride defines the steps for sliding operations
-// needs to have one entry for each dimension of flint_old
+// needs to have one entry for each dimension of flint
 type Stride []int
 
 func (a Stride) String() string {
@@ -33,7 +33,7 @@ func (a Stride) String() string {
 }
 
 // Axes indicate changes in dimensions (i.e. transpose)
-// needs to have one entry for each dimension of flint_old
+// needs to have one entry for each dimension of flint
 // and each entry should not be higher than the number of dimensions
 type Axes []int
 

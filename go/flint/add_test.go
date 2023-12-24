@@ -1,4 +1,4 @@
-package flint_old
+package flint
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestTensor_Sub(t *testing.T) {
+func TestAdd(t *testing.T) {
 	x := Scalar(float32(3))
 	fmt.Println("x", x)
 	y := Random(Shape{2})

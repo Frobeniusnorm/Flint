@@ -2,16 +2,16 @@ package optimize
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/flint_old"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 )
 
 type baseOptimizer struct {
-	params      []flint_old.Parameter
+	params      []flint.Parameter
 	regularizer Regularizer
 }
 
 type Optimizer interface {
 	fmt.Stringer
-	calculateUpdate(weightTensor flint_old.Tensor, gradientTensor flint_old.Tensor) flint_old.Tensor
-	Step(loss flint_old.Tensor)
+	calculateUpdate(weightTensor flint.Tensor, gradientTensor flint.Tensor) flint.Tensor
+	Step(loss flint.Tensor)
 }

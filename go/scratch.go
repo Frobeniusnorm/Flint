@@ -69,7 +69,7 @@ func Min(node GraphNode) (GraphNode, error) {
 	return node, nil
 }
 
-// Sum sums up all values in the flattened flint_old
+// Sum sums up all values in the flattened flint
 func Sum(node GraphNode) (GraphNode, error) {
 	node, err := Flatten(node)
 	if err != nil {
@@ -106,4 +106,42 @@ func OneHot(node GraphNode, numClasses uint) (GraphNode, error) {
 	}
 
 	return id, nil
+}
+
+func (x Tensor) Max() Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(wrapper.Max(*x.node))
+}
+
+func (x Tensor) Min() Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(wrapper.Min(*x.node))
+}
+
+func (x Tensor) Sum() Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(wrapper.Sum(*x.node))
+}
+
+func (x Tensor) OneHot(numClasses uint) Tensor {
+	x = x.readyNode()
+	return FromNodeWithErr(wrapper.OneHot(*x.node, numClasses))
+}
+
+func largerType(x Tensor, y Tensor) DataType {
+	if x.dataType > y.dataType {
+		return x.dataType
+	} else {
+		return y.dataType
+	}
+}
+
+func lightLast(x Tensor, y Tensor) (a Tensor, b Tensor) {
+	if !x.isLight() {
+		return x, y
+	} else if !y.isLight() {
+		return y, x
+	} else {
+		return x.readyNode(), y
+	}
 }

@@ -1,4 +1,4 @@
-package flint_old
+package flint
 
 import "github.com/Frobeniusnorm/Flint/go/wrapper"
 

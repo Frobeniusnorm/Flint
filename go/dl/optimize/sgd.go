@@ -2,7 +2,7 @@ package optimize
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/flint_old"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 	"github.com/Frobeniusnorm/Flint/go/wrapper"
 	"log"
 )
@@ -12,7 +12,7 @@ type Sgd struct {
 	learningRate float32
 }
 
-func NewSgd(params []flint_old.Parameter, learningRate float32) Sgd {
+func NewSgd(params []flint.Parameter, learningRate float32) Sgd {
 	if learningRate < 0.0 {
 		log.Panicf("Invalid learning rate: %f", learningRate)
 	}
@@ -25,12 +25,12 @@ func NewSgd(params []flint_old.Parameter, learningRate float32) Sgd {
 	}
 }
 
-func (sgd *Sgd) calculateUpdate(weightTensor flint_old.Tensor, gradientTensor flint_old.Tensor) flint_old.Tensor {
-	return weightTensor.Sub(gradientTensor.Mul(flint_old.Scalar(sgd.learningRate)))
+func (sgd *Sgd) calculateUpdate(weightTensor flint.Tensor, gradientTensor flint.Tensor) flint.Tensor {
+	return weightTensor.Sub(gradientTensor.Mul(flint.Scalar(sgd.learningRate)))
 }
 
-func (sgd *Sgd) Step(loss flint_old.Tensor) {
-	// turn flint_old array into array of graph nodes
+func (sgd *Sgd) Step(loss flint.Tensor) {
+	// turn flint array into array of graph nodes
 	paramsSimple := make([]wrapper.GraphNode, len(sgd.params))
 	for i, p := range sgd.params {
 		paramsSimple[i] = p.Node()
@@ -40,10 +40,10 @@ func (sgd *Sgd) Step(loss flint_old.Tensor) {
 	for i, w := range sgd.params {
 		for _, g := range grads {
 			sgd.params[i].Close()
-			gN := flint_old.FromNode(g)
-			update := sgd.calculateUpdate(gN, flint_old.Tensor(w))
+			gN := flint.FromNode(g)
+			update := sgd.calculateUpdate(gN, flint.Tensor(w))
 			gN.Close()
-			sgd.params[i] = flint_old.NewParameter(update)
+			sgd.params[i] = flint.NewParameter(update)
 		}
 	}
 }

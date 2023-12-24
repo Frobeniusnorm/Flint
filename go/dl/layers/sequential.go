@@ -2,7 +2,7 @@ package layers
 
 import (
 	"fmt"
-	"github.com/Frobeniusnorm/Flint/go/flint_old"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 	"strings"
 )
 
@@ -21,8 +21,8 @@ func NewSequential(layers ...Layer) Sequential {
 	}
 }
 
-func (seq Sequential) Forward(x flint_old.Tensor) flint_old.Tensor {
-	var res flint_old.Tensor
+func (seq Sequential) Forward(x flint.Tensor) flint.Tensor {
+	var res flint.Tensor
 	res = x
 	for _, l := range seq.layers {
 		res = l.Forward(res)
@@ -30,15 +30,15 @@ func (seq Sequential) Forward(x flint_old.Tensor) flint_old.Tensor {
 	return res
 }
 
-func (seq Sequential) Parameters(recurse bool) []flint_old.Parameter {
+func (seq Sequential) Parameters(recurse bool) []flint.Parameter {
 	if recurse {
-		var res []flint_old.Parameter
+		var res []flint.Parameter
 		for _, layer := range seq.layers {
 			res = append(res, layer.Parameters(recurse)...)
 		}
 		return res
 	} else {
-		return []flint_old.Parameter{}
+		return []flint.Parameter{}
 	}
 }
 

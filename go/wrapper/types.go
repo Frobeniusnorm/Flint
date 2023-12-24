@@ -23,6 +23,7 @@ typedef FGraphNode* graph_ref;
 */
 import "C"
 import (
+	"fmt"
 	"unsafe"
 )
 
@@ -60,19 +61,19 @@ type graphNode struct {
 	gradient_data     unsafe.Pointer
 }
 
-//type Result[T completeNumeric] struct {
-//	resultRef *C.FResultData
-//	nodeRef   *C.FGraphNode
-//	Data      ResultData[T]
-//	Shape     Shape
-//	DataType  DataType
-//}
+type Result[T completeNumeric] struct {
+	resultRef *C.FResultData
+	nodeRef   *C.FGraphNode
+	Data      ResultData[T]
+	Shape     Shape
+	DataType  DataType
+}
 
-//type ResultData[T completeNumeric] []T
-//
-//func (a ResultData[T]) String() string {
-//	return fmt.Sprintf("%v", []T(a))
-//}
+type ResultData[T completeNumeric] []T
+
+func (a ResultData[T]) String() string {
+	return fmt.Sprintf("%v", []T(a))
+}
 
 // DataType represents the valid datatypes for the wrapper backend
 type DataType uint32 // equal type so it is comparable

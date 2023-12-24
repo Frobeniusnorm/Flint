@@ -1,13 +1,13 @@
 package layers
 
 import (
-	"github.com/Frobeniusnorm/Flint/go/flint_old"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 )
 
 // TODO: add parameter dim (int) – A dimension along which Softmax will be computed (so every slice along dim will sum to 1).
 
 // LogSoftmax applies the logarithm to the softmax of the input [x]
-func LogSoftmax(x flint_old.Tensor) flint_old.Tensor {
+func LogSoftmax(x flint.Tensor) flint.Tensor {
 	defer x.Close()
 	res := Softmax(x)
 	defer res.Close()
@@ -20,11 +20,11 @@ func NewLogSoftmax() LogSoftmaxLayer {
 	return LogSoftmaxLayer{}
 }
 
-func (l LogSoftmaxLayer) Parameters(_ bool) []flint_old.Parameter {
-	return []flint_old.Parameter{}
+func (l LogSoftmaxLayer) Parameters(_ bool) []flint.Parameter {
+	return []flint.Parameter{}
 }
 
-func (l LogSoftmaxLayer) Forward(x flint_old.Tensor) flint_old.Tensor {
+func (l LogSoftmaxLayer) Forward(x flint.Tensor) flint.Tensor {
 	return LogSoftmax(x)
 }
 

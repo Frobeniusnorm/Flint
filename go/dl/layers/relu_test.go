@@ -1,7 +1,7 @@
 package layers
 
 import (
-	"github.com/Frobeniusnorm/Flint/go/flint_old"
+	"github.com/Frobeniusnorm/Flint/go/flint"
 	"github.com/Frobeniusnorm/Flint/go/wrapper"
 	"testing"
 )
@@ -13,7 +13,7 @@ func TestReLU_Forward(t *testing.T) {
 	input := wrapper.CreateGraphArrange(wrapper.Shape{5}, 0)
 	input = wrapper.Sub(input, int64(3))
 
-	output := relu.Forward(flint_old.NewTensor(input))
+	output := relu.Forward(flint.NewTensor(input))
 
 	expected := []int64{0, 0, 0, 0, 1}
 

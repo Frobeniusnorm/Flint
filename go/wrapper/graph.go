@@ -53,10 +53,10 @@ func CreateGraph[T completeNumeric](data []T, shape Shape) (GraphNode, error) {
 }
 
 /*
-CreateGraphConstant creates a flint_old in a specified [dataType] that contains the single given values in all entries.
+CreateGraphConstant creates a flint in a specified [dataType] that contains the single given values in all entries.
 
 Params:
-  - [value]: the value this flint_old should consist of
+  - [value]: the value this flint should consist of
   - [shape]: Each entry describing the size of the corresponding dimension.
   - [datatype]: Specifying a valid wrapper [dataType]
 */
@@ -86,7 +86,7 @@ func CreateGraphConstant[T completeNumeric](value T, shape Shape) (GraphNode, er
 }
 
 /*
-CreateGraphRandom creates a [F_FLOAT64] flint_old that contains randomly distributed values in the range of [0, 1)
+CreateGraphRandom creates a [F_FLOAT64] flint that contains randomly distributed values in the range of [0, 1)
 
 Params:
   - [shape]: Each entry describing the size of the corresponding dimension.
@@ -102,7 +102,7 @@ func CreateGraphRandom(shape Shape) (GraphNode, error) {
 }
 
 /*
-CreateGraphArrange creates a [F_INT64] flint_old that contains the indices relative to a given dimension [axis] for each element.
+CreateGraphArrange creates a [F_INT64] flint that contains the indices relative to a given dimension [axis] for each element.
 i.e. each entry is its index in that corresponding dimension.
 If you need to index more than one dimension, create multiple such tensors with [CreateGraphArrange].
 */

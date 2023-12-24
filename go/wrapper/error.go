@@ -44,7 +44,7 @@ var (
 	ErrIncompatibleShapes    = errors.New("incompatible shapes")
 	ErrInvalidSelect         = errors.New("invalid select")
 	ErrOpenCL                = errors.New("OpenCL error")
-	ErrInternal              = errors.New("internal error of flint_old")
+	ErrInternal              = errors.New("internal error of flint")
 	ErrOOM                   = errors.New("out of memory")
 	ErrIllegalDerive         = errors.New("impossible to derive")
 	ErrIO                    = errors.New("io error")
