@@ -129,9 +129,12 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 	size_t total = 1;
 	for (int i = 0; i < node->operation.dimensions; i++)
 		total *= node->operation.shape[i];
-	void *data;
+	void *data = nullptr;
 
 	if (!is_data_node) {
+		const std::vector<bool> reusage =
+			OperationImplementation::implementations[node->operation.op_type]
+				->reuse_parameter_result(node);
 		// build predecessor data
 		for (int i = 0; i < node->num_predecessor; i++) {
 			FGraphNode *pred = node->predecessors[i];
@@ -153,28 +156,43 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 			pred_data[i].shape = std::vector<size_t>(
 				pred->operation.shape,
 				pred->operation.shape + pred->operation.dimensions);
+			if (!data && pred->reference_counter == 1 && !reusage.empty() &&
+				reusage[i] && pred->operation.op_type != FSTORE &&
+				pred != node) {
+				if (pred->result_data) {
+					FResultData *data = pred->result_data;
+					if (data->mem_id)
+						clReleaseMemObject(data->mem_id);
+					delete data;
+					pred->result_data = nullptr;
+				}
+				pred_data[i].multi_use = true;
+				data = pred_data[i].data;
+			}
 		}
-		switch (node->operation.data_type) {
-		case F_INT32:
-			data = safe_mal<int>(total);
-			if (!data)
-				return nullptr;
-			break;
-		case F_INT64:
-			data = safe_mal<long>(total);
-			if (!data)
-				return nullptr;
-			break;
-		case F_FLOAT32:
-			data = safe_mal<float>(total);
-			if (!data)
-				return nullptr;
-			break;
-		case F_FLOAT64:
-			data = safe_mal<double>(total);
-			if (!data)
-				return nullptr;
-			break;
+		if (!data) {
+			switch (node->operation.data_type) {
+			case F_INT32:
+				data = safe_mal<int>(total);
+				if (!data)
+					return nullptr;
+				break;
+			case F_INT64:
+				data = safe_mal<long>(total);
+				if (!data)
+					return nullptr;
+				break;
+			case F_FLOAT32:
+				data = safe_mal<float>(total);
+				if (!data)
+					return nullptr;
+				break;
+			case F_FLOAT64:
+				data = safe_mal<double>(total);
+				if (!data)
+					return nullptr;
+				break;
+			}
 		}
 		chooseExecutionMethod(node, pred_data, (double *)data, total);
 	} else {
@@ -267,11 +285,6 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 				foo.data = store->data;
 			}
 			results.insert({curr, foo});
-			//	} else if (curr->operation.op_type == FRESHAPE && curr != node)
-			//{ 		CPUResultData npd = predData[0]; 		npd.shape =
-			//std::vector<size_t>(curr->operation.shape, 										curr->operation.shape +
-			//											curr->operation.dimensions);
-			//		results.insert({curr, npd});
 		} else {
 			vector<CPUResultData> predData(curr->num_predecessor);
 			void *data_to_recycle = nullptr;
@@ -283,7 +296,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 				FGraphNode *pred = curr->predecessors[i];
 				predData[i] = results[pred];
 				// recycle result data of that parent if it is no longer used
-				// elsewhere
+				// elsewhere // TODO outside of gradient context this should be
+				// possible for store too
 				if (!data_to_recycle && pred->reference_counter == 1 &&
 					!reusage.empty() && reusage[i] &&
 					pred->operation.op_type != FSTORE && pred != node) {
@@ -294,87 +308,40 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 						delete data;
 						pred->result_data = nullptr;
 					}
-					//	if (pred->operation.op_type == FSTORE &&
-					//		pred->operation.additional_data) {
-					//		FStore *store = (FStore
-					//*)pred->operation.additional_data; 		if
-					//(store->mem_id) 			clReleaseMemObject(store->mem_id);
-					//delete store; 		pred->operation.additional_data =
-					// nullptr;
-					//	}
 					results[pred].multi_use = true;
 					predData[i].multi_use = true;
 					data_to_recycle = predData[i].data;
-					//	std::cout << "reuse " <<
-					// fop_to_string[pred->operation.op_type]
-					//			  << " in " <<
-					// fop_to_string[curr->operation.op_type]
-					//			  << std::endl;
 				}
 			}
 			// allocate result data and execute // TODO refactor
-			switch (curr->operation.data_type) {
-			case F_INT32: {
-				int *result = data_to_recycle ? (int *)data_to_recycle
-											  : safe_mal<int>(size);
+			void *result = data_to_recycle;
+			if (!result) {
+				switch (curr->operation.data_type) {
+				case F_INT32: {
+					result = safe_mal<int>(size);
+				} break;
+				case F_INT64: {
+					result = safe_mal<long>(size);
+				} break;
+				case F_FLOAT32: {
+					result = safe_mal<float>(size);
+				} break;
+				case F_FLOAT64: {
+					result = safe_mal<double>(size);
+				} break;
+				}
 				if (!result)
 					return nullptr;
-				chooseExecutionMethod(curr, predData, result, size);
-				results.insert({curr,
-								{.data = (void *)result,
-								 .type = F_INT32,
-								 .num_entries = size,
-								 .shape = vector<size_t>(
-									 curr->operation.shape,
-									 curr->operation.shape +
-										 curr->operation.dimensions)}});
-			} break;
-			case F_INT64: {
-				long *result = data_to_recycle ? (long *)data_to_recycle
-											   : safe_mal<long>(size);
-				if (!result)
-					return nullptr;
-				chooseExecutionMethod(curr, predData, result, size);
-				results.insert({curr,
-								{.data = (void *)result,
-								 .type = F_INT64,
-								 .num_entries = size,
-								 .shape = vector<size_t>(
-									 curr->operation.shape,
-									 curr->operation.shape +
-										 curr->operation.dimensions)}});
-			} break;
-			case F_FLOAT32: {
-				float *result = data_to_recycle ? (float *)data_to_recycle
-												: safe_mal<float>(size);
-				if (!result)
-					return nullptr;
-				chooseExecutionMethod(curr, predData, result, size);
-				results.insert({curr,
-								{.data = (void *)result,
-								 .type = F_FLOAT32,
-								 .num_entries = size,
-								 .shape = vector<size_t>(
-									 curr->operation.shape,
-									 curr->operation.shape +
-										 curr->operation.dimensions)}});
-			} break;
-			case F_FLOAT64: {
-				double *result = data_to_recycle ? (double *)data_to_recycle
-												 : safe_mal<double>(size);
-				if (!result)
-					return nullptr;
-				chooseExecutionMethod(curr, predData, result, size);
-				results.insert({curr,
-								{.data = (void *)result,
-								 .type = F_FLOAT64,
-								 .num_entries = size,
-								 .shape = vector<size_t>(
-									 curr->operation.shape,
-									 curr->operation.shape +
-										 curr->operation.dimensions)}});
-			} break;
 			}
+			chooseExecutionMethod(curr, predData, result, size);
+			results.insert(
+				{curr,
+				 {.data = result,
+				  .type = curr->operation.data_type,
+				  .num_entries = size,
+				  .shape = vector<size_t>(curr->operation.shape,
+										  curr->operation.shape +
+											  curr->operation.dimensions)}});
 		}
 	}
 	CPUResultData final = results[node];
