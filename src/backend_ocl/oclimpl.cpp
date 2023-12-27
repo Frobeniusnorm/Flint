@@ -362,7 +362,8 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 			rd->data = malloc(type_size * num_elems);
 			if (!rd->data) {
 				setErrorType(OUT_OF_MEMORY);
-				flogging(F_ERROR, "Not enough memory to store result!");
+				flogging(F_ERROR, "Not enough memory to store result! " +
+									  to_string(num_elems));
 				return nullptr;
 			}
 			memcpy(rd->data, data, type_size * num_elems);
@@ -395,41 +396,32 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		kernel = prog->second;
 		flogging(F_DEBUG, "Loaded existing eager kernel");
 	}
-	// result buffer
+	// result data (may be recycle from predecessors)
 	size_t total_size_node;
-	cl_mem res_mem =
-		create_gpu_memory(node, CL_MEM_READ_WRITE, &total_size_node);
-	node->result_data = new FResultData();
-	node->result_data->mem_id = res_mem;
-	node->result_data->num_entries = total_size_node;
-	node->result_data->data = nullptr;
+	cl_mem res_mem = nullptr;
 	// load parameters
-	vector<cl_event> write_events;
-	int par_index = 0;
-	if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&res_mem) !=
-		CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return nullptr;
-	}
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&total_size_node) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return nullptr;
-	}
-	// process parameters i.e. predecessors
+	const vector<bool> reusage =
+		OperationImplementation::implementations[node->operation.op_type]
+			->reuse_parameter_result(node);
+	// collect memory objects from predecessors
+	vector<cl_mem> mem_objs(node->num_predecessor);
+	vector<size_t> mem_sizes(node->num_predecessor);
 	for (int i = 0; i < node->num_predecessor; i++) {
 		FGraphNode *pred = node->predecessors[i];
 		const FOperation op = pred->operation;
 		cl_mem mem_obj = nullptr;
 		bool do_write = false;
-		size_t type_size = typeSize(op.data_type);
+		const size_t type_size = typeSize(op.data_type);
 		size_t total_size;
 		cl_mem mem_id = nullptr;
+		const bool recycle = !res_mem && pred->reference_counter == 1 &&
+							 !reusage.empty() && reusage[i] &&
+							 pred->operation.op_type != FSTORE && pred != node;
 		if (pred->result_data) {
 			total_size = pred->result_data->num_entries;
 			mem_id = pred->result_data->mem_id;
+			if (recycle)
+				pred->result_data->mem_id = nullptr;
 		}
 		if (op.op_type == FSTORE && !mem_id) {
 			total_size = ((FStore *)op.additional_data)->num_entries;
@@ -447,6 +439,12 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 				pred->result_data->mem_id = mem_obj;
 			}
 			do_write = true;
+		}
+		mem_sizes[i] = total_size;
+		mem_objs[i] = mem_obj;
+		if (recycle) {
+			total_size_node = total_size;
+			res_mem = mem_obj;
 		}
 		if (do_write) {
 			void *data = op.op_type == FSTORE
@@ -473,6 +471,33 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 				return nullptr;
 			}
 		}
+	}
+	// result buffer
+	if (!res_mem)
+		res_mem = create_gpu_memory(node, CL_MEM_READ_WRITE, &total_size_node);
+	node->result_data = new FResultData();
+	node->result_data->mem_id = res_mem;
+	node->result_data->num_entries = total_size_node;
+	node->result_data->data = nullptr;
+	vector<cl_event> write_events;
+	int par_index = 0;
+	if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&res_mem) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return nullptr;
+	}
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&total_size_node) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return nullptr;
+	}
+	// process parameters i.e. predecessors
+	for (int i = 0; i < node->num_predecessor; i++) {
+		FGraphNode *pred = node->predecessors[i];
+		const FOperation op = pred->operation;
+		cl_mem mem_obj = mem_objs[i];
 		if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem),
 						   (void *)&mem_obj) != CL_SUCCESS) {
 			setErrorType(OCL_ERROR);
@@ -481,7 +506,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		}
 		// push total element size
 		if (clSetKernelArg(kernel, par_index++, sizeof(long),
-						   (void *)&total_size) != CL_SUCCESS) {
+						   (void *)&mem_sizes[i]) != CL_SUCCESS) {
 			setErrorType(OCL_ERROR);
 			flogging(F_ERROR, "Could not load Argument to kernel!");
 			return nullptr;
