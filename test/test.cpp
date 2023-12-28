@@ -80,6 +80,13 @@ TEST_SUITE("Graph implementation") {
 			fFreeGraph(gn2);
 		}
 	}
+  TEST_CASE("recycle") {
+    fSetLoggingLevel(F_DEBUG);
+    Tensor<double, 2> a = Flint::random(4, 4);
+    Tensor<double, 2> b = a.sin()().cos() + 3;
+    b.execute();
+    fSetLoggingLevel(F_INFO);
+  }
 	TEST_CASE("serialize, unserialize") {
 		using namespace std;
 		vector<double> v1(6);
@@ -1321,6 +1328,7 @@ TEST_SUITE("Advanced Broadcasting") {
 	}
 }
 int main(int argc, char **argv) {
+  fSetLoggingLevel(F_VERBOSE);
 	bool doCPU = false, doGPU = false, eager = false;
 	for (int i = 0; i < argc; i++) {
 		std::string arg(argv[i]);

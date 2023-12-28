@@ -369,7 +369,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 			memcpy(rd->data, data, type_size * num_elems);
 		} else if (gpu_data) {
 			rd->mem_id = OCLCompilerThread::copy_memory(
-				gpu_data, type_size * num_elems, CL_MEM_READ_ONLY);
+				gpu_data, type_size * num_elems, CL_MEM_READ_WRITE);
 		}
 		node->result_data = rd;
 		return node;
@@ -416,12 +416,18 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		cl_mem mem_id = nullptr;
 		const bool recycle = !res_mem && pred->reference_counter == 1 &&
 							 !reusage.empty() && reusage[i] &&
-							 pred->operation.op_type != FSTORE && pred != node;
+							 op.op_type != FSTORE && pred->result_data &&
+							 pred->result_data->mem_id;
 		if (pred->result_data) {
 			total_size = pred->result_data->num_entries;
 			mem_id = pred->result_data->mem_id;
-			if (recycle)
+			if (recycle) {
 				pred->result_data->mem_id = nullptr;
+				if (pred->result_data->data)
+					free(pred->result_data->data);
+				delete pred->result_data;
+				pred->result_data = nullptr;
+			}
 		}
 		if (op.op_type == FSTORE && !mem_id) {
 			total_size = ((FStore *)op.additional_data)->num_entries;
@@ -430,7 +436,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		if (mem_id) {
 			mem_obj = mem_id;
 		} else {
-			mem_obj = create_gpu_memory(pred, CL_MEM_READ_ONLY, &total_size);
+			mem_obj = create_gpu_memory(pred, CL_MEM_READ_WRITE, &total_size);
 			if (op.op_type == FSTORE) {
 				((FStore *)op.additional_data)->mem_id = mem_obj;
 				if (pred->result_data)
@@ -679,13 +685,43 @@ FResultData *fSyncMemory(FGraphNode *node) {
 	}
 	return res;
 }
+/**
+ * Calculates per kernel parameter if its result is reusable
+ */
+static vector<bool>
+find_reusable_parameters(const FGraphNode *node,
+						 const list<pair<FGraphNode *, string>> params) {
+	vector<bool> result(params.size(), false);
+	list<const FGraphNode *> todo;
+	todo.push_front(node);
+	while (!todo.empty()) {
+		const FGraphNode *curr = todo.front();
+		todo.pop_front();
+		const vector<bool> reusage =
+			OperationImplementation::implementations[curr->operation.op_type]
+				->reuse_parameter_result(curr);
+		for (int i = 0; i < curr->num_predecessor; i++) {
+			if (!reusage.empty() && reusage[i]) {
+				const FGraphNode *pred = curr->predecessors[i];
+				int j = 0;
+				for (const auto &[param, name] : params) {
+					if (pred == param)
+						result[j] = true;
+					j++;
+				}
+				todo.push_back(pred);
+			}
+		}
+	}
+	return result;
+}
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	if (!initialized) {
 		flintInit_gpu();
 	}
 	{
 		if (node->operation.op_type == FSTORE) {
-			node->result_data = new FResultData(); // TODO mem leak
+			node->result_data = new FResultData();
 			FStore *store = (FStore *)node->operation.additional_data;
 			node->result_data->num_entries = store->num_entries;
 			node->result_data->mem_id = store->mem_id;
@@ -701,7 +737,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	for (int i = 0; i < node_op.dimensions; i++)
 		total_size_node *= node_op.shape[i];
 	// calculate Code and Parameters
-	using namespace std;
 	list<pair<FGraphNode *, string>> parameters;
 	string graph_code = generateCode(node, parameters);
 	string code =
@@ -737,90 +772,109 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	start = chrono::high_resolution_clock::now();
 	// result buffer
 	size_t type_size_node = typeSize(node_op.data_type);
-	cl_mem result_mem =
-		clCreateBuffer(context, CL_MEM_READ_WRITE,
-					   total_size_node * type_size_node, nullptr, &err_code);
-	resultData->mem_id = result_mem;
-	if (err_code == CL_OUT_OF_HOST_MEMORY) {
-		setErrorType(OUT_OF_MEMORY);
-		flogging(F_ERROR, "Not enough memory to create buffer!");
-		return nullptr;
-	}
-	int index = 1;
+	cl_mem result_mem = nullptr;
 	vector<cl_event> writeEvents;
 	// upload or link parameters
-	for (auto &[gn, name] : parameters) {
-		const FOperation op = gn->operation;
-		cl_mem mem_obj = nullptr;
-		bool do_write = false;
-		size_t type_size = typeSize(op.data_type);
-		size_t total_size =
-			op.op_type == FSTORE
-				? ((FStore *)op.additional_data)->num_entries
-				: (op.op_type == FGEN_CONSTANT ? 1
-											   : gn->result_data->num_entries);
-		cl_mem mem_id = gn->result_data ? gn->result_data->mem_id : nullptr;
-		if (!mem_id && op.op_type == FSTORE)
-			mem_id = ((FStore *)op.additional_data)->mem_id;
-		if (mem_id) {
-			mem_obj = mem_id;
-		} else {
-			mem_obj =
-				clCreateBuffer(context, CL_MEM_READ_ONLY,
-							   total_size * type_size, nullptr, &err_code);
-			if (err_code == CL_OUT_OF_HOST_MEMORY) {
-				setErrorType(OUT_OF_MEMORY);
-				flogging(F_ERROR, "Not enough memory to create buffer!");
-				return nullptr;
-			}
-			if (op.op_type == FSTORE)
-				((FStore *)op.additional_data)->mem_id = mem_obj;
-			if (op.op_type == FGEN_CONSTANT && !gn->result_data) {
-				gn->result_data = new FResultData(); // TODO mem leak
-				gn->result_data->data = nullptr;
-				gn->result_data->num_entries = 1;
-			}
-			if (gn->result_data)
-				gn->result_data->mem_id = mem_obj;
-			if (!gn->result_data && op.op_type != FSTORE)
-				flogging(F_WARNING, "nowhere to store memory object!");
-			do_write = true;
-		}
-		// actually write the buffer
-		if (do_write) {
-			void *data = op.op_type == FSTORE
-							 ? ((FStore *)op.additional_data)->data
-						 : gn->operation.op_type == FGEN_CONSTANT
-							 ? gn->operation.additional_data
-							 : gn->result_data->data;
-			writeEvents.emplace_back();
-			err_code = clEnqueueWriteBuffer(
-				clqueue, mem_obj, CL_FALSE, 0, total_size * type_size, data, 0,
-				nullptr, &writeEvents[writeEvents.size() - 1]);
-			if (err_code != CL_SUCCESS) {
-				string msg = "Unknown Error while loading data to GPU!";
-				flogging(F_ERROR, msg);
-				setErrorType(OCL_ERROR);
+	vector<cl_mem> mem_objs(parameters.size());
+	const vector<bool> reusable = find_reusable_parameters(node, parameters);
+	{
+		int index = 0;
+		for (auto &[gn, name] : parameters) {
+			const FOperation op = gn->operation;
+			const bool recycle = !result_mem && gn->reference_counter == 1 &&
+								 reusable[index] && op.op_type != FSTORE;
+      // The problem here: optimized memory is a store
+			cl_mem mem_obj = nullptr;
+			bool do_write = false;
+			const size_t type_size = typeSize(op.data_type);
+			const size_t total_size =
+				op.op_type == FSTORE
+					? ((FStore *)op.additional_data)->num_entries
+					: (op.op_type == FGEN_CONSTANT
+						   ? 1
+						   : gn->result_data->num_entries);
+			cl_mem mem_id = gn->result_data ? gn->result_data->mem_id : nullptr;
+			if (!mem_id && op.op_type == FSTORE)
+				mem_id = ((FStore *)op.additional_data)->mem_id;
+			if (mem_id) {
+				mem_obj = mem_id;
+				if (recycle)
+					gn->result_data->mem_id = nullptr;
+			} else {
+				mem_obj =
+					clCreateBuffer(context, CL_MEM_READ_WRITE,
+								   total_size * type_size, nullptr, &err_code);
 				if (err_code == CL_OUT_OF_HOST_MEMORY) {
-					msg = "Not enough memory to load data to GPU!";
+					setErrorType(OUT_OF_MEMORY);
+					flogging(F_ERROR, "Not enough memory to create buffer!");
+					return nullptr;
 				}
-				return nullptr;
+				if (op.op_type == FSTORE)
+					((FStore *)op.additional_data)->mem_id = mem_obj;
+				if (op.op_type == FGEN_CONSTANT && !gn->result_data &&
+					!recycle) {
+					gn->result_data = new FResultData();
+					gn->result_data->data = nullptr;
+					gn->result_data->num_entries = 1;
+				}
+				if (gn->result_data && !recycle)
+					gn->result_data->mem_id = mem_obj;
+				do_write = true;
 			}
-		}
-		if (clSetKernelArg(kernel, index++, sizeof(cl_mem), (void *)&mem_obj) !=
-			CL_SUCCESS) {
-			setErrorType(OCL_ERROR);
-			flogging(F_ERROR, "Could not load Argument to kernel!");
-			return nullptr;
+			mem_objs[index++] = mem_obj;
+			if (recycle)
+				result_mem = mem_obj;
+			// actually write the buffer
+			if (do_write) {
+				void *data = op.op_type == FSTORE
+								 ? ((FStore *)op.additional_data)->data
+							 : gn->operation.op_type == FGEN_CONSTANT
+								 ? gn->operation.additional_data
+								 : gn->result_data->data;
+				writeEvents.emplace_back();
+				err_code = clEnqueueWriteBuffer(
+					clqueue, mem_obj, CL_FALSE, 0, total_size * type_size, data,
+					0, nullptr, &writeEvents[writeEvents.size() - 1]);
+				if (err_code != CL_SUCCESS) {
+					string msg = "Unknown Error while loading data to GPU!";
+					flogging(F_ERROR, msg);
+					setErrorType(OCL_ERROR);
+					if (err_code == CL_OUT_OF_HOST_MEMORY) {
+						msg = "Not enough memory to load data to GPU!";
+					}
+					return nullptr;
+				}
+			}
 		}
 	}
 	// link resource memory
+	if (!result_mem) {
+		result_mem = clCreateBuffer(context, CL_MEM_READ_WRITE,
+									total_size_node * type_size_node, nullptr,
+									&err_code);
+		if (err_code == CL_OUT_OF_HOST_MEMORY) {
+			setErrorType(OUT_OF_MEMORY);
+			flogging(F_ERROR, "Not enough memory to create buffer!");
+			return nullptr;
+		}
+	} else
+		flogging(F_INFO, "Reuse!");
+	resultData->mem_id = result_mem;
 	if ((err_code = clSetKernelArg(kernel, 0, sizeof(cl_mem),
 								   (void *)&result_mem)) != CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Could not set Kernel Argument for the result! " +
 							  to_string(err_code));
 		return nullptr;
+	}
+	// link parameter memory
+	for (int i = 0; i < mem_objs.size(); i++) {
+		if (clSetKernelArg(kernel, i + 1, sizeof(cl_mem),
+						   (void *)&mem_objs[i]) != CL_SUCCESS) {
+			setErrorType(OCL_ERROR);
+			flogging(F_ERROR, "Could not load Argument to kernel!");
+			return nullptr;
+		}
 	}
 	// execute kernel
 	const size_t global_size = total_size_node;
