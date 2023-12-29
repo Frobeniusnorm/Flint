@@ -142,10 +142,14 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 				if (!pred->result_data->data)
 					fSyncMemory(pred);
 				pred_data[i].data = pred->result_data->data;
+				if (!pred_data[i].data)
+					flogging(F_ERROR, "no result data!");
 				pred_data[i].num_entries = pred->result_data->num_entries;
 			} else if (pred->operation.op_type == FSTORE) {
 				FStore *store = (FStore *)pred->operation.additional_data;
 				pred_data[i].data = store->data;
+				if (!pred_data[i].data)
+					flogging(F_ERROR, "no store data!");
 				pred_data[i].num_entries = store->num_entries;
 			} else {
 				setErrorType(INTERNAL_ERROR);
@@ -157,14 +161,20 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 				pred->operation.shape,
 				pred->operation.shape + pred->operation.dimensions);
 			if (!data && pred->reference_counter == 1 && !reusage.empty() &&
-				reusage[i] && pred->operation.op_type != FSTORE &&
+				reusage[i] &&
+				(pred->operation.op_type !=
+				 FSTORE) && //  || !node->gradient_data
 				pred != node) {
+				// recycle data
 				if (pred->result_data) {
 					FResultData *data = pred->result_data;
 					if (data->mem_id)
 						clReleaseMemObject(data->mem_id);
 					delete data;
 					pred->result_data = nullptr;
+				}
+				if (pred->operation.op_type == FSTORE) {
+					((FStore *)pred->operation.additional_data)->data = nullptr;
 				}
 				pred_data[i].multi_use = true;
 				data = pred_data[i].data;
@@ -236,22 +246,25 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 				toExecute.remove(curr);
 			inExecuteList.insert(curr);
 			toExecute.push_front(curr);
-			for (int i = 0; i < curr->num_predecessor; i++) {
-				// execute on GPU if it makes more sense
-				if (is_gpu_backend) {
+			if (!curr->result_data)
+				for (int i = 0; i < curr->num_predecessor; i++) {
 					FGraphNode *p = curr->predecessors[i];
-					const size_t score = computeScore(p, true);
-					if (score >= 1024) {
-						if (inExecuteList.find(p) != inExecuteList.end())
-							toExecute.remove(p);
-						fSyncMemory(fExecuteGraph_gpu(p));
-						toExecute.push_front(p);
-						inExecuteList.insert(p);
-						continue;
+					// execute on GPU if it makes more sense
+					if (is_gpu_backend) {
+						const size_t score = computeScore(p, true);
+						if (score >= 1024) {
+							if (inExecuteList.find(p) != inExecuteList.end())
+								toExecute.remove(p);
+							fSyncMemory(fExecuteGraph_gpu(p));
+							toExecute.push_front(p);
+							inExecuteList.insert(p);
+							continue;
+						}
 					}
+					if ((long)p == 0x64)
+						flogging(F_ERROR, "FOOO");
+					workList.push_back(p);
 				}
-				workList.push_back(curr->predecessors[i]);
-			}
 		}
 	}
 	// work them in correct oder
@@ -296,24 +309,31 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 				FGraphNode *pred = curr->predecessors[i];
 				predData[i] = results[pred];
 				// recycle result data of that parent if it is no longer used
-				// elsewhere // TODO outside of gradient context this should be
-				// possible for store too
+				// elsewhere
 				if (!data_to_recycle && pred->reference_counter == 1 &&
 					!reusage.empty() && reusage[i] &&
-					pred->operation.op_type != FSTORE && pred != node) {
+					(pred->operation.op_type != FSTORE ||
+					 !curr->gradient_data) &&
+					pred != node) {
 					if (pred->result_data) {
 						FResultData *data = pred->result_data;
 						if (data->mem_id)
-							clReleaseMemObject(data->mem_id);
-						delete data;
-						pred->result_data = nullptr;
+							data->data = nullptr;
+						else {
+							delete data;
+							pred->result_data = nullptr;
+						}
+					}
+					if (pred->operation.op_type == FSTORE) {
+						((FStore *)pred->operation.additional_data)->data =
+							nullptr;
 					}
 					results[pred].multi_use = true;
 					predData[i].multi_use = true;
 					data_to_recycle = predData[i].data;
 				}
 			}
-			// allocate result data and execute // TODO refactor
+			// allocate result data and execute
 			void *result = data_to_recycle;
 			if (!result) {
 				switch (curr->operation.data_type) {
@@ -349,8 +369,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 		// free all other data
 		for (auto &[gn, rd] : results) {
 			if (gn != node && gn->operation.op_type != FSTORE &&
-				!gn->result_data && gn->operation.op_type != FRESHAPE &&
-				!rd.multi_use)
+				!gn->result_data && !rd.multi_use)
 				free(rd.data);
 		}
 	} else {

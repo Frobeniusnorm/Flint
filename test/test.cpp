@@ -115,7 +115,6 @@ TEST_SUITE("Execution") {
 		FGraphNode *gn11 =
 			fCreateGraph(v2.data(), v2.size(), F_FLOAT32, shape.data(), 1);
 		gn1 = fmul(gn1, gn11);
-		fFreeGraph(gn11); // delete handle
 		FGraphNode *result = fCalculateResult(gn1);
 		FResultData *rd = result->result_data;
 		CHECK_EQ(rd->num_entries, 10);
@@ -127,10 +126,12 @@ TEST_SUITE("Execution") {
 			v3[i] = i + 1;
 		FGraphNode *gn2 =
 			fCreateGraph(v3.data(), v3.size(), F_FLOAT32, shape.data(), 1);
+    gn2->reference_counter++;
 		FGraphNode *gn3 = fadd(gn2, result);
 		gn3 = fadd(gn3, result);
 		gn3 = fsub(gn3, 80);
 		gn3 = fadd(gn3, gn2);
+    gn2->reference_counter--; // free handle
 		result = fCalculateResult(gn3);
 		rd = result->result_data;
 		CHECK_EQ(rd->num_entries, 10);
@@ -1321,6 +1322,7 @@ TEST_SUITE("Advanced Broadcasting") {
 	}
 }
 int main(int argc, char **argv) {
+  fSetLoggingLevel(F_VERBOSE);
 	bool doCPU = false, doGPU = false, eager = false;
 	for (int i = 0; i < argc; i++) {
 		std::string arg(argv[i]);
