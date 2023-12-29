@@ -442,7 +442,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 			mem_obj = mem_id;
 		} else {
 			mem_obj = create_gpu_memory(pred, CL_MEM_READ_WRITE, &total_size);
-      // only set actual gpu memory if it is not recycled
+			// only set actual gpu memory if it is not recycled
 			if (!recycle) {
 				if (op.op_type == FSTORE) {
 					((FStore *)op.additional_data)->mem_id = mem_obj;
@@ -711,13 +711,19 @@ find_reusable_parameters(const FGraphNode *node,
 		for (int i = 0; i < curr->num_predecessor; i++) {
 			if (!reusage.empty() && reusage[i]) {
 				const FGraphNode *pred = curr->predecessors[i];
-				int j = 0;
-				for (const auto &[param, name] : params) {
-					if (pred == param)
-						result[j] = true;
-					j++;
+				bool allow_recycle = true;
+				if (pred->operation.op_type == FSTORE) {
+					allow_recycle = curr->gradient_data == nullptr;
 				}
-				todo.push_back(pred);
+				if (allow_recycle) {
+					int j = 0;
+					for (const auto &[param, name] : params) {
+						if (pred == param)
+							result[j] = true;
+						j++;
+					}
+					todo.push_back(pred);
+				}
 			}
 		}
 	}
@@ -790,8 +796,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		for (auto &[gn, name] : parameters) {
 			const FOperation op = gn->operation;
 			const bool recycle = !result_mem && gn->reference_counter == 1 &&
-								 reusable[index] && (op.op_type != FSTORE) &&
-								 op.op_type != FGEN_CONSTANT;
+								 reusable[index] && op.op_type != FGEN_CONSTANT;
 			// The problem here: optimized memory is a store
 			cl_mem mem_obj = nullptr;
 			bool do_write = false;
@@ -805,6 +810,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			cl_mem mem_id = gn->result_data ? gn->result_data->mem_id : nullptr;
 			if (!mem_id && op.op_type == FSTORE)
 				mem_id = ((FStore *)op.additional_data)->mem_id;
+			if (op.op_type == FSTORE && recycle && mem_id) {
+				((FStore *)op.additional_data)->mem_id = nullptr;
+			}
 			if (mem_id) {
 				mem_obj = mem_id;
 				if (recycle)
@@ -818,7 +826,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 					flogging(F_ERROR, "Not enough memory to create buffer!");
 					return nullptr;
 				}
-				if (op.op_type == FSTORE)
+				if (op.op_type == FSTORE && !recycle)
 					((FStore *)op.additional_data)->mem_id = mem_obj;
 				if (op.op_type == FGEN_CONSTANT && !gn->result_data &&
 					!recycle) {
