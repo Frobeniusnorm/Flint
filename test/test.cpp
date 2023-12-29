@@ -115,7 +115,6 @@ TEST_SUITE("Execution") {
 		FGraphNode *gn11 =
 			fCreateGraph(v2.data(), v2.size(), F_FLOAT32, shape.data(), 1);
 		gn1 = fmul(gn1, gn11);
-    gn1->reference_counter++;
 		FGraphNode *result = fCalculateResult(gn1);
 		FResultData *rd = result->result_data;
 		CHECK_EQ(rd->num_entries, 10);
@@ -130,7 +129,6 @@ TEST_SUITE("Execution") {
     gn2->reference_counter++;
 		FGraphNode *gn3 = fadd(gn2, result);
 		gn3 = fadd(gn3, result);
-    result->num_predecessor--; // free handle
 		gn3 = fsub(gn3, 80);
 		gn3 = fadd(gn3, gn2);
     gn2->reference_counter--; // free handle

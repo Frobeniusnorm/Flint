@@ -162,7 +162,8 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 				pred->operation.shape + pred->operation.dimensions);
 			if (!data && pred->reference_counter == 1 && !reusage.empty() &&
 				reusage[i] &&
-				(pred->operation.op_type != FSTORE) && //  || !node->gradient_data
+				(pred->operation.op_type !=
+				 FSTORE) && //  || !node->gradient_data
 				pred != node) {
 				// recycle data
 				if (pred->result_data) {
@@ -260,7 +261,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 							continue;
 						}
 					}
-          if ((long)p == 0x64) flogging(F_ERROR, "FOOO");
+					if ((long)p == 0x64)
+						flogging(F_ERROR, "FOOO");
 					workList.push_back(p);
 				}
 		}
@@ -367,8 +369,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 		// free all other data
 		for (auto &[gn, rd] : results) {
 			if (gn != node && gn->operation.op_type != FSTORE &&
-				!gn->result_data && gn->operation.op_type != FRESHAPE &&
-				!rd.multi_use)
+				!gn->result_data && !rd.multi_use)
 				free(rd.data);
 		}
 	} else {
