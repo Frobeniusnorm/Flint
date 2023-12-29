@@ -782,8 +782,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		for (auto &[gn, name] : parameters) {
 			const FOperation op = gn->operation;
 			const bool recycle = !result_mem && gn->reference_counter == 1 &&
-								 reusable[index] && op.op_type != FSTORE;
-      // The problem here: optimized memory is a store
+								 reusable[index] && op.op_type != FSTORE &&
+								 op.op_type != FGEN_CONSTANT;
+			// The problem here: optimized memory is a store
 			cl_mem mem_obj = nullptr;
 			bool do_write = false;
 			const size_t type_size = typeSize(op.data_type);
@@ -822,7 +823,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 				do_write = true;
 			}
 			mem_objs[index++] = mem_obj;
-			if (recycle)
+			if (recycle) 
 				result_mem = mem_obj;
 			// actually write the buffer
 			if (do_write) {
@@ -831,6 +832,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 							 : gn->operation.op_type == FGEN_CONSTANT
 								 ? gn->operation.additional_data
 								 : gn->result_data->data;
+				if (!data)
+					flogging(F_ERROR, "parameter has no data!");
 				writeEvents.emplace_back();
 				err_code = clEnqueueWriteBuffer(
 					clqueue, mem_obj, CL_FALSE, 0, total_size * type_size, data,
@@ -857,8 +860,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			flogging(F_ERROR, "Not enough memory to create buffer!");
 			return nullptr;
 		}
-	} else
-		flogging(F_INFO, "Reuse!");
+	}
 	resultData->mem_id = result_mem;
 	if ((err_code = clSetKernelArg(kernel, 0, sizeof(cl_mem),
 								   (void *)&result_mem)) != CL_SUCCESS) {
