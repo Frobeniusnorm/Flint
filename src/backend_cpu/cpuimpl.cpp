@@ -250,7 +250,8 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 						continue;
 					}
 				}
-				workList.push_back(curr->predecessors[i]);
+        if (!curr->result_data)
+				  workList.push_back(curr->predecessors[i]);
 			}
 		}
 	}
@@ -296,24 +297,31 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 				FGraphNode *pred = curr->predecessors[i];
 				predData[i] = results[pred];
 				// recycle result data of that parent if it is no longer used
-				// elsewhere // TODO outside of gradient context this should be
-				// possible for store too
+				// elsewhere
 				if (!data_to_recycle && pred->reference_counter == 1 &&
 					!reusage.empty() && reusage[i] &&
-					pred->operation.op_type != FSTORE && pred != node) {
+					(pred->operation.op_type != FSTORE ||
+					 !curr->gradient_data) &&
+					pred != node) {
 					if (pred->result_data) {
 						FResultData *data = pred->result_data;
 						if (data->mem_id)
-							clReleaseMemObject(data->mem_id);
-						delete data;
-						pred->result_data = nullptr;
+							data->data = nullptr;
+						else {
+							delete data;
+							pred->result_data = nullptr;
+						}
+					}
+					if (pred->operation.op_type == FSTORE) {
+						((FStore *)pred->operation.additional_data)->data =
+							nullptr;
 					}
 					results[pred].multi_use = true;
 					predData[i].multi_use = true;
 					data_to_recycle = predData[i].data;
 				}
 			}
-			// allocate result data and execute // TODO refactor
+			// allocate result data and execute
 			void *result = data_to_recycle;
 			if (!result) {
 				switch (curr->operation.data_type) {

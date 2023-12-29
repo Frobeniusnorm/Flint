@@ -115,7 +115,6 @@ TEST_SUITE("Execution") {
 		FGraphNode *gn11 =
 			fCreateGraph(v2.data(), v2.size(), F_FLOAT32, shape.data(), 1);
 		gn1 = fmul(gn1, gn11);
-		fFreeGraph(gn11); // delete handle
 		FGraphNode *result = fCalculateResult(gn1);
 		FResultData *rd = result->result_data;
 		CHECK_EQ(rd->num_entries, 10);

@@ -414,10 +414,11 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		const size_t type_size = typeSize(op.data_type);
 		size_t total_size;
 		cl_mem mem_id = nullptr;
-		const bool recycle = !res_mem && pred->reference_counter == 1 &&
-							 !reusage.empty() && reusage[i] &&
-							 op.op_type != FSTORE && pred->result_data &&
-							 pred->result_data->mem_id;
+		const bool recycle =
+			!res_mem && pred->reference_counter == 1 && !reusage.empty() &&
+			reusage[i] && (op.op_type != FSTORE || !node->gradient_data) &&
+			((pred->result_data && pred->result_data->mem_id) ||
+			 pred->operation.op_type == FSTORE);
 		if (pred->result_data) {
 			total_size = pred->result_data->num_entries;
 			mem_id = pred->result_data->mem_id;
@@ -427,22 +428,29 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 					free(pred->result_data->data);
 				delete pred->result_data;
 				pred->result_data = nullptr;
+				if (op.op_type == FSTORE)
+					((FStore *)op.additional_data)->mem_id = nullptr;
 			}
 		}
 		if (op.op_type == FSTORE && !mem_id) {
 			total_size = ((FStore *)op.additional_data)->num_entries;
 			mem_id = ((FStore *)op.additional_data)->mem_id;
+			if (recycle)
+				((FStore *)op.additional_data)->mem_id = nullptr;
 		}
 		if (mem_id) {
 			mem_obj = mem_id;
 		} else {
 			mem_obj = create_gpu_memory(pred, CL_MEM_READ_WRITE, &total_size);
-			if (op.op_type == FSTORE) {
-				((FStore *)op.additional_data)->mem_id = mem_obj;
-				if (pred->result_data)
+      // only set actual gpu memory if it is not recycled
+			if (!recycle) {
+				if (op.op_type == FSTORE) {
+					((FStore *)op.additional_data)->mem_id = mem_obj;
+					if (pred->result_data)
+						pred->result_data->mem_id = mem_obj;
+				} else {
 					pred->result_data->mem_id = mem_obj;
-			} else {
-				pred->result_data->mem_id = mem_obj;
+				}
 			}
 			do_write = true;
 		}
@@ -775,14 +783,14 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	cl_mem result_mem = nullptr;
 	vector<cl_event> writeEvents;
 	// upload or link parameters
-	vector<cl_mem> mem_objs(parameters.size());
+	cl_mem mem_objs[parameters.size()];
 	const vector<bool> reusable = find_reusable_parameters(node, parameters);
 	{
 		int index = 0;
 		for (auto &[gn, name] : parameters) {
 			const FOperation op = gn->operation;
 			const bool recycle = !result_mem && gn->reference_counter == 1 &&
-								 reusable[index] && op.op_type != FSTORE &&
+								 reusable[index] && (op.op_type != FSTORE) &&
 								 op.op_type != FGEN_CONSTANT;
 			// The problem here: optimized memory is a store
 			cl_mem mem_obj = nullptr;
@@ -823,7 +831,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 				do_write = true;
 			}
 			mem_objs[index++] = mem_obj;
-			if (recycle) 
+			if (recycle)
 				result_mem = mem_obj;
 			// actually write the buffer
 			if (do_write) {
@@ -870,7 +878,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		return nullptr;
 	}
 	// link parameter memory
-	for (int i = 0; i < mem_objs.size(); i++) {
+	for (int i = 0; i < parameters.size(); i++) {
 		if (clSetKernelArg(kernel, i + 1, sizeof(cl_mem),
 						   (void *)&mem_objs[i]) != CL_SUCCESS) {
 			setErrorType(OCL_ERROR);
