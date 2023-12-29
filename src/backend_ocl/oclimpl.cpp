@@ -815,8 +815,13 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			}
 			if (mem_id) {
 				mem_obj = mem_id;
-				if (recycle)
+				if (recycle) {
 					gn->result_data->mem_id = nullptr;
+					if (!gn->result_data->data) {
+						delete gn->result_data;
+						gn->result_data = nullptr;
+					}
+				}
 			} else {
 				mem_obj =
 					clCreateBuffer(context, CL_MEM_READ_WRITE,
@@ -839,8 +844,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 				do_write = true;
 			}
 			mem_objs[index++] = mem_obj;
-			if (recycle)
+			if (recycle) {
 				result_mem = mem_obj;
+      }
 			// actually write the buffer
 			if (do_write) {
 				void *data = op.op_type == FSTORE

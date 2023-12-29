@@ -100,9 +100,9 @@ int main() {
 	//		Conv2D(32, 64, 3, std::array<unsigned int, 2>{1, 1}, SAME_PADDING),
 	//		Relu(),
 	//		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, SAME_PADDING),
-	//    Flatten(),
-	//    Dropout(0.5),
-	//    Connected(3136, 10),
+	//		Flatten(),
+	//		Dropout(0.5),
+	//		Connected(3136, 10),
 	//		SoftMax()};
 	auto m = SequentialModel{
 		Conv2D(1, 32, 8, std::array<unsigned int, 2>{3, 3}, SAME_PADDING),
