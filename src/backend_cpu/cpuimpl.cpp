@@ -142,10 +142,14 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 				if (!pred->result_data->data)
 					fSyncMemory(pred);
 				pred_data[i].data = pred->result_data->data;
+				if (!pred_data[i].data)
+					flogging(F_ERROR, "no result data!");
 				pred_data[i].num_entries = pred->result_data->num_entries;
 			} else if (pred->operation.op_type == FSTORE) {
 				FStore *store = (FStore *)pred->operation.additional_data;
 				pred_data[i].data = store->data;
+				if (!pred_data[i].data)
+					flogging(F_ERROR, "no store data!");
 				pred_data[i].num_entries = store->num_entries;
 			} else {
 				setErrorType(INTERNAL_ERROR);
@@ -157,14 +161,19 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 				pred->operation.shape,
 				pred->operation.shape + pred->operation.dimensions);
 			if (!data && pred->reference_counter == 1 && !reusage.empty() &&
-				reusage[i] && pred->operation.op_type != FSTORE &&
+				reusage[i] &&
+				(pred->operation.op_type != FSTORE) && //  || !node->gradient_data
 				pred != node) {
+				// recycle data
 				if (pred->result_data) {
 					FResultData *data = pred->result_data;
 					if (data->mem_id)
 						clReleaseMemObject(data->mem_id);
 					delete data;
 					pred->result_data = nullptr;
+				}
+				if (pred->operation.op_type == FSTORE) {
+					((FStore *)pred->operation.additional_data)->data = nullptr;
 				}
 				pred_data[i].multi_use = true;
 				data = pred_data[i].data;
@@ -236,23 +245,24 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 				toExecute.remove(curr);
 			inExecuteList.insert(curr);
 			toExecute.push_front(curr);
-			for (int i = 0; i < curr->num_predecessor; i++) {
-				// execute on GPU if it makes more sense
-				if (is_gpu_backend) {
+			if (!curr->result_data)
+				for (int i = 0; i < curr->num_predecessor; i++) {
 					FGraphNode *p = curr->predecessors[i];
-					const size_t score = computeScore(p, true);
-					if (score >= 1024) {
-						if (inExecuteList.find(p) != inExecuteList.end())
-							toExecute.remove(p);
-						fSyncMemory(fExecuteGraph_gpu(p));
-						toExecute.push_front(p);
-						inExecuteList.insert(p);
-						continue;
+					// execute on GPU if it makes more sense
+					if (is_gpu_backend) {
+						const size_t score = computeScore(p, true);
+						if (score >= 1024) {
+							if (inExecuteList.find(p) != inExecuteList.end())
+								toExecute.remove(p);
+							fSyncMemory(fExecuteGraph_gpu(p));
+							toExecute.push_front(p);
+							inExecuteList.insert(p);
+							continue;
+						}
 					}
+          if ((long)p == 0x64) flogging(F_ERROR, "FOOO");
+					workList.push_back(p);
 				}
-        if (!curr->result_data)
-				  workList.push_back(curr->predecessors[i]);
-			}
 		}
 	}
 	// work them in correct oder

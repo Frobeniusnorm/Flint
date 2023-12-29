@@ -1,0 +1,34 @@
+#include "../flint.hpp"
+#include "flint.h"
+int main() {
+	FlintContext _1(FLINT_BACKEND_ONLY_CPU);
+  fEnableEagerExecution();
+	GradientContext _2;
+		using namespace std;
+		vector<double> v1(10, 4.0);
+		vector<float> v2(10, 4.0f);
+		// construct graph 1
+		vector<size_t> shape{10};
+		FGraphNode *gn1 =
+			fCreateGraph(v1.data(), v1.size(), F_FLOAT64, shape.data(), 1);
+		gn1 = fadd(gn1, 7.0);
+		FGraphNode *gn11 =
+			fCreateGraph(v2.data(), v2.size(), F_FLOAT32, shape.data(), 1);
+		gn1 = fmul(gn1, gn11);
+		fFreeGraph(gn11); // delete handle
+		FGraphNode *result = fCalculateResult(gn1);
+		FResultData *rd = result->result_data;
+		// construct graph 2 (first not-tree)
+		vector<float> v3(10);
+		for (int i = 0; i < 10; i++)
+			v3[i] = i + 1;
+		FGraphNode *gn2 =
+			fCreateGraph(v3.data(), v3.size(), F_FLOAT32, shape.data(), 1);
+		FGraphNode *gn3 = fadd(gn2, result);
+		gn3 = fadd(gn3, result);
+		gn3 = fsub(gn3, 80);
+		gn3 = fadd(gn3, gn2);
+		result = fCalculateResult(gn3);
+		rd = result->result_data;
+		fFreeGraph(result);
+}
