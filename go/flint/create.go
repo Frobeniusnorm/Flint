@@ -61,6 +61,7 @@ func Create(data any) Tensor {
 }
 
 //func CreateFromSlice(data any) Tensor {
+// probably impossible without reflection
 //	x := flatten(data)
 //	shape := Shape{1, 2} // TODO
 //
@@ -99,48 +100,25 @@ func Scalar[T Numeric](val T) Tensor {
 	return FromNodeWithErr(node, err)
 }
 
-//func Scalar[T Numeric](val T) Tensor {
-//	var res Tensor
-//	switch any(val).(type) {
-//	case int32:
-//		var typedVal = any(val).(int32)
-//		res.dataInt32 = &typedVal
-//		res.dataType = wrapper.INT32
-//	case int64:
-//		var typedVal = any(val).(int64)
-//		res.dataInt64 = &typedVal
-//		res.dataType = wrapper.INT64
-//	case float32:
-//		var typedVal = any(val).(float32)
-//		res.dataFloat32 = &typedVal
-//		res.dataType = wrapper.FLOAT32
-//	case float64:
-//		var typedVal = any(val).(float64)
-//		res.dataFloat64 = &typedVal
-//		res.dataType = wrapper.FLOAT64
+//	func Constant[T Numeric](val T, shape Shape) Tensor {
+//		return FromNodeWithErr(wrapper.CreateGraphConstant(val, shape))
 //	}
-//	res.init()
-//	return res
-//}
-
-func Constant[T Numeric](val T, shape Shape) Tensor {
-	return FromNodeWithErr(wrapper.CreateGraphConstant(val, shape))
-}
 
 func Random(shape Shape) Tensor {
 	return FromNodeWithErr(wrapper.CreateGraphRandom(shape))
 }
 
+//
 //func Arrange(shape Shape, axis int) Tensor {
 //	return FromNodeWithErr(wrapper.CreateGraphArrange(shape, axis))
 //}
-//
+
 //func Identity[T Numeric](size T) Tensor {
 //	return FromNodeWithErr(wrapper.CreateGraphIdentity(uint(size)))
 //}
-//
-//// CreateGraphIdentity creates an identity matrix.
-//// The datatype will be [INT32]
+
+// CreateGraphIdentity creates an identity matrix.
+// The datatype will be [INT32]
 //func CreateGraphIdentity(size uint) (GraphNode, error) {
 //	data := make([]int32, size*size)
 //	for i := uint(0); i < size; i++ {
@@ -153,4 +131,3 @@ func Random(shape Shape) Tensor {
 //func CreateScalar[T completeNumeric](value T) (GraphNode, error) {
 //	return CreateGraph[T]([]T{value}, Shape{1})
 //}
-//

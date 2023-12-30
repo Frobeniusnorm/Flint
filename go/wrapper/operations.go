@@ -564,28 +564,6 @@ func Convolve(node GraphNode, kernel GraphNode, stride Stride) (GraphNode, error
 }
 
 /*
-Slide moves the [kernel] along the node, multiplying it with the elements of the [node] it is slid over.
-For each element all multiplied values are summed up, so that the result has the same shape as the [kernel].
-Every element in the result is the accumulated sum of the product of that element with all elements it was slid over
-The [kernel] is initially placed so that the first element of [node] and the first element of [kernel] overlap.
-It is then moved with the [stride] value for each dimension except for the last, just like it would be by [Convolve].
-[stride] should have 1 dimension less than [node] and [kernel].
-With the difference, that everything is accumulated for the [kernel] instead of the original node.
-
-The last dimension of [node] and [kernel] should be equal,
-therefore it has no stride in that dimension since the complete kernel is multiplied in that dimension.
-*/
-func Slide(node GraphNode, kernel GraphNode, stride Stride) (GraphNode, error) {
-	newStride := convertArray[int, C.uint](stride)
-
-	flintNode, errno := C.fslide(node.ref, kernel.ref, &(newStride[0]))
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
-}
-
-/*
 Index selects single elements with an index-flint (integer flint containing indices for the selected dimension).
 It indexes a dimension of the input flint and the result has the shape of the input flint except for the indexed dimension.
 It is assumed that except for the last entry its shape is a prefix of the shape of the input flint and the indexing will occur in the matched subsets.

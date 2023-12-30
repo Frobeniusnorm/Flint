@@ -34,7 +34,6 @@ func signImpl(x Tensor) Tensor {
 }
 
 func Sign(x Tensor) Tensor {
-
 	return signImpl(x)
 }
 

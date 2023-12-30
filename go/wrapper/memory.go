@@ -77,7 +77,8 @@ func Deserialize(data []byte) (GraphNode, error) {
 	unsafeData := C.CBytes(data)
 	defer C.free(unsafe.Pointer(unsafeData))
 	// this cast is necessary as the binary data needs to be passed as char*.
-	flintNode, errno := C.fdeserialize((*C.char)(unsafeData))
+	bytesRead := C.size_t(0)
+	flintNode, errno := C.fdeserialize((*C.char)(unsafeData), &bytesRead)
 	if flintNode == nil {
 		return GraphNode{}, buildError(errno)
 	}

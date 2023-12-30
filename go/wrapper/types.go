@@ -89,7 +89,6 @@ const (
 	INT64
 	FLOAT32
 	FLOAT64
-	GRAPH
 )
 
 func (x DataType) String() string {

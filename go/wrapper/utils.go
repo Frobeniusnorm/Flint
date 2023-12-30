@@ -4,6 +4,7 @@ package wrapper
 import "C"
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 	"unsafe"
 )
@@ -116,4 +117,9 @@ func closestType[T completeNumeric](x T) DataType {
 	default:
 		panic("invalid type")
 	}
+}
+
+// use for type debugging
+func describe(i any) {
+	fmt.Printf("describe (value, underlying type): (%v, %T)\n", i, i)
 }
