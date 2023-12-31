@@ -80,7 +80,7 @@ func (a ResultData[T]) String() string {
 	return fmt.Sprintf("%v", []T(a))
 }
 
-// DataType represents the valid datatypes for the wrapper backend
+// DataType represents FType -- the valid datatypes for the wrapper backend
 type DataType uint32 // equal type so it is comparable
 
 // the order is important as it defines the type coercion
