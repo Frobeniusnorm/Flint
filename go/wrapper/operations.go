@@ -3,15 +3,6 @@ package wrapper
 // #include <flint/flint.h>
 import "C"
 
-func returnHelper(flintNode *C.FGraphNode, errno error) (GraphNode, error) {
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
-}
-
-/////////////////
-
 func AddGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
 	return returnHelper(C.fadd_g(a.ref, b.ref))
 }

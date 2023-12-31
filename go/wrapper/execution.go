@@ -88,7 +88,7 @@ CalculateResult is a convenience method that first executes [ExecuteGraph] and t
 
 It represents execution with one of both backends and additional memory synchronizing for the gpu framework.
 
-TODO: is it realistically even p`ossible for errors to occur here?
+TODO: is it realistically even possible for errors to occur here?
 */
 func CalculateResult[T completeNumeric](node GraphNode) (Result[T], error) {
 	flintNode, errno := C.fCalculateResult(node.ref)

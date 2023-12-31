@@ -131,3 +131,18 @@ func Random(shape Shape) Tensor {
 //func CreateScalar[T completeNumeric](value T) (GraphNode, error) {
 //	return CreateGraph[T]([]T{value}, Shape{1})
 //}
+
+// TODO: argmax
+//func OneHot(node GraphNode, numClasses uint) (GraphNode, error) {
+//	id, err := CreateGraphIdentity(numClasses)
+//	if err != nil {
+//		return GraphNode{}, err
+//	}
+//
+//	id, err = Index(id, node)
+//	if err != nil {
+//		return GraphNode{}, err
+//	}
+//
+//	return id, nil
+//}

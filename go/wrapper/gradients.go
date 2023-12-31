@@ -16,11 +16,7 @@ Params:
   - [dx]: the variable for which node is derived for
 */
 func CalculateGradient(node GraphNode, dx GraphNode) (GraphNode, error) {
-	flintNode, errno := C.fCalculateGradient(node.ref, dx.ref)
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
+	return returnHelper(C.fCalculateGradient(node.ref, dx.ref))
 }
 
 /*
@@ -37,6 +33,8 @@ Returns array with the same size as [dxs]
 */
 func CalculateGradients(node GraphNode, dxs []GraphNode) ([]GraphNode, error) {
 	n := len(dxs)
+
+	// TODO: rework (especially error handling)
 
 	partials := make([]*C.FGraphNode, n)
 	for i, x := range dxs {
