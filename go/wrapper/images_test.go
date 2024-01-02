@@ -14,7 +14,7 @@ func TestLoadImage(t *testing.T) {
 	assert.ErrorIs(t, err, ErrIO)
 	fmt.Println("node:", node, ", err:", err)
 
-	node, err = LoadImage(path.Join("..", "..", "wrapper.png"))
+	node, err = LoadImage(path.Join("..", "gopher.png"))
 	assert.NotEmpty(t, node)
 	assert.NoError(t, err)
 	fmt.Println("node:", node, ", err:", err)

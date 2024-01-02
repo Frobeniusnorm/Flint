@@ -2,7 +2,9 @@ package wrapper
 
 // #include <flint/flint.h>
 import "C"
-import "unsafe"
+import (
+	"unsafe"
+)
 
 /*
 CreateGraphDataInt creates a [INT32] flint that contains the given data.
