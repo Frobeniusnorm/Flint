@@ -10,9 +10,9 @@ Serialize the data and shape of the node and returns an array of bytes, in which
 func Serialize(node GraphNode) ([]byte, error) {
 	var size C.size_t
 	ptr, errno := C.fserialize(node.ref, &size)
-	defer C.free(unsafe.Pointer(ptr)) // FIXME: needed?
+	defer C.free(ptr)
 	if ptr == nil {
-		return []byte{}, buildError(errno)
+		return []byte{}, buildErrorFromErrno(errno)
 	}
 	return C.GoBytes(unsafe.Pointer(ptr), C.int(size)), nil
 }

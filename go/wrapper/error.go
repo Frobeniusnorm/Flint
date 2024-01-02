@@ -50,10 +50,10 @@ var (
 	ErrIO                    = errors.New("io error")
 )
 
-type errorCode int
+type errorType int
 
 const (
-	noError errorCode = iota
+	noError errorType = iota
 	wrongType
 	illegalDimension
 	illegalDimensionality
@@ -66,9 +66,7 @@ const (
 	ioError
 )
 
-// TODO: need to assume that error message and code might not always be set correctly!
-
-func buildErrorFromCode(err error, errCode errorCode) error {
+func buildErrorFromErrnoAndErrorType(err error, errCode errorType) error {
 	var errno syscall.Errno
 	if err != nil && !errors.As(err, &errno) {
 		panic("expected a Errno to build error from!")
@@ -144,15 +142,26 @@ func buildErrorFromCode(err error, errCode errorCode) error {
 	}
 }
 
-func buildError(err error) error {
+func buildErrorFromErrno(errno error) error {
 	errCode := lastError()
-	return buildErrorFromCode(err, errCode)
+	return buildErrorFromErrnoAndErrorType(errno, errCode)
+}
+
+func buildErrorCustom(flintErr error, message string) error {
+	if flintErr == nil {
+		return nil
+	}
+	return Error{
+		Message: message,
+		Err:     flintErr,
+		Errno:   0,
+	}
 }
 
 // lastError fetches the error type for the last recorded error.
 // This should only be queried when an error is certain (e.g. nullptr returned from C)
-func lastError() errorCode {
-	return errorCode(C.fErrorType())
+func lastError() errorType {
+	return errorType(C.fErrorType())
 }
 
 // errorMessage fetches the error message for the last recorded error.
@@ -168,4 +177,15 @@ func errorMessage() string {
 // However, this function should only be used in edge cases and not replace common sense error handling.
 func resetErrno() {
 	C.reset_errno()
+}
+
+/*
+returnHelper is a helper function for handling the return values of the C functions.
+NOTE: this only applies to the case where the function returns *C.FGraphNode and the CGo errno.
+*/
+func returnHelper(flintNode *C.FGraphNode, errno error) (GraphNode, error) {
+	if flintNode == nil {
+		return GraphNode{}, buildErrorFromErrno(errno)
+	}
+	return GraphNode{ref: flintNode}, nil
 }

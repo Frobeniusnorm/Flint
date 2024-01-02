@@ -123,10 +123,3 @@ func closestType[T completeNumeric](x T) DataType {
 func describe(i any) {
 	fmt.Printf("describe (value, underlying type): (%v, %T)\n", i, i)
 }
-
-func returnHelper(flintNode *C.FGraphNode, errno error) (GraphNode, error) {
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
-}

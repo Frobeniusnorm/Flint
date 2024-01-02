@@ -593,25 +593,25 @@ It indexes a dimension of the input flint and the result has the shape of the in
 It is assumed that except for the last entry its shape is a prefix of the shape of the input flint and the indexing will occur in the matched subsets.
 The last dimension of indices is the one indexed in node.
 
-Take the "subset" of the matrix where the first two slices are swapped:
+Example 1: Take the "subset" of the matrix where the first two slices are swapped:
 
 	Index([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]],
 			[1, 0]) =
 		[[[4, 5], [6, 7]], [[0, 1], [2, 3]]]
 
-TODO description:
+Example 2:
 
 	Index([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]],
 			[0, 0, 1]) =
 		[[[0, 1], [0, 1], [1, 2]], [[3, 4], [3, 4], [5, 6]], [[7, 8], [7, 8], [9, 10]]]
 
-TODO description:
+Example 3:
 
 	Index([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]],
 			[[0], [1], [0]]) =
 		[[[0], [2]], [[5], [7]], [[8], [10]]]
 
-TODO description:
+Example 4:
 
 	Index([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]],
 			[[0, 0], [1, 0], [0, 1]]) =

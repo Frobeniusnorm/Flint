@@ -23,7 +23,7 @@ Only use this function if you...
 */
 func Init(backend Backend) error {
 	errCode, errno := C.flintInit(C.int(backend))
-	return buildErrorFromCode(errno, errorCode(errCode))
+	return buildErrorFromErrnoAndErrorType(errno, errorType(errCode))
 }
 
 // InitializedBackend returns the initialized [Backend].
@@ -38,7 +38,7 @@ This method calls the other two (following) which are only executed if the frame
 */
 func Cleanup() error {
 	errCode, errno := C.flintCleanup()
-	return buildErrorFromCode(errno, errorCode(errCode))
+	return buildErrorFromErrnoAndErrorType(errno, errorType(errCode))
 }
 
 /*
@@ -46,7 +46,7 @@ CleanupCpu deallocates any resourced allocated by the CPU backend, if it was ini
 */
 func CleanupCpu() error {
 	errCode, errno := C.flintCleanup_cpu()
-	return buildErrorFromCode(errno, errorCode(errCode))
+	return buildErrorFromErrnoAndErrorType(errno, errorType(errCode))
 }
 
 /*
@@ -54,7 +54,7 @@ CleanupGpu deallocates any resourced allocated by the GPU backend, if it was ini
 */
 func CleanupGpu() error {
 	errCode, errno := C.flintCleanup_gpu()
-	return buildErrorFromCode(errno, errorCode(errCode))
+	return buildErrorFromErrnoAndErrorType(errno, errorType(errCode))
 }
 
 /*

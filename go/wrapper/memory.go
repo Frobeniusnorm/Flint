@@ -37,6 +37,8 @@ SyncMemory flushes all GPU data to the CPU.
 [ExecuteGraph] does not guarantee that memory is present on the cpu (it may be kept on the GPU for performance reasons).
 This method enforces all GPU data to be flushed to the CPU (but never executes the node!).
 Also see [CalculateResult].
+
+TODO: return something?
 */
 func SyncMemory(node GraphNode) {
 	C.fSyncMemory(node.ref)

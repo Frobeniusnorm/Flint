@@ -17,14 +17,10 @@ The backend is selected by the framework if both are initialized, else the one t
 If both are uninitialized, both will be initialized prior to execution.
 If eager execution is enabled each node will be executed eagerly upon construction or with this method.
 
-Also see [EnableEagerExecution], [SyncMemory]
+Also see [SetEagerExecution], [SyncMemory]
 */
 func ExecuteGraph(node GraphNode) (GraphNode, error) {
-	flintNode, errno := C.fExecuteGraph(node.ref)
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
+	return returnHelper(C.fExecuteGraph(node.ref))
 }
 
 /*
@@ -32,11 +28,7 @@ ExecuteGraphCpu executes the graph node operations from all yet to be executed p
 and returns a [GraphNode] with a [ResultDataOld] operation in which the resulting data is stored.
 */
 func ExecuteGraphCpu(node GraphNode) (GraphNode, error) {
-	flintNode, errno := C.fExecuteGraph_cpu(node.ref)
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
+	return returnHelper(C.fExecuteGraph_cpu(node.ref))
 }
 
 /*
@@ -47,25 +39,17 @@ The kernels are cashed, so it improves the performance of a program if the same 
 since then the backend can reuse already compiled kernels.
 */
 func ExecuteGraphGpu(node GraphNode) (GraphNode, error) {
-	flintNode, errno := C.fExecuteGraph_gpu(node.ref)
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
+	return returnHelper(C.fExecuteGraph_gpu(node.ref))
 }
 
 /*
 ExecuteGraphCpuEagerly executes the graph node directly and assumes that predecessor data has already been computed.
 Uses the CPU backend. Mainly used by helper functions of the framework, only use it if you now what you are doing.
 
-Also see [EnableEagerExecution], [ExecuteGraphCpu] and [ExecuteGraph].
+Also see [SetEagerExecution], [ExecuteGraphCpu] and [ExecuteGraph].
 */
 func ExecuteGraphCpuEagerly(node GraphNode) (GraphNode, error) {
-	flintNode, errno := C.fExecuteGraph_cpu_eagerly(node.ref)
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
+	return returnHelper(C.fExecuteGraph_cpu_eagerly(node.ref))
 }
 
 /*
@@ -73,14 +57,11 @@ ExecuteGraphGpuEagerly executes the graph node directly and assumes that predece
 Uses the GPU backend where for each operation and parameter type combination one eager kernel will be computed.
 Mainly used by helper functions of the framework, only use it if you now what you are doing.
 
-Also see [EnableEagerExecution], [ExecuteGraphGpu] and [ExecuteGraph].
+Also see [SetEagerExecution], [ExecuteGraphGpu] and [ExecuteGraph].
 */
 func ExecuteGraphGpuEagerly(node GraphNode) (GraphNode, error) {
-	flintNode, errno := C.fExecuteGraph_gpu_eagerly(node.ref)
-	if flintNode == nil {
-		return GraphNode{}, buildError(errno)
-	}
-	return GraphNode{ref: flintNode}, nil
+	return returnHelper(C.fExecuteGraph_gpu_eagerly(node.ref))
+
 }
 
 /*
@@ -93,7 +74,7 @@ TODO: is it realistically even possible for errors to occur here?
 func CalculateResult[T completeNumeric](node GraphNode) (Result[T], error) {
 	flintNode, errno := C.fCalculateResult(node.ref)
 	if flintNode == nil {
-		return Result[T]{}, buildError(errno)
+		return Result[T]{}, buildErrorFromErrno(errno)
 	}
 
 	dataSize := int(flintNode.result_data.num_entries)

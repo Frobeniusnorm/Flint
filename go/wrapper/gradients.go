@@ -34,8 +34,6 @@ Returns array with the same size as [dxs]
 func CalculateGradients(node GraphNode, dxs []GraphNode) ([]GraphNode, error) {
 	n := len(dxs)
 
-	// TODO: rework (especially error handling)
-
 	partials := make([]*C.FGraphNode, n)
 	for i, x := range dxs {
 		partials[i] = x.ref
@@ -44,7 +42,7 @@ func CalculateGradients(node GraphNode, dxs []GraphNode) ([]GraphNode, error) {
 	res := make([]*C.FGraphNode, n)
 
 	errCode, errno := C.fCalculateGradients(node.ref, &(partials[0]), C.uint(n), &(res[0]))
-	if err := buildErrorFromCode(errno, errorCode(errCode)); err != nil {
+	if err := buildErrorFromErrnoAndErrorType(errno, errorType(errCode)); err != nil {
 		return []GraphNode{}, err
 	}
 
