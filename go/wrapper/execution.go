@@ -61,7 +61,6 @@ Also see [SetEagerExecution], [ExecuteGraphGpu] and [ExecuteGraph].
 */
 func ExecuteGraphGpuEagerly(node GraphNode) (GraphNode, error) {
 	return returnHelper(C.fExecuteGraph_gpu_eagerly(node.ref))
-
 }
 
 /*

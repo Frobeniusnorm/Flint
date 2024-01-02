@@ -142,6 +142,9 @@ func buildErrorFromErrnoAndErrorType(err error, errCode errorType) error {
 	}
 }
 
+// buildErrorFromErrno builds an error from the last recorded error.
+// NOTE: the last error is not reset regularly,
+// so this should only be queried when an error is certain (e.g. errno set or nullptr returned from C)
 func buildErrorFromErrno(errno error) error {
 	errCode := lastError()
 	return buildErrorFromErrnoAndErrorType(errno, errCode)

@@ -52,22 +52,22 @@ func CreateGraphDataDouble(data []Double, shape Shape) (GraphNode, error) {
 	return returnHelper(C.fCreateGraph(&(data[0]), C.int(len(data)), C.enum_FType(FLOAT64), &(newShape[0]), C.int(len(shape))))
 }
 
-func CreateGraphConstantInt(shape Shape, value Int) (GraphNode, error) {
+func CreateGraphConstantInt(value Int, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
 	return returnHelper(C.fconstant_i(C.int(value), &(newShape[0]), C.int(len(shape))))
 }
 
-func CreateGraphConstantLong(shape Shape, value Long) (GraphNode, error) {
+func CreateGraphConstantLong(value Long, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
 	return returnHelper(C.fconstant_l(C.long(value), &(newShape[0]), C.int(len(shape))))
 }
 
-func CreateGraphConstantFloat(shape Shape, value Float) (GraphNode, error) {
+func CreateGraphConstantFloat(value Float, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
 	return returnHelper(C.fconstant_f(C.float(value), &(newShape[0]), C.int(len(shape))))
 }
 
-func CreateGraphConstantDouble(shape Shape, value Double) (GraphNode, error) {
+func CreateGraphConstantDouble(value Double, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
 	return returnHelper(C.fconstant_d(C.double(value), &(newShape[0]), C.int(len(shape))))
 }
