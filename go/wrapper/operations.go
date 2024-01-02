@@ -4,205 +4,250 @@ package wrapper
 import "C"
 
 func AddGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
-	return returnHelper(C.fadd_g(a.ref, b.ref))
+	flintNode, errno := C.fadd_g(a.ref, b.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func AddGraphInt(a GraphNode, b Int) (GraphNode, error) {
-	return returnHelper(C.fadd_ci(a.ref, C.int(b)))
+	flintNode, errno := C.fadd_ci(a.ref, C.int(b))
+	return returnHelper(flintNode, errno)
 }
 
 func AddGraphLong(a GraphNode, b Long) (GraphNode, error) {
-	return returnHelper(C.fadd_cl(a.ref, C.long(b)))
+	flintNode, errno := C.fadd_cl(a.ref, C.long(b))
+	return returnHelper(flintNode, errno)
 }
 
 func AddGraphFloat(a GraphNode, b Float) (GraphNode, error) {
-	return returnHelper(C.fadd_cf(a.ref, C.float(b)))
+	flintNode, errno := C.fadd_cf(a.ref, C.float(b))
+	return returnHelper(flintNode, errno)
 }
 
 func AddGraphDouble(a GraphNode, b Double) (GraphNode, error) {
-	return returnHelper(C.fadd_cd(a.ref, C.double(b)))
+	flintNode, errno := C.fadd_cd(a.ref, C.double(b))
+	return returnHelper(flintNode, errno)
 }
 
 /////////////////
 
 func SubGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
-	return returnHelper(C.fsub_g(a.ref, b.ref))
+	flintNode, errno := C.fsub_g(a.ref, b.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func SubGraphInt(a GraphNode, b Int) (GraphNode, error) {
-	return returnHelper(C.fsub_ci(a.ref, C.int(b)))
+	flintNode, errno := C.fsub_ci(a.ref, C.int(b))
+	return returnHelper(flintNode, errno)
 }
 
 func SubGraphLong(a GraphNode, b Long) (GraphNode, error) {
-	return returnHelper(C.fsub_cl(a.ref, C.long(b)))
+	flintNode, errno := C.fsub_cl(a.ref, C.long(b))
+	return returnHelper(flintNode, errno)
 }
 
 func SubGraphFloat(a GraphNode, b Float) (GraphNode, error) {
-	return returnHelper(C.fsub_cf(a.ref, C.float(b)))
+	flintNode, errno := C.fsub_cf(a.ref, C.float(b))
+	return returnHelper(flintNode, errno)
 }
 
 func SubGraphDouble(a GraphNode, b Double) (GraphNode, error) {
-	return returnHelper(C.fsub_cd(a.ref, C.double(b)))
+	flintNode, errno := C.fsub_cd(a.ref, C.double(b))
+	return returnHelper(flintNode, errno)
 }
 
 func SubIntGraph(b Int, a GraphNode) (GraphNode, error) {
-	return returnHelper(C.fsub_ci(C.int(b), a.ref))
+	flintNode, errno := C.fsub_ici(C.int(b), a.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func SubLongGraph(b Long, a GraphNode) (GraphNode, error) {
-	return returnHelper(C.fsub_cl(C.long(b), a.ref))
+	flintNode, errno := C.fsub_icl(C.long(b), a.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func SubFloatGraph(b Float, a GraphNode) (GraphNode, error) {
-	return returnHelper(C.fsub_cf(C.float(b), a.ref))
+	flintNode, errno := C.fsub_icf(C.float(b), a.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func SubDoubleGraph(b Double, a GraphNode) (GraphNode, error) {
-	return returnHelper(C.fsub_cd(C.double(b), a.ref))
+	flintNode, errno := C.fsub_icd(C.double(b), a.ref)
+	return returnHelper(flintNode, errno)
 }
 
 //////////////////
 
 func DivGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
-	return returnHelper(C.fdiv_g(a.ref, b.ref))
+	flintNode, errno := C.fdiv_g(a.ref, b.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func DivGraphInt(a GraphNode, b Int) (GraphNode, error) {
-	return returnHelper(C.fdiv_ci(a.ref, C.int(b)))
+	flintNode, errno := C.fdiv_ci(a.ref, C.int(b))
+	return returnHelper(flintNode, errno)
 }
 
 func DivGraphLong(a GraphNode, b Long) (GraphNode, error) {
-	return returnHelper(C.fdiv_cl(a.ref, C.long(b)))
+	flintNode, errno := C.fdiv_cl(a.ref, C.long(b))
+	return returnHelper(flintNode, errno)
 }
 
 func DivGraphFloat(a GraphNode, b Float) (GraphNode, error) {
-	return returnHelper(C.fdiv_cf(a.ref, C.float(b)))
+	flintNode, errno := C.fdiv_cf(a.ref, C.float(b))
+	return returnHelper(flintNode, errno)
 }
 
 func DivGraphDouble(a GraphNode, b Double) (GraphNode, error) {
-	return returnHelper(C.fdiv_cd(a.ref, C.double(b)))
+	flintNode, errno := C.fdiv_cd(a.ref, C.double(b))
+	return returnHelper(flintNode, errno)
 }
 
 func DivIntGraph(b Int, a GraphNode) (GraphNode, error) {
-	return returnHelper(C.fdiv_ci(C.int(b), a.ref))
+	flintNode, errno := C.fdiv_ici(C.int(b), a.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func DivLongGraph(b Long, a GraphNode) (GraphNode, error) {
-	return returnHelper(C.fdiv_cl(C.long(b), a.ref))
+	flintNode, errno := C.fdiv_icl(C.long(b), a.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func DivFloatGraph(b Float, a GraphNode) (GraphNode, error) {
-	return returnHelper(C.fdiv_cf(C.float(b), a.ref))
+	flintNode, errno := C.fdiv_icf(C.float(b), a.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func DivDoubleGraph(b Double, a GraphNode) (GraphNode, error) {
-	return returnHelper(C.fdiv_cd(C.double(b), a.ref))
+	flintNode, errno := C.fdiv_icd(C.double(b), a.ref)
+	return returnHelper(flintNode, errno)
 }
 
 //////////////
 
 func MulGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
-	return returnHelper(C.fmul_g(a.ref, b.ref))
+	flintNode, errno := C.fmul_g(a.ref, b.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func MulGraphInt(a GraphNode, b Int) (GraphNode, error) {
-	return returnHelper(C.fmul_ci(a.ref, C.int(b)))
+	flintNode, errno := C.fmul_ci(a.ref, C.int(b))
+	return returnHelper(flintNode, errno)
 }
 
 func MulGraphLong(a GraphNode, b Long) (GraphNode, error) {
-	return returnHelper(C.fmul_cl(a.ref, C.long(b)))
+	flintNode, errno := C.fmul_cl(a.ref, C.long(b))
+	return returnHelper(flintNode, errno)
 }
 
 func MulGraphFloat(a GraphNode, b Float) (GraphNode, error) {
-	return returnHelper(C.fmul_cf(a.ref, C.float(b)))
+	flintNode, errno := C.fmul_cf(a.ref, C.float(b))
+	return returnHelper(flintNode, errno)
 }
 
 func MulGraphDouble(a GraphNode, b Double) (GraphNode, error) {
-	return returnHelper(C.fmul_cd(a.ref, C.double(b)))
+	flintNode, errno := C.fmul_cd(a.ref, C.double(b))
+	return returnHelper(flintNode, errno)
 }
 
 ///////////////
 
 func PowGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
-	return returnHelper(C.fpow_g(a.ref, b.ref))
+	flintNode, errno := C.fpow_g(a.ref, b.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func PowGraphInt(a GraphNode, b Int) (GraphNode, error) {
-	return returnHelper(C.fpow_ci(a.ref, C.int(b)))
+	flintNode, errno := C.fpow_ci(a.ref, C.int(b))
+	return returnHelper(flintNode, errno)
 }
 
 func PowGraphLong(a GraphNode, b Long) (GraphNode, error) {
-	return returnHelper(C.fpow_cl(a.ref, C.long(b)))
+	flintNode, errno := C.fpow_cl(a.ref, C.long(b))
+	return returnHelper(flintNode, errno)
 }
 
 func PowGraphFloat(a GraphNode, b Float) (GraphNode, error) {
-	return returnHelper(C.fpow_cf(a.ref, C.float(b)))
+	flintNode, errno := C.fpow_cf(a.ref, C.float(b))
+	return returnHelper(flintNode, errno)
 }
 
 func PowGraphDouble(a GraphNode, b Double) (GraphNode, error) {
-	return returnHelper(C.fpow_cd(a.ref, C.double(b)))
+	flintNode, errno := C.fpow_cd(a.ref, C.double(b))
+	return returnHelper(flintNode, errno)
 }
 
 ////////////////
 
 // Log takes the element wise logarithm naturalis of x.
 func Log(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.flog(x.ref))
+	flintNode, errno := C.flog(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 // Log2 takes the element wise base 10 logarithm of x.
 func Log2(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.flog2(x.ref))
+	flintNode, errno := C.flog2(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 // Log10 takes the element wise base 10 logarithm of x.
 func Log10(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.flog10(x.ref))
+	flintNode, errno := C.flog10(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 // Sin takes the element wise sinus of x.
 func Sin(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.fsin(x.ref))
+	flintNode, errno := C.fsin(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 // Sqrt takes the element wise square root of x.
 func Sqrt(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.fsqrt_g(x.ref))
+	flintNode, errno := C.fsqrt_g(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 // Exp takes each element as the exponent for power of base e.
 func Exp(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.fexp(x.ref))
+	flintNode, errno := C.fexp(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 // Cos takes the element wise cosine of x.
 func Cos(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.fcos(x.ref))
+	flintNode, errno := C.fcos(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 // Tan takes the element wise tangent of x.
 func Tan(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.ftan(x.ref))
+	flintNode, errno := C.ftan(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 // Asin takes the element wise inverse sinus of x.
 func Asin(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.fasin(x.ref))
+	flintNode, errno := C.fasin(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 // Acos takes the element wise inverse cosine of x.
 func Acos(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.facos(x.ref))
+	flintNode, errno := C.facos(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 // Atan takes the element wise inverse tangent of x.
 func Atan(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.fatan(x.ref))
+	flintNode, errno := C.fatan(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 // Neg swaps the sign of each element.
 func Neg(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.fneg(x.ref))
+	flintNode, errno := C.fneg(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -212,7 +257,8 @@ The input flint [x] must have an integer type.
 This function returns a [F_INT32] [GraphNode].
 */
 func Sign(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.fsign(x.ref))
+	flintNode, errno := C.fsign(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -221,73 +267,89 @@ i.e. x[i] = 1 if x[i] mod 2 == 0 else x[i] = 0
 This function returns a [F_INT32] [GraphNode].
 */
 func Even(x GraphNode) (GraphNode, error) {
-	return returnHelper(C.feven(x.ref))
+	flintNode, errno := C.feven(x.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /////////////////
 
 func LessGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
-	return returnHelper(C.fless_g(a.ref, b.ref))
+	flintNode, errno := C.fless_g(a.ref, b.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func LessGraphInt(a GraphNode, b Int) (GraphNode, error) {
-	return returnHelper(C.fless_ci(a.ref, C.int(b)))
+	flintNode, errno := C.fless_ci(a.ref, C.int(b))
+	return returnHelper(flintNode, errno)
 }
 
 func LessGraphLong(a GraphNode, b Long) (GraphNode, error) {
-	return returnHelper(C.fless_cl(a.ref, C.long(b)))
+	flintNode, errno := C.fless_cl(a.ref, C.long(b))
+	return returnHelper(flintNode, errno)
 }
 
 func LessGraphFloat(a GraphNode, b Float) (GraphNode, error) {
-	return returnHelper(C.fless_cf(a.ref, C.float(b)))
+	flintNode, errno := C.fless_cf(a.ref, C.float(b))
+	return returnHelper(flintNode, errno)
 }
 
 func LessGraphDouble(a GraphNode, b Double) (GraphNode, error) {
-	return returnHelper(C.fless_cd(a.ref, C.double(b)))
+	flintNode, errno := C.fless_cd(a.ref, C.double(b))
+	return returnHelper(flintNode, errno)
 }
 
 /////////////////
 
 func GreaterGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
-	return returnHelper(C.fgreater_g(a.ref, b.ref))
+	flintNode, errno := C.fgreater_g(a.ref, b.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func GreaterGraphInt(a GraphNode, b Int) (GraphNode, error) {
-	return returnHelper(C.fgreater_ci(a.ref, C.int(b)))
+	flintNode, errno := C.fgreater_ci(a.ref, C.int(b))
+	return returnHelper(flintNode, errno)
 }
 
 func GreaterGraphLong(a GraphNode, b Long) (GraphNode, error) {
-	return returnHelper(C.fgreater_cl(a.ref, C.long(b)))
+	flintNode, errno := C.fgreater_cl(a.ref, C.long(b))
+	return returnHelper(flintNode, errno)
 }
 
 func GreaterGraphFloat(a GraphNode, b Float) (GraphNode, error) {
-	return returnHelper(C.fgreater_cf(a.ref, C.float(b)))
+	flintNode, errno := C.fgreater_cf(a.ref, C.float(b))
+	return returnHelper(flintNode, errno)
 }
 
 func GreaterGraphDouble(a GraphNode, b Double) (GraphNode, error) {
-	return returnHelper(C.fgreater_cd(a.ref, C.double(b)))
+	flintNode, errno := C.fgreater_cd(a.ref, C.double(b))
+	return returnHelper(flintNode, errno)
 }
 
 /////////////////
 
 func EqualGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
-	return returnHelper(C.fequal_g(a.ref, b.ref))
+	flintNode, errno := C.fequal_g(a.ref, b.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func EqualGraphInt(a GraphNode, b Int) (GraphNode, error) {
-	return returnHelper(C.fequal_ci(a.ref, C.int(b)))
+	flintNode, errno := C.fequal_ci(a.ref, C.int(b))
+	return returnHelper(flintNode, errno)
 }
 
 func EqualGraphLong(a GraphNode, b Long) (GraphNode, error) {
-	return returnHelper(C.fequal_cl(a.ref, C.long(b)))
+	flintNode, errno := C.fequal_cl(a.ref, C.long(b))
+	return returnHelper(flintNode, errno)
 }
 
 func EqualGraphFloat(a GraphNode, b Float) (GraphNode, error) {
-	return returnHelper(C.fequal_cf(a.ref, C.float(b)))
+	flintNode, errno := C.fequal_cf(a.ref, C.float(b))
+	return returnHelper(flintNode, errno)
 }
 
 func EqualGraphDouble(a GraphNode, b Double) (GraphNode, error) {
-	return returnHelper(C.fequal_cd(a.ref, C.double(b)))
+	flintNode, errno := C.fequal_cd(a.ref, C.double(b))
+	return returnHelper(flintNode, errno)
 }
 
 ////////////////
@@ -300,7 +362,8 @@ Since for one entry of the flint multiple other previous entries are needed, the
 Therefor the method will implicitly (or eagerly) execute the two parameter nodes [a] and [b] if their data is not already present.
 */
 func Matmul(a GraphNode, b GraphNode) (GraphNode, error) {
-	return returnHelper(C.fmatmul(a.ref, b.ref))
+	flintNode, errno := C.fmatmul(a.ref, b.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -311,7 +374,8 @@ E.g:
 		[3, 1, 4, 2, 1, 5, 0, 4, 2, 4, 7, 9].
 */
 func Flatten(a GraphNode) (GraphNode, error) {
-	return returnHelper(C.fflatten(a.ref))
+	flintNode, errno := C.fflatten(a.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -324,14 +388,16 @@ E.g:
 		[[3,1,4], [2,1,5], [0,4,2], [4,7,9]]
 */
 func FlattenDim(a GraphNode, dim int) (GraphNode, error) {
-	return returnHelper(C.fflatten_dimension(a.ref, C.int(dim)))
+	flintNode, errno := C.fflatten_dimension(a.ref, C.int(dim))
+	return returnHelper(flintNode, errno)
 }
 
 /*
 Convert the data of [a] to the type given by [newType].
 */
 func Convert(a GraphNode, newType DataType) (GraphNode, error) {
-	return returnHelper(C.fconvert(a.ref, C.enum_FType(newType)))
+	flintNode, errno := C.fconvert(a.ref, C.enum_FType(newType))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -341,51 +407,62 @@ This means it must describe the same number of entries of the flint.
 */
 func Reshape(a GraphNode, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
-	return returnHelper(C.freshape(a.ref, &(newShape[0]), C.int(len(shape))))
+	flintNode, errno := C.freshape(a.ref, &(newShape[0]), C.int(len(shape)))
+	return returnHelper(flintNode, errno)
 }
 
 ////////////////////
 
 func MinimumGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
-	return returnHelper(C.fmin_g(a.ref, b.ref))
+	flintNode, errno := C.fmin_g(a.ref, b.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func MinimumGraphInt(a GraphNode, b Int) (GraphNode, error) {
-	return returnHelper(C.fmin_ci(a.ref, C.int(b)))
+	flintNode, errno := C.fmin_ci(a.ref, C.int(b))
+	return returnHelper(flintNode, errno)
 }
 
 func MinimumGraphLong(a GraphNode, b Long) (GraphNode, error) {
-	return returnHelper(C.fmin_cl(a.ref, C.long(b)))
+	flintNode, errno := C.fmin_cl(a.ref, C.long(b))
+	return returnHelper(flintNode, errno)
 }
 
 func MinimumGraphFloat(a GraphNode, b Float) (GraphNode, error) {
-	return returnHelper(C.fmin_cf(a.ref, C.float(b)))
+	flintNode, errno := C.fmin_cf(a.ref, C.float(b))
+	return returnHelper(flintNode, errno)
 }
 
 func MinimumGraphDouble(a GraphNode, b Double) (GraphNode, error) {
-	return returnHelper(C.fmin_cd(a.ref, C.double(b)))
+	flintNode, errno := C.fmin_cd(a.ref, C.double(b))
+	return returnHelper(flintNode, errno)
 }
 
 ///////////////////
 
 func MaximumGraphGraph(a GraphNode, b GraphNode) (GraphNode, error) {
-	return returnHelper(C.fmax_g(a.ref, b.ref))
+	flintNode, errno := C.fmax_g(a.ref, b.ref)
+	return returnHelper(flintNode, errno)
 }
 
 func MaximumGraphInt(a GraphNode, b Int) (GraphNode, error) {
-	return returnHelper(C.fmax_ci(a.ref, C.int(b)))
+	flintNode, errno := C.fmax_ci(a.ref, C.int(b))
+	return returnHelper(flintNode, errno)
 }
 
 func MaximumGraphLong(a GraphNode, b Long) (GraphNode, error) {
-	return returnHelper(C.fmax_cl(a.ref, C.long(b)))
+	flintNode, errno := C.fmax_cl(a.ref, C.long(b))
+	return returnHelper(flintNode, errno)
 }
 
 func MaximumGraphFloat(a GraphNode, b Float) (GraphNode, error) {
-	return returnHelper(C.fmax_cf(a.ref, C.float(b)))
+	flintNode, errno := C.fmax_cf(a.ref, C.float(b))
+	return returnHelper(flintNode, errno)
 }
 
 func MaximumGraphDouble(a GraphNode, b Double) (GraphNode, error) {
-	return returnHelper(C.fmax_cd(a.ref, C.double(b)))
+	flintNode, errno := C.fmax_cd(a.ref, C.double(b))
+	return returnHelper(flintNode, errno)
 }
 
 ///////////////////
@@ -402,7 +479,8 @@ The results of the predecessor node must be available, to
 ensure that the method may execute the parameter node.
 */
 func ReduceSum(a GraphNode, dim int) (GraphNode, error) {
-	return returnHelper(C.freduce_sum(a.ref, C.int(dim)))
+	flintNode, errno := C.freduce_sum(a.ref, C.int(dim))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -416,7 +494,8 @@ E.g:
 The results of the predecessor node must be available; to ensure that the method may execute the parameter node.
 */
 func ReduceMul(a GraphNode, dim int) (GraphNode, error) {
-	return returnHelper(C.freduce_mul(a.ref, C.int(dim)))
+	flintNode, errno := C.freduce_mul(a.ref, C.int(dim))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -430,7 +509,8 @@ E.g:
 The results of the predecessor node must be available; to ensure that the method may execute the parameter node.
 */
 func ReduceMin(a GraphNode, dim int) (GraphNode, error) {
-	return returnHelper(C.freduce_min(a.ref, C.int(dim)))
+	flintNode, errno := C.freduce_min(a.ref, C.int(dim))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -444,7 +524,8 @@ E.g:
 The results of the predecessor node must be available; to ensure that the method may execute the parameter node.
 */
 func ReduceMax(a GraphNode, dim int) (GraphNode, error) {
-	return returnHelper(C.freduce_max(a.ref, C.int(dim)))
+	flintNode, errno := C.freduce_max(a.ref, C.int(dim))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -457,7 +538,8 @@ They may contain negative values, which are then subtracted from the end of the 
 func Slice(a GraphNode, start Axes, end Axes) (GraphNode, error) {
 	newStart := convertArray[int, C.long](start)
 	newEnd := convertArray[int, C.long](end)
-	return returnHelper(C.fslice(a.ref, &(newStart[0]), &(newEnd[0])))
+	flintNode, errno := C.fslice(a.ref, &(newStart[0]), &(newEnd[0]))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -476,7 +558,8 @@ func SliceWithStride(node GraphNode, start Axes, end Axes, stride Stride) (Graph
 	newEnd := convertArray[int, C.long](end)
 	newStride := convertArray[int, C.long](stride)
 
-	return returnHelper(C.fslice_step(node.ref, &(newStart[0]), &(newEnd[0]), &(newStride[0])))
+	flintNode, errno := C.fslice_step(node.ref, &(newStart[0]), &(newEnd[0]), &(newStride[0]))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -489,7 +572,8 @@ The original flint is embedded at the given indices.
 func Extend(node GraphNode, shape Shape, insertAt Axes) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
 	newInsertAt := convertArray[int, C.size_t](insertAt)
-	return returnHelper(C.fextend(node.ref, &(newShape[0]), &(newInsertAt[0])))
+	flintNode, errno := C.fextend(node.ref, &(newShape[0]), &(newInsertAt[0]))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -505,7 +589,8 @@ func ExtendWithStride(node GraphNode, shape Shape, insertAt Axes, stride Stride)
 	newInsertAt := convertArray[int, C.size_t](insertAt)
 	newStride := convertArray[int, C.long](stride)
 
-	return returnHelper(C.fextend_step(node.ref, &(newShape[0]), &(newInsertAt[0]), &(newStride[0])))
+	flintNode, errno := C.fextend_step(node.ref, &(newShape[0]), &(newInsertAt[0]), &(newStride[0]))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -519,7 +604,8 @@ E.g:
 	Concat({[[0, 1], [2, 3]], [[4, 5], [6, 7]]}, 1) = [[0, 1, 4, 5], [2, 3, 6, 7]]
 */
 func Concat(nodeA GraphNode, nodeB GraphNode, axis uint) (GraphNode, error) {
-	return returnHelper(C.fconcat(nodeA.ref, nodeB.ref, C.uint(axis)))
+	flintNode, errno := C.fconcat(nodeA.ref, nodeB.ref, C.uint(axis))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -528,14 +614,16 @@ Expand adds a new dimension at an arbitrary position to the flint and repeats th
   - [size]: the new size of that dimension (repeats the following dimensions ax_size - 1 times).
 */
 func Expand(a GraphNode, axis uint, size uint) (GraphNode, error) {
-	return returnHelper(C.fexpand(a.ref, C.uint(axis), C.uint(size)))
+	flintNode, errno := C.fexpand(a.ref, C.uint(axis), C.uint(size))
+	return returnHelper(flintNode, errno)
 }
 
 /*
 Abs takes the elementwise absolute value of [node], i.e. |a[i]|
 */
 func Abs(node GraphNode) (GraphNode, error) {
-	return returnHelper(C.fabs_g(node.ref))
+	flintNode, errno := C.fabs_g(node.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -550,7 +638,8 @@ E.g:
 */
 func Repeat(node GraphNode, repetitions Axes) (GraphNode, error) {
 	newRepetitions := convertArray[int, C.int](repetitions)
-	return returnHelper(C.frepeat(node.ref, &(newRepetitions[0])))
+	flintNode, errno := C.frepeat(node.ref, &(newRepetitions[0]))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -561,7 +650,8 @@ The flint will have a resulting shape in which the size each dimension correspon
 */
 func Transpose(node GraphNode, axes Axes) (GraphNode, error) {
 	newAxes := convertArray[int, C.int](axes)
-	return returnHelper(C.ftranspose(node.ref, &(newAxes[0])))
+	flintNode, errno := C.ftranspose(node.ref, &(newAxes[0]))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -584,7 +674,8 @@ The resulting [GraphNode] will therefore have a shape with dimensionality n - 1 
 */
 func Convolve(node GraphNode, kernel GraphNode, stride Stride) (GraphNode, error) {
 	newStride := convertArray[int, C.uint](stride)
-	return returnHelper(C.fconvolve(node.ref, kernel.ref, &(newStride[0])))
+	flintNode, errno := C.fconvolve(node.ref, kernel.ref, &(newStride[0]))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -618,7 +709,8 @@ Example 4:
 		[[[0, 0], [2, 2]], [[5, 4], [7, 6]], [[8, 9], [10, 11]]]
 */
 func Index(node GraphNode, indices GraphNode) (GraphNode, error) {
-	return returnHelper(C.findex(node.ref, indices.ref))
+	flintNode, errno := C.findex(node.ref, indices.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -647,7 +739,8 @@ In this case an index of -1 means to discard the element from nodeB and keep the
 		[[5, 1], [2, 13], [9, 8], [6, 10]]
 */
 func IndexSet(nodeA GraphNode, nodeB GraphNode, indices GraphNode) (GraphNode, error) {
-	return returnHelper(C.findex_set(nodeA.ref, nodeB.ref, indices.ref))
+	flintNode, errno := C.findex_set(nodeA.ref, nodeB.ref, indices.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -683,35 +776,41 @@ func SlidingWindow(node GraphNode, size Shape, stride Stride) (GraphNode, error)
 	newSize := convertArray[uint, C.size_t](size)
 	newStride := convertArray[int, C.uint](stride)
 
-	return returnHelper(C.fsliding_window(node.ref, &(newSize[0]), &(newStride[0])))
+	flintNode, errno := C.fsliding_window(node.ref, &(newSize[0]), &(newStride[0]))
+	return returnHelper(flintNode, errno)
 }
 
 // TODO: comment from flint.h
 func UnslideWindow(node GraphNode, size Shape, stride Stride) (GraphNode, error) {
 	newSize := convertArray[uint, C.size_t](size)
 	newStride := convertArray[int, C.uint](stride)
-	return returnHelper(C.funslide_window(node.ref, &(newSize[0]), &(newStride[0])))
+	flintNode, errno := C.funslide_window(node.ref, &(newSize[0]), &(newStride[0]))
+	return returnHelper(flintNode, errno)
 }
 
 /*
 Permute randomly permutes (= swaps multiple elements with each other without creating, copying or deleting new ones) one axis of the input flint.
 */
 func Permute(a GraphNode, axis uint) (GraphNode, error) {
-	return returnHelper(C.fpermutate(a.ref, C.uint(axis)))
+	flintNode, errno := C.fpermutate(a.ref, C.uint(axis))
+	return returnHelper(flintNode, errno)
 }
 
 func PoolingSum(node GraphNode, size Shape, stride Stride) (GraphNode, error) {
 	newSize := convertArray[uint, C.size_t](size)
 	newStride := convertArray[int, C.uint](stride)
-	return returnHelper(C.fpooling_sum(node.ref, &(newSize[0]), &(newStride[0])))
+	flintNode, errno := C.fpooling_sum(node.ref, &(newSize[0]), &(newStride[0]))
+	return returnHelper(flintNode, errno)
 }
 
 func PoolingMax(node GraphNode, size Shape, stride Stride) (GraphNode, error) {
 	newSize := convertArray[uint, C.size_t](size)
 	newStride := convertArray[int, C.uint](stride)
-	return returnHelper(C.fpooling_max(node.ref, &(newSize[0]), &(newStride[0])))
+	flintNode, errno := C.fpooling_max(node.ref, &(newSize[0]), &(newStride[0]))
+	return returnHelper(flintNode, errno)
 }
 
 func Dropout(node GraphNode, probability Double) (GraphNode, error) {
-	return returnHelper(C.fdropout(node.ref, C.double(probability)))
+	flintNode, errno := C.fdropout(node.ref, C.double(probability))
+	return returnHelper(flintNode, errno)
 }

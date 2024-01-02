@@ -20,7 +20,8 @@ If eager execution is enabled each node will be executed eagerly upon constructi
 Also see [SetEagerExecution], [SyncMemory]
 */
 func ExecuteGraph(node GraphNode) (GraphNode, error) {
-	return returnHelper(C.fExecuteGraph(node.ref))
+	flintNode, errno := C.fExecuteGraph(node.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -28,7 +29,8 @@ ExecuteGraphCpu executes the graph node operations from all yet to be executed p
 and returns a [GraphNode] with a [ResultDataOld] operation in which the resulting data is stored.
 */
 func ExecuteGraphCpu(node GraphNode) (GraphNode, error) {
-	return returnHelper(C.fExecuteGraph_cpu(node.ref))
+	flintNode, errno := C.fExecuteGraph_cpu(node.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -39,7 +41,8 @@ The kernels are cashed, so it improves the performance of a program if the same 
 since then the backend can reuse already compiled kernels.
 */
 func ExecuteGraphGpu(node GraphNode) (GraphNode, error) {
-	return returnHelper(C.fExecuteGraph_gpu(node.ref))
+	flintNode, errno := C.fExecuteGraph_gpu(node.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -49,7 +52,8 @@ Uses the CPU backend. Mainly used by helper functions of the framework, only use
 Also see [SetEagerExecution], [ExecuteGraphCpu] and [ExecuteGraph].
 */
 func ExecuteGraphCpuEagerly(node GraphNode) (GraphNode, error) {
-	return returnHelper(C.fExecuteGraph_cpu_eagerly(node.ref))
+	flintNode, errno := C.fExecuteGraph_cpu_eagerly(node.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -60,7 +64,8 @@ Mainly used by helper functions of the framework, only use it if you now what yo
 Also see [SetEagerExecution], [ExecuteGraphGpu] and [ExecuteGraph].
 */
 func ExecuteGraphGpuEagerly(node GraphNode) (GraphNode, error) {
-	return returnHelper(C.fExecuteGraph_gpu_eagerly(node.ref))
+	flintNode, errno := C.fExecuteGraph_gpu_eagerly(node.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*

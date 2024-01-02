@@ -16,7 +16,8 @@ Params:
   - [dx]: the variable for which node is derived for
 */
 func CalculateGradient(node GraphNode, dx GraphNode) (GraphNode, error) {
-	return returnHelper(C.fCalculateGradient(node.ref, dx.ref))
+	flintNode, errno := C.fCalculateGradient(node.ref, dx.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*

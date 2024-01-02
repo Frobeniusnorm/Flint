@@ -13,7 +13,9 @@ The data is copied to internal memory, so after return of the function,
 */
 func CreateGraphDataInt(data []Int, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
-	return returnHelper(C.fCreateGraph(&(data[0]), C.int(len(data)), C.enum_FType(INT32), &(newShape[0]), C.int(len(shape))))
+	newData := convertArray[Int, C.int](data)
+	flintNode, errno := C.fCreateGraph(unsafe.Pointer(&(newData[0])), C.int(len(data)), C.enum_FType(INT32), &(newShape[0]), C.int(len(shape)))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -25,7 +27,9 @@ The data is copied to internal memory, so after return of the function,
 */
 func CreateGraphDataLong(data []Long, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
-	return returnHelper(C.fCreateGraph(&(data[0]), C.int(len(data)), C.enum_FType(INT64), &(newShape[0]), C.int(len(shape))))
+	newData := convertArray[Long, C.long](data)
+	flintNode, errno := C.fCreateGraph(unsafe.Pointer(&(newData[0])), C.int(len(data)), C.enum_FType(INT64), &(newShape[0]), C.int(len(shape)))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -37,7 +41,9 @@ The data is copied to internal memory, so after return of the function,
 */
 func CreateGraphDataFloat(data []Float, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
-	return returnHelper(C.fCreateGraph(&(data[0]), C.int(len(data)), C.enum_FType(FLOAT32), &(newShape[0]), C.int(len(shape))))
+	newData := convertArray[Float, C.float](data)
+	flintNode, errno := C.fCreateGraph(unsafe.Pointer(&(newData[0])), C.int(len(data)), C.enum_FType(FLOAT32), &(newShape[0]), C.int(len(shape)))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -49,27 +55,33 @@ The data is copied to internal memory, so after return of the function,
 */
 func CreateGraphDataDouble(data []Double, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
-	return returnHelper(C.fCreateGraph(&(data[0]), C.int(len(data)), C.enum_FType(FLOAT64), &(newShape[0]), C.int(len(shape))))
+	newData := convertArray[Double, C.double](data)
+	flintNode, errno := C.fCreateGraph(unsafe.Pointer(&(newData[0])), C.int(len(data)), C.enum_FType(FLOAT64), &(newShape[0]), C.int(len(shape)))
+	return returnHelper(flintNode, errno)
 }
 
 func CreateGraphConstantInt(value Int, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
-	return returnHelper(C.fconstant_i(C.int(value), &(newShape[0]), C.int(len(shape))))
+	flintNode, errno := C.fconstant_i(C.int(value), &(newShape[0]), C.int(len(shape)))
+	return returnHelper(flintNode, errno)
 }
 
 func CreateGraphConstantLong(value Long, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
-	return returnHelper(C.fconstant_l(C.long(value), &(newShape[0]), C.int(len(shape))))
+	flintNode, errno := C.fconstant_l(C.long(value), &(newShape[0]), C.int(len(shape)))
+	return returnHelper(flintNode, errno)
 }
 
 func CreateGraphConstantFloat(value Float, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
-	return returnHelper(C.fconstant_f(C.float(value), &(newShape[0]), C.int(len(shape))))
+	flintNode, errno := C.fconstant_f(C.float(value), &(newShape[0]), C.int(len(shape)))
+	return returnHelper(flintNode, errno)
 }
 
 func CreateGraphConstantDouble(value Double, shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
-	return returnHelper(C.fconstant_d(C.double(value), &(newShape[0]), C.int(len(shape))))
+	flintNode, errno := C.fconstant_d(C.double(value), &(newShape[0]), C.int(len(shape)))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -80,7 +92,8 @@ Params:
 */
 func CreateGraphRandom(shape Shape) (GraphNode, error) {
 	newShape := convertArray[uint, C.size_t](shape)
-	return returnHelper(C.frandom(&(newShape[0]), C.int(len(shape))))
+	flintNode, errno := C.frandom(&(newShape[0]), C.int(len(shape)))
+	return returnHelper(flintNode, errno)
 }
 
 /*
@@ -95,7 +108,8 @@ func CreateGraphArrange(shape Shape, axis int) (GraphNode, error) {
 	}
 
 	newShape := convertArray[uint, C.size_t](shape)
-	return returnHelper(C.farange(&(newShape[0]), C.int(len(shape)), C.int(axis)))
+	flintNode, errno := C.farange(&(newShape[0]), C.int(len(shape)), C.int(axis))
+	return returnHelper(flintNode, errno)
 }
 
 // GetShape returns the shape of a graph node

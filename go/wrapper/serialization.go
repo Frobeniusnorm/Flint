@@ -10,7 +10,7 @@ Serialize the data and shape of the node and returns an array of bytes, in which
 func Serialize(node GraphNode) ([]byte, error) {
 	var size C.size_t
 	ptr, errno := C.fserialize(node.ref, &size)
-	defer C.free(ptr)
+	defer C.free(unsafe.Pointer(ptr))
 	if ptr == nil {
 		return []byte{}, buildErrorFromErrno(errno)
 	}
@@ -27,5 +27,6 @@ func Deserialize(data []byte) (GraphNode, error) {
 
 	bytesRead := C.size_t(0)
 	// this cast is necessary as the binary data needs to be passed as char*.
-	return returnHelper(C.fdeserialize((*C.char)(unsafeData), &bytesRead))
+	flintNode, errno := C.fdeserialize((*C.char)(unsafeData), &bytesRead)
+	return returnHelper(flintNode, errno)
 }

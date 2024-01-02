@@ -28,7 +28,8 @@ func LoadImage(path string) (GraphNode, error) {
 	unsafePath := C.CString(path)
 	defer C.free(unsafe.Pointer(unsafePath))
 
-	return returnHelper(C.fload_image(unsafePath))
+	flintNode, errno := C.fload_image(unsafePath)
+	return returnHelper(flintNode, errno)
 }
 
 /*

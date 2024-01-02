@@ -53,7 +53,8 @@ If you call this function manually please make sure to call [IncreaseRefCounter]
 since this function may decrease their counter and free them.
 */
 func OptimizeMemory(node GraphNode) (GraphNode, error) {
-	return returnHelper(C.fOptimizeMemory(node.ref))
+	flintNode, errno := C.fOptimizeMemory(node.ref)
+	return returnHelper(flintNode, errno)
 }
 
 /*
