@@ -94,6 +94,7 @@ struct ExtendImpl : OperationImplementation {
 			FExtend *s = (FExtend *)gn->operation.additional_data;
 			free(s->start);
 			free(s->step);
+      delete s;
 		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
