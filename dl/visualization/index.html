@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>
+    Flint Visualization Toolkit
+  </title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script type="text/javascript" src="chart.js"></script>
+  <script type="text/javascript" src="connector.js"></script>
+</head>
+
+<body>
+
+  <div id="header-bar">
+    <div class="left-spaced">
+      <img src="flint.png" style="width:5.2em; height:3em; display: inline-block; vertical-align: middle;" />
+      <a class="item selected">Overview</a>
+      <a class="item">Operation Statistics</a>
+      <a class="item">Weight Visualization</a>
+    </div>
+  </div>
+  <div id="showcase_background">
+	<center>
+		<div class="content" id="connection_status">
+		  Searching for a Connection ...
+		</div>
+	</center>	
+  </div>
+  <center>
+    <div class="content">
+      <div class="card">
+        <span class="card_header">Learning Process</span>
+      </div>
+      <br />
+      <div class="card" style="width: 55em">
+        <p>
+			<table style="min-width: 35em; font-size: 1.2em; margin-bottom: 1em" class="card_header_code">
+				<tr>
+					<td><b>Epoch:</b> <div style="display:inline" id="epoch_counter">0</div></td>
+					<td><b>Batch:</b> <div style="display:inline" id="batch_counter">0/0</div></td>
+					<td style="text-align: right">
+						<button id="learning_pause" style="display: inline-block;" onclick="pause_play_training(false)">
+							<img src="pause.svg" width="15em" height="15em"></img>
+						</button>
+						<button id="learning_play" style="display: none" onclick="pause_play_training(true)">
+							<img src="play.svg" width="15em" height="15em"></img>
+						</button>
+						<button id="learning_stop" style="display: inline-block" onclick="stop_training(true)">
+							<img src="stop.svg" width="15em" height="15em"></img>
+						</button>
+					</td>
+				</tr>
+			</table>
+			<div class="no_data">
+				No Connection established yet
+			</div>
+			<div id="learning_data" style="display: none">
+				<canvas id="learning_curve" style="width:45em; height:28em;"></canvas>
+			</div>
+        </p>
+      </div>
+	  <div class="spacer" style="height: 3em"></div>
+      <div class="card">
+        <span class="card_header">Model Overview</span>
+      </div>
+      <br />
+      <div class="card" style="min-width: 35em">
+        <p>
+			<div class="no_data">
+				No Connection established yet
+			</div>
+        </p>
+      </div>
+    </div>
+  </center>
+  <div id="footer">
+    <center>
+    <div class="content">
+      <div class="row">
+        <div class="column">
+          © David Schwarzbeck, 2024</br>
+          Licensed under the <a href="https://github.com/Frobeniusnorm/Flint/blob/main/LICENCE">Apache License</a>, Version 2.0
+        </div>
+        <div class="column">&nbsp;</div>
+        <div class="column">&nbsp;</div>
+        <div class="column">
+          <a href="https://github.com/Frobeniusnorm/Flint/">Github</a>
+        </div>
+      </div>
+    </div>
+    <i style="color: #D0D0D0;">This site values your privacy, does not use cookies and does not sell anything.</i></center>
+    </center>
+  </div>
+</body>
+<script type="text/javascript">
+	async function refresh() {
+		while(true) {
+			connect_and_receive();
+			await sleep(500);
+		}
+	}
+	refresh();
+</script>
+</html>
+

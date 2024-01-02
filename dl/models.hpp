@@ -16,7 +16,6 @@
 #include "layers.hpp"
 #include "losses.hpp"
 #include "optimizers.hpp"
-#include "trainer.hpp"
 #include <chrono>
 #include <flint/flint.h>
 #include <flint/flint_helper.hpp>
@@ -186,147 +185,34 @@ template <GenericLayer... T> struct SequentialModel {
 			file.close();
 			flogging(F_VERBOSE, "stored weights");
 		}
-		/**
-		 * Trains the model with input data and the desired output.
-		 * - `data` contains the input (`X`) and desired data (`Y`) and
-		 * optionally validation data, if it does after each epoch a validation
-		 * error is calculated.
-		 * - `loss` The loss function to calculate the error between the actual
-		 * output and the desired one from the training data. Can be an
-		 * arbitrary class that implements the `GenericLoss` concept, some
-		 * implementations can be found in "losses.hpp".
-		 * - `epochs` Number of epochs the model has to be trained. The complete
-		 *    dataset is passed through the model per epoch (It is split into
-		 *    `batch_size` slices in the first dimension of the input data and
-		 * each batch has to be passed through the model once per epoch).
-		 * - `batch_size` Size of each batch. A batch is a slice of the first
-		 *    dimension of the input data. The input is shuffeled every epoch,
-		 * which is important if your batch size is smaller then your input
-		 * size. The weights of the model are optimized per batch that was
-		 * passed through the model. Meaning small batch sizes lead to faster
-		 * convergence (since more optimizations are executed) but to more noise
-		 * and variance, since each batch is only an approximation of the
-		 * complete dataset. If training times don't matter we suggest full
-		 * gradient descent (meaning `batch_size = input_size`), else finetune
-		 * this value to your usecase.
-		 */
-		template <typename T1, unsigned int n1, typename T2, unsigned int n2,
-				  GenericLoss L>
-		void train(TrainingData<T1, n1, T2, n2> &data, L loss, int epochs = 1,
-				   int batch_size = 32) {
-			set_training<0>(true);
-			const size_t batches = data.X.get_shape()[0];
-			if (data.Y.get_shape()[0] != batches)
-				flogging(
-					F_ERROR,
-					"Input and Target Datas batch size does not correspond!");
-			std::cout << "\r\e[Kbatch error: ... \e[1;30m";
-			for (int k = 0; k < 15; k++)
-				std::cout << "―";
-			std::cout << "\033[0m" << std::flush;
-			Tensor<long, 1> indices = Flint::arange(0, data.X.get_shape()[0]);
-			for (int i = 0; i < epochs; i++) {
-				// shuffle each epoch
-				Tensor<T1, n1> sx = data.X.index(indices);
-				Tensor<T2, n2> sy = data.Y.index(indices);
-				indices = indices.permutate(0);
-				indices.execute();
-				// iterate through batches
-				size_t number_batches = batches / batch_size + 1;
-				double total_error = 0;
-				for (size_t b = 0; b < number_batches; b++) {
-					size_t slice_to = (b + 1) * batch_size;
-					if (slice_to > batches)
-						slice_to = batches;
-					if (b * batch_size == slice_to)
-						break;
-					// run batch and calculate error
-					auto input =
-						sx.slice(TensorRange(b * batch_size, slice_to));
-					auto expected =
-						sy.slice(TensorRange(b * batch_size, slice_to));
-					input.execute();
-					expected.execute();
-					fStartGradientContext();
-#ifdef FLINT_DL_PROFILE
-					auto start = std::chrono::high_resolution_clock::now();
-#endif
-					auto output = forward_batch(input);
-					auto error = loss.calculate_error(output, expected);
-#ifdef FLINT_DL_PROFILE
-					std::chrono::duration<double, std::milli> elapsed =
-						std::chrono::high_resolution_clock::now() - start;
-					std::cout << " forward took " << elapsed.count()
-							  << std::endl;
-#endif
-					fStopGradientContext();
-					// optimize weights
-					// flatten all vars, but keep original structure for
-					// reconstruction
-					std::vector<std::vector<FGraphNode *>> vars;
-					collect_weights<0>(vars);
-					std::vector<FGraphNode *> flat_vars;
-					for (unsigned int i = 0; i < vars.size(); i++)
-						flat_vars.insert(flat_vars.end(), vars[i].begin(),
-										 vars[i].end());
-					std::vector<FGraphNode *> grads(flat_vars.size());
-#ifdef FLINT_DL_PROFILE
-					start = std::chrono::high_resolution_clock::now();
-#endif
-					// calculate gradients
-					fCalculateGradients(error.get_graph_node(),
-										flat_vars.data(), flat_vars.size(),
-										grads.data());
-					// reconstruct for layers
-					std::vector<std::vector<FGraphNode *>> plgrads(vars.size());
-					int index = 0;
-					for (unsigned int i = 0; i < vars.size(); i++) {
-						plgrads[i] = std::vector<FGraphNode *>(vars[i].size());
-						for (unsigned int j = 0; j < vars[i].size(); j++) {
-							FGraphNode *curr_grad = grads[index++];
-							plgrads[i][j] =
-								curr_grad ? fOptimizeMemory(fExecuteGraph(curr_grad)) : nullptr;
-						}
-					}
-#ifdef FLINT_DL_PROFILE
-					elapsed = std::chrono::high_resolution_clock::now() - start;
-					std::cout << " gradient calc took " << elapsed.count()
-							  << std::endl;
-#endif
-					backward<0>(plgrads);
-					// calculate error value
-					double local_error = (double)(error.reduce_sum()[0]);
-					total_error += local_error / number_batches;
-					// print metrics
-					std::cout << "\r\e[Kbatch error: " << std::setprecision(3)
-							  << local_error << " \e[1;96m";
-					for (int k = 0; k < 15; k++) {
-						if ((k) / 15.0 <= (b + 1.0) / number_batches)
-							std::cout << "―";
-						else {
-							std::cout << "\e[1;30m";
-							for (int l = k; l < 15; l++)
-								std::cout << "―";
-							break;
-						}
-					}
-					std::cout << "\033[0m" << std::flush;
+		template <typename T1, unsigned int n1>
+		void backward(Tensor<T1, n1> &error) {
+			std::vector<std::vector<FGraphNode *>> vars;
+			collect_weights<0>(vars);
+			std::vector<FGraphNode *> flat_vars;
+			for (unsigned int i = 0; i < vars.size(); i++)
+				flat_vars.insert(flat_vars.end(), vars[i].begin(),
+								 vars[i].end());
+			std::vector<FGraphNode *> grads(flat_vars.size());
+			// calculate gradients
+			fCalculateGradients(error.get_graph_node(), flat_vars.data(),
+								flat_vars.size(), grads.data());
+			// reconstruct for layers
+			std::vector<std::vector<FGraphNode *>> plgrads(vars.size());
+			int index = 0;
+			for (unsigned int i = 0; i < vars.size(); i++) {
+				plgrads[i] = std::vector<FGraphNode *>(vars[i].size());
+				for (unsigned int j = 0; j < vars[i].size(); j++) {
+					FGraphNode *curr_grad = grads[index++];
+					plgrads[i][j] =
+						curr_grad ? fOptimizeMemory(fExecuteGraph(curr_grad))
+								  : nullptr;
 				}
-				// validate
-				std::string validation_msg = "";
-				if (data.vX.has_value() && data.vY.has_value()) {
-					auto output = forward_batch(data.vX.value());
-					auto error = loss.calculate_error(output, data.vY.value());
-					validation_msg = " validation error: " +
-									 std::to_string(error.reduce_sum()[0]);
-				}
-				std::cout << "\r\e";
-				flogging(F_INFO, "Mean loss #" + std::to_string(i + 1) + ": " +
-									 std::to_string(total_error) +
-									 validation_msg);
 			}
-			set_training<0>(false);
+			backward<0>(plgrads);
 		}
+		void enable_training() { set_training<0>(true); }
+		void disable_training() { set_training<0>(false); }
 		/** Returns a small summary of the model. */
 		std::string summary() { return summary_helper<0>(); }
 		/**

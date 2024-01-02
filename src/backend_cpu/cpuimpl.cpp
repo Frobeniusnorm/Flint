@@ -287,14 +287,14 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 				if (!rd->data)
 					fSyncMemory(curr);
 				foo.num_entries = rd->num_entries;
-				if (foo.num_entries != size)
-					flogging(F_ERROR, "Wrong number of entries!");
+				if (foo.num_entries != size && curr->operation.op_type != FGEN_CONSTANT)
+					flogging(F_ERROR, "Wrong number of entries! " + to_string(rd->num_entries) + " vs " + to_string(size));
 				foo.data = rd->data;
 			} else {
 				FStore *store = (FStore *)curr->operation.additional_data;
 				foo.num_entries = store->num_entries;
 				if (foo.num_entries != size)
-					flogging(F_ERROR, "Wrong number of entries!");
+					flogging(F_ERROR, "Wrong number of entries! " + to_string(store->num_entries) + " vs " + to_string(size));
 				foo.data = store->data;
 			}
 			results.insert({curr, foo});
@@ -373,7 +373,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 				free(rd.data);
 		}
 	} else {
-		// construt a result for each node
+		// construct a result for each node
 		for (auto &[gn, rd] : results) {
 			if (gn != node && gn->operation.op_type != FSTORE &&
 				!gn->result_data && !rd.multi_use) {
