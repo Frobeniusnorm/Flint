@@ -89,36 +89,6 @@ func fromCToArray[T completeNumeric](dataPtr unsafe.Pointer, length int, dataTyp
 	return result
 }
 
-// closestType takes in a Go type and returns a valid [dataType] that most closely matches it.
-func closestType[T completeNumeric](x T) DataType {
-	switch any(x).(type) {
-	case int:
-		return INT64
-	case int8:
-		return INT32
-	case int16:
-		return INT32
-	case int32:
-		return INT32
-	case int64:
-		return INT64
-	case uint:
-		return INT64
-	case uint8:
-		return INT32
-	case uint16:
-		return INT32
-	case uint32:
-		return INT64
-	case float32:
-		return FLOAT32
-	case float64:
-		return FLOAT64
-	default:
-		panic("invalid type")
-	}
-}
-
 // use for type debugging
 func describe(i any) {
 	fmt.Printf("describe (value, underlying type): (%v, %T)\n", i, i)

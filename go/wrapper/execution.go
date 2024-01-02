@@ -71,7 +71,7 @@ It represents execution with one of both backends and additional memory synchron
 
 TODO: is it realistically even possible for errors to occur here?
 */
-func CalculateResult[T completeNumeric](node GraphNode) (Result[T], error) {
+func CalculateResult[T Numeric](node GraphNode) (Result[T], error) {
 	flintNode, errno := C.fCalculateResult(node.ref)
 	if flintNode == nil {
 		return Result[T]{}, buildErrorFromErrno(errno)

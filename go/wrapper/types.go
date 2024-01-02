@@ -38,10 +38,10 @@ type GraphNode struct {
 	// ref *graphNode
 }
 
-type Int int32
-type Long int64
-type Float float32
-type Double float64
+type Int = int32
+type Long = int64
+type Float = float32
+type Double = float64
 
 type operation struct {
 	shape             *C.size_t
@@ -66,7 +66,7 @@ type graphNode struct {
 	gradient_data     unsafe.Pointer
 }
 
-type Result[T completeNumeric] struct {
+type Result[T Numeric] struct {
 	resultRef *C.FResultData
 	nodeRef   *C.FGraphNode
 	Data      ResultData[T]
@@ -81,6 +81,10 @@ type ResultData[T completeNumeric] []T
 func (a ResultData[T]) String() string {
 	return fmt.Sprintf("%v", []T(a))
 }
+
+//////////////////
+// NUMERIC TYPES
+//////////////////
 
 // DataType represents FType -- the valid datatypes for the wrapper backend
 type DataType uint32 // equal type so it is comparable
@@ -106,4 +110,61 @@ func (x DataType) String() string {
 	default:
 		panic("invalid type")
 	}
+}
+
+type Numeric interface {
+	~Int | ~Long | ~Float | ~Double
+}
+
+// completeNumeric is a constraint interface representing all numeric types that can be used in wrapper!
+// NOTE: cant support uint64 as casting it to int64 might cause overflows
+type completeNumeric interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~float32 | ~float64
+}
+
+// cNumbers represents the basic C types available in CGo
+// NOTE: size_t should be equivalent to ulong
+type cNumbers interface {
+	C.int | C.size_t | C.long | C.uint | C.float | C.double
+}
+
+//////////////////
+// SHAPE
+//////////////////
+
+// Shape represents the size of a flint.
+// needs to have one entry for each dimension of flint
+type Shape []uint
+
+func (a Shape) String() string {
+	return fmt.Sprintf("%v", []uint(a))
+}
+
+func (a Shape) Equal(b Shape) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// Stride defines the steps for sliding operations
+// needs to have one entry for each dimension of flint
+type Stride []int
+
+func (a Stride) String() string {
+	return fmt.Sprintf("%v", []int(a))
+}
+
+// Axes indicate changes in dimensions (i.e. transpose)
+// needs to have one entry for each dimension of flint
+// and each entry should not be higher than the number of dimensions
+type Axes []int
+
+func (a Axes) String() string {
+	return fmt.Sprintf("%v", []int(a))
 }
