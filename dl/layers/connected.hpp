@@ -65,8 +65,14 @@ struct Connected : public Layer<2> {
 		Tensor<double, n> forward(Tensor<T, n> &in) {
 			std::array<size_t, n> one_shape = in.get_shape();
 			one_shape[n - 1] = 1;
+      // allow optimization of in
+      in.get_graph_node()->reference_counter--;
+      // create one column for bias
 			Tensor<T, n> ones = Flint::constant_array<T, n>(1, one_shape);
-			return Flint::concat(in, ones, n - 1).matmul(get_weight<0>());
+      auto a = Flint::concat(in, ones, n - 1);
+      // prevent destructor to remove memory
+      in.set_graph_node(nullptr);
+			return a.matmul(get_weight<0>());
 		}
 		std::string name() override { return "Connected"; }
 		std::string description() override {

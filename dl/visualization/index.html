@@ -66,7 +66,7 @@
       </div>
       <br />
       <div class="card" style="min-width: 35em">
-        <p>
+        <p id="model_information">
 			<div class="no_data">
 				No Connection established yet
 			</div>
@@ -97,7 +97,7 @@
 	async function refresh() {
 		while(true) {
 			connect_and_receive();
-			await sleep(500);
+			await sleep(100);
 		}
 	}
 	refresh();

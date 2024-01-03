@@ -65,7 +65,6 @@ struct CrossEntropyLoss {
 		template <typename T, unsigned int n>
 		Tensor<double, transform_dimensionality(n)>
 		calculate_error(Tensor<T, n> &in, Tensor<T, n> &expected) {
-			// TODO sparse categorical cross entropy loss
 			auto pred =
 				(in / in.reduce_sum(n - 1).expand(n - 1, in.get_shape()[n - 1]))
 					.max(1e-7)

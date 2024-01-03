@@ -29,7 +29,12 @@ class Dropout : public UntrainableLayer {
 			if (!training) {
 				return in;
 			}
-			return in.dropout(p);
+      // s.t. the memory may be reused we remove the handle of in 
+      in.get_graph_node()->reference_counter--;
+			auto result = in.dropout(p);
+      // avoid in freeing memory on destruction
+      in.set_graph_node(nullptr);
+      return result;
 		}
 		std::string name() override { return "Dropout"; }
 		std::string description() override {

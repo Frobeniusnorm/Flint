@@ -172,7 +172,8 @@ using FlintTypeToCpp = typename std::conditional<
  * `transform_dimensionality(n)` and type `transform_type(T)` should be
  * returned). It is highly recommended to derive your Layer from
  * `UntrainableLayer` or `Layer`, since they provide already implementations for
- * some methods.
+ * some methods. `forward` may consume its input tensor since it isn't needed
+ * afterwards.
  */
 template <typename T>
 concept GenericLayer =

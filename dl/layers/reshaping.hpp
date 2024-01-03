@@ -20,11 +20,19 @@ struct Flatten : public UntrainableLayer {
 		/** Flattens every feature axis into one single axis, does not touch the
 		 * batch-axis (the first) */
 		template <typename T, unsigned int n>
-		Tensor<T, 2> forward(const Tensor<T, n> &in) {
+		Tensor<T, 2> forward(Tensor<T, n> &in) {
 			if constexpr (n == 2)
-				return Tensor<T, 2>(in);
-			else
-				return forward(in.flattened(n - 1));
+				return in;
+			else {
+        FGraphNode* node = in.get_graph_node();
+        // consume the node (i.e. remove handle from wrapper)
+        in.set_graph_node(nullptr);
+        node->reference_counter--;
+        while (node->operation.dimensions > 2) {
+          node = fflatten_dimension(node, node->operation.dimensions - 1);
+        }
+				return Tensor<T, 2>(node);
+      }
 		}
 		std::string name() override { return "Flatten"; }
 };

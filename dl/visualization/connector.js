@@ -7,11 +7,16 @@ const id = new Date().getTime();
 let gd_epochs = [];
 let gd_batches = [];
 let gd_validation = [];
-
+let color_in = null;
 let first_time = true;
 
 function handle_message(data) {
 	if (first_time) {
+	  color_in = setInterval(function() {
+	  	const d = new Date();
+	  	const x = (1 + Math.cos(d.getTime() / 1000)) * 30 + 40;
+	  	document.getElementById("showcase_background").style.background = "rgb(0, 10, " + x + ")";	
+	  }, 10);
 		first_time = false;
 		let nodatas = document.getElementsByClassName("no_data");
 		for (let i = 0; i < nodatas.length; i++)
@@ -24,6 +29,15 @@ function handle_message(data) {
     document.getElementById("learning_pause").disabled = false;
     document.getElementById("learning_play").disabled = false;
     document.getElementById("learning_stop").disabled = false;
+    
+		let xmlHttp = new XMLHttpRequest();
+		xmlHttp.onreadystatechange = function() { 
+			if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+				describe_model(xmlHttp.responseText);
+			}
+		}
+		xmlHttp.open("GET", "http://localhost:5111/describe", true); // true for asynchronous 
+		xmlHttp.send(null);
 	}
 	console.log(data);
 	const msg = JSON.parse(data);
@@ -91,11 +105,6 @@ function visualize_data() {
 }
 
 async function connect_and_receive() {
-	// const colorIn = setInterval(function() {
-	// 	const d = new Date();
-	// 	const x = (1 + Math.cos(d.getTime() / 1000)) * 30 + 40;
-	// 	document.getElementById("showcase_background").style.background = "rgb(0, 10, " + x + ")";	
-	// }, 10);
 		let xmlHttp = new XMLHttpRequest();
 		xmlHttp.onreadystatechange = function() { 
 			if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
@@ -108,13 +117,13 @@ async function connect_and_receive() {
           document.getElementById("learning_pause").disabled = true;
           document.getElementById("learning_play").disabled = true;
           document.getElementById("learning_stop").disabled = true;
+          if (color_in != null)
+            clearInterval(color_in);
 				}
 			}
 		}
 		xmlHttp.open("GET", "http://localhost:5111/" + id, true); // true for asynchronous 
 		xmlHttp.send(null);
-		// TODO: set interval in first message, on error stop interval and reset first_time flag
-	// clearInterval(colorIn);
 }
 function pause_play_training(activate) {
 	if (!activate) {
@@ -135,4 +144,16 @@ function stop_training() {
 	document.getElementById("learning_pause").disabled = true;
 	document.getElementById("learning_play").disabled = true;
 	document.getElementById("learning_stop").disabled = true;
+  if (color_in != null)
+    clearInterval(color_in);
+}
+function describe_model(data) {
+  document.getElementById("model_information").innerHTML = "";
+  const description = JSON.parse(data);
+  console.log(description);
+  for (let i = 0; i < description.layers.length; i++) {
+    const layer = description.layers[i];
+    document.getElementById("model_information").innerHTML += '<div class="layer_card"><div class="layer_header"><b>' + layer.name + 
+      '</b>&nbsp;<pre style="display:inline;">' + layer.no_params + '</pre> parameters</div><div class="layer_description">' + layer.description + '</div></div>';
+  }
 }

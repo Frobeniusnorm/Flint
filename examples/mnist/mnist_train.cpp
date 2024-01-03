@@ -79,7 +79,6 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // http://yann.lecun.com/exdb/mnist/
 int main() {
 	FlintContext _(FLINT_BACKEND_ONLY_GPU, F_VERBOSE);
-  fEnableEagerExecution();
 	Tensor<float, 3> X = load_mnist_images("train-images-idx3-ubyte");
 	Tensor<double, 2> Y =
 		load_mnist_labels("train-labels-idx1-ubyte").convert<double>();
@@ -130,6 +129,6 @@ int main() {
 	auto trainer = Trainer(m, data, CrossEntropyLoss());
 	trainer.set_metric_reporter(&nmr);
 	trainer.max_epochs(25);
-	trainer.train(1000);
+	trainer.train(600);
 	m.save("mnist_model.flint");
 }

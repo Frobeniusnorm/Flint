@@ -61,6 +61,22 @@ struct MetricReporter {
 		}
 		virtual bool is_stop_signal() { return false; }
 		virtual void report_finished() {}
+		virtual void
+		model_description(std::vector<std::string> layer_names,
+						  std::vector<std::string> layer_descriptions,
+						  std::vector<size_t> number_parameters,
+						  std::string loss_fct) {
+			this->layer_names = layer_names;
+			this->layer_descriptions = layer_descriptions;
+			this->number_parameters = number_parameters;
+			this->loss_fct = loss_fct;
+		}
+
+	protected:
+		std::vector<std::string> layer_names;
+		std::vector<std::string> layer_descriptions;
+		std::vector<size_t> number_parameters;
+		std::string loss_fct;
 };
 // TODO dataloader
 template <typename T1, unsigned int n1, typename T2, unsigned int n2>
@@ -118,7 +134,18 @@ class Trainer {
 		 */
 		Trainer(SequentialModel<T...> &model,
 				TrainingData<T1, n1, T2, n2> &data, L loss)
-			: model(model), data(data), loss(loss) {}
+			: model(model), data(data), loss(loss) {
+			using namespace std;
+			const auto names = model.layer_names();
+			const auto descriptions = model.layer_descriptions();
+			const auto number_parameters = model.num_layer_parameters();
+			this->default_reporter.model_description(
+				vector<string>(names.begin(), names.end()),
+				vector<string>(descriptions.begin(), descriptions.end()),
+				vector<size_t>(number_parameters.begin(),
+							   number_parameters.end()),
+				loss.name());
+		}
 
 		/**
 		 * Sets the maximum number of epochs after which the training should be
@@ -138,6 +165,16 @@ class Trainer {
 		 */
 		void set_metric_reporter(MetricReporter *reporter) {
 			this->reporter = reporter;
+			using namespace std;
+			const auto names = model.layer_names();
+			const auto descriptions = model.layer_descriptions();
+			const auto number_parameters = model.num_layer_parameters();
+			reporter->model_description(
+				vector<string>(names.begin(), names.end()),
+				vector<string>(descriptions.begin(), descriptions.end()),
+				vector<size_t>(number_parameters.begin(),
+							   number_parameters.end()),
+				loss.name());
 		}
 		void train(int batch_size = 32) {
 			const size_t batches = data.X.get_shape()[0];
@@ -268,6 +305,17 @@ class NetworkMetricReporter : public MetricReporter {
 					pause = false;
 					stop = true;
 					pause_lock.release();
+				} else if (path == "/describe") {
+					packet = "{\"layers\":[";
+					for (int i = 0; i < layer_names.size(); i++) {
+						if (i != 0)
+							packet += ",";
+						packet += "{\"name\":\"" + layer_names[i] +
+								  "\",\"description\":\"" +
+								  layer_descriptions[i] + "\",\"no_params\":" +
+								  to_string(number_parameters[i]) + "}";
+					}
+					packet += "]}";
 				} else {
 					const long id = strtol(path.data() + 1, nullptr, 10);
 					packet = "{";
@@ -347,6 +395,7 @@ class NetworkMetricReporter : public MetricReporter {
 		}
 		void report_finished() override {
 			terminate = true;
+      stop = true;
 			shutdown(socket_id, SHUT_RD);
 			close(socket_id);
 			thread.join();

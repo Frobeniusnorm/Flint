@@ -127,7 +127,6 @@ template <GenericLayer... T> struct SequentialModel {
 		forward(Tensor<K, n> &in) {
 			// because layers expect batches
 			Tensor<K, n + 1> expanded = in.expand(0, 1);
-			std::cout << expanded << std::endl;
 			expanded.get_graph_node()->reference_counter++;
 			auto out =
 				forward_helper<0,
@@ -193,9 +192,10 @@ template <GenericLayer... T> struct SequentialModel {
 			file.close();
 			flogging(F_VERBOSE, "stored weights");
 		}
-    /**
-     * Calculated gradient to the given error tensor for each weight and optimized the weights with their corres
-     */
+		/**
+		 * Calculated gradient to the given error tensor for each weight and
+		 * optimized the weights with their corres
+		 */
 		template <typename T1, unsigned int n1>
 		void backward(Tensor<T1, n1> &error) {
 			std::vector<std::vector<FGraphNode *>> vars;
@@ -234,28 +234,28 @@ template <GenericLayer... T> struct SequentialModel {
 		void disable_training() { set_training<0>(false); }
 		/** Returns a small summary of the model. */
 		std::string summary() { return summary_helper<0>(); }
-    /**
-     * Returns the name of each layer in an array
-     */
+		/**
+		 * Returns the name of each layer in an array
+		 */
 		std::array<std::string, sizeof...(T)> layer_names() {
 			std::array<std::string, sizeof...(T)> names;
-      get_names<0>(names);
+			get_names<0>(names);
 			return names;
 		}
-    /**
-     * Returns the description of each layer in an array
-     */
+		/**
+		 * Returns the description of each layer in an array
+		 */
 		std::array<std::string, sizeof...(T)> layer_descriptions() {
 			std::array<std::string, sizeof...(T)> descriptions;
-      get_descriptions<0>(descriptions);
+			get_descriptions<0>(descriptions);
 			return descriptions;
 		}
-    /**
-     * Returns the number of parameters of each layer in an array
-     */
+		/**
+		 * Returns the number of parameters of each layer in an array
+		 */
 		std::array<size_t, sizeof...(T)> num_layer_parameters() {
 			std::array<size_t, sizeof...(T)> numbers;
-      get_num_parameters<0>(numbers);
+			get_num_parameters<0>(numbers);
 			return numbers;
 		}
 		/**
@@ -312,21 +312,27 @@ template <GenericLayer... T> struct SequentialModel {
 			return "";
 		}
 		template <int n>
-		void get_names(std::array<std::string, sizeof...(T)> names) {
-			if constexpr (n < sizeof...(T))
+		void get_names(std::array<std::string, sizeof...(T)> &names) {
+			if constexpr (n < sizeof...(T)) {
 				names[n] = std::get<n>(layers).name();
+				get_names<n + 1>(names);
+			}
 		}
 		template <int n>
 		void
-		get_descriptions(std::array<std::string, sizeof...(T)> descriptions) {
-			if constexpr (n < sizeof...(T))
+		get_descriptions(std::array<std::string, sizeof...(T)> &descriptions) {
+			if constexpr (n < sizeof...(T)) {
 				descriptions[n] = std::get<n>(layers).description();
+				get_descriptions<n + 1>(descriptions);
+			}
 		}
 		template <int n>
-		void
-		get_num_parameters(std::array<size_t, sizeof...(T)> number_parameters) {
-			if constexpr (n < sizeof...(T))
+		void get_num_parameters(
+			std::array<size_t, sizeof...(T)> &number_parameters) {
+			if constexpr (n < sizeof...(T)) {
 				number_parameters[n] = std::get<n>(layers).num_parameters();
+				get_num_parameters<n + 1>(number_parameters);
+			}
 		}
 		template <int n>
 		inline void
@@ -343,12 +349,9 @@ template <GenericLayer... T> struct SequentialModel {
 			{
 				Tensor<T1, n1> it(in);
 				// now in is no longer needed (reference counter has been
-				// artifically incremented). We undo the incrementation of the
-				// Tensor struct
-				in->reference_counter -= 2;
+				// artifically incremented).
+				in->reference_counter --;
 				auto ot = std::get<layer>(layers).forward(it);
-				// to prevent memory errors or double frees
-				it.set_graph_node(nullptr);
 				// out is still needed -> save the GraphNode handle from
 				// destruction with
 				out = ot.get_graph_node();

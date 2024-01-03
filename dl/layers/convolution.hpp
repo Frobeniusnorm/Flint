@@ -213,6 +213,8 @@ template <int n> class Convolution : public Layer<n, 1> {
 		}
 		template <typename T, unsigned int k>
 		Tensor<double, k> forward(Tensor<T, k> &in) {
+			// allow optimizations of in
+			in.get_graph_node()->reference_counter--;
 			in.execute();
 			const unsigned int filters =
 				Layer<n, 1>::template get_weight<0>().get_shape()[0];
@@ -233,6 +235,8 @@ template <int n> class Convolution : public Layer<n, 1> {
 						   padding_stride, padding_mode)
 					 : in)
 					.convolve_array(filter, act_stride);
+			// prevent destructor to free memory
+			in.set_graph_node(nullptr);
 			// repeat bias to the shape of res and add
 			std::array<size_t, n - 1> bias_shape;
 			bias_shape[n - 2] = filters;
@@ -291,12 +295,22 @@ template <int n> class Pooling : public UntrainableLayer {
 
 		template <typename T, unsigned int k>
 		Tensor<T, k> forward(Tensor<T, k> &in) {
-			in.execute();
-			Tensor<T, k> p = in;
+			// move in
+			in.get_graph_node()->reference_counter--;
+			Tensor<T, k> p;
 			if (padding_mode != NO_PADDING) {
 				p = applyPadding(in, window_size, step_size, padding_mode);
+			} else {
+				p = Tensor<T, k>(in.get_graph_node(), in.get_shape());
 			}
+			in.set_graph_node(nullptr);
+			// p is only used once -> make it consumable
+			p.get_graph_node()->reference_counter--;
 			Tensor<T, k + 1> pe = p.expand(k, 1);
+			p.set_graph_node(nullptr);
+			// pe is only used once -> make it consumable
+			pe.execute();
+			pe.get_graph_node()->reference_counter--;
 			Tensor<T, n> red;
 			switch (mode) {
 			case MAX_POOLING:
@@ -319,6 +333,7 @@ template <int n> class Pooling : public UntrainableLayer {
 						  (long)total_windows;
 			} break;
 			}
+			pe.set_graph_node(nullptr);
 			return red;
 		}
 
@@ -338,19 +353,19 @@ template <int n> class Pooling : public UntrainableLayer {
 			return method + "Pooling";
 		}
 		std::string description() override {
-      std::string description = "window size: [";
-      for (int i = 0; i < window_size.size(); i++) {
-        if (i != 0)
-          description += ", ";
-        description += std::to_string(window_size[i]);
-      }
-      description += "], step size: [";
-      for (int i = 0; i < step_size.size(); i++) {
-        if (i != 0)
-          description += ", ";
-        description += std::to_string(step_size[i]);
-      }
-      return description + "]";
+			std::string description = "window size: [";
+			for (int i = 0; i < window_size.size(); i++) {
+				if (i != 0)
+					description += ", ";
+				description += std::to_string(window_size[i]);
+			}
+			description += "], step size: [";
+			for (int i = 0; i < step_size.size(); i++) {
+				if (i != 0)
+					description += ", ";
+				description += std::to_string(step_size[i]);
+			}
+			return description + "]";
 		}
 		static Pooling<n>
 		max_pooling(std::initializer_list<size_t> window_size,
