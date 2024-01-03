@@ -200,14 +200,14 @@ template <int n> class Convolution : public Layer<n, 1> {
 			initialize_precalc(stride);
 		}
 		std::string name() override { return "Convolution"; }
-		std::string summary() override {
+		std::string description() override {
 			const unsigned int filters =
 				Layer<n, 1>::template get_weight<0>().get_shape()[0];
 			const unsigned int units_in =
 				Layer<n, 1>::template get_weight<0>().get_shape()[n - 1];
 			const unsigned int kernel_size =
 				Layer<n, 1>::template get_weight<0>().get_shape()[1];
-			return name() + ": input channels: " + std::to_string(units_in) +
+			return "input channels: " + std::to_string(units_in) +
 				   " filters: " + std::to_string(filters) +
 				   ", kernel size: " + std::to_string(kernel_size);
 		}
@@ -336,6 +336,21 @@ template <int n> class Pooling : public UntrainableLayer {
 				break;
 			}
 			return method + "Pooling";
+		}
+		std::string description() override {
+      std::string description = "window size: [";
+      for (int i = 0; i < window_size.size(); i++) {
+        if (i != 0)
+          description += ", ";
+        description += std::to_string(window_size[i]);
+      }
+      description += "], step size: [";
+      for (int i = 0; i < step_size.size(); i++) {
+        if (i != 0)
+          description += ", ";
+        description += std::to_string(step_size[i]);
+      }
+      return description + "]";
 		}
 		static Pooling<n>
 		max_pooling(std::initializer_list<size_t> window_size,

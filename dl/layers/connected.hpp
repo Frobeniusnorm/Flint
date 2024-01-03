@@ -69,9 +69,8 @@ struct Connected : public Layer<2> {
 			return Flint::concat(in, ones, n - 1).matmul(get_weight<0>());
 		}
 		std::string name() override { return "Connected"; }
-		std::string summary() override {
-			return name() + ": " +
-				   std::to_string(get_weight<0>().get_shape()[0]) + " * " +
+		std::string description() override {
+			return std::to_string(get_weight<0>().get_shape()[0]) + " * " +
 				   std::to_string(get_weight<0>().get_shape()[1]);
 		}
 };

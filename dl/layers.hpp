@@ -39,7 +39,7 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
 			weight = w;
 			weight.watch();
 		}
-		void set_weights(const std::vector<FGraphNode*> nodes) {
+		void set_weights(const std::vector<FGraphNode *> nodes) {
 			weight = Tensor<double, n>(nodes[index]);
 			weight.watch();
 		}
@@ -77,6 +77,12 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
 				flogging(F_WARNING, "No Optimizer for weight!");
 			}
 		}
+		size_t count_weights() {
+			size_t total = 1;
+			for (int i = 0; i < n; i++)
+				total *= weight.get_shape()[i];
+			return total;
+		}
 };
 
 template <unsigned int index, int n, int... wn>
@@ -96,7 +102,7 @@ struct WeightRef<index, n, wn...> {
 			} else
 				others.template set_weight<k>(w);
 		}
-		void set_weights(const std::vector<FGraphNode*> nodes) {
+		void set_weights(const std::vector<FGraphNode *> nodes) {
 			weight = Tensor<double, n>(nodes[index]);
 			weight.watch();
 			others.template set_weights(nodes);
@@ -140,6 +146,12 @@ struct WeightRef<index, n, wn...> {
 				flogging(F_WARNING, "No Optimizer for weight!");
 			}
 			others.update_weights(grads);
+		}
+		size_t count_weights() {
+			size_t total = 1;
+			for (int i = 0; i < n; i++)
+				total *= weight.get_shape()[i];
+			return total + others.count_weights();
 		}
 };
 template <FType t>
@@ -201,7 +213,8 @@ concept GenericLayer =
 		{ T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
 		{ T::transform_type(F_INT32) } -> std::convertible_to<FType>;
 		{ a.name() } -> std::convertible_to<std::string>;
-		{ a.summary() } -> std::convertible_to<std::string>;
+		{ a.description() } -> std::convertible_to<std::string>;
+		{ a.num_parameters() } -> std::convertible_to<size_t>;
 	};
 /**
  * Implements blank methods for every method of GenericLayer that is not needed
@@ -220,13 +233,14 @@ struct UntrainableLayer {
 		void optimize_weights(const Tensor<T, dim> &error) {}
 		void optimize_weights(std::vector<FGraphNode *> grads) {}
 		std::vector<FGraphNode *> collect_weights() { return {}; }
-		void set_weights(const std::vector<FGraphNode*> weights) { }
+		void set_weights(const std::vector<FGraphNode *> weights) {}
 		static constexpr FType transform_type(FType t) { return t; }
 		static constexpr unsigned int transform_dimensionality(unsigned int n) {
 			return n;
 		}
+		size_t num_parameters() { return 0; }
 		virtual std::string name() { return "unnamed"; }
-		virtual std::string summary() { return name() + " layer"; }
+		virtual std::string description() { return name() + " layer"; }
 };
 /**
  * Virtual super class of all Layer implementations with type safe weight
@@ -278,7 +292,7 @@ template <int... wn> class Layer {
 			weight_refs.template set_weight<index>(std::move(t));
 		}
 		/** Sets all weights from an array */
-		void set_weights(const std::vector<FGraphNode*> weights) {
+		void set_weights(const std::vector<FGraphNode *> weights) {
 			weight_refs.set_weights(weights);
 		}
 		/** Returns a reference to a specific weight described by its index */
@@ -316,9 +330,7 @@ template <int... wn> class Layer {
 		/** Returns the name of this Layer for overviews and debugging. */
 		virtual std::string name() { return "unnamed"; }
 		/** Returns a summary of this Layer for overviews and debugging. */
-		virtual std::string summary() {
-			return name() + " layer with " + std::to_string(sizeof...(wn)) +
-				   " weight tensors";
-		}
+		virtual std::string description() { return name() + " layer"; }
+		size_t num_parameters() { return weight_refs.count_weights(); }
 };
 #endif

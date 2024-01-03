@@ -78,17 +78,14 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // download and extract to the desired folder from
 // http://yann.lecun.com/exdb/mnist/
 int main() {
-	FlintContext _(FLINT_BACKEND_ONLY_CPU, F_VERBOSE);
-	Tensor<float, 3> X = load_mnist_images("train-images-idx3-ubyte")
-							 .slice(TensorRange(0, 1000));
-	Tensor<double, 2> Y = load_mnist_labels("train-labels-idx1-ubyte")
-							  .convert<double>()
-							  .slice(TensorRange(0, 1000));
-	Tensor<float, 3> vX =
-		load_mnist_images("t10k-images-idx3-ubyte").slice(TensorRange(0, 1000));
-	Tensor<double, 2> vY = load_mnist_labels("t10k-labels-idx1-ubyte")
-							   .convert<double>()
-							   .slice(TensorRange(0, 1000));
+	FlintContext _(FLINT_BACKEND_ONLY_GPU, F_VERBOSE);
+  fEnableEagerExecution();
+	Tensor<float, 3> X = load_mnist_images("train-images-idx3-ubyte");
+	Tensor<double, 2> Y =
+		load_mnist_labels("train-labels-idx1-ubyte").convert<double>();
+	Tensor<float, 3> vX = load_mnist_images("t10k-images-idx3-ubyte");
+	Tensor<double, 2> vY =
+		load_mnist_labels("t10k-labels-idx1-ubyte").convert<double>();
 	auto data = TrainingData(
 		X.reshape(X.get_shape()[0], X.get_shape()[1], X.get_shape()[2], 1), Y,
 		vX.reshape(vX.get_shape()[0], vX.get_shape()[1], vX.get_shape()[2], 1),
@@ -97,17 +94,17 @@ int main() {
 			  << "x" << data.X.get_shape()[1] << " (and "
 			  << data.Y.get_shape()[0] << " labels)" << std::endl;
 	std::cout << "loaded data. Starting training." << std::endl;
-	//	auto m = SequentialModel{
-	//		Conv2D(1, 32, 3, std::array<unsigned int, 2>{1, 1}, SAME_PADDING),
-	//		Relu(),
-	//		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, SAME_PADDING),
-	//		Conv2D(32, 64, 3, std::array<unsigned int, 2>{1, 1}, SAME_PADDING),
-	//		Relu(),
-	//		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, SAME_PADDING),
-	//		Flatten(),
-	//		Dropout(0.5),
-	//		Connected(3136, 10),
-	//		SoftMax()};
+	auto m = SequentialModel{
+		Conv2D(1, 32, 3, std::array<unsigned int, 2>{1, 1}, SAME_PADDING),
+		Relu(),
+		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, SAME_PADDING),
+		Conv2D(32, 64, 3, std::array<unsigned int, 2>{1, 1}, SAME_PADDING),
+		Relu(),
+		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, SAME_PADDING),
+		Flatten(),
+		Dropout(0.5),
+		Connected(3136, 10),
+		SoftMax()};
 	// auto m = SequentialModel{
 	// 	Conv2D(1, 32, 8, std::array<unsigned int, 2>{3, 3}, SAME_PADDING),
 	// 	Relu(),
@@ -118,21 +115,21 @@ int main() {
 	// 	Relu(),
 	// 	Connected(80, 10),
 	// 	SoftMax()};
-	auto m = SequentialModel{
-		Conv2D(1, 16, 8, std::array<unsigned int, 2>{3, 3}, SAME_PADDING),
-		Relu(),
-		Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}, SAME_PADDING),
-		Dropout(0.1),
-		Flatten(),
-		Connected(400, 10),
-		SoftMax()};
+	// auto m = SequentialModel{
+	// 	Conv2D(1, 16, 8, std::array<unsigned int, 2>{3, 3}, SAME_PADDING),
+	// 	Relu(),
+	// 	Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}, SAME_PADDING),
+	// 	Dropout(0.1),
+	// 	Flatten(),
+	// 	Connected(400, 10),
+	// 	SoftMax()};
 	NetworkMetricReporter nmr;
 	std::cout << m.summary() << std::endl;
 	AdamFactory opt(0.003);
 	m.generate_optimizer(opt);
 	auto trainer = Trainer(m, data, CrossEntropyLoss());
 	trainer.set_metric_reporter(&nmr);
-	trainer.max_epochs(15);
-	trainer.train(20);
+	trainer.max_epochs(25);
+	trainer.train(1000);
 	m.save("mnist_model.flint");
 }

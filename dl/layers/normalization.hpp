@@ -32,8 +32,8 @@ class Dropout : public UntrainableLayer {
 			return in.dropout(p);
 		}
 		std::string name() override { return "Dropout"; }
-		std::string summary() override {
-			return name() + " (p = " + std::to_string(p) + ")";
+		std::string description() override {
+			return "p = " + std::to_string(p);
 		}
 };
 #endif

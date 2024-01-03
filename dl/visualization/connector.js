@@ -18,8 +18,12 @@ function handle_message(data) {
 			nodatas[i].style.display = "none";
 		document.getElementById("learning_data").style.display = "block";
 		gd_epochs = [];
-    	gd_batches = [];
-    	gd_validation = [];
+    gd_batches = [];
+    gd_validation = [];
+
+    document.getElementById("learning_pause").disabled = false;
+    document.getElementById("learning_play").disabled = false;
+    document.getElementById("learning_stop").disabled = false;
 	}
 	console.log(data);
 	const msg = JSON.parse(data);
@@ -101,6 +105,9 @@ async function connect_and_receive() {
 				if (xmlHttp.readyState == 4) {
 					document.getElementById("connection_status").innerHTML = "Searching for a Connection ...";
 					first_time = true;
+          document.getElementById("learning_pause").disabled = true;
+          document.getElementById("learning_play").disabled = true;
+          document.getElementById("learning_stop").disabled = true;
 				}
 			}
 		}
@@ -125,4 +132,7 @@ function stop_training() {
 	let xmlHttp = new XMLHttpRequest();
 	xmlHttp.open("GET", "http://localhost:5111/stop", true); // true for asynchronous 
 	xmlHttp.send(null);
+	document.getElementById("learning_pause").disabled = true;
+	document.getElementById("learning_play").disabled = true;
+	document.getElementById("learning_stop").disabled = true;
 }

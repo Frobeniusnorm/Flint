@@ -60,6 +60,7 @@ struct MetricReporter {
 						 std::to_string(info.last_validation_error));
 		}
 		virtual bool is_stop_signal() { return false; }
+		virtual void report_finished() {}
 };
 // TODO dataloader
 template <typename T1, unsigned int n1, typename T2, unsigned int n2>
@@ -140,7 +141,7 @@ class Trainer {
 		}
 		void train(int batch_size = 32) {
 			const size_t batches = data.X.get_shape()[0];
-			size_t number_batches = (size_t)(batches / (double)batch_size);
+			size_t number_batches = (size_t)ceil(batches / (double)batch_size);
 			MetricInfo info_obj = {.batch = 0,
 								   .epoch = 0,
 								   .total_batches = number_batches,
@@ -160,7 +161,8 @@ class Trainer {
 				indices = indices.permutate(0);
 				indices.execute();
 				double total_error = 0;
-				for (size_t b = 0; b < number_batches && !reporter->is_stop_signal(); b++) {
+				for (size_t b = 0;
+					 b < number_batches && !reporter->is_stop_signal(); b++) {
 					size_t slice_to = (b + 1) * batch_size;
 					if (slice_to > batches)
 						slice_to = batches;
@@ -184,8 +186,6 @@ class Trainer {
 					info_obj.batch = b + 1;
 					get_metric().report_batch(info_obj);
 				}
-				if (!reporter->is_stop_signal())
-					break;
 				info_obj.epoch = i + 1;
 				info_obj.last_epoch_error = total_error;
 				if (data.vX.has_value()) {
@@ -196,7 +196,10 @@ class Trainer {
 					info_obj.last_validation_error = val_error;
 				}
 				get_metric().report_epoch(info_obj);
+				if (reporter->is_stop_signal())
+					break;
 			}
+			get_metric().report_finished();
 		}
 };
 class NetworkMetricReporter : public MetricReporter {
@@ -207,7 +210,7 @@ class NetworkMetricReporter : public MetricReporter {
 		std::vector<MetricInfo> batches, epochs;
 		std::unordered_map<long, std::pair<long, long>> last_read;
 		// controller states
-		bool pause = false, stop = false;
+		bool pause = false, stop = false, sent_all = false;
 		std::binary_semaphore pause_lock;
 		void open_connection() {
 			socket_id = socket(AF_INET, SOCK_STREAM, 0);
@@ -229,7 +232,7 @@ class NetworkMetricReporter : public MetricReporter {
 	public:
 		void thread_routine() {
 			using namespace std;
-			while (!terminate) {
+			while (!terminate || !stop) {
 				size_t addrlen = sizeof(sockaddr);
 				int connection = accept(socket_id, (struct sockaddr *)&sockaddr,
 										(socklen_t *)&addrlen);
@@ -242,8 +245,9 @@ class NetworkMetricReporter : public MetricReporter {
 				if (no_bytes <= 0) {
 					if (!terminate)
 						flogging(F_WARNING,
-								 "reading error: " + to_string(no_bytes) + ", " +
-									 to_string(errno));
+								 "reading error: " + to_string(no_bytes) +
+									 ", " + to_string(errno));
+					close(connection);
 					continue;
 				}
 				const string response = string(&buffer[0]);
@@ -256,12 +260,14 @@ class NetworkMetricReporter : public MetricReporter {
 					response.substr(4, response.find_first_of("\r\n ", 4) - 4);
 				string packet;
 				if (path == "/pause") {
-					pause = true;			
+					pause = true;
 				} else if (path == "/play") {
 					pause = false;
 					pause_lock.release();
 				} else if (path == "/stop") {
+					pause = false;
 					stop = true;
+					pause_lock.release();
 				} else {
 					const long id = strtol(path.data() + 1, nullptr, 10);
 					packet = "{";
@@ -273,7 +279,7 @@ class NetworkMetricReporter : public MetricReporter {
 						packet += "\"state\":";
 						if (pause)
 							packet += "\"pause\"";
-						else 
+						else
 							packet += "\"play\"";
 						packet += ",";
 					}
@@ -325,22 +331,28 @@ class NetworkMetricReporter : public MetricReporter {
 			thread = std::thread(&NetworkMetricReporter::thread_routine, this);
 		}
 		~NetworkMetricReporter() override {
-			terminate = true;
-			shutdown(socket_id, SHUT_RD);
-			close(socket_id);
-			thread.join();
-			flogging(F_VERBOSE, "Shutting down network");
+			if (!terminate)
+				report_finished();
 		}
 		NetworkMetricReporter(NetworkMetricReporter &&) = delete;
 		NetworkMetricReporter(const NetworkMetricReporter &) = delete;
 		NetworkMetricReporter &operator=(NetworkMetricReporter &&) = delete;
 		NetworkMetricReporter &
 		operator=(const NetworkMetricReporter &) = delete;
-		void report_batch(MetricInfo info) override { 
+		void report_batch(MetricInfo info) override {
 			if (pause) {
 				pause_lock.acquire();
 			}
-			batches.push_back(info); 
+			batches.push_back(info);
+		}
+		void report_finished() override {
+			terminate = true;
+			shutdown(socket_id, SHUT_RD);
+			close(socket_id);
+			thread.join();
+			int t = 1;
+			setsockopt(socket_id, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int));
+			flogging(F_VERBOSE, "Shutting down network");
 		}
 		void report_epoch(MetricInfo info) override { epochs.push_back(info); }
 		bool is_stop_signal() override { return stop; }

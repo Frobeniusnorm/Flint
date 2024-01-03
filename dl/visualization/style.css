@@ -25,6 +25,11 @@ button:hover {
 button:active {
 	background: #E0E0F0;
 }
+button:disabled {
+	background: #A0A0A0;
+	border: 1px solid #707070;
+  cursor: not-allowed;
+}
 /* header */
 #header-bar{
     background-color: #20252F;

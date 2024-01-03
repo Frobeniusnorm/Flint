@@ -145,6 +145,11 @@ template <GenericLayer... T> struct SequentialModel {
 		void optimize(const Tensor<K, n> &error) {
 			backward<0>(error);
 		}
+		/**
+		 * Loads the weights of a model from a file.
+		 * The file has to be in a concatenated representation of the
+		 * deserialization of each weight in the correct order.
+		 */
 		void load(const std::string path) {
 			using namespace std;
 			ifstream file(path, ios::binary);
@@ -170,6 +175,9 @@ template <GenericLayer... T> struct SequentialModel {
 			flogging(F_VERBOSE,
 					 "loaded weights, " + to_string(index) + " bytes");
 		}
+		/**
+		 * Saves the deserialization of all weights of the model to a file.
+		 */
 		void save(const std::string path) {
 			using namespace std;
 			ofstream file(path, ios::binary);
@@ -185,6 +193,9 @@ template <GenericLayer... T> struct SequentialModel {
 			file.close();
 			flogging(F_VERBOSE, "stored weights");
 		}
+    /**
+     * Calculated gradient to the given error tensor for each weight and optimized the weights with their corres
+     */
 		template <typename T1, unsigned int n1>
 		void backward(Tensor<T1, n1> &error) {
 			std::vector<std::vector<FGraphNode *>> vars;
@@ -211,10 +222,42 @@ template <GenericLayer... T> struct SequentialModel {
 			}
 			backward<0>(plgrads);
 		}
+		/**
+		 * Enables the training mode, i.e. layers like dropout will be enabled
+		 * (internally used by the trainer)
+		 */
 		void enable_training() { set_training<0>(true); }
+		/**
+		 * Disables the training mode, i.e. layers like dropout will be disabled
+		 * (internally used by the trainer)
+		 */
 		void disable_training() { set_training<0>(false); }
 		/** Returns a small summary of the model. */
 		std::string summary() { return summary_helper<0>(); }
+    /**
+     * Returns the name of each layer in an array
+     */
+		std::array<std::string, sizeof...(T)> layer_names() {
+			std::array<std::string, sizeof...(T)> names;
+      get_names<0>(names);
+			return names;
+		}
+    /**
+     * Returns the description of each layer in an array
+     */
+		std::array<std::string, sizeof...(T)> layer_descriptions() {
+			std::array<std::string, sizeof...(T)> descriptions;
+      get_descriptions<0>(descriptions);
+			return descriptions;
+		}
+    /**
+     * Returns the number of parameters of each layer in an array
+     */
+		std::array<size_t, sizeof...(T)> num_layer_parameters() {
+			std::array<size_t, sizeof...(T)> numbers;
+      get_num_parameters<0>(numbers);
+			return numbers;
+		}
 		/**
 		 * Returns a per-layer vector of all weight-tensors of that layer
 		 */
@@ -263,9 +306,27 @@ template <GenericLayer... T> struct SequentialModel {
 		template <int n> std::string summary_helper() {
 			if constexpr (n < sizeof...(T))
 				return std::to_string(n + 1) + ". " +
-					   std::get<n>(layers).summary() + "\n" +
+					   std::get<n>(layers).name() + ": " +
+					   std::get<n>(layers).description() + "\n" +
 					   summary_helper<n + 1>();
 			return "";
+		}
+		template <int n>
+		void get_names(std::array<std::string, sizeof...(T)> names) {
+			if constexpr (n < sizeof...(T))
+				names[n] = std::get<n>(layers).name();
+		}
+		template <int n>
+		void
+		get_descriptions(std::array<std::string, sizeof...(T)> descriptions) {
+			if constexpr (n < sizeof...(T))
+				descriptions[n] = std::get<n>(layers).description();
+		}
+		template <int n>
+		void
+		get_num_parameters(std::array<size_t, sizeof...(T)> number_parameters) {
+			if constexpr (n < sizeof...(T))
+				number_parameters[n] = std::get<n>(layers).num_parameters();
 		}
 		template <int n>
 		inline void
@@ -282,10 +343,12 @@ template <GenericLayer... T> struct SequentialModel {
 			{
 				Tensor<T1, n1> it(in);
 				// now in is no longer needed (reference counter has been
-				// artifically incremented) will be freed with it at the end of
-				// the block
-				in->reference_counter--;
+				// artifically incremented). We undo the incrementation of the
+				// Tensor struct
+				in->reference_counter -= 2;
 				auto ot = std::get<layer>(layers).forward(it);
+				// to prevent memory errors or double frees
+				it.set_graph_node(nullptr);
 				// out is still needed -> save the GraphNode handle from
 				// destruction with
 				out = ot.get_graph_node();
