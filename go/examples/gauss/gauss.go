@@ -5,31 +5,27 @@ package main
 import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/wrapper"
-	"log"
 )
 
 func main() {
-	wrapper.Init(wrapper.BACKEND_BOTH)
+	_ = wrapper.Init(wrapper.BACKEND_BOTH)
 	wrapper.SetLoggingLevel(wrapper.LOG_INFO)
 
-	img, err := wrapper.LoadImage("../../../wrapper.png")
-	if err != nil {
-		log.Fatal(err)
-	}
+	img, _ := wrapper.LoadImage("../../gopher.png")
 
 	imgShape := img.GetShape()
 	h, w, c := imgShape[0], imgShape[1], imgShape[2]
 	fmt.Println("img shape (beginning):", imgShape)
 
 	// channel in first dim
-	img = wrapper.Transpose(img, wrapper.Axes{2, 1, 0})
+	img, _ = wrapper.Transpose(img, wrapper.Axes{2, 1, 0})
 
-	var kernelData = []float32{
+	var kernelData = []wrapper.Float{
 		1.0 / 16.0, 1.0 / 8.0, 1.0 / 16.0,
 		1.0 / 8.0, 1.0 / 4.0, 1.0 / 8.0,
 		1.0 / 16.0, 1.0 / 8.0, 1.0 / 16.0,
 	}
-	kernel := wrapper.CreateGraph(kernelData, wrapper.Shape{1, 3, 3, 1})
+	kernel, _ := wrapper.CreateGraphDataFloat(kernelData, wrapper.Shape{1, 3, 3, 1})
 
 	wrapper.IncreaseRefCounter(kernel)
 	wrapper.IncreaseRefCounter(img)
@@ -37,28 +33,28 @@ func main() {
 	for i := 0; i < 200; i++ {
 		fmt.Println("iteration:", i)
 		// add padding
-		img = wrapper.Extend(
+		img, _ = wrapper.Extend(
 			img,
 			wrapper.Shape{c, w + 2, h + 2},
 			wrapper.Axes{0, 1, 1},
 		)
 		// gaussian blur
-		img = wrapper.Reshape(img, wrapper.Shape{c, w + 2, h + 2, 1})
-		img = wrapper.Convolve(img, kernel, wrapper.Stride{1, 1, 1})
+		img, _ = wrapper.Reshape(img, wrapper.Shape{c, w + 2, h + 2, 1})
+		img, _ = wrapper.Convolve(img, kernel, wrapper.Stride{1, 1, 1})
 
-		img = wrapper.ExecuteGraph(img)
-		img = wrapper.OptimizeMemory(img)
+		img, _ = wrapper.ExecuteGraph(img)
+		img, _ = wrapper.OptimizeMemory(img)
 	}
 	fmt.Println("done")
 
 	// channel back into last dim
-	img = wrapper.Transpose(img, wrapper.Axes{2, 1, 0})
+	img, _ = wrapper.Transpose(img, wrapper.Axes{2, 1, 0})
 
-	wrapper.StoreImage(img, "./gauss.jpg", wrapper.JPEG)
+	_ = wrapper.StoreImage(img, "./gauss.jpg", wrapper.JPEG)
 
 	wrapper.DecreaseRefCounter(kernel)
 	wrapper.DecreaseRefCounter(img)
 	wrapper.FreeGraph(kernel)
 	wrapper.FreeGraph(img)
-	wrapper.Cleanup()
+	_ = wrapper.Cleanup()
 }
