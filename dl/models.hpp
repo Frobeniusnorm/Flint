@@ -96,6 +96,8 @@ template <GenericLayer... T> struct SequentialModel {
 		SequentialModel(T... layers) : layers(std::move(layers)...) {}
 
 		template <OptimizerFactory Fac> void generate_optimizer(Fac fac) {
+      optimizer_name = fac.name();
+      optimizer_desc = fac.description();
 			gen_opt<0>(fac);
 		}
 		/**
@@ -250,6 +252,18 @@ template <GenericLayer... T> struct SequentialModel {
 			get_descriptions<0>(descriptions);
 			return descriptions;
 		}
+    /**
+     * Returns the name of the generated optimizer
+     */
+    std::string optimizer() {
+      return optimizer_name;
+    }
+    /**
+     * Returns the description of the generated optimizer
+     */
+    std::string optimizer_description() {
+      return optimizer_desc;
+    }
 		/**
 		 * Returns the number of parameters of each layer in an array
 		 */
@@ -268,6 +282,7 @@ template <GenericLayer... T> struct SequentialModel {
 		}
 
 	private:
+    std::string optimizer_name, optimizer_desc;
 		template <int n, typename K, unsigned int k>
 		inline void backward(const Tensor<K, k> &error) {
 			if constexpr (n < sizeof...(T)) {

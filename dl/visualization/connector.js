@@ -148,12 +148,19 @@ function stop_training() {
     clearInterval(color_in);
 }
 function describe_model(data) {
-  document.getElementById("model_information").innerHTML = "";
   const description = JSON.parse(data);
   console.log(description);
+  let html = '<div style="width: 40em; display: inline-block; float:left;">';
   for (let i = 0; i < description.layers.length; i++) {
     const layer = description.layers[i];
-    document.getElementById("model_information").innerHTML += '<div class="layer_card"><div class="layer_header"><b>' + layer.name + 
-      '</b>&nbsp;<pre style="display:inline;">' + layer.no_params + '</pre> parameters</div><div class="layer_description">' + layer.description + '</div></div>';
+    html += 
+      '<div class="layer_card"><div class="layer_header"><b>' + layer.name + 
+      '</b>&nbsp;<pre style="display:inline;">' + layer.no_params + 
+      '</pre> parameters</div><div class="layer_description">' + layer.description + '</div></div>';
   }
+  html += '</div><div style="width: 28em; display: inline-block; float:left; padding-left: 2em;">&nbsp;<br/><b>Loss Function: </b>' + description.loss_fct + "<br/>"
+  html += '<div class="layer_card"><div class="layer_header"><b>'
+    + description.optimizer.name + '</b></div><div class="layer_description">' + description.optimizer.description + '</div></div></div>';
+  document.getElementById("model_information").innerHTML = html;
+
 }

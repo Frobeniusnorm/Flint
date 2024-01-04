@@ -65,18 +65,21 @@ struct MetricReporter {
 		model_description(std::vector<std::string> layer_names,
 						  std::vector<std::string> layer_descriptions,
 						  std::vector<size_t> number_parameters,
-						  std::string loss_fct) {
+						  std::string loss_fct, std::string optimizer_name,
+						  std::string optimizer_desc) {
 			this->layer_names = layer_names;
 			this->layer_descriptions = layer_descriptions;
 			this->number_parameters = number_parameters;
 			this->loss_fct = loss_fct;
+			this->optimizer_desc = optimizer_desc;
+			this->optimizer_name = optimizer_name;
 		}
 
 	protected:
 		std::vector<std::string> layer_names;
 		std::vector<std::string> layer_descriptions;
 		std::vector<size_t> number_parameters;
-		std::string loss_fct;
+		std::string loss_fct, optimizer_name, optimizer_desc;
 };
 // TODO dataloader
 template <typename T1, unsigned int n1, typename T2, unsigned int n2>
@@ -144,7 +147,7 @@ class Trainer {
 				vector<string>(descriptions.begin(), descriptions.end()),
 				vector<size_t>(number_parameters.begin(),
 							   number_parameters.end()),
-				loss.name());
+				loss.name(), model.optimizer(), model.optimizer_description());
 		}
 
 		/**
@@ -174,7 +177,7 @@ class Trainer {
 				vector<string>(descriptions.begin(), descriptions.end()),
 				vector<size_t>(number_parameters.begin(),
 							   number_parameters.end()),
-				loss.name());
+				loss.name(), model.optimizer(), model.optimizer_description());
 		}
 		void train(int batch_size = 32) {
 			const size_t batches = data.X.get_shape()[0];
@@ -315,7 +318,12 @@ class NetworkMetricReporter : public MetricReporter {
 								  layer_descriptions[i] + "\",\"no_params\":" +
 								  to_string(number_parameters[i]) + "}";
 					}
-					packet += "]}";
+					packet += "],\"loss_fct\":\"" + loss_fct +
+							  "\",\"optimizer\":{\"name\":\"" + optimizer_name +
+							  "\", "
+							  "\"description\":\"" +
+							  optimizer_desc + "\"}}";
+
 				} else {
 					const long id = strtol(path.data() + 1, nullptr, 10);
 					packet = "{";
@@ -395,7 +403,7 @@ class NetworkMetricReporter : public MetricReporter {
 		}
 		void report_finished() override {
 			terminate = true;
-      stop = true;
+			stop = true;
 			shutdown(socket_id, SHUT_RD);
 			close(socket_id);
 			thread.join();
