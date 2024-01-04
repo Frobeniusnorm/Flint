@@ -5,6 +5,8 @@ import (
 	"github.com/Frobeniusnorm/Flint/go/wrapper"
 )
 
+// cos
+
 func cosImpl(x Tensor) Tensor {
 	node, err := wrapper.Cos(x.node)
 	return Tensor{
@@ -24,6 +26,8 @@ func (x Tensor) Cos() Tensor {
 func (x *Tensor) Cos_() {
 	*x = cosImpl(*x)
 }
+
+// sin
 
 func sinImpl(x Tensor) Tensor {
 	node, err := wrapper.Sin(x.node)
@@ -45,6 +49,8 @@ func (x *Tensor) Sin_() {
 	*x = sinImpl(*x)
 }
 
+// tan
+
 func tanImpl(x Tensor) Tensor {
 	node, err := wrapper.Tan(x.node)
 	return Tensor{
@@ -64,6 +70,8 @@ func (x Tensor) Tan() Tensor {
 func (x *Tensor) Tan_() {
 	*x = tanImpl(*x)
 }
+
+// acos
 
 func acosImpl(x Tensor) Tensor {
 	node, err := wrapper.Acos(x.node)
@@ -85,6 +93,8 @@ func (x *Tensor) Acos_() {
 	*x = acosImpl(*x)
 }
 
+// asin
+
 func asinImpl(x Tensor) Tensor {
 	node, err := wrapper.Asin(x.node)
 	return Tensor{
@@ -105,6 +115,8 @@ func (x *Tensor) Asin_() {
 
 	*x = asinImpl(*x)
 }
+
+// atan
 
 func atanImpl(x Tensor) Tensor {
 	node, err := wrapper.Atan(x.node)
