@@ -74,7 +74,7 @@ type Result[T Numeric] struct {
 	DataType  DataType
 }
 
-// TODO: writer parsing functions to convert from C to Go types
+// TODO: write parsing functions to convert from C to Go types
 
 type ResultData[T completeNumeric] []T
 
