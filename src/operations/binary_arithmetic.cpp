@@ -290,31 +290,44 @@ void MatMulImpl::binary_expression(T *__restrict__ result,
 								   size_t size, size_t index_man_1,
 								   size_t inv_man_1, size_t index_man_2,
 								   size_t inv_man_2, const FGraphNode *curr) {
-	FGraphNode *gnp1 = curr->predecessors[0], *gnp2 = curr->predecessors[1];
-	size_t l = gnp1->operation.shape[gnp1->operation.dimensions - 2];
-	size_t m = gnp1->operation.shape[gnp1->operation.dimensions - 1];
-	size_t n = gnp2->operation.shape[gnp2->operation.dimensions - 1];
-	for (size_t index = from; index < from + size; index++) {
+	const FGraphNode *gnp1 = curr->predecessors[0],
+					 *gnp2 = curr->predecessors[1];
+	const size_t l = gnp1->operation.shape[gnp1->operation.dimensions - 2];
+	const size_t m = gnp1->operation.shape[gnp1->operation.dimensions - 1];
+	const size_t n = gnp2->operation.shape[gnp2->operation.dimensions - 1];
+	// to optimize cache hits, we iterate inside of the loop over m over n
+	// for last iteration (inclusive)
+	const size_t k_end = ((from + size - 1) % (l * n)) % n;
+	const size_t j_end = ((from + size - 1) % (l * n)) / n;
+	for (size_t index = from; index < from + size;) {
 		result[index] = 0;
 		// indices in node matrix
-		size_t j = (index % (l * n)) / n;
-		size_t k = (index % (l * n)) % n;
-
+		const size_t j = (index % (l * n)) / n;
+		const size_t k_start = (index % (l * n)) % n;
+		// in the last matrix in the last row, use ending k in that iteration
+		const size_t k_end_actual =
+			(j == j_end && (from + size - index < l * n)) ? k_end
+														  : n - 1; // inclusive
 		// matrix number of predecessors
 		size_t base_p1 = 0;
-		if (gnp1->operation.dimensions > 2) {
+		if (gnp1->operation.dimensions > 2)
 			// get matrix number of index and then reproject
 			base_p1 = (index / (l * n)) * (l * m);
-		}
 		size_t base_p2 = 0;
-		if (gnp2->operation.dimensions > 2) {
+		if (gnp2->operation.dimensions > 2) 
 			// get matrix number of index and then reproject
 			base_p2 = (index / (l * n)) * (m * n);
-		}
+		// initialize all results
+		for (size_t k = 0; k <= k_end_actual - k_start; k++)
+			result[index + k] = 0;
+		// do the cache optimized iteration
 		for (size_t i = 0; i < m; i++) {
-			result[index] +=
-				data1[base_p1 + j * m + i] * data2[base_p2 + i * n + k];
+			const A a = data1[base_p1 + j * m + i];
+			for (size_t k = 0; k <= k_end_actual - k_start; k++) {
+				result[index + k] += a * data2[base_p2 + i * n + k];
+			}
 		}
+		index += k_end_actual - k_start + 1;
 	}
 }
 int MatMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,

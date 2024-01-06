@@ -127,11 +127,11 @@ double convolve_grad_fun() {
 }
 void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
 	unordered_map<string, double (*)()> benches;
-	benches.insert({"convolve_fun", convolve_fun});
-	benches.insert({"convolve_grad_fun", convolve_grad_fun});
-	benches.insert({"gradient_fun", gradient_fun});
+	//benches.insert({"convolve_fun", convolve_fun});
+	//benches.insert({"convolve_grad_fun", convolve_grad_fun});
+	//benches.insert({"gradient_fun", gradient_fun});
 	benches.insert({"matrix_multiplication", matrix_multiplication});
-	benches.insert({"reduce_fun", reduce_fun});
+	//benches.insert({"reduce_fun", reduce_fun});
 	/////////////////////////////////////////////////
 	unordered_map<string, tuple<double, double, double>> times;
 	Flint::setLoggingLevel(F_INFO);

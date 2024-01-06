@@ -169,9 +169,9 @@ FGraphNode *fCalculateResult(FGraphNode *node) {
 	return node;
 }
 FErrorType flintCleanup() {
-	for (OperationImplementation *impl :
-		 OperationImplementation::implementations)
-		delete impl;
+	// for (OperationImplementation *impl :
+	// 	 OperationImplementation::implementations)
+	// 	delete impl;
 	FErrorType e1 = flintCleanup_cpu();
 	if (e1 != NO_ERROR)
 		return e1;
