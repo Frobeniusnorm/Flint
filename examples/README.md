@@ -6,7 +6,8 @@ One implementation is written with the C and the other with the C++ interface. L
 
 ## MNIST
 Showcases the Deep Learning library of the C++ interface by using a sequential model with Convolution and Pooling Layers for learning on the MNIST dataset.
-The dataset can be downloaded with the `download_data.sh` script. If training has been succesfull the model should be able to categorize 28x28 images of number characters (0-9).
+The dataset can be downloaded with the `download_data.sh` script. If training has been succesfull the model should be able to categorize 28x28 images of number characters (0-9). The deep learning library has a small and incomplete visualization front end that is currently used.
+Once the `NetworkMetricReporter` is set up, the training status can be seen by opening the `dl/visualization/index.html` in a browser (preferably firefox).
 
 ## Building
 With CMake:

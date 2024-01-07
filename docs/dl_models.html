@@ -160,7 +160,7 @@
       <h1 id="trainer"><u>dl/trainer.hpp</u></h1>
       <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-&model_				TrainingData_T1__n1__T2__n2__&data__L_loss_			:_model_model___data_data___loss_loss__"><b>Trainer</b>(SequentialModel<T...> &model,
 				TrainingData<T1, n1, T2, n2> &data, L loss)
-			: model(model), data(data), loss(loss) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-max_epochs_int_epochs__">void <b>max_epochs</b>(int epochs) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-stopping_error_double_error__">void <b>stopping_error</b>(double error) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-set_metric_reporter_MetricReporter_*reporter__">void <b>set_metric_reporter</b>(MetricReporter *reporter) </a><br/><br/></div>
+			: model(model), data(data), loss(loss) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-max_epochs_int_epochs__">void <b>max_epochs</b>(int epochs) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-stopping_error_double_error__">void <b>stopping_error</b>(double error) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-set_metric_reporter_MetricReporter_*reporter__">void <b>set_metric_reporter</b>(MetricReporter *reporter) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-train_int_batch_size_=_32__">void <b>train</b>(int batch_size = 32) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-NetworkMetricReporter_:_public_MetricReporter_">class <b>NetworkMetricReporter : public MetricReporter </b></a><br/><br/></div>
       <div style="display: block; height: 2em;"></div>
       <div id="s-&model_				TrainingData_T1__n1__T2__n2__&data__L_loss_			:_model_model___data_data___loss_loss__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code"><b>Trainer</b>(SequentialModel<T...> &model,
 				TrainingData<T1, n1, T2, n2> &data, L loss)
@@ -174,26 +174,15 @@
    output and the desired one from the training data. Can be an
    arbitrary class that implements the <pre class="inline_code">GenericLoss</pre> concept, some
    implementations can be found in "losses.hpp".
-</li><li><pre class="inline_code">epochs</pre> Number of epochs the model has to be trained. The complete
-   dataset is passed through the model per epoch (It is split into
-   <pre class="inline_code">batch_size</pre> slices in the first dimension of the input data and
- 	 each batch has to be passed through the model once per epoch).
-</li><li><pre class="inline_code">batch_size</pre> Size of each batch. A batch is a slice of the first
-   dimension of the input data. The input is shuffeled every epoch,
-   which is important if your batch size is smaller then your input
-   size. The weights of the model are optimized per batch that was
-   passed through the model. Meaning small batch sizes lead to faster
-   convergence (since more optimizations are executed) but to more
-   noise and variance, since each batch is only an approximation of
-   the complete dataset. If training times don't matter we suggest
-   full gradient descent (meaning <pre class="inline_code">batch_size = input_size</pre>), else
-   finetune this value to your usecase.</li></ul>
-</div></div><div style="display: block; height: 2em;"></div>
+</li><li><pre class="inline_code">epochs</pre> .</li></ul> </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-max_epochs_int_epochs__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>max_epochs</b>(int epochs) </pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Sets the maximum number of epochs after which the training should be
- stopped
+ stopped. The complete dataset is passed through the model per epoch
+ (It is split into <pre class="inline_code">batch_size</pre> - configured in the  <a href="#s-train_int_batch_size_=_32__"><pre class="inline_code">train</pre></a> method -
+ slices in the first dimension of the input data and each batch has to
+ be passed through the model once per epoch)
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-stopping_error_double_error__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>stopping_error</b>(double error) </pre></div>
 <br />
@@ -206,6 +195,27 @@
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Sets the metric reporter (to print or display informations about the
  training process)
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-train_int_batch_size_=_32__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>train</b>(int batch_size = 32) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Trains the model for the given batch size. A batch is a slice of the
+ first imension of the input data. The input is shuffeled every epoch,
+ which is important if your batch size is smaller then your input
+ size. The weights of the model are optimized per batch that was
+ passed through the model. Meaning small batch sizes lead to faster
+ convergence (since more optimizations are executed) and lower memory
+ consumption, but to more noise and variance, since each batch is only
+ an approximation of the complete dataset. If training times and
+ memory consumption don't matter we suggest full gradient descent
+ (meaning <pre class="inline_code">batch_size = input_size</pre>), else finetune this value to your
+ usecase.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-NetworkMetricReporter_:_public_MetricReporter_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">class <b>NetworkMetricReporter : public MetricReporter </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Sends the trainings data over a REST API for HTTP connections on the port
+ 5111. For a documentation of the API see <pre class="inline_code">dl/visualization/README.md</pre>
 </div></div><div style="display: block; height: 2em;"></div>
 
     </div>

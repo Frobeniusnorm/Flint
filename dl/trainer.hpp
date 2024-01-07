@@ -120,21 +120,7 @@ class Trainer {
 		 *   output and the desired one from the training data. Can be an
 		 *   arbitrary class that implements the `GenericLoss` concept, some
 		 *   implementations can be found in "losses.hpp".
-		 * - `epochs` Number of epochs the model has to be trained. The complete
-		 *   dataset is passed through the model per epoch (It is split into
-		 *   `batch_size` slices in the first dimension of the input data and
-		 * 	 each batch has to be passed through the model once per epoch).
-		 * - `batch_size` Size of each batch. A batch is a slice of the first
-		 *   dimension of the input data. The input is shuffeled every epoch,
-		 *   which is important if your batch size is smaller then your input
-		 *   size. The weights of the model are optimized per batch that was
-		 *   passed through the model. Meaning small batch sizes lead to faster
-		 *   convergence (since more optimizations are executed) but to more
-		 *   noise and variance, since each batch is only an approximation of
-		 *   the complete dataset. If training times don't matter we suggest
-		 *   full gradient descent (meaning `batch_size = input_size`), else
-		 *   finetune this value to your usecase.
-		 */
+		 * - `epochs` . */
 		Trainer(SequentialModel<T...> &model,
 				TrainingData<T1, n1, T2, n2> &data, L loss)
 			: model(model), data(data), loss(loss) {
@@ -152,7 +138,10 @@ class Trainer {
 
 		/**
 		 * Sets the maximum number of epochs after which the training should be
-		 * stopped
+		 * stopped. The complete dataset is passed through the model per epoch
+		 * (It is split into `batch_size` - configured in the `train` method -
+		 * slices in the first dimension of the input data and each batch has to
+		 * be passed through the model once per epoch)
 		 */
 		void max_epochs(int epochs) { this->epochs = epochs; }
 
@@ -179,6 +168,19 @@ class Trainer {
 							   number_parameters.end()),
 				loss.name(), model.optimizer(), model.optimizer_description());
 		}
+		/**
+		 * Trains the model for the given batch size. A batch is a slice of the
+		 * first imension of the input data. The input is shuffeled every epoch,
+		 * which is important if your batch size is smaller then your input
+		 * size. The weights of the model are optimized per batch that was
+		 * passed through the model. Meaning small batch sizes lead to faster
+		 * convergence (since more optimizations are executed) and lower memory
+		 * consumption, but to more noise and variance, since each batch is only
+		 * an approximation of the complete dataset. If training times and
+		 * memory consumption don't matter we suggest full gradient descent
+		 * (meaning `batch_size = input_size`), else finetune this value to your
+		 * usecase.
+		 */
 		void train(int batch_size = 32) {
 			const size_t batches = data.X.get_shape()[0];
 			size_t number_batches = (size_t)ceil(batches / (double)batch_size);
@@ -242,6 +244,10 @@ class Trainer {
 			get_metric().report_finished();
 		}
 };
+/**
+ * Sends the trainings data over a REST API for HTTP connections on the port
+ * 5111. For a documentation of the API see `dl/visualization/README.md`
+ */
 class NetworkMetricReporter : public MetricReporter {
 		std::thread thread;
 		bool terminate;
