@@ -96,7 +96,7 @@ pacman -S gcc opencl-headers rocm-opencl-runtime make cmake
 ## Examples ##
 
 There is an example model for the MNIST dataset showcasing the Deep Learning front end and a simple implementation of a Gauss filter with convolutions.
-Both help seeing Flint in action [src/examples/README.md](https://github.com/Frobeniusnorm/Flint/tree/main/src/examples#readme)
+Both help seeing Flint in action [examples/README.md](https://github.com/Frobeniusnorm/Flint/tree/main/examples#readme)
 
 ## Contribution ##
 
