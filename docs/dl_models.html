@@ -37,15 +37,17 @@
       <div class="standalone-button button2"><a href="#trainer">trainer</a></div>
       <div style="display: block; height: 2em;"></div>
       <h1 id="models"><u>dl/models.hpp</u></h1>
-      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_GenericLayer____T__struct_SequentialModel_">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_toFlintType_K_____T________			___get_output_dim_n__T_______		forward_Tensor_K__n__&in__">template &lt;typename K, unsigned int n&gt;
+      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_GenericLayer____T__struct_SequentialModel_">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_toFlintType_K_____T________			___get_output_dim_n__T_______		forward_batch_Tensor_K__n__&in__">template &lt;typename K, unsigned int n&gt;
+		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
+				   get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
+			   get_output_dim&lt;n, <b>T...&gt;()&gt;
+		forward_batch</b>(Tensor<K, n> &in) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_toFlintType_K_____T________			___get_output_dim_n__T_______		forward_Tensor_K__n__&in__">template &lt;typename K, unsigned int n&gt;
 		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
 				   get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
 			   get_output_dim&lt;n, <b>T...&gt;()&gt;
 		forward</b>(Tensor<K, n> &in) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		void_optimize_const_Tensor_K__n__&error__">template &lt;typename K, unsigned int n&gt;
-		void <b>optimize</b>(const Tensor<K, n> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T1__unsigned_int_n1__typename_T2__unsigned_int_n2_				__GenericLoss_L_		void_train_TrainingData_T1__n1__T2__n2__&data__L_loss__int_epochs_=_1_				___int_batch_size_=_32__">template &lt;typename T1, unsigned int n1, typename T2, unsigned int n2,
-				  GenericLoss L&gt;
-		void <b>train</b>(TrainingData<T1, n1, T2, n2> &data, L loss, int epochs = 1,
-				   int batch_size = 32) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-summary___">std::string <b>summary</b>() </a><br/><br/></div>
+		void <b>optimize</b>(const Tensor<K, n> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-load_const_std::string_path__">void <b>load</b>(const std::string path) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-save_const_std::string_path__">void <b>save</b>(const std::string path) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T1__unsigned_int_n1_		void_backward_Tensor_T1__n1__&error__">template &lt;typename T1, unsigned int n1&gt;
+		void <b>backward</b>(Tensor<T1, n1> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-enable_training___">void <b>enable_training</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-disable_training___">void <b>disable_training</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-summary___">std::string <b>summary</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-sizeof____T___layer_names___">std::array&lt;std::string, sizeof...(T)&gt; <b>layer_names</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-sizeof____T___layer_descriptions___">std::array&lt;std::string, sizeof...(T)&gt; <b>layer_descriptions</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-optimizer___">std::string <b>optimizer</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-optimizer_description___">std::string <b>optimizer_description</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-sizeof____T___num_layer_parameters___">std::array&lt;size_t, sizeof...(T)&gt; <b>num_layer_parameters</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-___collect_weights___">std::vector&lt;std::vector&lt;FGraphNode *&gt;&gt; <b>collect_weights</b>() </a><br/><br/></div>
       <div style="display: block; height: 2em;"></div>
       <div id="s-_GenericLayer____T__struct_SequentialModel_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></pre></div>
 <br />
@@ -61,6 +63,16 @@
   SoftMax()
  ); <span style="color: #D0D0D0">// has type SequentialModel&lt;Connected, Relu, Dropout, Connected, SoftMax&gt;</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_toFlintType_K_____T________			___get_output_dim_n__T_______		forward_batch_Tensor_K__n__&in__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
+		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
+				   get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
+			   get_output_dim&lt;n, <b>T...&gt;()&gt;
+		forward_batch</b>(Tensor<K, n> &in) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Passes a batch of input tensors through all layers and returns the
+ output of the last layer.
+</div></div><div style="display: block; height: 2em;"></div>
 <div id="s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_toFlintType_K_____T________			___get_output_dim_n__T_______		forward_Tensor_K__n__&in__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
 		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
 				   get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
@@ -68,7 +80,7 @@
 		forward</b>(Tensor<K, n> &in) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Passes a input tensor through all layers and returns the output of
+ Passes an input tensor through all layers and returns the output of
  the last layer.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-_typename_K__unsigned_int_n_		void_optimize_const_Tensor_K__n__&error__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
@@ -78,41 +90,124 @@
  Optimizes the weights (calculates the gradients + calls the
  optimizers) of all layer to an error.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_T1__unsigned_int_n1__typename_T2__unsigned_int_n2_				__GenericLoss_L_		void_train_TrainingData_T1__n1__T2__n2__&data__L_loss__int_epochs_=_1_				___int_batch_size_=_32__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename T1, unsigned int n1, typename T2, unsigned int n2,
-				  GenericLoss L&gt;
-		void <b>train</b>(TrainingData<T1, n1, T2, n2> &data, L loss, int epochs = 1,
-				   int batch_size = 32) </pre></div>
+<div id="s-load_const_std::string_path__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>load</b>(const std::string path) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Trains the model with input data and the desired output.<ul><li><pre class="inline_code">data</pre> contains the input (<pre class="inline_code">X</pre>) and desired data (<pre class="inline_code">Y</pre>) and
-</li></ul> optionally validation data, if it does after each epoch a validation
- error is calculated.<ul><li><pre class="inline_code">loss</pre> The loss function to calculate the error between the actual
-</li></ul> output and the desired one from the training data. Can be an
- arbitrary class that implements the <pre class="inline_code">GenericLoss</pre> concept, some
- implementations can be found in "losses.hpp".<ul><li><pre class="inline_code">epochs</pre> Number of epochs the model has to be trained. The complete
-    dataset is passed through the model per epoch (It is split into
-    <pre class="inline_code">batch_size</pre> slices in the first dimension of the input data and
-</li></ul> each batch has to be passed through the model once per epoch).<ul><li><pre class="inline_code">batch_size</pre> Size of each batch. A batch is a slice of the first
-    dimension of the input data. The input is shuffeled every epoch,
-</li></ul> which is important if your batch size is smaller then your input
- size. The weights of the model are optimized per batch that was
- passed through the model. Meaning small batch sizes lead to faster
- convergence (since more optimizations are executed) but to more noise
- and variance, since each batch is only an approximation of the
- complete dataset. If training times don't matter we suggest full
- gradient descent (meaning <pre class="inline_code">batch_size = input_size</pre>), else finetune
- this value to your usecase.
+ Loads the weights of a model from a file.
+ The file has to be in a concatenated representation of the
+ deserialization of each weight in the correct order.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-save_const_std::string_path__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>save</b>(const std::string path) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Saves the deserialization of all weights of the model to a file.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T1__unsigned_int_n1_		void_backward_Tensor_T1__n1__&error__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename T1, unsigned int n1&gt;
+		void <b>backward</b>(Tensor<T1, n1> &error) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Calculated gradient to the given error tensor for each weight and
+ optimized the weights with their corres
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-enable_training___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>enable_training</b>() </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Enables the training mode, i.e. layers like dropout will be enabled
+ (internally used by the trainer)
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-disable_training___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>disable_training</b>() </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Disables the training mode, i.e. layers like dropout will be disabled
+ (internally used by the trainer)
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-summary___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::string <b>summary</b>() </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Returns a small summary of the model. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-sizeof____T___layer_names___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::array&lt;std::string, sizeof...(T)&gt; <b>layer_names</b>() </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Returns the name of each layer in an array
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-sizeof____T___layer_descriptions___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::array&lt;std::string, sizeof...(T)&gt; <b>layer_descriptions</b>() </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Returns the description of each layer in an array
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-optimizer___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::string <b>optimizer</b>() </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Returns the name of the generated optimizer
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-optimizer_description___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::string <b>optimizer_description</b>() </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Returns the description of the generated optimizer
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-sizeof____T___num_layer_parameters___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::array&lt;size_t, sizeof...(T)&gt; <b>num_layer_parameters</b>() </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Returns the number of parameters of each layer in an array
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-___collect_weights___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::vector&lt;std::vector&lt;FGraphNode *&gt;&gt; <b>collect_weights</b>() </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Returns a per-layer vector of all weight-tensors of that layer
+</div></div><div style="display: block; height: 2em;"></div>
 
 
       <div style="display: block; height: 2em;"></div>
       <h1 id="trainer"><u>dl/trainer.hpp</u></h1>
-      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div><br/></div>
+      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-&model_				TrainingData_T1__n1__T2__n2__&data__L_loss_			:_model_model___data_data___loss_loss__"><b>Trainer</b>(SequentialModel<T...> &model,
+				TrainingData<T1, n1, T2, n2> &data, L loss)
+			: model(model), data(data), loss(loss) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-max_epochs_int_epochs__">void <b>max_epochs</b>(int epochs) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-stopping_error_double_error__">void <b>stopping_error</b>(double error) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-set_metric_reporter_MetricReporter_*reporter__">void <b>set_metric_reporter</b>(MetricReporter *reporter) </a><br/><br/></div>
       <div style="display: block; height: 2em;"></div>
-      
+      <div id="s-&model_				TrainingData_T1__n1__T2__n2__&data__L_loss_			:_model_model___data_data___loss_loss__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code"><b>Trainer</b>(SequentialModel<T...> &model,
+				TrainingData<T1, n1, T2, n2> &data, L loss)
+			: model(model), data(data), loss(loss) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Trains the model with input data and the desired output.<ul><li><pre class="inline_code">data</pre> contains the input (<pre class="inline_code">X</pre>) and desired data (<pre class="inline_code">Y</pre>) and
+   optionally validation data, if it does after each epoch a
+   validation error is calculated.
+</li><li> <a href="#s-&model_				TrainingData_T1__n1__T2__n2__&data__L_loss_			:_model_model___data_data___loss_loss__"><pre class="inline_code">loss</pre></a> The loss function to calculate the error between the actual
+   output and the desired one from the training data. Can be an
+   arbitrary class that implements the <pre class="inline_code">GenericLoss</pre> concept, some
+   implementations can be found in "losses.hpp".
+</li><li><pre class="inline_code">epochs</pre> Number of epochs the model has to be trained. The complete
+   dataset is passed through the model per epoch (It is split into
+   <pre class="inline_code">batch_size</pre> slices in the first dimension of the input data and
+ 	 each batch has to be passed through the model once per epoch).
+</li><li><pre class="inline_code">batch_size</pre> Size of each batch. A batch is a slice of the first
+   dimension of the input data. The input is shuffeled every epoch,
+   which is important if your batch size is smaller then your input
+   size. The weights of the model are optimized per batch that was
+   passed through the model. Meaning small batch sizes lead to faster
+   convergence (since more optimizations are executed) but to more
+   noise and variance, since each batch is only an approximation of
+   the complete dataset. If training times don't matter we suggest
+   full gradient descent (meaning <pre class="inline_code">batch_size = input_size</pre>), else
+   finetune this value to your usecase.</li></ul>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-max_epochs_int_epochs__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>max_epochs</b>(int epochs) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Sets the maximum number of epochs after which the training should be
+ stopped
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-stopping_error_double_error__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>stopping_error</b>(double error) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Sets the minimum epoch error after which the training should be
+ stopped
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-set_metric_reporter_MetricReporter_*reporter__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>set_metric_reporter</b>(MetricReporter *reporter) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Sets the metric reporter (to print or display informations about the
+ training process)
+</div></div><div style="display: block; height: 2em;"></div>
+
     </div>
   </center>
   <div id="footer">

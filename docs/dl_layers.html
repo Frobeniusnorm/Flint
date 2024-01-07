@@ -41,9 +41,9 @@
 concept GenericLayer <b>=
 	requires</b>(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
 			 Tensor<double, 2> &t3, Tensor<long, 2> &t4, AdamFactory fac,
-			 std::vector<FGraphNode *> grads) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-UntrainableLayer_">struct <b>UntrainableLayer </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_int____wn__class_Layer_">template &lt;int... wn&gt; class <b>Layer </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args__Layer_args____weights__">template &lt;typename... args&gt; <b>Layer</b>(args... weights) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_int_index__int_dim__void_set_weight_Tensor_double__dim__t__">template &lt;int index, int dim&gt; void <b>set_weight</b>(Tensor<double, dim> t) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-set_weights_const_std::vector_FGraphNode*__weights__">void <b>set_weights</b>(const std::vector<FGraphNode*> weights) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_int_index_		Tensor_double__get_dim_index__wn________&get_weight___">template &lt;int index&gt;
+			 std::vector<FGraphNode *> grads) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-UntrainableLayer_">struct <b>UntrainableLayer </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_int____wn__class_Layer_">template &lt;int... wn&gt; class <b>Layer </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args__Layer_args____weights__">template &lt;typename... args&gt; <b>Layer</b>(args... weights) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_int_index__int_dim__void_set_weight_Tensor_double__dim__t__">template &lt;int index, int dim&gt; void <b>set_weight</b>(Tensor<double, dim> t) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-set_weights_const_std::vector_FGraphNode_*__weights__">void <b>set_weights</b>(const std::vector<FGraphNode *> weights) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_int_index_		Tensor_double__get_dim_index__wn________&get_weight___">template &lt;int index&gt;
 		Tensor&lt;double, get_dim&lt;index, wn...&gt;()&gt; <b>&get_weight</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_OptimizerFactory_Fac__void_generate_optimizer_Fac_factory__">template &lt;OptimizerFactory Fac&gt; void <b>generate_optimizer</b>(Fac factory) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_dim_		void_optimize_weights_const_Tensor_T__dim__&error__">template &lt;typename T, unsigned int dim&gt;
-		void <b>optimize_weights</b>(const Tensor<T, dim> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-__collect_weights___">std::vector&lt;FGraphNode *&gt; <b>collect_weights</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-optimize_weights_std::vector_FGraphNode_*__grads__">void <b>optimize_weights</b>(std::vector<FGraphNode *> grads) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::string_name___">virtual std::string <b>name</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::string_summary___">virtual std::string <b>summary</b>() </a><br/><br/></div>
+		void <b>optimize_weights</b>(const Tensor<T, dim> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-__collect_weights___">std::vector&lt;FGraphNode *&gt; <b>collect_weights</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-optimize_weights_std::vector_FGraphNode_*__grads__">void <b>optimize_weights</b>(std::vector<FGraphNode *> grads) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::string_name___">virtual std::string <b>name</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::string_description___">virtual std::string <b>description</b>() </a><br/><br/></div>
       <div style="display: block; height: 2em;"></div>
       <div id="s-_unsigned_int_index__int____w__class_WeightRef_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;unsigned int index, int... w&gt; class <b>WeightRef </b></pre></div>
 <br />
@@ -67,7 +67,8 @@ concept GenericLayer <b>=
  <pre class="inline_code">transform_dimensionality(n)</pre> and type <pre class="inline_code">transform_type(T)</pre> should be
  returned). It is highly recommended to derive your Layer from
   <a href="#s-UntrainableLayer_"><pre class="inline_code">UntrainableLayer</pre></a> or <pre class="inline_code">Layer</pre>, since they provide already implementations for
- some methods.
+ some methods. <pre class="inline_code">forward</pre> may consume its input tensor since it isn't needed
+ afterwards.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-UntrainableLayer_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>UntrainableLayer </b></pre></div>
 <br />
@@ -101,7 +102,7 @@ concept GenericLayer <b>=
 <div id="s-_int_index__int_dim__void_set_weight_Tensor_double__dim__t__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;int index, int dim&gt; void <b>set_weight</b>(Tensor<double, dim> t) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Sets a specific weight described by its index </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-set_weights_const_std::vector_FGraphNode*__weights__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>set_weights</b>(const std::vector<FGraphNode*> weights) </pre></div>
+<div id="s-set_weights_const_std::vector_FGraphNode_*__weights__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>set_weights</b>(const std::vector<FGraphNode *> weights) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Sets all weights from an array </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-_int_index_		Tensor_double__get_dim_index__wn________&get_weight___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;int index&gt;
@@ -131,7 +132,7 @@ concept GenericLayer <b>=
 <div id="s-std::string_name___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual std::string <b>name</b>() </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Returns the name of this Layer for overviews and debugging. </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-std::string_summary___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual std::string <b>summary</b>() </pre></div>
+<div id="s-std::string_description___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual std::string <b>description</b>() </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Returns a summary of this Layer for overviews and debugging. </div></div><div style="display: block; height: 2em;"></div>
 

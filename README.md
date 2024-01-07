@@ -32,7 +32,7 @@ additionally supports eager execution, for e.g. efficient cpu calculation or deb
 
 The main library only contains the implementation of the backends, the C++ frontend with the Tensor class and the
 operations with automatic gradient calculations. There is an example implementation of often used deep learning
-algorithms and concepts in the `dl/` folder in work.
+algorithms and concepts in the `dl/` folder in work, the documentation can be found in the [https://frobeniusnorm.github.io/Flint/dl.html](project documentation).
 
 ## Usage ##
 
@@ -56,6 +56,7 @@ works on your machine.
 After that you can include the library in your project with
 
 ```
+#include <flint/flint_dl.hpp> // for the C++ deep learning library
 #include <flint/flint.hpp> // for the C++ implementation
 #include <flint/flint.h> // for the C implementation
 ```
@@ -83,6 +84,11 @@ For Archlinux installing the dependencies for an AMD GPU would look like this:
 ```
 pacman -S gcc opencl-headers rocm-opencl-runtime make cmake
 ```
+
+## Examples ##
+
+There is an example model for the MNIST dataset showcasing the Deep Learning front end and a simple implementation of a Gauss filter with convolutions.
+Both help seeing Flint in action [src/examples/README.md](https://github.com/Frobeniusnorm/Flint/tree/main/src/examples#readme)
 
 ## Contribution ##
 
