@@ -30,9 +30,9 @@ CPU (with a thread pool that executes the tensor operations in parallel) and GPU
 kernels for the execution graph), or you can let the framework decide on certain heuristics which backend to use. It
 additionally supports eager execution, for e.g. efficient cpu calculation or debugging purposes.
 
-The main library only contains the implementation of the backends, the C++ frontend with the Tensor class and the
+The main library contains the implementation of the backends, the C++ frontend with the Tensor class and the
 operations with automatic gradient calculations. There is an example implementation of often used deep learning
-algorithms and concepts in the `dl/` folder in work, the documentation can be found in the [https://frobeniusnorm.github.io/Flint/dl.html](project documentation).
+algorithms and concepts in the `dl/` folder in work, the documentation can be found in the [https://frobeniusnorm.github.io/Flint/dl.html](project documentation). It will be installed by the `install` target as well.
 
 ## Usage ##
 
@@ -72,6 +72,14 @@ of the documentation is already built in the repository and deployed to the abov
 
 I case you want to build the library in a C-compatible version replace the `cmake` command
 with `cmake -Wdev --fresh .. -DC_COMPATIBLE=ON`
+
+## State of the project ##
+
+The project is and will be worked on for the forseeable future.
+Although it already has a large number of commits, a library like this 
+needs much time for optimization and feature implementations
+and is therefore still in an early state performance and feature wise. 
+All requests and tips for future developement are very welcome :)
 
 ## Dependencies ##
 
