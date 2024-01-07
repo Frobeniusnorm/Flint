@@ -27,7 +27,7 @@ func main() {
 	fset := token.NewFileSet()
 	files := []*ast.File{
 		mustParse(fset, "types.go"),
-		mustParse(fset, "examples/gauss.go"),
+		mustParse(fset, "examples/gauss_wrapper.go"),
 	}
 
 	// Compute package documentation the selected source files.

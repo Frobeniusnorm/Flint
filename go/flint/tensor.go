@@ -21,6 +21,10 @@ type (
 	Stride   = wrapper.Stride
 	DataType = wrapper.DataType
 	Numeric  = wrapper.Numeric
+	Int      = wrapper.Int
+	Long     = wrapper.Long
+	Float    = wrapper.Float
+	Double   = wrapper.Double
 )
 
 /*
@@ -35,15 +39,36 @@ type Tensor struct {
 
 // String prints the contents of the flint.
 func (x Tensor) String() string {
-	res, err := x.Value()
+	res, err := x.ValueFloat()
 	if err != nil {
-		panic(err)
+		return fmt.Sprintln("erroneous tensor:", err)
+	} else {
+		return fmt.Sprintf("Tensor (%s): [%v] - type %s", x.Shape(), res, x.DataType())
 	}
-	return fmt.Sprintf("Tensor (%s): [%v] - type %s", res.Shape, res.Data, res.DataType)
 }
 
-func (x Tensor) Value() (wrapper.Result[float32], error) {
-	return wrapper.CalculateResult[float32](x.node)
+func (x Tensor) ValueInt() ([]Int, error) {
+	node, err := wrapper.CalculateResult(x.node)
+	res := wrapper.GetResultValue[Int](node)
+	return res, err
+}
+
+func (x Tensor) ValueLong() ([]Long, error) {
+	node, err := wrapper.CalculateResult(x.node)
+	res := wrapper.GetResultValue[Long](node)
+	return res, err
+}
+
+func (x Tensor) ValueFloat() ([]Float, error) {
+	node, err := wrapper.CalculateResult(x.node)
+	res := wrapper.GetResultValue[Float](node)
+	return res, err
+}
+
+func (x Tensor) ValueDouble() ([]Double, error) {
+	node, err := wrapper.CalculateResult(x.node)
+	res := wrapper.GetResultValue[Double](node)
+	return res, err
 }
 
 /*
@@ -85,4 +110,8 @@ func (x Tensor) Shape() Shape {
 
 func (x Tensor) Node() wrapper.GraphNode {
 	return x.node
+}
+
+func (x Tensor) DataType() DataType {
+	return x.node.GetType()
 }
