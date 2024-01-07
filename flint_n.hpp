@@ -252,7 +252,8 @@ template <typename T, unsigned int n> struct Tensor {
 		 * Deserializes the binary representation of Tensor data back to a
 		 * Tensor object. The number of bytes read is stored in `bytes_read`.
 		 */
-		static Tensor<T, n> deserialize(char *data, size_t* bytes_read = nullptr) {
+		static Tensor<T, n> deserialize(char *data,
+										size_t *bytes_read = nullptr) {
 			FGraphNode *node = fdeserialize(data, bytes_read);
 			if (n != node->operation.dimensions)
 				flogging(F_ERROR,
@@ -1777,6 +1778,14 @@ template <typename T, unsigned int n> struct Tensor {
 		 * is still memory managed by this Tensor instance, so be carefull about
 		 * variable lifetimes. */
 		FGraphNode *get_graph_node() const { return node; }
+		/**
+		 * Without freeing or changing the reference counter of the current node
+		 * changes the managed node to the given parameter (is reference counter
+		 * is modified neither). If the node is not `nullptr` the reference
+		 * counter should have been incremented before this method, be carefull
+		 * about variable lifetimes!
+		 */
+		void set_graph_node(FGraphNode *node) { this->node = node; }
 		/**
 		 * Calculates the gradient of this Tensor to `dx`. A gradient is always
 		 * a Tensor of type `double`. `dx` needs to have been marked with

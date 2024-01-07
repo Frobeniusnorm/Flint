@@ -46,6 +46,9 @@ concept GenericLoss = requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
 	} -> std::convertible_to<
 		Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
 			   T::transform_dimensionality(2)>>;
+  {
+    a.name()
+  } -> std::convertible_to<std::string>;
 };
 
 /** Calculates the Categorical Cross Entropy Loss with full summation. It is
@@ -62,7 +65,6 @@ struct CrossEntropyLoss {
 		template <typename T, unsigned int n>
 		Tensor<double, transform_dimensionality(n)>
 		calculate_error(Tensor<T, n> &in, Tensor<T, n> &expected) {
-			// TODO sparse categorical cross entropy loss
 			auto pred =
 				(in / in.reduce_sum(n - 1).expand(n - 1, in.get_shape()[n - 1]))
 					.max(1e-7)
@@ -73,5 +75,8 @@ struct CrossEntropyLoss {
 				total_size *= in.get_shape()[i];
 			return (t1 / (double)total_size);
 		}
+    std::string name() {
+      return "Cross Entropy Loss";
+    }
 };
 #endif

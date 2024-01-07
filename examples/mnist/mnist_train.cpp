@@ -78,7 +78,7 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // download and extract to the desired folder from
 // http://yann.lecun.com/exdb/mnist/
 int main() {
-	FlintContext _(FLINT_BACKEND_ONLY_GPU, F_INFO);
+	FlintContext _(FLINT_BACKEND_BOTH, F_VERBOSE);
 	Tensor<float, 3> X = load_mnist_images("train-images-idx3-ubyte");
 	Tensor<double, 2> Y =
 		load_mnist_labels("train-labels-idx1-ubyte").convert<double>();
@@ -93,30 +93,42 @@ int main() {
 			  << "x" << data.X.get_shape()[1] << " (and "
 			  << data.Y.get_shape()[0] << " labels)" << std::endl;
 	std::cout << "loaded data. Starting training." << std::endl;
-	//	auto m = SequentialModel{
-	//		Conv2D(1, 32, 3, std::array<unsigned int, 2>{1, 1}, SAME_PADDING),
-	//		Relu(),
-	//		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, SAME_PADDING),
-	//		Conv2D(32, 64, 3, std::array<unsigned int, 2>{1, 1}, SAME_PADDING),
-	//		Relu(),
-	//		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, SAME_PADDING),
-	//		Flatten(),
-	//		Dropout(0.5),
-	//		Connected(3136, 10),
-	//		SoftMax()};
 	auto m = SequentialModel{
-		Conv2D(1, 32, 8, std::array<unsigned int, 2>{3, 3}, SAME_PADDING),
+		Conv2D(1, 32, 3, std::array<unsigned int, 2>{1, 1}, SAME_PADDING),
 		Relu(),
-		Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}, SAME_PADDING),
-		Dropout(0.1),
+		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, SAME_PADDING),
+		Conv2D(32, 64, 3, std::array<unsigned int, 2>{1, 1}, SAME_PADDING),
+		Relu(),
+		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, SAME_PADDING),
 		Flatten(),
-		Connected(800, 80),
-		Relu(),
-		Connected(80, 10),
+		Dropout(0.5),
+		Connected(3136, 10),
 		SoftMax()};
+	// auto m = SequentialModel{
+	// 	Conv2D(1, 32, 8, std::array<unsigned int, 2>{3, 3}, SAME_PADDING),
+	// 	Relu(),
+	// 	Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}, SAME_PADDING),
+	// 	Dropout(0.1),
+	// 	Flatten(),
+	// 	Connected(800, 80),
+	// 	Relu(),
+	// 	Connected(80, 10),
+	// 	SoftMax()};
+	// auto m = SequentialModel{
+	// 	Conv2D(1, 16, 8, std::array<unsigned int, 2>{3, 3}, SAME_PADDING),
+	// 	Relu(),
+	// 	Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}, SAME_PADDING),
+	// 	Dropout(0.1),
+	// 	Flatten(),
+	// 	Connected(400, 10),
+	// 	SoftMax()};
+	NetworkMetricReporter nmr;
 	std::cout << m.summary() << std::endl;
 	AdamFactory opt(0.003);
 	m.generate_optimizer(opt);
-	m.train(data, CrossEntropyLoss(), 25, 2000);
+	auto trainer = Trainer(m, data, CrossEntropyLoss());
+	trainer.set_metric_reporter(&nmr);
+	trainer.max_epochs(25);
+	trainer.train(600);
 	m.save("mnist_model.flint");
 }

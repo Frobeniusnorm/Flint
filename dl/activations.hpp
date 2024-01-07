@@ -49,7 +49,12 @@ class SoftMax : public UntrainableLayer {
 struct Relu : public UntrainableLayer {
 		template <typename T, unsigned int n>
 		Tensor<T, n> forward(Tensor<T, n> &in) {
-			return in.max(0);
+      // s.t. the memory may be reused we remove the handle of in 
+      in.get_graph_node()->reference_counter--;
+			auto res = in.max(0);
+      // avoid in freeing memory on destruction
+      in.set_graph_node(nullptr);
+      return res;
 		}
 		std::string name() override { return "Relu"; }
 };

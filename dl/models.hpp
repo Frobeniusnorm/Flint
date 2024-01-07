@@ -16,7 +16,6 @@
 #include "layers.hpp"
 #include "losses.hpp"
 #include "optimizers.hpp"
-#include "trainer.hpp"
 #include <chrono>
 #include <flint/flint.h>
 #include <flint/flint_helper.hpp>
@@ -97,6 +96,8 @@ template <GenericLayer... T> struct SequentialModel {
 		SequentialModel(T... layers) : layers(std::move(layers)...) {}
 
 		template <OptimizerFactory Fac> void generate_optimizer(Fac fac) {
+      optimizer_name = fac.name();
+      optimizer_desc = fac.description();
 			gen_opt<0>(fac);
 		}
 		/**
@@ -128,7 +129,6 @@ template <GenericLayer... T> struct SequentialModel {
 		forward(Tensor<K, n> &in) {
 			// because layers expect batches
 			Tensor<K, n + 1> expanded = in.expand(0, 1);
-			std::cout << expanded << std::endl;
 			expanded.get_graph_node()->reference_counter++;
 			auto out =
 				forward_helper<0,
@@ -146,6 +146,11 @@ template <GenericLayer... T> struct SequentialModel {
 		void optimize(const Tensor<K, n> &error) {
 			backward<0>(error);
 		}
+		/**
+		 * Loads the weights of a model from a file.
+		 * The file has to be in a concatenated representation of the
+		 * deserialization of each weight in the correct order.
+		 */
 		void load(const std::string path) {
 			using namespace std;
 			ifstream file(path, ios::binary);
@@ -171,6 +176,9 @@ template <GenericLayer... T> struct SequentialModel {
 			flogging(F_VERBOSE,
 					 "loaded weights, " + to_string(index) + " bytes");
 		}
+		/**
+		 * Saves the deserialization of all weights of the model to a file.
+		 */
 		void save(const std::string path) {
 			using namespace std;
 			ofstream file(path, ios::binary);
@@ -187,148 +195,83 @@ template <GenericLayer... T> struct SequentialModel {
 			flogging(F_VERBOSE, "stored weights");
 		}
 		/**
-		 * Trains the model with input data and the desired output.
-		 * - `data` contains the input (`X`) and desired data (`Y`) and
-		 * optionally validation data, if it does after each epoch a validation
-		 * error is calculated.
-		 * - `loss` The loss function to calculate the error between the actual
-		 * output and the desired one from the training data. Can be an
-		 * arbitrary class that implements the `GenericLoss` concept, some
-		 * implementations can be found in "losses.hpp".
-		 * - `epochs` Number of epochs the model has to be trained. The complete
-		 *    dataset is passed through the model per epoch (It is split into
-		 *    `batch_size` slices in the first dimension of the input data and
-		 * each batch has to be passed through the model once per epoch).
-		 * - `batch_size` Size of each batch. A batch is a slice of the first
-		 *    dimension of the input data. The input is shuffeled every epoch,
-		 * which is important if your batch size is smaller then your input
-		 * size. The weights of the model are optimized per batch that was
-		 * passed through the model. Meaning small batch sizes lead to faster
-		 * convergence (since more optimizations are executed) but to more noise
-		 * and variance, since each batch is only an approximation of the
-		 * complete dataset. If training times don't matter we suggest full
-		 * gradient descent (meaning `batch_size = input_size`), else finetune
-		 * this value to your usecase.
+		 * Calculated gradient to the given error tensor for each weight and
+		 * optimized the weights with their corres
 		 */
-		template <typename T1, unsigned int n1, typename T2, unsigned int n2,
-				  GenericLoss L>
-		void train(TrainingData<T1, n1, T2, n2> &data, L loss, int epochs = 1,
-				   int batch_size = 32) {
-			set_training<0>(true);
-			const size_t batches = data.X.get_shape()[0];
-			if (data.Y.get_shape()[0] != batches)
-				flogging(
-					F_ERROR,
-					"Input and Target Datas batch size does not correspond!");
-			std::cout << "\r\e[Kbatch error: ... \e[1;30m";
-			for (int k = 0; k < 15; k++)
-				std::cout << "―";
-			std::cout << "\033[0m" << std::flush;
-			Tensor<long, 1> indices = Flint::arange(0, data.X.get_shape()[0]);
-			for (int i = 0; i < epochs; i++) {
-				// shuffle each epoch
-				Tensor<T1, n1> sx = data.X.index(indices);
-				Tensor<T2, n2> sy = data.Y.index(indices);
-				indices = indices.permutate(0);
-				indices.execute();
-				// iterate through batches
-				size_t number_batches = batches / batch_size + 1;
-				double total_error = 0;
-				for (size_t b = 0; b < number_batches; b++) {
-					size_t slice_to = (b + 1) * batch_size;
-					if (slice_to > batches)
-						slice_to = batches;
-					if (b * batch_size == slice_to)
-						break;
-					// run batch and calculate error
-					auto input =
-						sx.slice(TensorRange(b * batch_size, slice_to));
-					auto expected =
-						sy.slice(TensorRange(b * batch_size, slice_to));
-					input.execute();
-					expected.execute();
-					fStartGradientContext();
-#ifdef FLINT_DL_PROFILE
-					auto start = std::chrono::high_resolution_clock::now();
-#endif
-					auto output = forward_batch(input);
-					auto error = loss.calculate_error(output, expected);
-#ifdef FLINT_DL_PROFILE
-					std::chrono::duration<double, std::milli> elapsed =
-						std::chrono::high_resolution_clock::now() - start;
-					std::cout << " forward took " << elapsed.count()
-							  << std::endl;
-#endif
-					fStopGradientContext();
-					// optimize weights
-					// flatten all vars, but keep original structure for
-					// reconstruction
-					std::vector<std::vector<FGraphNode *>> vars;
-					collect_weights<0>(vars);
-					std::vector<FGraphNode *> flat_vars;
-					for (unsigned int i = 0; i < vars.size(); i++)
-						flat_vars.insert(flat_vars.end(), vars[i].begin(),
-										 vars[i].end());
-					std::vector<FGraphNode *> grads(flat_vars.size());
-#ifdef FLINT_DL_PROFILE
-					start = std::chrono::high_resolution_clock::now();
-#endif
-					// calculate gradients
-					fCalculateGradients(error.get_graph_node(),
-										flat_vars.data(), flat_vars.size(),
-										grads.data());
-					// reconstruct for layers
-					std::vector<std::vector<FGraphNode *>> plgrads(vars.size());
-					int index = 0;
-					for (unsigned int i = 0; i < vars.size(); i++) {
-						plgrads[i] = std::vector<FGraphNode *>(vars[i].size());
-						for (unsigned int j = 0; j < vars[i].size(); j++) {
-							FGraphNode *curr_grad = grads[index++];
-							plgrads[i][j] =
-								curr_grad ? fOptimizeMemory(fExecuteGraph(curr_grad)) : nullptr;
-						}
-					}
-#ifdef FLINT_DL_PROFILE
-					elapsed = std::chrono::high_resolution_clock::now() - start;
-					std::cout << " gradient calc took " << elapsed.count()
-							  << std::endl;
-#endif
-					backward<0>(plgrads);
-					// calculate error value
-					double local_error = (double)(error.reduce_sum()[0]);
-					total_error += local_error / number_batches;
-					// print metrics
-					std::cout << "\r\e[Kbatch error: " << std::setprecision(3)
-							  << local_error << " \e[1;96m";
-					for (int k = 0; k < 15; k++) {
-						if ((k) / 15.0 <= (b + 1.0) / number_batches)
-							std::cout << "―";
-						else {
-							std::cout << "\e[1;30m";
-							for (int l = k; l < 15; l++)
-								std::cout << "―";
-							break;
-						}
-					}
-					std::cout << "\033[0m" << std::flush;
+		template <typename T1, unsigned int n1>
+		void backward(Tensor<T1, n1> &error) {
+			std::vector<std::vector<FGraphNode *>> vars;
+			collect_weights<0>(vars);
+			std::vector<FGraphNode *> flat_vars;
+			for (unsigned int i = 0; i < vars.size(); i++)
+				flat_vars.insert(flat_vars.end(), vars[i].begin(),
+								 vars[i].end());
+			std::vector<FGraphNode *> grads(flat_vars.size());
+			// calculate gradients
+			fCalculateGradients(error.get_graph_node(), flat_vars.data(),
+								flat_vars.size(), grads.data());
+			// reconstruct for layers
+			std::vector<std::vector<FGraphNode *>> plgrads(vars.size());
+			int index = 0;
+			for (unsigned int i = 0; i < vars.size(); i++) {
+				plgrads[i] = std::vector<FGraphNode *>(vars[i].size());
+				for (unsigned int j = 0; j < vars[i].size(); j++) {
+					FGraphNode *curr_grad = grads[index++];
+					plgrads[i][j] =
+						curr_grad ? fOptimizeMemory(fExecuteGraph(curr_grad))
+								  : nullptr;
 				}
-				// validate
-				std::string validation_msg = "";
-				if (data.vX.has_value() && data.vY.has_value()) {
-					auto output = forward_batch(data.vX.value());
-					auto error = loss.calculate_error(output, data.vY.value());
-					validation_msg = " validation error: " +
-									 std::to_string(error.reduce_sum()[0]);
-				}
-				std::cout << "\r\e";
-				flogging(F_INFO, "Mean loss #" + std::to_string(i + 1) + ": " +
-									 std::to_string(total_error) +
-									 validation_msg);
 			}
-			set_training<0>(false);
+			backward<0>(plgrads);
 		}
+		/**
+		 * Enables the training mode, i.e. layers like dropout will be enabled
+		 * (internally used by the trainer)
+		 */
+		void enable_training() { set_training<0>(true); }
+		/**
+		 * Disables the training mode, i.e. layers like dropout will be disabled
+		 * (internally used by the trainer)
+		 */
+		void disable_training() { set_training<0>(false); }
 		/** Returns a small summary of the model. */
 		std::string summary() { return summary_helper<0>(); }
+		/**
+		 * Returns the name of each layer in an array
+		 */
+		std::array<std::string, sizeof...(T)> layer_names() {
+			std::array<std::string, sizeof...(T)> names;
+			get_names<0>(names);
+			return names;
+		}
+		/**
+		 * Returns the description of each layer in an array
+		 */
+		std::array<std::string, sizeof...(T)> layer_descriptions() {
+			std::array<std::string, sizeof...(T)> descriptions;
+			get_descriptions<0>(descriptions);
+			return descriptions;
+		}
+    /**
+     * Returns the name of the generated optimizer
+     */
+    std::string optimizer() {
+      return optimizer_name;
+    }
+    /**
+     * Returns the description of the generated optimizer
+     */
+    std::string optimizer_description() {
+      return optimizer_desc;
+    }
+		/**
+		 * Returns the number of parameters of each layer in an array
+		 */
+		std::array<size_t, sizeof...(T)> num_layer_parameters() {
+			std::array<size_t, sizeof...(T)> numbers;
+			get_num_parameters<0>(numbers);
+			return numbers;
+		}
 		/**
 		 * Returns a per-layer vector of all weight-tensors of that layer
 		 */
@@ -339,6 +282,7 @@ template <GenericLayer... T> struct SequentialModel {
 		}
 
 	private:
+    std::string optimizer_name, optimizer_desc;
 		template <int n, typename K, unsigned int k>
 		inline void backward(const Tensor<K, k> &error) {
 			if constexpr (n < sizeof...(T)) {
@@ -377,9 +321,33 @@ template <GenericLayer... T> struct SequentialModel {
 		template <int n> std::string summary_helper() {
 			if constexpr (n < sizeof...(T))
 				return std::to_string(n + 1) + ". " +
-					   std::get<n>(layers).summary() + "\n" +
+					   std::get<n>(layers).name() + ": " +
+					   std::get<n>(layers).description() + "\n" +
 					   summary_helper<n + 1>();
 			return "";
+		}
+		template <int n>
+		void get_names(std::array<std::string, sizeof...(T)> &names) {
+			if constexpr (n < sizeof...(T)) {
+				names[n] = std::get<n>(layers).name();
+				get_names<n + 1>(names);
+			}
+		}
+		template <int n>
+		void
+		get_descriptions(std::array<std::string, sizeof...(T)> &descriptions) {
+			if constexpr (n < sizeof...(T)) {
+				descriptions[n] = std::get<n>(layers).description();
+				get_descriptions<n + 1>(descriptions);
+			}
+		}
+		template <int n>
+		void get_num_parameters(
+			std::array<size_t, sizeof...(T)> &number_parameters) {
+			if constexpr (n < sizeof...(T)) {
+				number_parameters[n] = std::get<n>(layers).num_parameters();
+				get_num_parameters<n + 1>(number_parameters);
+			}
 		}
 		template <int n>
 		inline void
@@ -396,9 +364,8 @@ template <GenericLayer... T> struct SequentialModel {
 			{
 				Tensor<T1, n1> it(in);
 				// now in is no longer needed (reference counter has been
-				// artifically incremented) will be freed with it at the end of
-				// the block
-				in->reference_counter--;
+				// artifically incremented).
+				in->reference_counter --;
 				auto ot = std::get<layer>(layers).forward(it);
 				// out is still needed -> save the GraphNode handle from
 				// destruction with

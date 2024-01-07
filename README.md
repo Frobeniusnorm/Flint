@@ -30,9 +30,9 @@ CPU (with a thread pool that executes the tensor operations in parallel) and GPU
 kernels for the execution graph), or you can let the framework decide on certain heuristics which backend to use. It
 additionally supports eager execution, for e.g. efficient cpu calculation or debugging purposes.
 
-The main library only contains the implementation of the backends, the C++ frontend with the Tensor class and the
+The main library contains the implementation of the backends, the C++ frontend with the Tensor class and the
 operations with automatic gradient calculations. There is an example implementation of often used deep learning
-algorithms and concepts in the `dl/` folder in work.
+algorithms and concepts in the `dl/` folder in work, the documentation can be found in the [https://frobeniusnorm.github.io/Flint/dl.html](project documentation). It will be installed by the `install` target as well.
 
 ## Usage ##
 
@@ -56,6 +56,7 @@ works on your machine.
 After that you can include the library in your project with
 
 ```
+#include <flint/flint_dl.hpp> // for the C++ deep learning library
 #include <flint/flint.hpp> // for the C++ implementation
 #include <flint/flint.h> // for the C implementation
 ```
@@ -72,6 +73,14 @@ of the documentation is already built in the repository and deployed to the abov
 I case you want to build the library in a C-compatible version replace the `cmake` command
 with `cmake -Wdev --fresh .. -DC_COMPATIBLE=ON`
 
+## State of the project ##
+
+The project is and will be worked on for the forseeable future.
+Although it already has a large number of commits, a library like this 
+needs much time for optimization and feature implementations
+and is therefore still in an early state performance and feature wise. 
+All requests and tips for future developement are very welcome :)
+
 ## Dependencies ##
 
 - OpenCL
@@ -84,6 +93,11 @@ For Archlinux installing the dependencies for an AMD GPU would look like this:
 pacman -S gcc opencl-headers rocm-opencl-runtime make cmake
 ```
 
+## Examples ##
+
+There is an example model for the MNIST dataset showcasing the Deep Learning front end and a simple implementation of a Gauss filter with convolutions.
+Both help seeing Flint in action [src/examples/README.md](https://github.com/Frobeniusnorm/Flint/tree/main/src/examples#readme)
+
 ## Contribution ##
 
 - If the documentation is unclear in any way please open an issue with a clarification request
@@ -91,7 +105,7 @@ pacman -S gcc opencl-headers rocm-opencl-runtime make cmake
     - You can fix them yourself in a fork and open a merge request with an explanation of the bug and fix
     - You can open an issue with information on how to recreate the bug and how it manifests itself
 - New operations are fairly simple to implement once you get the hang of the operation framework.
-  See [src/operations/README.md](https://github.com/Frobeniusnorm/Flint/tree/operation_refactor/src/operations#readme)
+  See [src/operations/README.md](https://github.com/Frobeniusnorm/Flint/tree/main/src/operations#readme)
   for a short guide.
 - Performance improvements, refactoring and new features of the rest of the framework are very welcome too, but more
   complex. Start by working through the code in `flint.h` and take a look at the control and data flow

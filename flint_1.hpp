@@ -838,6 +838,14 @@ template <typename T> struct Tensor<T, 1> {
 		 * variable lifetimes. */
 		FGraphNode *get_graph_node() const { return node; }
 		/**
+		 * Without freeing or changing the reference counter of the current node
+		 * changes the managed node to the given parameter (is reference counter
+		 * is modified neither). If the node is not `nullptr` the reference
+		 * counter should have been incremented before this method, be carefull
+		 * about variable lifetimes!
+		 */
+		void set_graph_node(FGraphNode *node) { this->node = node; }
+		/**
 		 * Repeats this Tensor `repetitions` times. A value of `0` would yield
 		 * the input Tensor. E.g.
 		 *
