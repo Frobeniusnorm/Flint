@@ -110,3 +110,9 @@ program.
 
 - cgo memory allocation / pinning / etc.:
     - <https://stackoverflow.com/questions/76395957/cgo-write-memory-in-c-allocated-by-go>
+
+- CGo performance:
+    - https://github.com/petermattis/fastcgo
+    - https://github.com/golang/go/issues/47687
+    - https://github.com/golang/go/issues/19574
+

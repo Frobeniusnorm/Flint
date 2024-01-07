@@ -2,7 +2,6 @@ package wrapper
 
 // #include <flint/flint.h>
 import "C"
-import "unsafe"
 
 /*
 ExecuteGraph executes the graph node operations from all yet to be executed predecessors to [node] and returns a [GraphNode] with a [ResultDataOld] operation in which the resulting data is stored.
@@ -72,28 +71,8 @@ func ExecuteGraphGpuEagerly(node GraphNode) (GraphNode, error) {
 CalculateResult is a convenience method that first executes [ExecuteGraph] and then [SyncMemory] on the [node].
 
 It represents execution with one of both backends and additional memory synchronizing for the gpu framework.
-
-TODO: is it realistically even possible for errors to occur here?
 */
-func CalculateResult[T Numeric](node GraphNode) (Result[T], error) {
+func CalculateResult(node GraphNode) (GraphNode, error) {
 	flintNode, errno := C.fCalculateResult(node.ref)
-	if flintNode == nil {
-		return Result[T]{}, buildErrorFromErrno(errno)
-	}
-
-	dataSize := int(flintNode.result_data.num_entries)
-	dataPtr := unsafe.Pointer(flintNode.result_data.data)
-	shapePtr := unsafe.Pointer(flintNode.operation.shape)
-	shapeSize := int(flintNode.operation.dimensions)
-	dataType := DataType(flintNode.operation.data_type)
-
-	var result = fromCToArray[T](dataPtr, dataSize, dataType)
-	var shape = Shape(fromCToArray[uint](shapePtr, shapeSize, INT64))
-
-	return Result[T]{
-		nodeRef:  flintNode,
-		Data:     result,
-		Shape:    shape,
-		DataType: dataType,
-	}, nil
+	return returnHelper(flintNode, errno)
 }

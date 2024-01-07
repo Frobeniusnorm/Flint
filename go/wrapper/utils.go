@@ -9,9 +9,9 @@ import (
 	"unsafe"
 )
 
-// convertArray converts Arrays between arbitrary types
+// fromGoArrayToC converts Arrays between arbitrary types
 // NOTE: does not work with nested arrays yet.
-func convertArray[In completeNumeric, Out cNumbers](arr []In) []Out {
+func fromGoArrayToC[In completeNumeric, Out cNumbers](arr []In) []Out {
 	result := make([]Out, len(arr))
 	switch any(result[0]).(type) {
 	case C.int:
@@ -42,7 +42,7 @@ func convertArray[In completeNumeric, Out cNumbers](arr []In) []Out {
 	return result
 }
 
-func fromCToArray[T completeNumeric](dataPtr unsafe.Pointer, length int, dataType DataType) []T {
+func fromCArrayToGo[T completeNumeric](dataPtr unsafe.Pointer, length int, dataType DataType) []T {
 	var result = make([]T, length)
 
 	switch dataType {
@@ -62,7 +62,6 @@ func fromCToArray[T completeNumeric](dataPtr unsafe.Pointer, length int, dataTyp
 			x := binary.LittleEndian.Uint64(relevantData)
 			result[i] = T(x)
 		}
-
 	case FLOAT32:
 		var data []byte = C.GoBytes(dataPtr, C.int(length*C.sizeof_float))
 		elementSize := len(data) / length
@@ -72,7 +71,6 @@ func fromCToArray[T completeNumeric](dataPtr unsafe.Pointer, length int, dataTyp
 			x := math.Float32frombits(bits)
 			result[i] = T(x)
 		}
-
 	case FLOAT64:
 		var data []byte = C.GoBytes(dataPtr, C.int(length*C.sizeof_double))
 		elementSize := len(data) / length

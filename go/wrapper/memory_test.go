@@ -1,7 +1,6 @@
 package wrapper
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -19,15 +18,5 @@ func TestCalculateGradients(t *testing.T) {
 	partials, err := CalculateGradients(y1, []GraphNode{x1, x2})
 
 	assert.NoError(t, err)
-
-	result, _ := CalculateResult[int32](y1)
-	dx1, _ := CalculateResult[int32](partials[0])
-	dx2, _ := CalculateResult[int32](partials[1])
-
-	fmt.Println("result", result)
-	fmt.Println("dx1", dx1)
-	fmt.Println("dx2", dx2)
-
-	// TODO: assert partials[0] == x1
-	// TODO: assert partials[1] == x2
+	assert.Len(t, partials, 2)
 }

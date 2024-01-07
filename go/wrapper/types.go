@@ -27,8 +27,6 @@ import (
 	"unsafe"
 )
 
-// TODO: use go:generate with for the docs (combination with my custom doc generation script)!
-
 ///////////////
 // Types and Structs
 //////////////
@@ -43,38 +41,38 @@ type Long = int64
 type Float = float32
 type Double = float64
 
-type operation struct {
-	shape             *C.size_t
-	additional_data   unsafe.Pointer
-	op_type           C.enum_FOperationType
-	data_type         C.enum_FType
-	dimensions        C.int
-	broadcasting_mode C.int
+///////////
+// Extraction Functions
+///////////
+
+// GetResultValue fetches the result data from the C backend and returns it as a Go type
+// NOTE: this will not execute the graph or change anything in memory
+// So make sure to execute the graph before calling this function!
+func GetResultValue[T Numeric](node GraphNode) []T {
+	SyncMemory(node) // make sure data is accessible on CPU
+
+	var flintNode *C.FGraphNode = node.ref
+
+	dataSize := int(flintNode.result_data.num_entries)
+	dataPtr := unsafe.Pointer(flintNode.result_data.data)
+	dataType := DataType(flintNode.operation.data_type)
+
+	return fromCArrayToGo[T](dataPtr, dataSize, dataType)
 }
 
-type resultData struct {
-	data        unsafe.Pointer
-	num_entries C.size_t
+// GetShape returns the shape of a graph node
+// NOTE: this will not execute the graph or change anything in memory
+func (node GraphNode) GetShape() Shape {
+	var flintNode *C.FGraphNode = node.ref
+	shapePtr := unsafe.Pointer(flintNode.operation.shape)
+	shapeSize := int(flintNode.operation.dimensions)
+	return fromCArrayToGo[uint](shapePtr, shapeSize, INT64) // as the C backend stores the shape as int64
 }
 
-type graphNode struct {
-	num_predecessor   C.int
-	predecessor       **C.FGraphNode
-	operation         operation
-	reference_counter C.size_t
-	result_data       *resultData
-	gradient_data     unsafe.Pointer
+func (node GraphNode) GetType() DataType {
+	var flintNode *C.FGraphNode = node.ref
+	return DataType(flintNode.operation.data_type)
 }
-
-type Result[T Numeric] struct {
-	resultRef *C.FResultData
-	nodeRef   *C.FGraphNode
-	Data      ResultData[T]
-	Shape     Shape
-	DataType  DataType
-}
-
-// TODO: write parsing functions to convert from C to Go types
 
 type ResultData[T completeNumeric] []T
 
@@ -112,6 +110,7 @@ func (x DataType) String() string {
 	}
 }
 
+// Numeric represents the numeric types that can be used in wrapper!
 type Numeric interface {
 	~Int | ~Long | ~Float | ~Double
 }
@@ -150,6 +149,14 @@ func (a Shape) Equal(b Shape) bool {
 		}
 	}
 	return true
+}
+
+func (a Shape) NumElements() uint {
+	var result uint = 1
+	for _, v := range a {
+		result *= v
+	}
+	return result
 }
 
 // Stride defines the steps for sliding operations

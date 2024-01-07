@@ -14,18 +14,14 @@ import (
 	"runtime"
 )
 
-type Shape = wrapper.Shape // this way we keep the functions etc.
-
-type Axes = wrapper.Axes
-
-type Stride = wrapper.Stride
-
-type DataType = wrapper.DataType
-
-// Numeric is a constraint union collection of valid numeric types for use in tensors
-type Numeric interface {
-	~int32 | ~int64 | ~float32 | ~float64
-}
+// Copy the most important types
+type (
+	Shape    = wrapper.Shape // this way we keep the functions etc.
+	Axes     = wrapper.Axes
+	Stride   = wrapper.Stride
+	DataType = wrapper.DataType
+	Numeric  = wrapper.Numeric
+)
 
 /*
 Tensor essentially acts as a memory-safe wrapper for [wrapper.GraphNode].
@@ -38,14 +34,16 @@ type Tensor struct {
 }
 
 // String prints the contents of the flint.
-// NOTE: If not a isLight flint, this causes the node's graph to be executed!
-// Use carefully! (best only in debugging)
 func (x Tensor) String() string {
-	res, err := wrapper.CalculateResult[float32](x.node)
+	res, err := x.Value()
 	if err != nil {
 		panic(err)
 	}
 	return fmt.Sprintf("Tensor (%s): [%v] - type %s", res.Shape, res.Data, res.DataType)
+}
+
+func (x Tensor) Value() (wrapper.Result[float32], error) {
+	return wrapper.CalculateResult[float32](x.node)
 }
 
 /*

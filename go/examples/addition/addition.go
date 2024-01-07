@@ -4,19 +4,33 @@ package main
 import (
 	"fmt"
 	"github.com/Frobeniusnorm/Flint/go/wrapper"
+	"log"
 )
 
 func main() {
-	wrapper.Init(wrapper.BACKEND_BOTH)
+	err := wrapper.Init(wrapper.BACKEND_BOTH)
+	if err != nil {
+		log.Fatal(err)
+	}
 	wrapper.SetLoggingLevel(wrapper.LOG_INFO)
 
 	shape := wrapper.Shape{2, 3}
-	var x = wrapper.CreateGraphConstant(1, shape)
-	var y = wrapper.CreateGraphConstant(6, shape)
-	z := wrapper.Add(x, y)
-	res := wrapper.CalculateResult[int64](z)
+	x, err := wrapper.CreateGraphConstantInt(1, shape)
+	y, err := wrapper.CreateGraphConstantInt(6, shape)
+	z, err := wrapper.AddGraphGraph(x, y)
+	z, err = wrapper.CalculateResult(z)
+	if err != nil {
+		log.Fatal(err)
+	}
+	res := wrapper.GetResultValue[wrapper.Int](z)
 	fmt.Println("res", res)
 
 	wrapper.FreeGraph(z)
-	wrapper.Cleanup()
+	err = wrapper.Cleanup()
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		fmt.Println("done")
+		fmt.Println("res:", res)
+	}
 }

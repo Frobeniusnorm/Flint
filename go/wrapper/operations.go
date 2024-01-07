@@ -454,7 +454,7 @@ The product of each dimension of the new shape must be the same as the product o
 This means it must describe the same number of entries of the flint.
 */
 func Reshape(a GraphNode, shape Shape) (GraphNode, error) {
-	newShape := convertArray[uint, C.size_t](shape)
+	newShape := fromGoArrayToC[uint, C.size_t](shape)
 	flintNode, errno := C.freshape(a.ref, &(newShape[0]), C.int(len(shape)))
 	return returnHelper(flintNode, errno)
 }
@@ -594,8 +594,8 @@ They may contain negative values, which are then subtracted from the end of the 
 [start] is inclusive and describes the start index of the selection per dimension and [end] describes the end index per dimension and is exclusive.
 */
 func Slice(a GraphNode, start Axes, end Axes) (GraphNode, error) {
-	newStart := convertArray[int, C.long](start)
-	newEnd := convertArray[int, C.long](end)
+	newStart := fromGoArrayToC[int, C.long](start)
+	newEnd := fromGoArrayToC[int, C.long](end)
 	flintNode, errno := C.fslice(a.ref, &(newStart[0]), &(newEnd[0]))
 	return returnHelper(flintNode, errno)
 }
@@ -612,9 +612,9 @@ For a negative stride, [start] > [end] must hold (for a positive of course [end]
 */
 func SliceWithStride(node GraphNode, start Axes, end Axes, stride Stride) (GraphNode, error) {
 	// TODO: check that axes has the right length compared to node! (or does the C function do this?)
-	newStart := convertArray[int, C.long](start)
-	newEnd := convertArray[int, C.long](end)
-	newStride := convertArray[int, C.long](stride)
+	newStart := fromGoArrayToC[int, C.long](start)
+	newEnd := fromGoArrayToC[int, C.long](end)
+	newStride := fromGoArrayToC[int, C.long](stride)
 
 	flintNode, errno := C.fslice_step(node.ref, &(newStart[0]), &(newEnd[0]), &(newStride[0]))
 	return returnHelper(flintNode, errno)
@@ -628,8 +628,8 @@ The original flint is embedded at the given indices.
   - [insertAt]: array with indices per dimension of [node], denoting where [node] is to be placed in the resulting flint
 */
 func Extend(node GraphNode, shape Shape, insertAt Axes) (GraphNode, error) {
-	newShape := convertArray[uint, C.size_t](shape)
-	newInsertAt := convertArray[int, C.size_t](insertAt)
+	newShape := fromGoArrayToC[uint, C.size_t](shape)
+	newInsertAt := fromGoArrayToC[int, C.size_t](insertAt)
 	flintNode, errno := C.fextend(node.ref, &(newShape[0]), &(newInsertAt[0]))
 	return returnHelper(flintNode, errno)
 }
@@ -643,9 +643,9 @@ The original flint is embedded at the given indices.
   - [stride]: allows to pull apart [node], em-placing zeros between each value of [node]. Has a value per dimension.
 */
 func ExtendWithStride(node GraphNode, shape Shape, insertAt Axes, stride Stride) (GraphNode, error) {
-	newShape := convertArray[uint, C.size_t](shape)
-	newInsertAt := convertArray[int, C.size_t](insertAt)
-	newStride := convertArray[int, C.long](stride)
+	newShape := fromGoArrayToC[uint, C.size_t](shape)
+	newInsertAt := fromGoArrayToC[int, C.size_t](insertAt)
+	newStride := fromGoArrayToC[int, C.long](stride)
 
 	flintNode, errno := C.fextend_step(node.ref, &(newShape[0]), &(newInsertAt[0]), &(newStride[0]))
 	return returnHelper(flintNode, errno)
@@ -695,7 +695,7 @@ E.g:
 		[[0,1,0,1,0,1], [2,3,2,3,2,3], [0,1,0,1,0,1], [2,3,2,3,2,3]]
 */
 func Repeat(node GraphNode, repetitions Axes) (GraphNode, error) {
-	newRepetitions := convertArray[int, C.int](repetitions)
+	newRepetitions := fromGoArrayToC[int, C.int](repetitions)
 	flintNode, errno := C.frepeat(node.ref, &(newRepetitions[0]))
 	return returnHelper(flintNode, errno)
 }
@@ -707,7 +707,7 @@ The array [axes] has the same number of entries as [node] has dimensions, which 
 The flint will have a resulting shape in which the size each dimension corresponds to the former size in dimension in [axes].
 */
 func Transpose(node GraphNode, axes Axes) (GraphNode, error) {
-	newAxes := convertArray[int, C.int](axes)
+	newAxes := fromGoArrayToC[int, C.int](axes)
 	flintNode, errno := C.ftranspose(node.ref, &(newAxes[0]))
 	return returnHelper(flintNode, errno)
 }
@@ -731,7 +731,7 @@ The resulting [GraphNode] will therefore have a shape with dimensionality n - 1 
 	else (shape[i] - kernel.get_shape()[i] - 1) / stride[i] + 1
 */
 func Convolve(node GraphNode, kernel GraphNode, stride Stride) (GraphNode, error) {
-	newStride := convertArray[int, C.uint](stride)
+	newStride := fromGoArrayToC[int, C.uint](stride)
 	flintNode, errno := C.fconvolve(node.ref, kernel.ref, &(newStride[0]))
 	return returnHelper(flintNode, errno)
 }
@@ -831,8 +831,8 @@ This example moves a 2x2x2 cube across the node, this time moving 2 across the f
 		  [[4, 5], [5, 6]]]]
 */
 func SlidingWindow(node GraphNode, size Shape, stride Stride) (GraphNode, error) {
-	newSize := convertArray[uint, C.size_t](size)
-	newStride := convertArray[int, C.uint](stride)
+	newSize := fromGoArrayToC[uint, C.size_t](size)
+	newStride := fromGoArrayToC[int, C.uint](stride)
 
 	flintNode, errno := C.fsliding_window(node.ref, &(newSize[0]), &(newStride[0]))
 	return returnHelper(flintNode, errno)
@@ -854,8 +854,8 @@ If in a dimension `steps` was smaller than `window_size` (the windows were
 `shape` and `steps` therefore have 1 entry less than `a` has dimensions.
 */
 func UnslideWindow(node GraphNode, size Shape, stride Stride) (GraphNode, error) {
-	newSize := convertArray[uint, C.size_t](size)
-	newStride := convertArray[int, C.uint](stride)
+	newSize := fromGoArrayToC[uint, C.size_t](size)
+	newStride := fromGoArrayToC[int, C.uint](stride)
 	flintNode, errno := C.funslide_window(node.ref, &(newSize[0]), &(newStride[0]))
 	return returnHelper(flintNode, errno)
 }
@@ -884,8 +884,8 @@ each pooling for each dimension (one element less than `a` has
 dimensions).
 */
 func PoolingSum(node GraphNode, size Shape, stride Stride) (GraphNode, error) {
-	newSize := convertArray[uint, C.size_t](size)
-	newStride := convertArray[int, C.uint](stride)
+	newSize := fromGoArrayToC[uint, C.size_t](size)
+	newStride := fromGoArrayToC[int, C.uint](stride)
 	flintNode, errno := C.fpooling_sum(node.ref, &(newSize[0]), &(newStride[0]))
 	return returnHelper(flintNode, errno)
 }
@@ -906,8 +906,8 @@ inside each window the maximum should be taken.
 each pooling for each dimension (one element less than `a` has dimensions).
 */
 func PoolingMax(node GraphNode, size Shape, stride Stride) (GraphNode, error) {
-	newSize := convertArray[uint, C.size_t](size)
-	newStride := convertArray[int, C.uint](stride)
+	newSize := fromGoArrayToC[uint, C.size_t](size)
+	newStride := fromGoArrayToC[int, C.uint](stride)
 	flintNode, errno := C.fpooling_max(node.ref, &(newSize[0]), &(newStride[0]))
 	return returnHelper(flintNode, errno)
 }

@@ -157,7 +157,7 @@ func buildErrorCustom(flintErr error, message string) error {
 	return Error{
 		Message: message,
 		Err:     flintErr,
-		Errno:   0,
+		Errno:   0, // non-error by convention
 	}
 }
 
