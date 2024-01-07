@@ -1,5 +1,4 @@
 AHTML := $(wildcard *.ahtml)
-
 all: $(AHTML) generator/SideGenerator
 	generator/SideGenerator "./"
 
@@ -10,5 +9,3 @@ clean:
 	rm generator/*.hi
 	rm generator/*.o
 	rm generator/SideGenerator
-	# remove all html files except for header and footer
-	# find . -name "*.html" ! -name "header.html" ! -name "footer.html" -exec rm {} \;
