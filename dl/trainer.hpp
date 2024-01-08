@@ -204,7 +204,7 @@ class Trainer {
 				indices.execute();
 				double total_error = 0;
 				for (size_t b = 0;
-					 b < number_batches && !reporter->is_stop_signal(); b++) {
+					 b < number_batches && !get_metric().is_stop_signal(); b++) {
 					size_t slice_to = (b + 1) * batch_size;
 					if (slice_to > batches)
 						slice_to = batches;
@@ -238,7 +238,7 @@ class Trainer {
 					info_obj.last_validation_error = val_error;
 				}
 				get_metric().report_epoch(info_obj);
-				if (reporter->is_stop_signal())
+				if (get_metric().is_stop_signal())
 					break;
 			}
 			get_metric().report_finished();
