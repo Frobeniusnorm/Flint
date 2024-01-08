@@ -94,16 +94,26 @@ int main() {
 			  << data.Y.get_shape()[0] << " labels)" << std::endl;
 	std::cout << "loaded data. Starting training." << std::endl;
 	auto m = SequentialModel{
-		Conv2D(1, 32, 3, std::array<unsigned int, 2>{1, 1}, SAME_PADDING),
+		Conv2D(1, 32, 3, std::array<unsigned int, 2>{1, 1}, NO_PADDING),
 		Relu(),
-		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, SAME_PADDING),
-		Conv2D(32, 64, 3, std::array<unsigned int, 2>{1, 1}, SAME_PADDING),
+		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, NO_PADDING),
+		Conv2D(32, 64, 3, std::array<unsigned int, 2>{1, 1}, NO_PADDING),
 		Relu(),
-		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, SAME_PADDING),
+		Pooling<4>::max_pooling({2, 2, 1}, {2, 2, 1}, NO_PADDING),
 		Flatten(),
 		Dropout(0.5),
-		Connected(3136, 10),
+		Connected(1600, 10),
 		SoftMax()};
+	auto shape = m.shape_per_layer(std::array<size_t, 4>{1, 28, 28, 1});
+	for (int i = 0; i < shape.size(); i++) {
+		std::cout << "Output " << m.layer_names()[i] << ": [";
+		for (int j = 0; j < shape[i].size(); j++) {
+			if (j != 0)
+				std::cout << ", ";
+			std::cout << shape[i][j];
+		}
+		std::cout << "]" << std::endl;
+	}
 	// auto m = SequentialModel{
 	// 	Conv2D(1, 32, 8, std::array<unsigned int, 2>{3, 3}, SAME_PADDING),
 	// 	Relu(),
@@ -122,11 +132,13 @@ int main() {
 	// 	Flatten(),
 	// 	Connected(400, 10),
 	// 	SoftMax()};
+	NetworkMetricReporter nmr;
 	std::cout << m.summary() << std::endl;
 	AdamFactory opt(0.003);
 	m.generate_optimizer(opt);
 	auto trainer = Trainer(m, data, CrossEntropyLoss());
-	trainer.max_epochs(10);
+	trainer.set_metric_reporter(&nmr);
+	trainer.max_epochs(25);
 	trainer.train(600);
 	m.save("mnist_model.flint");
 }

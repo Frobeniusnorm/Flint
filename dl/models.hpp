@@ -96,8 +96,8 @@ template <GenericLayer... T> struct SequentialModel {
 		SequentialModel(T... layers) : layers(std::move(layers)...) {}
 
 		template <OptimizerFactory Fac> void generate_optimizer(Fac fac) {
-      optimizer_name = fac.name();
-      optimizer_desc = fac.description();
+			optimizer_name = fac.name();
+			optimizer_desc = fac.description();
 			gen_opt<0>(fac);
 		}
 		/**
@@ -252,18 +252,14 @@ template <GenericLayer... T> struct SequentialModel {
 			get_descriptions<0>(descriptions);
 			return descriptions;
 		}
-    /**
-     * Returns the name of the generated optimizer
-     */
-    std::string optimizer() {
-      return optimizer_name;
-    }
-    /**
-     * Returns the description of the generated optimizer
-     */
-    std::string optimizer_description() {
-      return optimizer_desc;
-    }
+		/**
+		 * Returns the name of the generated optimizer
+		 */
+		std::string optimizer() { return optimizer_name; }
+		/**
+		 * Returns the description of the generated optimizer
+		 */
+		std::string optimizer_description() { return optimizer_desc; }
 		/**
 		 * Returns the number of parameters of each layer in an array
 		 */
@@ -280,9 +276,16 @@ template <GenericLayer... T> struct SequentialModel {
 			collect_weights<0>(vars);
 			return vars;
 		}
+		template <size_t n>
+		std::array<std::vector<size_t>, sizeof...(T)>
+		shape_per_layer(std::array<size_t, n> input_shape) {
+			std::array<std::vector<size_t>, sizeof...(T)> res;
+			shape_per_layer<0>(res, input_shape);
+			return res;
+		}
 
 	private:
-    std::string optimizer_name, optimizer_desc;
+		std::string optimizer_name, optimizer_desc;
 		template <int n, typename K, unsigned int k>
 		inline void backward(const Tensor<K, k> &error) {
 			if constexpr (n < sizeof...(T)) {
@@ -357,6 +360,21 @@ template <GenericLayer... T> struct SequentialModel {
 				collect_weights<n + 1>(vars);
 			}
 		}
+
+		template <unsigned int n, size_t k>
+		inline void
+		shape_per_layer(std::array<std::vector<size_t>, sizeof...(T)>& result,
+						const std::array<size_t, k> input_shape) {
+			if constexpr (n < sizeof...(T)) {
+				Tensor<double, k> in = Flint::constant_array(1.0, input_shape);
+				auto out = std::get<n>(layers).forward(in);
+				result[n] = std::vector<size_t>(out.get_shape().size());
+				for (int i = 0; i < out.get_shape().size(); i++) {
+					result[n][i] = out.get_shape()[i];
+				}
+				shape_per_layer<n + 1>(result, out.get_shape());
+			}
+		}
 		template <int layer, typename T2, unsigned int n2, typename T1,
 				  unsigned int n1>
 		inline Tensor<T2, n2> forward_helper(FGraphNode *in) {
@@ -365,7 +383,7 @@ template <GenericLayer... T> struct SequentialModel {
 				Tensor<T1, n1> it(in);
 				// now in is no longer needed (reference counter has been
 				// artifically incremented).
-				in->reference_counter --;
+				in->reference_counter--;
 				auto ot = std::get<layer>(layers).forward(it);
 				// out is still needed -> save the GraphNode handle from
 				// destruction with
