@@ -33,6 +33,11 @@ struct MetricInfo {
 		double last_batch_error;
 		double last_epoch_error;
 		double last_validation_error;
+		ProfilingData profiling; // only available if profiling is enabled
+};
+struct ControlInformation {
+		bool stop_signal = false;
+		bool profiling = false;
 };
 struct MetricReporter {
 		virtual ~MetricReporter() = default;
@@ -59,7 +64,11 @@ struct MetricReporter {
 						 " validation error: " +
 						 std::to_string(info.last_validation_error));
 		}
-		virtual bool is_stop_signal() { return false; }
+		/**
+		 * Allows the reporter to send controlling signals to the trainer and
+		 * model
+		 */
+		virtual ControlInformation control() { return {}; }
 		virtual void report_finished() {}
 		virtual void
 		model_description(std::vector<std::string> layer_names,
@@ -196,6 +205,7 @@ class Trainer {
 					F_ERROR,
 					"Input and Target Datas batch size does not correspond!");
 			Tensor<long, 1> indices = Flint::arange(0, data.X.get_shape()[0]);
+			ControlInformation control = get_metric().control();
 			for (int i = 0; i < epochs; i++) {
 				// shuffle each epoch
 				Tensor<T1, n1> sx = data.X.index(indices);
@@ -203,8 +213,9 @@ class Trainer {
 				indices = indices.permutate(0);
 				indices.execute();
 				double total_error = 0;
-				for (size_t b = 0;
-					 b < number_batches && !get_metric().is_stop_signal(); b++) {
+				for (size_t b = 0; b < number_batches && !control.stop_signal;
+					 b++) {
+					control = get_metric().control();
 					size_t slice_to = (b + 1) * batch_size;
 					if (slice_to > batches)
 						slice_to = batches;
@@ -226,6 +237,7 @@ class Trainer {
 					total_error += local_error / number_batches;
 					info_obj.last_batch_error = local_error;
 					info_obj.batch = b + 1;
+					info_obj.profiling = model.last_profiling_data();
 					get_metric().report_batch(info_obj);
 				}
 				info_obj.epoch = i + 1;
@@ -238,7 +250,7 @@ class Trainer {
 					info_obj.last_validation_error = val_error;
 				}
 				get_metric().report_epoch(info_obj);
-				if (get_metric().is_stop_signal())
+				if (control.stop_signal)
 					break;
 			}
 			get_metric().report_finished();
@@ -256,7 +268,8 @@ class NetworkMetricReporter : public MetricReporter {
 		std::vector<MetricInfo> batches, epochs;
 		std::unordered_map<long, std::pair<long, long>> last_read;
 		// controller states
-		bool pause = false, stop = false, sent_all = false;
+		bool pause = false, sent_all = false;
+		ControlInformation control_info;
 		std::binary_semaphore pause_lock;
 		void open_connection() {
 			socket_id = socket(AF_INET, SOCK_STREAM, 0);
@@ -278,7 +291,7 @@ class NetworkMetricReporter : public MetricReporter {
 	public:
 		void thread_routine() {
 			using namespace std;
-			while (!terminate || !stop) {
+			while (!terminate || !control_info.stop_signal) {
 				size_t addrlen = sizeof(sockaddr);
 				int connection = accept(socket_id, (struct sockaddr *)&sockaddr,
 										(socklen_t *)&addrlen);
@@ -312,7 +325,7 @@ class NetworkMetricReporter : public MetricReporter {
 					pause_lock.release();
 				} else if (path == "/stop") {
 					pause = false;
-					stop = true;
+					control_info.stop_signal = true;
 					pause_lock.release();
 				} else if (path == "/describe") {
 					packet = "{\"layers\":[";
@@ -329,7 +342,10 @@ class NetworkMetricReporter : public MetricReporter {
 							  "\", "
 							  "\"description\":\"" +
 							  optimizer_desc + "\"}}";
-
+				} else if (path == "/start_profiling") {
+					control_info.profiling = true;
+				} else if (path == "/stop_profiling") {
+					control_info.profiling = false;
 				} else {
 					const long id = strtol(path.data() + 1, nullptr, 10);
 					packet = "{";
@@ -347,8 +363,10 @@ class NetworkMetricReporter : public MetricReporter {
 					}
 					packet += "\"batches\":[";
 					long total_batches = 0, total_epochs = 0;
+					bool read_something = false;
 					for (; last_read_batch < batches.size();
 						 last_read_batch++) {
+						read_something = true;
 						MetricInfo batch = batches[last_read_batch];
 						total_batches = batch.total_batches;
 						packet +=
@@ -360,6 +378,7 @@ class NetworkMetricReporter : public MetricReporter {
 					}
 					packet += "], \"epochs\": [";
 					for (; last_read_epoch < epochs.size(); last_read_epoch++) {
+						read_something = true;
 						MetricInfo epoch = epochs[last_read_epoch];
 						total_epochs = epoch.total_epochs;
 						packet +=
@@ -374,7 +393,23 @@ class NetworkMetricReporter : public MetricReporter {
 					last_read[id].second = last_read_epoch;
 					packet +=
 						"], \"total_batches\": " + to_string(total_batches) +
-						"}";
+						", \"profiling_data\": {\"forward\":[";
+					if (read_something) {
+						ProfilingData profiling =
+							batches[batches.size() - 1].profiling;
+						for (int i = 0; i < layer_names.size(); i++) {
+							if (i != 0)
+								packet += ",";
+							packet += "{\"name\": \"" + layer_names[i] +
+									  "\", \"time\": " +
+									  to_string(profiling.time_per_layer[i]) +
+									  "}";
+						}
+						packet +=
+							"], \"gradient\": " +
+							to_string(profiling.time_gradient_calculation) + "}";
+					} else packet += "]}";
+					packet += "}";
 				}
 				const string msg = "HTTP/1.1 200 OK\r\nServer: "
 								   "Apache\r\nAccess-Control-Allow-Origin: "
@@ -409,7 +444,7 @@ class NetworkMetricReporter : public MetricReporter {
 		}
 		void report_finished() override {
 			terminate = true;
-			stop = true;
+			control_info.stop_signal = true;
 			shutdown(socket_id, SHUT_RD);
 			close(socket_id);
 			thread.join();
@@ -418,6 +453,6 @@ class NetworkMetricReporter : public MetricReporter {
 			flogging(F_VERBOSE, "Shutting down network");
 		}
 		void report_epoch(MetricInfo info) override { epochs.push_back(info); }
-		bool is_stop_signal() override { return stop; }
+		ControlInformation control() override { return control_info; }
 };
 #endif

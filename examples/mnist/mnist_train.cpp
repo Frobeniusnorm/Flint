@@ -133,6 +133,7 @@ int main() {
 	// 	Connected(400, 10),
 	// 	SoftMax()};
 	NetworkMetricReporter nmr;
+	m.enable_profiling();
 	std::cout << m.summary() << std::endl;
 	AdamFactory opt(0.003);
 	m.generate_optimizer(opt);

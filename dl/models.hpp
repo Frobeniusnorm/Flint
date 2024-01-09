@@ -25,7 +25,19 @@
 #include <memory>
 #include <tuple>
 #include <vector>
-
+/**
+ * Informations about time consumption per layer and memory consumption
+ */
+struct ProfilingData {
+		// milliseconds each layer took to finish in forward propagation
+		std::vector<long> time_per_layer;
+		// milliseconds the gradient calculations took
+		long time_gradient_calculation;
+		// memory consumption of the framework per layer
+		std::vector<long> memory_per_layer;
+		// total time of forward
+		long total_time;
+};
 template <FType in> constexpr FType get_output_type() { return in; }
 template <FType in, GenericLayer K> constexpr FType get_output_type() {
 	return K::transform_type(in);
@@ -93,7 +105,9 @@ constexpr FType get_layer_type() {
  */
 template <GenericLayer... T> struct SequentialModel {
 		std::tuple<T...> layers;
-		SequentialModel(T... layers) : layers(std::move(layers)...) {}
+		SequentialModel(T... layers) : layers(std::move(layers)...) {
+			last_profiling.time_per_layer = std::vector<long>(sizeof...(T));
+		}
 
 		template <OptimizerFactory Fac> void generate_optimizer(Fac fac) {
 			optimizer_name = fac.name();
@@ -208,6 +222,7 @@ template <GenericLayer... T> struct SequentialModel {
 								 vars[i].end());
 			std::vector<FGraphNode *> grads(flat_vars.size());
 			// calculate gradients
+			auto start = std::chrono::steady_clock::now();
 			fCalculateGradients(error.get_graph_node(), flat_vars.data(),
 								flat_vars.size(), grads.data());
 			// reconstruct for layers
@@ -222,6 +237,10 @@ template <GenericLayer... T> struct SequentialModel {
 								  : nullptr;
 				}
 			}
+			if (profiling) {
+				last_profiling.time_gradient_calculation =
+					(std::chrono::steady_clock::now() - start).count();
+			}
 			backward<0>(plgrads);
 		}
 		/**
@@ -234,6 +253,19 @@ template <GenericLayer... T> struct SequentialModel {
 		 * (internally used by the trainer)
 		 */
 		void disable_training() { set_training<0>(false); }
+		/**
+		 * Starts collection profiling data.
+		 * This hurts performance in uneager execution.
+		 */
+		void enable_profiling() { profiling = true; }
+		/**
+		 * Stops collection profiling data
+		 */
+		void disable_profiling() { profiling = true; }
+		/**
+		 * Returns collected profiling data of the last call to `forward`
+		 */
+		ProfilingData last_profiling_data() const { return last_profiling; }
 		/** Returns a small summary of the model. */
 		std::string summary() { return summary_helper<0>(); }
 		/**
@@ -285,6 +317,8 @@ template <GenericLayer... T> struct SequentialModel {
 		}
 
 	private:
+		bool profiling = false;
+		ProfilingData last_profiling;
 		std::string optimizer_name, optimizer_desc;
 		template <int n, typename K, unsigned int k>
 		inline void backward(const Tensor<K, k> &error) {
@@ -363,7 +397,7 @@ template <GenericLayer... T> struct SequentialModel {
 
 		template <unsigned int n, size_t k>
 		inline void
-		shape_per_layer(std::array<std::vector<size_t>, sizeof...(T)>& result,
+		shape_per_layer(std::array<std::vector<size_t>, sizeof...(T)> &result,
 						const std::array<size_t, k> input_shape) {
 			if constexpr (n < sizeof...(T)) {
 				Tensor<double, k> in = Flint::constant_array(1.0, input_shape);
@@ -380,11 +414,17 @@ template <GenericLayer... T> struct SequentialModel {
 		inline Tensor<T2, n2> forward_helper(FGraphNode *in) {
 			FGraphNode *out;
 			{
+				auto start = std::chrono::steady_clock::now();
 				Tensor<T1, n1> it(in);
 				// now in is no longer needed (reference counter has been
 				// artifically incremented).
 				in->reference_counter--;
 				auto ot = std::get<layer>(layers).forward(it);
+				if (profiling) {
+					ot.execute();
+					last_profiling.time_per_layer[layer] =
+						(std::chrono::steady_clock::now() - start).count();
+				}
 				// out is still needed -> save the GraphNode handle from
 				// destruction with
 				out = ot.get_graph_node();
