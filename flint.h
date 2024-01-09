@@ -1172,7 +1172,7 @@ FGraphNode *fpooling_max(FGraphNode *a, const size_t *window_size,
 
 /**
  * Sets random selected elements in `g` to 0 by the chance `p` (i.e. if `p` is
- * 0.4. each element has a 40% probability of beeing set to 0).
+ * 0.4. each element has a 40% probability of being set to 0).
  */
 FGraphNode *fdropout(FGraphNode *g, const double p);
 #ifdef __cplusplus
