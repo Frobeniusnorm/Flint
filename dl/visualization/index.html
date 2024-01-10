@@ -66,11 +66,23 @@
       </div>
       <br />
       <div class="card" style="min-width: 70em;">
-        <div id="model_information" style="min-width: 70em">
-          <div class="no_data">
+        <div style="min-width: 70em; min-height: 3em">
+          <div class="no_data" style="margin-top: 1em">
             No Connection established yet
           </div>
-        </div>
+		  <div id="model_information" style="display: none">
+            <div style="width: 40em; display: inline-block; float:left;" id="model_summary">
+            </div>
+            <div style="width: 28em; display: inline-block; float:left; padding-left: 2em;">
+              <canvas id="performance_pie" style="width:28em; height:28em; margin-bottom: 1em; margin-top: 1em;"></canvas>
+		      <center>
+		        <button id="profiling_toggle" style="margin-bottom: 1em;">enable profiling</button>
+		      </center>
+              <div id="optimizer_info">
+              </div>
+            </div>
+		  </div>
+		</div>
       </div>
     </div>
   </center>

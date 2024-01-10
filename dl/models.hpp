@@ -261,7 +261,8 @@ template <GenericLayer... T> struct SequentialModel {
 		/**
 		 * Stops collection profiling data
 		 */
-		void disable_profiling() { profiling = true; }
+		void disable_profiling() { profiling = false; }
+		bool is_profiling() const { return profiling; }
 		/**
 		 * Returns collected profiling data of the last call to `forward`
 		 */

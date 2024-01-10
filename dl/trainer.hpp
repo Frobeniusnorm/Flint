@@ -40,6 +40,10 @@ struct ControlInformation {
 		bool profiling = false;
 };
 struct MetricReporter {
+		ControlInformation control_info;
+		MetricReporter() = default;
+		MetricReporter(ControlInformation initial_state) : control_info(initial_state) {
+		}
 		virtual ~MetricReporter() = default;
 		virtual void report_batch(MetricInfo info) {
 			std::cout << "\r\e[Kbatch error: " << std::setprecision(3)
@@ -64,11 +68,6 @@ struct MetricReporter {
 						 " validation error: " +
 						 std::to_string(info.last_validation_error));
 		}
-		/**
-		 * Allows the reporter to send controlling signals to the trainer and
-		 * model
-		 */
-		virtual ControlInformation control() { return {}; }
 		virtual void report_finished() {}
 		virtual void
 		model_description(std::vector<std::string> layer_names,
@@ -143,6 +142,7 @@ class Trainer {
 				vector<size_t>(number_parameters.begin(),
 							   number_parameters.end()),
 				loss.name(), model.optimizer(), model.optimizer_description());
+			this->default_reporter.control_info.profiling = model.is_profiling();
 		}
 
 		/**
@@ -176,6 +176,7 @@ class Trainer {
 				vector<size_t>(number_parameters.begin(),
 							   number_parameters.end()),
 				loss.name(), model.optimizer(), model.optimizer_description());
+			reporter->control_info.profiling = model.is_profiling();
 		}
 		/**
 		 * Trains the model for the given batch size. A batch is a slice of the
@@ -205,7 +206,7 @@ class Trainer {
 					F_ERROR,
 					"Input and Target Datas batch size does not correspond!");
 			Tensor<long, 1> indices = Flint::arange(0, data.X.get_shape()[0]);
-			ControlInformation control = get_metric().control();
+			ControlInformation control = get_metric().control_info;
 			for (int i = 0; i < epochs; i++) {
 				// shuffle each epoch
 				Tensor<T1, n1> sx = data.X.index(indices);
@@ -215,7 +216,11 @@ class Trainer {
 				double total_error = 0;
 				for (size_t b = 0; b < number_batches && !control.stop_signal;
 					 b++) {
-					control = get_metric().control();
+					control = get_metric().control_info;
+					if (control.profiling)
+						model.enable_profiling();
+					else
+						model.disable_profiling();
 					size_t slice_to = (b + 1) * batch_size;
 					if (slice_to > batches)
 						slice_to = batches;
@@ -269,7 +274,6 @@ class NetworkMetricReporter : public MetricReporter {
 		std::unordered_map<long, std::pair<long, long>> last_read;
 		// controller states
 		bool pause = false, sent_all = false;
-		ControlInformation control_info;
 		std::binary_semaphore pause_lock;
 		void open_connection() {
 			socket_id = socket(AF_INET, SOCK_STREAM, 0);
@@ -361,6 +365,7 @@ class NetworkMetricReporter : public MetricReporter {
 							packet += "\"play\"";
 						packet += ",";
 					}
+					packet += "\"profiling\":" + string(control_info.profiling ? "true" : "false") + ",";
 					packet += "\"batches\":[";
 					long total_batches = 0, total_epochs = 0;
 					bool read_something = false;
@@ -392,9 +397,9 @@ class NetworkMetricReporter : public MetricReporter {
 					last_read[id].first = last_read_batch;
 					last_read[id].second = last_read_epoch;
 					packet +=
-						"], \"total_batches\": " + to_string(total_batches) +
-						", \"profiling_data\": {\"forward\":[";
+						"], \"total_batches\": " + to_string(total_batches);
 					if (read_something) {
+						packet += ", \"profiling_data\": {\"forward\":[";
 						ProfilingData profiling =
 							batches[batches.size() - 1].profiling;
 						for (int i = 0; i < layer_names.size(); i++) {
@@ -408,7 +413,7 @@ class NetworkMetricReporter : public MetricReporter {
 						packet +=
 							"], \"gradient\": " +
 							to_string(profiling.time_gradient_calculation) + "}";
-					} else packet += "]}";
+					}
 					packet += "}";
 				}
 				const string msg = "HTTP/1.1 200 OK\r\nServer: "
@@ -453,6 +458,5 @@ class NetworkMetricReporter : public MetricReporter {
 			flogging(F_VERBOSE, "Shutting down network");
 		}
 		void report_epoch(MetricInfo info) override { epochs.push_back(info); }
-		ControlInformation control() override { return control_info; }
 };
 #endif
