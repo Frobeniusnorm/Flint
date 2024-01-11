@@ -28,7 +28,7 @@ static inline int reducing(const FGraphNode *node, std::string name,
 	// we insert a index definition to introduce the for for our
 	// predecessors
 	const string par1 = "v" + std::to_string(compiler_state.variable_index + 1);
-	const string type = typeString(node->operation.data_type);
+	const string type = type_string(node->operation.data_type);
 	const int red_dim = ((int *)node->operation.additional_data)[0];
 	size_t it_dim = 1; // iteration size <=> product of all dimensions along dim
 	for (size_t d = red_dim + 1; d < prev->operation.dimensions; d++)
@@ -46,10 +46,10 @@ static inline int reducing(const FGraphNode *node, std::string name,
 		index_defs += "1";
 		break;
 	case FREDUCE_MIN:
-		index_defs += maxForType(node->operation.data_type);
+		index_defs += max_for_type(node->operation.data_type);
 		break;
 	case FREDUCE_MAX:
-		index_defs += minForType(node->operation.data_type);
+		index_defs += min_for_type(node->operation.data_type);
 		break;
 	default:
 		break;
@@ -97,7 +97,7 @@ static std::string reducing_eager(FType res_type,
 								  std::vector<FType> parameter_types) {
 	Twine code;
 	code += "if(index >= num_entries0) return;\n";
-	code += typeString(res_type) + " res = ";
+	code += type_string(res_type) + " res = ";
 	switch (operation) {
 	case FREDUCE_SUM:
 		code += "0";
@@ -119,7 +119,7 @@ static std::string reducing_eager(FType res_type,
 	code += ";\n"
 			"for(long i = 0; i < shape_dim0; i++){\n"
 			" const " +
-			typeString(res_type) +
+			type_string(res_type) +
 			" curr = P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % "
 			"it_dim0 "
 			"+ i * it_dim0];\n";
@@ -144,7 +144,7 @@ static std::string reducing_eager(FType res_type,
 }
 static std::string
 reducing_parameters_eager(FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0, const long num_entries0, const int dimensions0, const long "
 		   "it_dim0, const long shape_dim0"
 		   ", int reduce_dim";

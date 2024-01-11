@@ -27,7 +27,7 @@ void GenRandomImpl::execute_cpu(const FGraphNode *node,
 }
 int GenRandomImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
-	const string type = typeString(node->operation.data_type);
+	const string type = type_string(node->operation.data_type);
 	double seed = ((double *)node->operation.additional_data)[0];
 	compiler_state.code.prepend(type + " " + name + " = 0;\n{\n " + name +
 								" = sin(index + " + std::to_string(seed) +
@@ -70,7 +70,7 @@ void GenConstantImpl::zeroary_expression(const FGraphNode *node,
 }
 std::string GenConstantImpl::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
-	return ", const " + typeString(res_type) + " constant_val";
+	return ", const " + type_string(res_type) + " constant_val";
 }
 int GenConstantImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									   OCLLazyCodegenState &compiler_state) {
@@ -124,7 +124,7 @@ void GenArangeImpl::execute_cpu(const FGraphNode *node,
 }
 int GenArangeImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
-	const string type = typeString(node->operation.data_type);
+	const string type = type_string(node->operation.data_type);
 	unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
 	size_t acc_sizes_ax = 1;
 	for (unsigned int i = ax + 1; i < node->operation.dimensions; i++)

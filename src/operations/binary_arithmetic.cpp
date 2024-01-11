@@ -33,7 +33,7 @@ void AddImpl::binary_expression(T *__restrict__ result,
 }
 int AddImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 							   OCLLazyCodegenState &compiler_state) {
-	string type = typeString(node->operation.data_type);
+	string type = type_string(node->operation.data_type);
 	compiler_state.code.prepend(
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " + v" +
@@ -53,7 +53,7 @@ std::vector<bool> AddImpl::reuse_parameter_binary_impl(const FGraphNode *node) {
 	for (int i = 0; i < node->num_predecessor; i++) {
 		const FOperation pred = node->predecessors[i]->operation;
 		if (op.dimensions == pred.dimensions &&
-			typeSize(op.data_type) == typeSize(pred.data_type)) {
+			type_size(op.data_type) == type_size(pred.data_type)) {
 			result[i] = true;
 			for (int j = 0; j < pred.dimensions; j++) {
 				if (op.shape[j] != pred.shape[j]) {
@@ -88,7 +88,7 @@ void SubImpl::binary_expression(T *__restrict__ result,
 }
 int SubImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 							   OCLLazyCodegenState &compiler_state) {
-	string type = typeString(node->operation.data_type);
+	string type = type_string(node->operation.data_type);
 	compiler_state.code.prepend(
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " - v" +
@@ -125,7 +125,7 @@ void MulImpl::binary_expression(T *__restrict__ result,
 }
 int MulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 							   OCLLazyCodegenState &compiler_state) {
-	string type = typeString(node->operation.data_type);
+	string type = type_string(node->operation.data_type);
 	compiler_state.code.prepend(
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " * v" +
@@ -166,7 +166,7 @@ void DivImpl::binary_expression(T *__restrict__ result,
 }
 int DivImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 							   OCLLazyCodegenState &compiler_state) {
-	string type = typeString(node->operation.data_type);
+	string type = type_string(node->operation.data_type);
 	compiler_state.code.prepend(
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " / v" +
@@ -209,7 +209,7 @@ void PowImpl::binary_expression(T *__restrict__ result,
 }
 int PowImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 							   OCLLazyCodegenState &compiler_state) {
-	const string type = typeString(node->operation.data_type);
+	const string type = type_string(node->operation.data_type);
 	Twine &code = compiler_state.code;
 	const int variable_index = compiler_state.variable_index;
 	const FOperation x = node->predecessors[0]->operation;
@@ -239,7 +239,7 @@ std::string PowImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
 	std::string code =
 		"if(index >= num_entries0 && index >= num_entries1) return;\n";
-	string type = typeString(res_type);
+	string type = type_string(res_type);
 	if ((parameter_types[0] == F_FLOAT32 || parameter_types[0] == F_FLOAT64) &&
 		(parameter_types[1] == F_FLOAT32 || parameter_types[1] == F_FLOAT64))
 		code += "R[index] = pow((" + type +
@@ -332,7 +332,7 @@ void MatMulImpl::binary_expression(T *__restrict__ result,
 }
 int MatMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								  OCLLazyCodegenState &compiler_state) {
-	string type = typeString(node->operation.data_type);
+	string type = type_string(node->operation.data_type);
 	string par1, par2;
 	auto parameters = compiler_state.parameters;
 	FGraphNode *gnp1 = node->predecessors[0], *gnp2 = node->predecessors[1];
@@ -390,7 +390,7 @@ MatMulImpl::generate_ocl_parameters_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
 	Twine code;
 	for (int i = 0; i < 2; i++) {
-		code += ", const __global " + typeString(parameter_types[i]) + "* P" +
+		code += ", const __global " + type_string(parameter_types[i]) + "* P" +
 				to_string(i) + ", long num_entries" + to_string(i) +
 				", int dimensions" + to_string(i);
 	}
@@ -399,7 +399,7 @@ MatMulImpl::generate_ocl_parameters_eager(FType res_type,
 }
 std::string MatMulImpl::generate_ocl_eager(FType res_type,
 										   std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n" + typeString(res_type) +
+	return "if(index >= num_entriesR) return;\n" + type_string(res_type) +
 		   " res = 0;\n"
 		   "long j = (index % (l * n)) / n;\n"
 		   "long k = (index % (l * n)) % n;\n"

@@ -34,7 +34,7 @@ void NegImpl::unary_expression(T *__restrict__ result,
 int NegImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
+		"const " + type_string(node->operation.data_type) + " " + name +
 		" = -v" + to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
@@ -67,7 +67,7 @@ void LogImpl::unary_expression(T *__restrict__ result,
 int LogImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
+		"const " + type_string(node->operation.data_type) + " " + name +
 		" = log(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
@@ -104,7 +104,7 @@ void Log2Impl::unary_expression(T *__restrict__ result,
 int Log2Impl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
+		"const " + type_string(node->operation.data_type) + " " + name +
 		" = log2(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
@@ -141,7 +141,7 @@ void Log10Impl::unary_expression(T *__restrict__ result,
 int Log10Impl::generate_ocl_lazy(const FGraphNode *node, string name,
 								 OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
+		"const " + type_string(node->operation.data_type) + " " + name +
 		" = log10(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
@@ -173,7 +173,7 @@ int SignImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name + " = v" +
+		"const " + type_string(node->operation.data_type) + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " < 0 ? -1 : 1;\n");
 	return 0;
 }
@@ -214,7 +214,7 @@ void EvenImpl::execute_cpu(const FGraphNode *node,
 int EvenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name + " = v" +
+		"const " + type_string(node->operation.data_type) + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " % 2 == 0 ? 1 : 0;\n");
 	return 0;
 }
@@ -242,7 +242,7 @@ void SinImpl::unary_expression(T *__restrict__ result,
 int SinImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
+		"const " + type_string(node->operation.data_type) + " " + name +
 		" = sin(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
@@ -275,7 +275,7 @@ void CosImpl::unary_expression(T *__restrict__ result,
 int CosImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
+		"const " + type_string(node->operation.data_type) + " " + name +
 		" = cos(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
@@ -308,7 +308,7 @@ void TanImpl::unary_expression(T *__restrict__ result,
 int TanImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
+		"const " + type_string(node->operation.data_type) + " " + name +
 		" = tan(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
@@ -341,7 +341,7 @@ void ASinImpl::unary_expression(T *__restrict__ result,
 int ASinImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
+		"const " + type_string(node->operation.data_type) + " " + name +
 		" = asin(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
@@ -374,7 +374,7 @@ void ACosImpl::unary_expression(T *__restrict__ result,
 int ACosImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
+		"const " + type_string(node->operation.data_type) + " " + name +
 		" = acos(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
@@ -413,7 +413,7 @@ std::string ATanImpl::generate_ocl_eager(FType res_type,
 int ATanImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
+		"const " + type_string(node->operation.data_type) + " " + name +
 		" = atan(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
@@ -440,7 +440,7 @@ void SqrtImpl::unary_expression(T *__restrict__ result,
 int SqrtImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
+		"const " + type_string(node->operation.data_type) + " " + name +
 		" = sqrt(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
@@ -473,7 +473,7 @@ void ExpImpl::unary_expression(T *__restrict__ result,
 int ExpImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name +
+		"const " + type_string(node->operation.data_type) + " " + name +
 		" = exp(v" + to_string(compiler_state.variable_index + 1) + ");\n");
 	return 0;
 }
@@ -506,7 +506,7 @@ void AbsImpl::unary_expression(T *__restrict__ result,
 int AbsImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name + " = v" +
+		"const " + type_string(node->operation.data_type) + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " < 0 ? -v" +
 		to_string(compiler_state.variable_index + 1) + ": v" +
 		to_string(compiler_state.variable_index + 1) + ";\n");

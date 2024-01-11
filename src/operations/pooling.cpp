@@ -17,8 +17,8 @@ static void pooling(T *__restrict__ result, const T *__restrict__ data,
 	const FOperation pred = gnp1->operation;
 	const FSlidingWindow *window = (FSlidingWindow *)op.additional_data;
 	// calculate accumulated sizes for result, kernel and source (pred)
-	const std::vector<size_t> acc_sizes = calcAccSizes(op);
-	const std::vector<size_t> acc_sizes_pred = calcAccSizes(pred);
+	const std::vector<size_t> acc_sizes = calc_acc_sizes(op);
+	const std::vector<size_t> acc_sizes_pred = calc_acc_sizes(pred);
 	size_t kernel_num_elems = window->size[op.dimensions - 1];
 	std::vector<size_t> acc_sizes_kernel = std::vector<size_t>(op.dimensions);
 	acc_sizes_kernel[op.dimensions - 1] = 1;
@@ -69,11 +69,11 @@ static int pooling_gpu(const FGraphNode *node, std::string name,
 	const FGraphNode *gnp1 = node->predecessors[0];
 	const FOperation pred = gnp1->operation;
 	const FSlidingWindow *window = (FSlidingWindow *)op.additional_data;
-	const string type = typeString(node->operation.data_type);
+	const string type = type_string(node->operation.data_type);
 	// calculate accumulated sizes for result, kernel and source
 	// (pred)
-	const vector<size_t> acc_sizes = calcAccSizes(op);
-	const vector<size_t> acc_sizes_pred = calcAccSizes(pred);
+	const vector<size_t> acc_sizes = calc_acc_sizes(op);
+	const vector<size_t> acc_sizes_pred = calc_acc_sizes(pred);
 	size_t kernel_num_elems = window->size[op.dimensions - 1];
 	vector<size_t> acc_sizes_kernel = vector<size_t>(op.dimensions);
 	acc_sizes_kernel[op.dimensions - 1] = 1;
@@ -85,7 +85,7 @@ static int pooling_gpu(const FGraphNode *node, std::string name,
 		"base_ind" + to_string(compiler_state.variable_index);
 	Twine pooling_code =
 		type + " " + name + " = " +
-		(op.op_type == FPOOLING_SUM ? "0" : minForType(op.data_type)) +
+		(op.op_type == FPOOLING_SUM ? "0" : min_for_type(op.data_type)) +
 		";\nlong " + base_ind + " = 0";
 	for (int d = 0; d < op.dimensions; d++) {
 		pooling_code +=
@@ -134,7 +134,7 @@ static int pooling_gpu(const FGraphNode *node, std::string name,
 }
 static std::string
 pooling_gpu_eager_params(FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0"
 		   ", const long num_entries0, const int dimensions0"
 		   ", __constant long* acc_sizes_pred, __constant long* "
@@ -152,11 +152,11 @@ static std::string pooling_gpu_eager(FType res_type,
 			"acc_sizes[d];\n"
 			" j += di * steps[d] * acc_sizes_pred[d];\n"
 			"}\n" +
-			typeString(res_type) + " res = ";
+			type_string(res_type) + " res = ";
 	if constexpr (operation == FPOOLING_SUM)
 		code += "0";
 	else
-		code += minForType(res_type);
+		code += min_for_type(res_type);
 	code += ";\n"
 			"for(long k = 0; k < kernel_num_elems; k++){\n"
 			" int set_zero = false;\n"
@@ -351,8 +351,8 @@ void GradientPoolingMax::execute_cpu_typed(
 	const unsigned int *steps = window->step;
 	// calculate accumulated sizes for result (pred), kernel and a
 	// (adjacent)
-	std::vector<size_t> acc_sizes = calcAccSizes(a);
-	std::vector<size_t> acc_sizes_pred = calcAccSizes(op);
+	std::vector<size_t> acc_sizes = calc_acc_sizes(a);
+	std::vector<size_t> acc_sizes_pred = calc_acc_sizes(op);
 	acc_sizes[op.dimensions - 2] = 1;
 	std::vector<size_t> acc_sizes_kernel(op.dimensions);
 	acc_sizes_kernel[acc_sizes_kernel.size() - 1] = 1;
@@ -487,11 +487,11 @@ int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node,
 	const FOperation a = gnp2->operation;
 	const FOperation image = gnp3->operation;
 	const unsigned int *steps = window->step;
-	const string type = typeString(op.data_type);
+	const string type = type_string(op.data_type);
 	// calculate accumulated sizes for result (pred), kernel and a
 	// (adjacent)
-	std::vector<size_t> acc_sizes = calcAccSizes(a);
-	std::vector<size_t> acc_sizes_pred = calcAccSizes(op);
+	std::vector<size_t> acc_sizes = calc_acc_sizes(a);
+	std::vector<size_t> acc_sizes_pred = calc_acc_sizes(op);
 	acc_sizes[op.dimensions - 2] = 1;
 	std::vector<size_t> acc_sizes_kernel(op.dimensions);
 	acc_sizes_kernel[acc_sizes_kernel.size() - 1] = 1;
@@ -605,14 +605,14 @@ int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node,
 }
 std::string GradientPoolingMax::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0"
 		   ", const long num_entries0, const int dimensions0, const "
 		   "__global " +
-		   typeString(parameter_types[1]) +
+		   type_string(parameter_types[1]) +
 		   "* P1, const long num_entries1, const int dimensions1, const "
 		   "__global " +
-		   typeString(parameter_types[2]) +
+		   type_string(parameter_types[2]) +
 		   "* P2, const long num_entries2, const int dimensions2"
 		   ", __constant long* acc_sizes_pred, "
 		   "__constant long* acc_sizes_kernel"
@@ -626,7 +626,7 @@ GradientPoolingMax::generate_ocl_eager(FType res_type,
 	return "if(index >= num_entriesR) return;\n"
 		   "const long overlapping = max(1l, (long)ceil(kernel_shape[0] / "
 		   "(double)steps[0])) * acc_overlapping[0];\n" +
-		   typeString(res_type) +
+		   type_string(res_type) +
 		   " res = 0;\n"
 		   "int in_steps = true;\n"
 		   "int started_counting = false;\n"

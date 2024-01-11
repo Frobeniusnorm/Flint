@@ -54,12 +54,12 @@ struct ConversionImpl : OperationImplementation {
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
 			// all combinations of parameter and return type possible
-			return allTypePermutations(2);
+			return all_type_permutations(2);
 		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
-			return {typeSize(node->predecessors[0]->operation.data_type) ==
-					typeSize(node->operation.data_type)};
+			return {type_size(node->predecessors[0]->operation.data_type) ==
+					type_size(node->operation.data_type)};
 		}
 };
 struct RepeatImpl : OperationImplementation {

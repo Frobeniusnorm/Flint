@@ -34,9 +34,9 @@ void SliceImpl::unary_expression(T *__restrict__ result,
 								 size_t size, const FGraphNode *curr) {
 	FOperation pred = curr->predecessors[0]->operation;
 	FSlice *slice = (FSlice *)curr->operation.additional_data;
-	std::vector<size_t> acc_sizes = calcAccSizes(curr->operation);
+	std::vector<size_t> acc_sizes = calc_acc_sizes(curr->operation);
 	std::vector<size_t> acc_sizes_pred =
-		calcAccSizes(pred.dimensions, pred.shape);
+		calc_acc_sizes(pred.dimensions, pred.shape);
 	// calculate start and step size in flattened array
 	size_t start = 0;
 	for (unsigned int d = 0; d < curr->operation.dimensions; d++) {
@@ -59,7 +59,7 @@ int SliceImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	FOperation pred = node->predecessors[0]->operation;
 	FSlice *slice = (FSlice *)node->operation.additional_data;
 	unsigned int old_idx = compiler_state.num_indices++;
-	const string type = typeString(node->operation.data_type);
+	const string type = type_string(node->operation.data_type);
 	Twine index_defs = "int old_index" + to_string(old_idx) + " = index;\n";
 	// flattened shape data
 	std::vector<size_t> acc_sizes(node->operation.dimensions);
@@ -102,7 +102,7 @@ int SliceImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 std::string
 SliceImpl::generate_ocl_parameters_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0"
 		   ", const long num_entries0, const int dimensions0"
 		   ", __constant long* acc_sizes, __constant long* acc_sizes_pred"
@@ -190,9 +190,9 @@ void ExtendImpl::unary_expression(T *__restrict__ result,
 								  size_t size, const FGraphNode *curr) {
 	FOperation pred = curr->predecessors[0]->operation;
 	FExtend *extend = (FExtend *)curr->operation.additional_data;
-	std::vector<size_t> acc_sizes = calcAccSizes(curr->operation);
+	std::vector<size_t> acc_sizes = calc_acc_sizes(curr->operation);
 	std::vector<size_t> acc_sizes_pred =
-		calcAccSizes(pred.dimensions, pred.shape);
+		calc_acc_sizes(pred.dimensions, pred.shape);
 	// calculate for each entry corresponding element
 	for (size_t i = from; i < from + size; i++) {
 		size_t j = 0;
@@ -231,7 +231,7 @@ void ExtendImpl::unary_expression(T *__restrict__ result,
 int ExtendImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								  OCLLazyCodegenState &compiler_state) {
 	const FOperation pred = node->predecessors[0]->operation;
-	const string type = typeString(node->operation.data_type);
+	const string type = type_string(node->operation.data_type);
 	const FExtend *extend = (FExtend *)node->operation.additional_data;
 	const unsigned int old_idx = compiler_state.num_indices++;
 	Twine index_defs;
@@ -301,7 +301,7 @@ int ExtendImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 std::string
 ExtendImpl::generate_ocl_parameters_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0"
 		   ", const long num_entries0, const int dimensions0"
 		   ", __constant long* acc_sizes, __constant long* acc_sizes_pred"
@@ -398,7 +398,7 @@ int IndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	FGraphNode *b = node->predecessors[1];
 	const FOperation op = node->operation;
 	const unsigned int axis = b->operation.dimensions - 1;
-	const string type = typeString(node->operation.data_type);
+	const string type = type_string(node->operation.data_type);
 	string par1, par2;
 	par1 = "v" + to_string(++compiler_state.variable_index);
 	par2 = "v" + to_string(++compiler_state.variable_index);
@@ -434,11 +434,11 @@ int IndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 std::string
 IndexImpl::generate_ocl_parameters_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0"
 		   ", const long num_entries0, const int dimensions0"
 		   ", const __global " +
-		   typeString(parameter_types[1]) +
+		   type_string(parameter_types[1]) +
 		   "* P1"
 		   ", const long num_entries1, const int dimensions1 "
 		   ", const long acc_sizes_ax, const long op_shape_ax, const long "
@@ -581,7 +581,7 @@ int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		"(long) " + par3 + "[index / " + to_string(acc_sizes_ax) + "]";
 	const std::string base_ind =
 		base + " * " + to_string(c->operation.shape[axis]);
-	const string type = typeString(node->operation.data_type);
+	const string type = type_string(node->operation.data_type);
 	compiler_state.code.prepend(type + " " + name +
 								" = 0;\n"
 								"{const long base_ind = " +
@@ -616,15 +616,15 @@ int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string SetIndexImpl::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0"
 		   ", const long num_entries0, const int dimensions0"
 		   ", const __global " +
-		   typeString(parameter_types[1]) +
+		   type_string(parameter_types[1]) +
 		   "* P1"
 		   ", const long num_entries1, const int dimensions1 "
 		   ", const __global " +
-		   typeString(parameter_types[2]) +
+		   type_string(parameter_types[2]) +
 		   "* P2"
 		   ", const long num_entries2, const int dimensions2 "
 		   ", const long acc_sizes_ax, const long op_shape_ax, const long "

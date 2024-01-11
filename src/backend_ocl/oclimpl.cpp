@@ -170,7 +170,7 @@ FErrorType flintInit_gpu() {
 static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
 								size_t *total_size = nullptr) {
 	cl_int err_code;
-	size_t type_size_node = typeSize(node->operation.data_type);
+	size_t type_size_node = type_size(node->operation.data_type);
 	size_t total_size_node = 1;
 	for (int i = 0; i < node->operation.dimensions; i++)
 		total_size_node *= node->operation.shape[i];
@@ -357,26 +357,26 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		rd->data = nullptr;
 		rd->num_entries = num_elems;
 		rd->mem_id = nullptr;
-		int type_size = typeSize(node->operation.data_type);
+		int type_s = type_size(node->operation.data_type);
 		if (data) {
-			rd->data = malloc(type_size * num_elems);
+			rd->data = malloc(type_s * num_elems);
 			if (!rd->data) {
 				setErrorType(OUT_OF_MEMORY);
 				flogging(F_ERROR, "Not enough memory to store result! " +
 									  to_string(num_elems));
 				return nullptr;
 			}
-			memcpy(rd->data, data, type_size * num_elems);
+			memcpy(rd->data, data, type_s * num_elems);
 		} else if (gpu_data) {
 			rd->mem_id = OCLCompilerThread::copy_memory(
-				gpu_data, type_size * num_elems, CL_MEM_READ_WRITE);
+				gpu_data, type_s * num_elems, CL_MEM_READ_WRITE);
 		}
 		node->result_data = rd;
 		return node;
 	}
 	size_t inv_broad[2];
 	if (node->num_predecessor == 2)
-		calculateDivisorForInverseBroadcasting(
+		calculate_divisor_for_inverse_broadcasting(
 			node->predecessors[0], inv_broad[0], node->predecessors[1],
 			inv_broad[1]);
 	vector<FType> params_types(node->num_predecessor);
@@ -411,7 +411,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		const FOperation op = pred->operation;
 		cl_mem mem_obj = nullptr;
 		bool do_write = false;
-		const size_t type_size = typeSize(op.data_type);
+		const size_t type_s = type_size(op.data_type);
 		size_t total_size;
 		cl_mem mem_id = nullptr;
 		const bool recycle =
@@ -472,7 +472,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 							 fop_to_string[op.op_type]);
 			}
 			err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_TRUE, 0,
-											total_size * type_size, data, 0,
+											total_size * type_s, data, 0,
 											nullptr, nullptr);
 			if (err_code != CL_SUCCESS) {
 				string msg = "Unknown Error while loading data to GPU! Error: ";
@@ -664,7 +664,7 @@ FResultData *fSyncMemory(FGraphNode *node) {
 	FResultData *res = node->result_data;
 	if (res && res->mem_id && !res->data) {
 		// read result to cpu
-		int type_size_node = typeSize(node->operation.data_type);
+		int type_size_node = type_size(node->operation.data_type);
 		res->data = malloc(res->num_entries * type_size_node);
 		if (store_data)
 			*store_data = res->data;
@@ -756,11 +756,11 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	string code =
 		"#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void "
 		"execute_graph(__global ";
-	code += typeString(node->operation.data_type);
+	code += type_string(node->operation.data_type);
 	code += " *R";
 	// insert parameters
 	for (auto &[op, name] : parameters)
-		code += ", __global const " + typeString(op->operation.data_type) +
+		code += ", __global const " + type_string(op->operation.data_type) +
 				" *" + name;
 	code += "){\n";
 	// add the execution code
@@ -785,7 +785,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		chrono::high_resolution_clock::now() - start;
 	start = chrono::high_resolution_clock::now();
 	// result buffer
-	size_t type_size_node = typeSize(node_op.data_type);
+	size_t type_size_node = type_size(node_op.data_type);
 	cl_mem result_mem = nullptr;
 	vector<cl_event> writeEvents;
 	// upload or link parameters
@@ -800,7 +800,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			// The problem here: optimized memory is a store
 			cl_mem mem_obj = nullptr;
 			bool do_write = false;
-			const size_t type_size = typeSize(op.data_type);
+			const size_t type_s = type_size(op.data_type);
 			const size_t total_size =
 				op.op_type == FSTORE
 					? ((FStore *)op.additional_data)->num_entries
@@ -825,7 +825,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			} else {
 				mem_obj =
 					clCreateBuffer(context, CL_MEM_READ_WRITE,
-								   total_size * type_size, nullptr, &err_code);
+								   total_size * type_s, nullptr, &err_code);
 				if (err_code == CL_OUT_OF_HOST_MEMORY) {
 					setErrorType(OUT_OF_MEMORY);
 					flogging(F_ERROR, "Not enough memory to create buffer!");
@@ -858,7 +858,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 					flogging(F_ERROR, "parameter has no data!");
 				writeEvents.emplace_back();
 				err_code = clEnqueueWriteBuffer(
-					clqueue, mem_obj, CL_FALSE, 0, total_size * type_size, data,
+					clqueue, mem_obj, CL_FALSE, 0, total_size * type_s, data,
 					0, nullptr, &writeEvents[writeEvents.size() - 1]);
 				if (err_code != CL_SUCCESS) {
 					string msg = "Unknown Error while loading data to GPU!";

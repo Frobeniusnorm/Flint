@@ -31,7 +31,7 @@ std::string generateEagerCode(FOperationType operation, FType res_type,
 	kernel_name = string(fop_to_string[operation]) + type_info;
 	Twine code =
 		"#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void " +
-		kernel_name + "(__global " + typeString(res_type) +
+		kernel_name + "(__global " + type_string(res_type) +
 		"* R, long num_entriesR";
 	// generate parameters
 	code += OperationImplementation::implementations[operation]

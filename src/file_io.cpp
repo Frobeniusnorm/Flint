@@ -37,7 +37,7 @@ char *fserialize(FGraphNode *node, size_t *bytes_written) {
 	// header
 	size_t data_size = 4;
 	// pure data
-	data_size += total_size_node * typeSize(node->operation.data_type);
+	data_size += total_size_node * type_size(node->operation.data_type);
 	// data type + dimensions + shape
 	data_size += sizeof(FType) + sizeof(int) +
 				 node->operation.dimensions * sizeof(size_t);
@@ -65,10 +65,10 @@ char *fserialize(FGraphNode *node, size_t *bytes_written) {
 	}
 	// data
 	memcpy(&data[index], node->result_data->data,
-		   total_size_node * typeSize(node->operation.data_type));
+		   total_size_node * type_size(node->operation.data_type));
 	if (bytes_written)
 		*bytes_written =
-			index + total_size_node * typeSize(node->operation.data_type);
+			index + total_size_node * type_size(node->operation.data_type);
 	return data;
 }
 
@@ -94,15 +94,15 @@ FGraphNode *fdeserialize(char *data, size_t *bytes_read) {
 		}
 		total_size *= shape[i];
 	}
-	char *res = safe_mal<char>(total_size * typeSize((FType)data_type));
+	char *res = safe_mal<char>(total_size * type_size((FType)data_type));
 	if (!res)
 		return nullptr;
-	memcpy(res, &data[index], total_size * typeSize((FType)data_type));
+	memcpy(res, &data[index], total_size * type_size((FType)data_type));
 	FGraphNode *node = fCreateGraph((void *)res, total_size, (FType)data_type,
 									shape.data(), shape.size());
 	free(res);
 	if (bytes_read) {
-		*bytes_read = index + total_size * typeSize((FType)data_type);
+		*bytes_read = index + total_size * type_size((FType)data_type);
 	}
 	return node;
 }

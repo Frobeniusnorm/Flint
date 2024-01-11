@@ -144,7 +144,7 @@ struct SignImpl : OperationImplementation {
 		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
-			return {typeSize(node->predecessors[0]->operation.data_type) == typeSize(F_INT32)};
+			return {type_size(node->predecessors[0]->operation.data_type) == type_size(F_INT32)};
 		}
 };
 struct EvenImpl : OperationImplementation {
@@ -168,7 +168,7 @@ struct EvenImpl : OperationImplementation {
 		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
-			return {typeSize(node->predecessors[0]->operation.data_type) == typeSize(F_INT32)};
+			return {type_size(node->predecessors[0]->operation.data_type) == type_size(F_INT32)};
 		}
 };
 struct SinImpl : OperationImplementation {

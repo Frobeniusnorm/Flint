@@ -8,8 +8,10 @@
 using namespace std;
 
 FGraphNode *ConvolveImpl::gradient_convolve2(FGraphNode *a, FGraphNode *kernel,
-									  FGraphNode *prev_adj,
-									  const unsigned int *steps) {
+											 FGraphNode *prev_adj,
+											 const unsigned int *steps) {
+	std::cout << kernel->result_data << " and " << prev_adj->result_data
+			  << std::endl;
 	if (!kernel->result_data)
 		fExecuteGraph(kernel);
 	if (!prev_adj->result_data)
@@ -33,6 +35,9 @@ FGraphNode *ConvolveImpl::gradient_convolve2(FGraphNode *a, FGraphNode *kernel,
 	if (!op.shape)
 		return nullptr;
 	memcpy(op.shape, kernel->operation.shape, op.dimensions * sizeof(size_t));
+	std::cout << "shape: " << print_shape(op.shape, op.dimensions) << std::endl;
+	std::cout << "image shape: " << print_shape(a->operation.shape, a->operation.dimensions) << std::endl;
+	// TODO small result and REALLY HIGH image -> execute on cpu
 	op.op_type = FGRADIENT_CONVOLVE2;
 	op.additional_data = safe_mal<unsigned int>(a->operation.dimensions - 1);
 	if (!op.additional_data)
@@ -45,8 +50,8 @@ FGraphNode *ConvolveImpl::gradient_convolve2(FGraphNode *a, FGraphNode *kernel,
 	return gradient;
 }
 FGraphNode *ConvolveImpl::gradient_convolve1(FGraphNode *a, FGraphNode *kernel,
-									  FGraphNode *prev_adj,
-									  const unsigned int *steps) {
+											 FGraphNode *prev_adj,
+											 const unsigned int *steps) {
 	if (!kernel->result_data)
 		fExecuteGraph(kernel);
 	if (!prev_adj->result_data)
@@ -136,9 +141,9 @@ void ConvolveImpl::binary_expression(T *__restrict__ result,
 	const bool multiple_filter =
 		gnp2->operation.dimensions != gnp1->operation.dimensions;
 	// calculate accumulated sizes for result, kernel and source (pred)
-	std::vector<size_t> acc_sizes = calcAccSizes(op);
-	std::vector<size_t> acc_sizes_pred = calcAccSizes(pred);
-	std::vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
+	std::vector<size_t> acc_sizes = calc_acc_sizes(op);
+	std::vector<size_t> acc_sizes_pred = calc_acc_sizes(pred);
+	std::vector<size_t> acc_sizes_kernel = calc_acc_sizes(kernel);
 	size_t kernel_num_elems = kernel.shape[acc_sizes.size()];
 	size_t pred_num_elems = multiple_filter ? 1 : pred.shape[acc_sizes.size()];
 	for (long d = acc_sizes.size() - 1; d >= 0; d--) {
@@ -211,9 +216,9 @@ int ConvolveImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	const FOperation op = node->operation;
 	const FOperation pred = gnp1->operation, kernel = gnp2->operation;
 	const unsigned int *steps = (unsigned int *)op.additional_data;
-	const vector<size_t> acc_sizes = calcAccSizes(op);
-	const vector<size_t> acc_sizes_pred = calcAccSizes(pred);
-	const vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
+	const vector<size_t> acc_sizes = calc_acc_sizes(op);
+	const vector<size_t> acc_sizes_pred = calc_acc_sizes(pred);
+	const vector<size_t> acc_sizes_kernel = calc_acc_sizes(kernel);
 	size_t kernel_num_elems = kernel.shape[acc_sizes.size()];
 	size_t pred_num_elems = multiple_filter ? 1 : pred.shape[acc_sizes.size()];
 	for (long d = acc_sizes.size() - 1; d >= 0; d--) {
@@ -222,7 +227,7 @@ int ConvolveImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 										// the dimension of filters
 			kernel_num_elems *= kernel.shape[d];
 	}
-	const std::string type = typeString(node->operation.data_type);
+	const std::string type = type_string(node->operation.data_type);
 	Twine conv_code;
 	conv_code += type + " " + name + " = 0;\n{\nlong j = 0";
 	for (unsigned int d = 0;
@@ -239,7 +244,7 @@ int ConvolveImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 					  ") / " + to_string(acc_sizes[op.dimensions - 1]) + " * " +
 					  to_string(kernel_num_elems))
 			 : string("0")) +
-		";\n" + typeString(op.data_type) +
+		";\n" + type_string(op.data_type) +
 		" res = 0;\n"
 		"for(long k = 0; k < " +
 		to_string(kernel_num_elems) +
@@ -280,11 +285,11 @@ int ConvolveImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string ConvolveImpl::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0"
 		   ", const long num_entries0, const int dimensions0"
 		   ", const __global " +
-		   typeString(parameter_types[1]) +
+		   type_string(parameter_types[1]) +
 		   "* P1"
 		   ", const long num_entries1, const int dimensions1"
 
@@ -309,7 +314,7 @@ ConvolveImpl::generate_ocl_eager(FType res_type,
 		   "acc_sizes[dimensions0 - 1];\n"
 		   " kernel_offset = fi * acc_sizes_kernel[0];\n"
 		   "}\n" +
-		   typeString(res_type) +
+		   type_string(res_type) +
 		   " res = 0;\n"
 		   "const long kernel_num_elems = multi_filter ? acc_sizes_kernel[0] "
 		   ": "
@@ -406,8 +411,8 @@ FGraphNode *GradientConvolve1Impl::local_gradient(FGraphNode *y, int dx_i,
 			gradient, {kernel, prev_adj});
 		return gradient;
 	} else if (0 == dx_i) {
-		return ConvolveImpl::gradient_convolve1(prev_adj, kernel, a,
-								  (unsigned int *)y->operation.additional_data);
+		return ConvolveImpl::gradient_convolve1(
+			prev_adj, kernel, a, (unsigned int *)y->operation.additional_data);
 	}
 	return nullptr;
 }
@@ -437,9 +442,9 @@ void GradientConvolve1Impl::binary_expression(
 	const unsigned int *steps = (unsigned int *)op.additional_data;
 	// calculate accumulated sizes for result (pred), kernel and a
 	// (adjacent)
-	std::vector<size_t> acc_sizes = calcAccSizes(a);
-	std::vector<size_t> acc_sizes_pred = calcAccSizes(op);
-	std::vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
+	std::vector<size_t> acc_sizes = calc_acc_sizes(a);
+	std::vector<size_t> acc_sizes_pred = calc_acc_sizes(op);
+	std::vector<size_t> acc_sizes_kernel = calc_acc_sizes(kernel);
 	acc_sizes[op.dimensions - 2] = 1;
 	// accumulations of overlapping elements (kernel overlapping itself)
 	std::vector<size_t> acc_overlapping(op.dimensions - 1);
@@ -548,9 +553,9 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 	const unsigned int *steps = (unsigned int *)op.additional_data;
 	// calculate accumulated sizes for result (pred), kernel and a
 	// (adjacent)
-	std::vector<size_t> acc_sizes = calcAccSizes(a);
-	std::vector<size_t> acc_sizes_pred = calcAccSizes(op);
-	std::vector<size_t> acc_sizes_kernel = calcAccSizes(kernel);
+	std::vector<size_t> acc_sizes = calc_acc_sizes(a);
+	std::vector<size_t> acc_sizes_pred = calc_acc_sizes(op);
+	std::vector<size_t> acc_sizes_kernel = calc_acc_sizes(kernel);
 	acc_sizes[op.dimensions - 2] = 1;
 	size_t kernel_num_elems = kernel.shape[op.dimensions - 1];
 	size_t a_num_elems = 1;
@@ -573,7 +578,7 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 		std::max(1l,
 				 (long)std::ceil((double)kernel.shape[0] / (double)steps[0])) *
 		acc_overlapping[0];
-	const string type = typeString(op.data_type);
+	const string type = type_string(op.data_type);
 	Twine convc;
 	convc += type + " " + name + " = 0;\n{";
 	convc += "int in_steps = 1, started_counting = 0;\n"
@@ -667,11 +672,11 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 }
 std::string GradientConvolve1Impl::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0"
 		   ", const long num_entries0, const int dimensions0, const "
 		   "__global " +
-		   typeString(parameter_types[1]) +
+		   type_string(parameter_types[1]) +
 		   "* P1, const long num_entries1, const int dimensions1"
 		   ", __constant long* acc_sizes_pred, "
 		   "__constant long* acc_sizes_kernel"
@@ -685,7 +690,7 @@ GradientConvolve1Impl::generate_ocl_eager(FType res_type,
 	return "if(index >= num_entriesR) return;\n"
 		   "const long overlapping = max(1l, (long)ceil(kernel_shape[0] / "
 		   "(double)steps[0])) * acc_overlapping[0];\n" +
-		   typeString(res_type) +
+		   type_string(res_type) +
 		   " res = 0;\n"
 		   "int in_steps = true;\n"
 		   "int started_counting = false;\n"
@@ -804,6 +809,7 @@ void GradientConvolve2Impl::binary_expression(
 	const B *__restrict__ data2, size_t from, size_t size, size_t index_man_1,
 	size_t inv_man_1, size_t index_man_2, size_t inv_man_2,
 	const FGraphNode *curr) {
+	std::cout << "gradient convolve 2 on cpu! :(" << std::endl;
 	// normal convolution:
 	//   shape(op) = [k1, k2, ..., kn, c]
 	//   shape(pred) = [p1, p2, ..., pn, c]
@@ -816,8 +822,8 @@ void GradientConvolve2Impl::binary_expression(
 	const FGraphNode *gnp1 = curr->predecessors[0],
 					 *gnp2 = curr->predecessors[1];
 	const FOperation pred = gnp1->operation, prev_adj = gnp2->operation;
-	const std::vector<size_t> acc_sizes_pred = calcAccSizes(pred);
-	const std::vector<size_t> acc_sizes_kernel = calcAccSizes(op);
+	const std::vector<size_t> acc_sizes_pred = calc_acc_sizes(pred);
+	const std::vector<size_t> acc_sizes_kernel = calc_acc_sizes(op);
 	const bool multifilter = op.dimensions > pred.dimensions;
 	// like accumulated sizes for prev_adj but without filter in multifilter
 	// context
@@ -868,10 +874,10 @@ int GradientConvolve2Impl::generate_ocl_lazy(
 	const string par1 = "v" + to_string(++compiler_state.variable_index);
 	const string par2 = compiler_state.findOrInsertParameter(gnp2);
 	const FOperation pred = gnp1->operation, prev_adj = gnp2->operation;
-	const vector<size_t> acc_sizes_pred = calcAccSizes(pred);
-	const vector<size_t> acc_sizes_kernel = calcAccSizes(op);
+	const vector<size_t> acc_sizes_pred = calc_acc_sizes(pred);
+	const vector<size_t> acc_sizes_kernel = calc_acc_sizes(op);
 	const bool multifilter = op.dimensions > pred.dimensions;
-	const string type = typeString(op.data_type);
+	const string type = type_string(op.data_type);
 	const unsigned int num_filter = multifilter ? op.shape[0] : 1;
 	// like accumulated sizes for prev_adj but without filter in
 	// multifilter context
@@ -928,7 +934,7 @@ int GradientConvolve2Impl::generate_ocl_lazy(
 }
 std::string GradientConvolve2Impl::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P1"
 		   ", const long num_entries1, const int dimensions1, const __global "
 		   "double* P2, const long num_entries2, const int dimensions2, "

@@ -39,7 +39,7 @@ template <typename T> inline T *safe_mal(unsigned int count) {
 }
 extern const char *fop_to_string[];
 template <typename T>
-static inline std::string vectorString(const std::vector<T> &vec,
+static inline std::string vector_string(const std::vector<T> &vec,
 									   std::string indentation = "") {
 	std::string res = "[";
 	for (size_t i = 0; i < vec.size(); i++) {
@@ -50,17 +50,48 @@ static inline std::string vectorString(const std::vector<T> &vec,
 	return res + "]";
 }
 template <typename T>
-static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
+static inline std::string vector_string(const std::vector<std::vector<T>> &vec,
 									   std::string indentation = "") {
 	std::string res = "[";
 	for (size_t i = 0; i < vec.size(); i++) {
-		res += vectorString(vec[i], indentation + " ");
+		res += vector_string(vec[i], indentation + " ");
 		if (i != vec.size() - 1)
 			res += ",\n" + indentation;
 	}
 	return res + "]";
 }
-static inline size_t computeScore(FGraphNode *g, bool with_pred = true) {
+static std::string print_shape(size_t *shape, int dim) {
+	std::vector<size_t> sh(shape, shape + dim);
+	return vector_string(sh);
+}
+template <typename T>
+static std::string print_node(FGraphNode *node, int dim, int *b) {
+	std::string prev = "";
+	for (int i = 0; i < dim; i++)
+		prev += " ";
+	std::string s = "[";
+	if (dim == node->operation.dimensions - 1) {
+		for (int i = 0; i < node->operation.shape[dim]; i++) {
+			s += std::to_string(((T *)node->result_data->data)[*b + i]);
+			if (i != node->operation.shape[dim] - 1)
+				s += ", ";
+		}
+		(*b) += node->operation.shape[dim];
+	} else {
+		for (int i = 0; i < node->operation.shape[dim]; i++)
+			s += print_node<T>(node, dim + 1, b) + ",\n" + prev;
+		s = s.substr(0, s.size() - 2 - prev.size());
+	}
+	return s + "]";
+}
+template <typename T> static std::string print_node(FGraphNode *node) {
+	if (!node->result_data) {
+		fSyncMemory(fExecuteGraph(node));
+	}
+	int b = 0;
+	return print_node<T>(node, 0, &b);
+}
+static inline size_t compute_score(FGraphNode *g, bool with_pred = true) {
 	std::queue<FGraphNode *> todo;
 	size_t no_elems = 1;
 	for (int i = 0; i < g->operation.dimensions; i++)
@@ -81,7 +112,7 @@ static inline size_t computeScore(FGraphNode *g, bool with_pred = true) {
 	}
 	return score * no_elems;
 }
-inline std::string typeString(FType t) {
+inline std::string type_string(FType t) {
 	switch (t) {
 	case F_INT32:
 		return "int";
@@ -94,7 +125,7 @@ inline std::string typeString(FType t) {
 	}
 	return "";
 }
-inline size_t typeSize(FType t) {
+inline size_t type_size(FType t) {
 	switch (t) {
 	case F_INT32:
 		return sizeof(int);
@@ -107,7 +138,7 @@ inline size_t typeSize(FType t) {
 	}
 	return 1;
 }
-inline FType higherType(const FType a, const FType b) {
+inline FType higher_type(const FType a, const FType b) {
 	FType highest = F_INT32;
 	if (a == F_FLOAT64 || (b == F_FLOAT64))
 		highest = F_FLOAT64;
@@ -117,7 +148,7 @@ inline FType higherType(const FType a, const FType b) {
 		highest = F_INT64;
 	return highest;
 }
-inline std::vector<size_t> calcAccSizes(const int dimensions,
+inline std::vector<size_t> calc_acc_sizes(const int dimensions,
 										const size_t *shape) {
 	std::vector<size_t> acc_sizes(dimensions);
 	acc_sizes[dimensions - 1] = 1;
@@ -126,17 +157,17 @@ inline std::vector<size_t> calcAccSizes(const int dimensions,
 	}
 	return acc_sizes;
 }
-inline std::vector<size_t> calcAccSizes(const FOperation op) {
-	return calcAccSizes(op.dimensions, op.shape);
+inline std::vector<size_t> calc_acc_sizes(const FOperation op) {
+	return calc_acc_sizes(op.dimensions, op.shape);
 }
-inline std::vector<std::vector<FType>> allTypePermutations(int num) {
+inline std::vector<std::vector<FType>> all_type_permutations(int num) {
 	using namespace std;
 	if (num == 0)
 		return vector<vector<FType>>{};
 	if (num == 1)
 		return vector<vector<FType>>{
 			{F_INT32}, {F_FLOAT32}, {F_INT64}, {F_FLOAT64}};
-	const vector<vector<FType>> rek = allTypePermutations(num - 1);
+	const vector<vector<FType>> rek = all_type_permutations(num - 1);
 	vector<vector<FType>> res(rek.size() * 4);
 	for (int i = 0; i < rek.size(); i++) {
 		int j = 0;
@@ -148,7 +179,7 @@ inline std::vector<std::vector<FType>> allTypePermutations(int num) {
 	}
 	return res;
 }
-template <typename T> static constexpr FType toFlintType() {
+template <typename T> static constexpr FType to_flint_type() {
 	if (std::is_same<T, int>())
 		return F_INT32;
 	if (std::is_same<T, long>())
@@ -159,7 +190,7 @@ template <typename T> static constexpr FType toFlintType() {
 		return F_FLOAT64;
 	return F_INT32;
 }
-static std::string epsilonForType(FType type) {
+static std::string epsilon_for_type(FType type) {
 	switch (type) {
 	case F_FLOAT32:
 		return "FLT_EPSILON";
@@ -169,7 +200,7 @@ static std::string epsilonForType(FType type) {
 		return "0";
 	}
 }
-static std::string maxForType(FType type) {
+static std::string max_for_type(FType type) {
 	switch (type) {
 	case F_FLOAT32:
 		return "FLT_MAX";
@@ -182,7 +213,7 @@ static std::string maxForType(FType type) {
 	}
 	return "0";
 }
-static std::string minForType(FType type) {
+static std::string min_for_type(FType type) {
 	switch (type) {
 	case F_FLOAT32:
 		return "-FLT_MAX";
@@ -236,7 +267,7 @@ template <typename T> class blocking_queue {
  * local dimension). Every index is referenced exactly once in its local
  * dimension.
  */
-inline long *generatePermutation(size_t *shape, unsigned int ax, size_t *size) {
+inline long *generate_permutation(size_t *shape, unsigned int ax, size_t *size) {
 	size_t total_size = 1;
 	for (unsigned int i = 0; i <= ax; i++)
 		total_size *= shape[i];
@@ -259,7 +290,7 @@ inline long *generatePermutation(size_t *shape, unsigned int ax, size_t *size) {
 	return ind;
 }
 
-static void calculateDivisorForInverseBroadcasting(const FGraphNode *a,
+static void calculate_divisor_for_inverse_broadcasting(const FGraphNode *a,
 												   size_t &iv1,
 												   const FGraphNode *b,
 												   size_t &iv2) {

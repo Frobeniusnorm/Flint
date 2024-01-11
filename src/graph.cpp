@@ -105,13 +105,13 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
 	}
 	if (all_calculated && (use_cpu || use_gpu)) {
 		// since we only have one node the heuristics become constant
-		unsigned int gpu_score = computeScore(f, false);
+		unsigned int gpu_score = compute_score(f, false);
 		return use_gpu && (gpu_score >= 1024 || !use_cpu)
 				   ? fExecuteGraph_gpu_eagerly(f)
 				   : fExecuteGraph_cpu_eagerly(f);
 	} else {
 		if (use_gpu && use_cpu) {
-			unsigned int gpu_score = computeScore(f, true);
+			unsigned int gpu_score = compute_score(f, true);
 			return gpu_score >= 1024 || !use_cpu ? fExecuteGraph_gpu(f)
 												 : fExecuteGraph_cpu(f);
 		}
@@ -153,7 +153,7 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
 	if (use_gpu && use_cpu) {
 		// TODO the number of elements has to be large enough for accelerator,
 		// somehow query here
-		unsigned int gpu_score = computeScore(node, true);
+		unsigned int gpu_score = compute_score(node, true);
 		return gpu_score >= 2048 ? fExecuteGraph_gpu(node)
 								 : fExecuteGraph_cpu(node);
 	}
@@ -388,10 +388,10 @@ static inline void initShape_keep(FOperation &op, const FOperation *a,
 			}
 			if (broadcasting_mode == 2 ? s2 != s3 : s1 != s2)
 				flogging(F_ERROR, "incompatible shapes of operands: " +
-									  vectorString(std::vector<size_t>(
+									  vector_string(std::vector<size_t>(
 										  src, src + op.dimensions)) +
 									  " and " +
-									  vectorString(std::vector<size_t>(
+									  vector_string(std::vector<size_t>(
 										  lower, lower + lower_dim)) +
 									  " in " + fop_to_string[op.op_type]);
 		}
@@ -400,7 +400,7 @@ static inline void initShape_keep(FOperation &op, const FOperation *a,
 	op.shape = (size_t *)malloc(sizeof(size_t) * op.dimensions);
 	memcpy((void *)op.shape, src, sizeof(size_t) * op.dimensions);
 	// determine type
-	op.data_type = b ? higherType(a->data_type, b->data_type) : a->data_type;
+	op.data_type = b ? higher_type(a->data_type, b->data_type) : a->data_type;
 }
 void fEnforceInverseBroadcasting(FGraphNode *node) {
 	node->operation.broadcasting_mode = 1;
@@ -502,7 +502,7 @@ FGraphNode *fadd_g(FGraphNode *a, FGraphNode *b) {
 	op.additional_data = nullptr;
 	op.op_type = FADD;
 	initShape_keep(op, &a->operation, &b->operation);
-	op.data_type = higherType(a->operation.data_type, b->operation.data_type);
+	op.data_type = higher_type(a->operation.data_type, b->operation.data_type);
 	return addNode(op, {a, b});
 }
 FGraphNode *fsub_g(FGraphNode *a, FGraphNode *b) {
@@ -510,7 +510,7 @@ FGraphNode *fsub_g(FGraphNode *a, FGraphNode *b) {
 	op.additional_data = nullptr;
 	op.op_type = FSUB;
 	initShape_keep(op, &a->operation, &b->operation);
-	op.data_type = higherType(a->operation.data_type, b->operation.data_type);
+	op.data_type = higher_type(a->operation.data_type, b->operation.data_type);
 	return addNode(op, {a, b});
 }
 FGraphNode *fdiv_g(FGraphNode *a, FGraphNode *b) {
@@ -518,7 +518,7 @@ FGraphNode *fdiv_g(FGraphNode *a, FGraphNode *b) {
 	op.additional_data = nullptr;
 	op.op_type = FDIV;
 	initShape_keep(op, &a->operation, &b->operation);
-	op.data_type = higherType(a->operation.data_type, b->operation.data_type);
+	op.data_type = higher_type(a->operation.data_type, b->operation.data_type);
 	return addNode(op, {a, b});
 }
 FGraphNode *fmul_g(FGraphNode *a, FGraphNode *b) {
@@ -526,7 +526,7 @@ FGraphNode *fmul_g(FGraphNode *a, FGraphNode *b) {
 	op.additional_data = nullptr;
 	op.op_type = FMUL;
 	initShape_keep(op, &a->operation, &b->operation);
-	op.data_type = higherType(a->operation.data_type, b->operation.data_type);
+	op.data_type = higher_type(a->operation.data_type, b->operation.data_type);
 	return addNode(op, {a, b});
 }
 FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b) {
@@ -534,7 +534,7 @@ FGraphNode *fpow_g(FGraphNode *a, FGraphNode *b) {
 	op.additional_data = nullptr;
 	op.op_type = FPOW;
 	initShape_keep(op, &a->operation, &b->operation);
-	op.data_type = higherType(a->operation.data_type, b->operation.data_type);
+	op.data_type = higher_type(a->operation.data_type, b->operation.data_type);
 	return addNode(op, {a, b});
 }
 FGraphNode *fmin_g(FGraphNode *a, FGraphNode *b) {
@@ -542,7 +542,7 @@ FGraphNode *fmin_g(FGraphNode *a, FGraphNode *b) {
 	op.additional_data = nullptr;
 	op.op_type = FMIN;
 	initShape_keep(op, &a->operation, &b->operation);
-	op.data_type = higherType(a->operation.data_type, b->operation.data_type);
+	op.data_type = higher_type(a->operation.data_type, b->operation.data_type);
 	return addNode(op, {a, b});
 }
 FGraphNode *fmax_g(FGraphNode *a, FGraphNode *b) {
@@ -550,7 +550,7 @@ FGraphNode *fmax_g(FGraphNode *a, FGraphNode *b) {
 	op.additional_data = nullptr;
 	op.op_type = FMAX;
 	initShape_keep(op, &a->operation, &b->operation);
-	op.data_type = higherType(a->operation.data_type, b->operation.data_type);
+	op.data_type = higher_type(a->operation.data_type, b->operation.data_type);
 	return addNode(op, {a, b});
 }
 template <typename T>
@@ -570,7 +570,7 @@ static FGraphNode *addNodeWithConst(FOperation op, FGraphNode *a, const T b) {
 		return nullptr;
 	cop.shape[0] = 1;
 	cop.additional_data = (void *)store;
-	cop.data_type = toFlintType<T>();
+	cop.data_type = to_flint_type<T>();
 	return addNode(op, {a, addNode(cop, {})});
 }
 template <typename T>
@@ -612,7 +612,7 @@ static inline FGraphNode *constant(const T value, const size_t *shape,
 		return nullptr;
 	memcpy(op.shape, shape, op.dimensions * sizeof(size_t));
 	op.op_type = FGEN_CONSTANT;
-	op.data_type = toFlintType<T>();
+	op.data_type = to_flint_type<T>();
 	op.additional_data = safe_mal<T>(1);
 	if (!op.additional_data)
 		return nullptr;
@@ -661,7 +661,7 @@ template <typename T> static inline FGraphNode *add(FGraphNode *a, const T b) {
 	op.additional_data = nullptr;
 	op.op_type = FADD;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higherType(a->operation.data_type, toFlintType<T>());
+	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
 	FGraphNode *foo = addNodeWithConst(op, a, b);
 	return foo;
 }
@@ -675,7 +675,7 @@ template <typename T> static inline FGraphNode *sub(FGraphNode *a, const T b) {
 	op.op_type = FSUB;
 	op.additional_data = nullptr;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higherType(a->operation.data_type, toFlintType<T>());
+	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
 	return addNodeWithConst(op, a, b);
 }
 template <typename T> static inline FGraphNode *sub(const T b, FGraphNode *a) {
@@ -702,7 +702,7 @@ template <typename T> static inline FGraphNode *div(FGraphNode *a, const T b) {
 	op.additional_data = nullptr;
 	op.op_type = FDIV;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higherType(a->operation.data_type, toFlintType<T>());
+	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
 	return addNodeWithConst(op, a, b);
 }
 template <typename T> static inline FGraphNode *div(const T b, FGraphNode *a) {
@@ -729,7 +729,7 @@ template <typename T> static inline FGraphNode *mul(FGraphNode *a, const T b) {
 	op.additional_data = nullptr;
 	op.op_type = FMUL;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higherType(a->operation.data_type, toFlintType<T>());
+	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
 	return addNodeWithConst(op, a, b);
 }
 FGraphNode *fmul_cd(FGraphNode *a, const double b) { return mul<double>(a, b); }
@@ -742,7 +742,7 @@ template <typename T> static inline FGraphNode *pow(FGraphNode *a, const T b) {
 	op.additional_data = nullptr;
 	op.op_type = FPOW;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higherType(a->operation.data_type, toFlintType<T>());
+	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
 	return addNodeWithConst(op, a, b);
 }
 FGraphNode *fpow_cd(FGraphNode *a, const double b) { return pow<double>(a, b); }
@@ -755,7 +755,7 @@ template <typename T> static inline FGraphNode *min(FGraphNode *a, const T b) {
 	op.additional_data = nullptr;
 	op.op_type = FMIN;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higherType(a->operation.data_type, toFlintType<T>());
+	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
 	return addNodeWithConst(op, a, b);
 }
 FGraphNode *fmin_ci(FGraphNode *a, const int b) { return min(a, b); }
@@ -768,7 +768,7 @@ template <typename T> static inline FGraphNode *max(FGraphNode *a, const T b) {
 	op.additional_data = nullptr;
 	op.op_type = FMAX;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higherType(a->operation.data_type, toFlintType<T>());
+	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
 	return addNodeWithConst(op, a, b);
 }
 FGraphNode *fmax_ci(FGraphNode *a, const int b) { return max(a, b); }
@@ -934,10 +934,10 @@ FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
 	if (m != mb) {
 		last_error = INCOMPATIBLE_SHAPES;
 		flogging(F_ERROR, "Incompatible Shapes for matrix multiplications: " +
-							  vectorString(std::vector<size_t>(
+							  vector_string(std::vector<size_t>(
 								  ao.shape, ao.shape + ao.dimensions)) +
 							  " and " +
-							  vectorString(std::vector<size_t>(
+							  vector_string(std::vector<size_t>(
 								  bo.shape, bo.shape + bo.dimensions)));
 		return nullptr; // for c compatibility
 	}
@@ -1463,7 +1463,7 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
 		op, ao, multiple_filters ? bo.shape + 1 : bo.shape, steps);
 	if (multiple_filters)
 		op.shape[ao.dimensions - 1] = bo.shape[0];
-	op.data_type = higherType(ao.data_type, bo.data_type);
+	op.data_type = higher_type(ao.data_type, bo.data_type);
 	op.op_type = FCONVOLVE;
 	op.additional_data = safe_mal<unsigned int>(op.dimensions);
 	if (!op.additional_data)
@@ -1671,7 +1671,7 @@ FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
 FGraphNode *fpermutate(FGraphNode *a, unsigned int ax) {
 	size_t total_size;
 	const long *perms =
-		generatePermutation(a->operation.shape, ax, &total_size);
+		generate_permutation(a->operation.shape, ax, &total_size);
 	if (!perms)
 		return nullptr;
 	FGraphNode *ind =
