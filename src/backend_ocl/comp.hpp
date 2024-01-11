@@ -22,8 +22,8 @@ struct OCLCompilerThread {
 		static std::unordered_map<long, cl_kernel> eager_cache;
 		static std::unordered_map<std::string, std::pair<cl_program, cl_kernel>>
 			kernel_cache;
-		static cl_kernel eagerCompile(FGraphNode *node, int hash);
-		static cl_kernel lazyCompile(FGraphNode *node, std::string code);
+		static cl_kernel eager_compile(FGraphNode *node, int hash);
+		static cl_kernel lazy_compile(FGraphNode *node, std::string code);
 		static cl_mem copy_memory(const cl_mem other, size_t num_bytes,
 								  cl_mem_flags memory_flags);
 		static void memory_barrier();
@@ -35,7 +35,7 @@ struct OCLCompilerThread {
 		//      for future" kernels and in the front for "compile for now"
 		//      kernels
 #define MAX_NUMBER_PARAMS 3
-		static int generateKernelHash(FOperationType operation,
+		static int generate_kernel_hash(FOperationType operation,
 									  FType return_type,
 									  std::vector<FType> params) {
 			int hash = (operation << 3) |
@@ -46,4 +46,5 @@ struct OCLCompilerThread {
 				hash = hash << 3;
 			return hash;
 		}
+		static int get_num_stream_cpus();
 };

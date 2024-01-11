@@ -142,7 +142,7 @@ configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
 	}
 	g->gradient_data = (void *)gd;
 }
-
+static const int cores = std::thread::hardware_concurrency();
 // INTERFACE METHODS
 FGraphNode *fExecuteGraph(FGraphNode *node) {
 	if (!use_cpu && !use_gpu)
@@ -151,10 +151,11 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
 	if (eager_execution)
 		return execute_eagerly(node);
 	if (use_gpu && use_cpu) {
-		// TODO the number of elements has to be large enough for accelerator,
-		// somehow query here
-		unsigned int gpu_score = compute_score(node, true);
-		return gpu_score >= 2048 ? fExecuteGraph_gpu(node)
+		size_t no_elems = 1;
+		for (int i = 0; i < node->operation.dimensions; i++)
+			no_elems *= node->operation.shape[i];
+		const unsigned int gpu_score = compute_score(node, true);
+		return no_elems * gpu_score >= 2048 && no_elems > 12 * cores ? fExecuteGraph_gpu(node)
 								 : fExecuteGraph_cpu(node);
 	}
 	if (use_gpu)

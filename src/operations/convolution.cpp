@@ -10,8 +10,6 @@ using namespace std;
 FGraphNode *ConvolveImpl::gradient_convolve2(FGraphNode *a, FGraphNode *kernel,
 											 FGraphNode *prev_adj,
 											 const unsigned int *steps) {
-	std::cout << kernel->result_data << " and " << prev_adj->result_data
-			  << std::endl;
 	if (!kernel->result_data)
 		fExecuteGraph(kernel);
 	if (!prev_adj->result_data)
@@ -35,9 +33,6 @@ FGraphNode *ConvolveImpl::gradient_convolve2(FGraphNode *a, FGraphNode *kernel,
 	if (!op.shape)
 		return nullptr;
 	memcpy(op.shape, kernel->operation.shape, op.dimensions * sizeof(size_t));
-	std::cout << "shape: " << print_shape(op.shape, op.dimensions) << std::endl;
-	std::cout << "image shape: " << print_shape(a->operation.shape, a->operation.dimensions) << std::endl;
-	// TODO small result and REALLY HIGH image -> execute on cpu
 	op.op_type = FGRADIENT_CONVOLVE2;
 	op.additional_data = safe_mal<unsigned int>(a->operation.dimensions - 1);
 	if (!op.additional_data)
@@ -809,7 +804,6 @@ void GradientConvolve2Impl::binary_expression(
 	const B *__restrict__ data2, size_t from, size_t size, size_t index_man_1,
 	size_t inv_man_1, size_t index_man_2, size_t inv_man_2,
 	const FGraphNode *curr) {
-	std::cout << "gradient convolve 2 on cpu! :(" << std::endl;
 	// normal convolution:
 	//   shape(op) = [k1, k2, ..., kn, c]
 	//   shape(pred) = [p1, p2, ..., pn, c]

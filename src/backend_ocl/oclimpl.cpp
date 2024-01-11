@@ -213,7 +213,7 @@ cl_mem OCLCompilerThread::copy_memory(const cl_mem other, size_t num_bytes,
 }
 #include <chrono>
 #include <unordered_map>
-cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
+cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
 	cl_int err_code;
 	cl_kernel kernel = nullptr;
 	auto start = chrono::high_resolution_clock::now();
@@ -240,7 +240,7 @@ cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
 			correct &= types[i] == node->predecessors[i]->operation.data_type;
 		if (correct)
 			our_kernel = kernel_name;
-		all_kernels.push_back({OCLCompilerThread::generateKernelHash(
+		all_kernels.push_back({OCLCompilerThread::generate_kernel_hash(
 								   node->operation.op_type, ret, types),
 							   kernel_name});
 	}
@@ -383,7 +383,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 	for (int i = 0; i < node->num_predecessor; i++)
 		params_types[i] = node->predecessors[i]->operation.data_type;
 	// because the operation type should be at the same position
-	int hash = OCLCompilerThread::generateKernelHash(
+	int hash = OCLCompilerThread::generate_kernel_hash(
 		node->operation.op_type, node->operation.data_type, params_types);
 	const auto prog = OCLCompilerThread::eager_cache.find(hash);
 	cl_kernel kernel = nullptr;
@@ -391,7 +391,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 	list<cl_mem> to_free;
 	// check if the kernel already exists or if it has to be generated
 	if (prog == OCLCompilerThread::eager_cache.end()) {
-		kernel = OCLCompilerThread::eagerCompile(node, hash);
+		kernel = OCLCompilerThread::eager_compile(node, hash);
 	} else {
 		kernel = prog->second;
 		flogging(F_DEBUG, "Loaded existing eager kernel");
@@ -575,7 +575,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		clReleaseMemObject(tfn);
 	return node;
 }
-cl_kernel OCLCompilerThread::lazyCompile(FGraphNode *node, string code) {
+cl_kernel OCLCompilerThread::lazy_compile(FGraphNode *node, string code) {
 	using namespace std;
 	cl_kernel kernel;
 	cl_int err_code;
@@ -744,8 +744,18 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		if (node->result_data)
 			return node;
 	}
+	// eager if all parameters have result
+	bool all_have_result = true;
+	for (int i = 0; i < node->num_predecessor; i++)
+		if (!node->predecessors[i]->result_data) {
+			all_have_result = false;
+			break;
+		}
+	// then execute eagerly
+	if (all_have_result)
+		return fExecuteGraph_gpu_eagerly(node);
 	auto start = chrono::high_resolution_clock::now();
-	FResultData *resultData = new FResultData(); // TODO mem leak
+	FResultData *resultData = new FResultData();
 	const FOperation node_op = node->operation;
 	size_t total_size_node = 1;
 	for (int i = 0; i < node_op.dimensions; i++)
@@ -776,7 +786,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	if (cache_val == OCLCompilerThread::kernel_cache.end()) {
 		flogging(F_DEBUG, "code generation finished (in " +
 							  to_string(elapsed.count()) + " ms): \n" + code);
-		kernel = OCLCompilerThread::lazyCompile(node, code);
+		kernel = OCLCompilerThread::lazy_compile(node, code);
 	} else {
 		flogging(F_DEBUG, "code from cache");
 		kernel = cache_val->second.second;
@@ -846,7 +856,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			mem_objs[index++] = mem_obj;
 			if (recycle) {
 				result_mem = mem_obj;
-      }
+			}
 			// actually write the buffer
 			if (do_write) {
 				void *data = op.op_type == FSTORE
@@ -858,8 +868,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 					flogging(F_ERROR, "parameter has no data!");
 				writeEvents.emplace_back();
 				err_code = clEnqueueWriteBuffer(
-					clqueue, mem_obj, CL_FALSE, 0, total_size * type_s, data,
-					0, nullptr, &writeEvents[writeEvents.size() - 1]);
+					clqueue, mem_obj, CL_FALSE, 0, total_size * type_s, data, 0,
+					nullptr, &writeEvents[writeEvents.size() - 1]);
 				if (err_code != CL_SUCCESS) {
 					string msg = "Unknown Error while loading data to GPU!";
 					flogging(F_ERROR, msg);

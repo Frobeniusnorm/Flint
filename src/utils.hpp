@@ -93,9 +93,6 @@ template <typename T> static std::string print_node(FGraphNode *node) {
 }
 static inline size_t compute_score(FGraphNode *g, bool with_pred = true) {
 	std::queue<FGraphNode *> todo;
-	size_t no_elems = 1;
-	for (int i = 0; i < g->operation.dimensions; i++)
-		no_elems *= g->operation.shape[i];
 	size_t score = 0;
 	todo.push(g);
 	while (!todo.empty()) {
@@ -110,7 +107,7 @@ static inline size_t compute_score(FGraphNode *g, bool with_pred = true) {
 					todo.push(c->predecessors[i]);
 		}
 	}
-	return score * no_elems;
+	return score;
 }
 inline std::string type_string(FType t) {
 	switch (t) {
