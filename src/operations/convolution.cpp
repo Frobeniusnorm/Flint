@@ -437,6 +437,7 @@ void GradientConvolve1Impl::binary_expression(
 	const unsigned int *steps = (unsigned int *)op.additional_data;
 	// calculate accumulated sizes for result (pred), kernel and a
 	// (adjacent)
+	const bool multifilter = op.dimensions != kernel.dimensions;
 	std::vector<size_t> acc_sizes = calc_acc_sizes(a);
 	std::vector<size_t> acc_sizes_pred = calc_acc_sizes(op);
 	std::vector<size_t> acc_sizes_kernel = calc_acc_sizes(kernel);
@@ -446,94 +447,115 @@ void GradientConvolve1Impl::binary_expression(
 	acc_overlapping[acc_overlapping.size() - 1] = 1;
 	for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
 		acc_overlapping[i] =
-			MAX_VAL(1, (long)std::ceil((double)kernel.shape[i + 1] /
-									   (double)steps[i + 1])) *
+			MAX_VAL(1, (long)std::ceil(
+						   (double)kernel.shape[multifilter ? i + 2 : i + 1] /
+						   (double)steps[i + 1])) *
 			acc_overlapping[i + 1];
 	}
 	// First dimension overlap
 	const size_t overlapping =
-		MAX_VAL(1,
-				(long)std::ceil((double)kernel.shape[0] / (double)steps[0])) *
+		MAX_VAL(1, (long)std::ceil((double)kernel.shape[multifilter ? 1 : 0] /
+								   (double)steps[0])) *
 		acc_overlapping[0];
-	for (size_t i = from; i < from + size; i++) {
-		T res = 0;
-		bool in_steps = true;
-		bool started_counting = false;
-		// get base indices
-		size_t keri = 0;
-		size_t adji = 0;
-		for (int d = 0; d < op.dimensions - 1; d++) {
-			const size_t di =
-				(d == 0 ? i : i % acc_sizes_pred[d - 1]) / acc_sizes_pred[d];
-			// first kernel element is the offset from di to the first
-			// kernel that overlaps it
-			const size_t ki = di - (di / steps[d]) * steps[d];
-			// if this index is outside the kernel size -> i is not
-			// overlapped by a kernel
-			if (ki >= kernel.shape[d]) {
-				in_steps = false;
-				break;
+	for (size_t filter = 0; filter < (multifilter ? kernel.shape[0] : 1);
+		 filter++) {
+		for (size_t i = from; i < from + size; i++) {
+			T res = 0;
+			bool in_steps = true;
+			bool started_counting = false;
+			// get base indices
+			size_t keri = 0;
+			size_t adji = 0;
+			for (int d = 0; d < op.dimensions - 1; d++) {
+				const size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
+								  acc_sizes_pred[d];
+				// first kernel element is the offset from di to the first
+				// kernel that overlaps it
+				const size_t ki = di - (di / steps[d]) * steps[d];
+				// if this index is outside the kernel size -> i is not
+				// overlapped by a kernel
+				if (ki >= kernel.shape[multifilter ? d + 1 : d]) {
+					in_steps = false;
+					break;
+				}
+				// first window for this index
+				const size_t wdf = (size_t)std::ceil(
+					(std::max(0l,
+							  (long)di -
+								  (long)kernel.shape[multifilter ? d + 1 : d] +
+								  1) /
+					 (double)steps[d]));
+				keri += ki * acc_sizes_kernel[multifilter ? d + 1 : d];
+				adji += wdf * acc_sizes[d];
 			}
-			// first window for this index
-			const size_t wdf = (size_t)std::ceil(
-				(std::max(0l, (long)di - (long)kernel.shape[d] + 1) /
-				 (double)steps[d]));
-			keri += ki * acc_sizes_kernel[d];
-			adji += wdf * acc_sizes[d];
-		}
-		if (in_steps) {
-			// kernel offset for last index
-			keri += i % op.shape[op.dimensions - 1];
-			size_t actual_overlapping = 0;
-			// iterate over overlapping windows = elements in a
-			for (size_t o = 0; o < overlapping; o++) {
-				// offsets
-				size_t adjo = 0;
-				size_t kero = 0;
-				bool skip_kernel = false;
-				for (int d = 0; d < op.dimensions - 1; d++) {
-					// for each index adji will point to the first window in
-					// that dimension calculate overlap in each dimension
-					// and add it to the adjacent offset
-					const size_t di = (d == 0 ? i : i % acc_sizes_pred[d - 1]) /
-									  acc_sizes_pred[d];
-					const size_t io =
-						(d == 0 ? o : o % acc_overlapping[d - 1]) /
-						acc_overlapping[d];
-					const size_t ao =
-						(d == 0 ? actual_overlapping
-								: actual_overlapping % acc_overlapping[d - 1]) /
-						acc_overlapping[d];
-					// check if kernel offset is feasible (the kernel we
-					// take the offset to is in bounds)
-					const size_t ki =
-						(d == 0 ? keri : keri % acc_sizes_kernel[d - 1]) /
-						acc_sizes_kernel[d];
-					if (di + kernel.shape[d] - (ki + io * steps[d]) >
-						op.shape[d]) {
-						// those cases are no real windows, only skip them
-						// if there haven't been real windows yet
-						if (!started_counting) {
-							actual_overlapping--;
+			if (in_steps) {
+				// kernel offset for last index
+				keri += i % op.shape[op.dimensions - 1];
+				size_t actual_overlapping = 0;
+				// iterate over overlapping windows = elements in a
+				for (size_t o = 0; o < overlapping; o++) {
+					// offsets
+					size_t adjo = 0;
+					size_t kero = 0;
+					bool skip_kernel = false;
+					for (int d = 0; d < op.dimensions - 1; d++) {
+						// for each index adji will point to the first window in
+						// that dimension calculate overlap in each dimension
+						// and add it to the adjacent offset
+						const size_t di =
+							(d == 0 ? i : i % acc_sizes_pred[d - 1]) /
+							acc_sizes_pred[d];
+						const size_t io =
+							(d == 0 ? o : o % acc_overlapping[d - 1]) /
+							acc_overlapping[d];
+						const size_t ao =
+							(d == 0 ? actual_overlapping
+									: actual_overlapping %
+										  acc_overlapping[d - 1]) /
+							acc_overlapping[d];
+						// check if kernel offset is feasible (the kernel we
+						// take the offset to is in bounds)
+						const size_t ki =
+							(d == 0
+								 ? keri
+								 : keri %
+									   acc_sizes_kernel[multifilter ? d
+																	: d - 1]) /
+							acc_sizes_kernel[multifilter ? d + 1 : d];
+						if (di + kernel.shape[multifilter ? d + 1 : d] -
+								(ki + io * steps[d]) >
+							op.shape[d]) {
+							// those cases are no real windows, only skip them
+							// if there haven't been real windows yet
+							if (!started_counting) {
+								actual_overlapping--;
+							}
+							skip_kernel = true;
+							break;
+						} else if (ki + io * steps[d] >=
+									   kernel.shape[multifilter ? d + 1 : d] ||
+								   di < ki + io * steps[d]) {
+							skip_kernel = true;
+							break;
 						}
-						skip_kernel = true;
-						break;
-					} else if (ki + io * steps[d] >= kernel.shape[d] ||
-							   di < ki + io * steps[d]) {
-						skip_kernel = true;
-						break;
+						adjo += ao * acc_sizes[d];
+						kero += io * steps[d] *
+								acc_sizes_kernel[multifilter ? d + 1 : d];
 					}
-					adjo += ao * acc_sizes[d];
-					kero += io * steps[d] * acc_sizes_kernel[d];
+					if (!skip_kernel) {
+						started_counting = true;
+						res +=
+							data1[filter * acc_sizes_kernel[0] + keri + kero] *
+							data2[adjo + adji];
+					}
+					actual_overlapping++;
 				}
-				if (!skip_kernel) {
-					started_counting = true;
-					res += data1[keri + kero] * data2[adjo + adji];
-				}
-				actual_overlapping++;
 			}
+			if (filter == 0)
+				result[i] = res;
+			else
+				result[i] += res;
 		}
-		result[i] = res;
 	}
 }
 int GradientConvolve1Impl::generate_ocl_lazy(
