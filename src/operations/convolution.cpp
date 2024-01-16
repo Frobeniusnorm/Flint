@@ -711,7 +711,6 @@ GradientConvolve1Impl::generate_ocl_eager(FType res_type,
 		   type_string(res_type) +
 		   " res = 0;\n"
 		   "int in_steps = true;\n"
-		   "int started_counting = false;\n"
 		   "long keri = 0;\n"
 		   "long adji = 0;\n"
 		   "for(int d = 0; d < dimensionsR-1; d++){\n"
@@ -729,8 +728,9 @@ GradientConvolve1Impl::generate_ocl_eager(FType res_type,
 		   "}\n"
 		   "if(in_steps){\n"
 		   " keri += index % op_shape[dimensionsR - 1];\n"
-		   " long actual_overlapping = 0;\n"
        " for(long filter = 0; filter < (multifilter ? kernel_shape[0] : 1); filter++){\n"
+		   "  int started_counting = false;\n"
+		   "  long actual_overlapping = 0;\n"
 		   "  for(long o = 0; o < overlapping; o++){\n"
 		   "   long adjo = 0;\n"
 		   "   long kero = 0;\n"
@@ -788,18 +788,15 @@ void GradientConvolve1Impl::push_additional_kernel_parameters(
 	to_free.push_back(calc_and_push_acc_size(a.dimensions, a.shape, kernel,
 											 context, par_index));
 
+	const bool multifilter = op.dimensions != kernel_op.dimensions;
 	std::vector<size_t> acc_overlapping(op.dimensions - 1);
 	acc_overlapping[acc_overlapping.size() - 1] = 1;
 	for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
 		acc_overlapping[i] =
-			std::max(1l, (long)std::ceil((double)kernel_op.shape[i + 1] /
+			std::max(1l, (long)std::ceil((double)kernel_op.shape[multifilter ? i + 2 : i + 1] /
 										 (double)steps[i + 1])) *
 			acc_overlapping[i + 1];
 	}
-	const size_t overlapping =
-		std::max(1l, (long)std::ceil((double)kernel_op.shape[0] /
-									 (double)steps[0])) *
-		acc_overlapping[0];
 	to_free.push_back(push_array(acc_overlapping.size(), acc_overlapping.data(),
 								 kernel, context, par_index));
 	to_free.push_back(
