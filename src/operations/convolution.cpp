@@ -113,7 +113,7 @@ FGraphNode *ConvolveImpl::local_gradient(FGraphNode *y, int dx_i,
 		// 	}
 		// 	return res;
 		// } else
-			return gradient_convolve1(a, kernel, prev_adj, steps);
+		return gradient_convolve1(a, kernel, prev_adj, steps);
 	} else if (1 == dx_i) {
 		if (y->operation.op_type == FCONVOLVE)
 			return gradient_convolve2(a, kernel, prev_adj, steps);
@@ -567,26 +567,25 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 	const FOperation op = node->operation;
 	const FOperation kernel = gnp1->operation, a = gnp2->operation;
 	const unsigned int *steps = (unsigned int *)op.additional_data;
+	const bool multifilter = op.dimensions != kernel.dimensions;
 	// calculate accumulated sizes for result (pred), kernel and a
 	// (adjacent)
 	std::vector<size_t> acc_sizes = calc_acc_sizes(a);
 	std::vector<size_t> acc_sizes_pred = calc_acc_sizes(op);
 	std::vector<size_t> acc_sizes_kernel = calc_acc_sizes(kernel);
 	acc_sizes[op.dimensions - 2] = 1;
-	size_t kernel_num_elems = kernel.shape[op.dimensions - 1];
 	size_t a_num_elems = 1;
 	for (long d = a.dimensions - 1; d >= 0; d--)
 		a_num_elems *= a.shape[d];
-	for (long d = op.dimensions - 2; d >= 0; d--)
-		kernel_num_elems *= kernel.shape[d];
 	// accumulations of overlapping elements (kernel overlapping
 	// itself)
 	std::vector<size_t> acc_overlapping(op.dimensions - 1);
 	acc_overlapping[acc_overlapping.size() - 1] = 1;
 	for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
 		acc_overlapping[i] =
-			std::max(1l, (long)std::ceil((double)kernel.shape[i + 1] /
-										 (double)steps[i + 1])) *
+			std::max(1l, (long)std::ceil(
+							 (double)kernel.shape[multifilter ? i + 2 : i + 1] /
+							 (double)steps[i + 1])) *
 			acc_overlapping[i + 1];
 	}
 	// First dimension overlap
@@ -596,7 +595,8 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 		acc_overlapping[0];
 	const string type = type_string(op.data_type);
 	Twine convc;
-	convc += type + " " + name + " = 0;\n{";
+	convc += type + " " + name + " = 0;\nfor(long filter=0;filter<" +
+			 to_string(multifilter ? kernel.shape[0] : 1) + ";filter++){";
 	convc += "int in_steps = 1, started_counting = 0;\n"
 			 "long keri = 0, adji = 0;\n";
 	for (int d = 0; d < op.dimensions - 1; d++) {
@@ -611,16 +611,16 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 				 to_string(steps[d]) + ")*" + to_string(steps[d]) +
 				 ";\n"
 				 "if (ki >= " +
-				 to_string(kernel.shape[d]) +
+				 to_string(kernel.shape[multifilter ? d + 1 : d]) +
 				 ") {"
 				 " in_steps = 0; }\n"
 				 "keri += ki * " +
-				 to_string(acc_sizes_kernel[d]) +
+				 to_string(acc_sizes_kernel[multifilter ? d + 1 : d]) +
 				 ";\n"
 				 "adji += (long)ceil(max(0l, di - " +
-				 to_string(kernel.shape[d] - 1) + ") / (double)" +
-				 to_string(steps[d]) + ") * " + to_string(acc_sizes[d]) +
-				 ";\n}\n";
+				 to_string(kernel.shape[multifilter ? d + 1 : d] - 1) +
+				 ") / (double)" + to_string(steps[d]) + ") * " +
+				 to_string(acc_sizes[d]) + ";\n}\n";
 	}
 	convc += "if(in_steps){\n long actual_overlapping = 0;\n keri "
 			 "+= index % " +
@@ -655,31 +655,37 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 		if (d == 0)
 			convc += "keri";
 		else
-			convc += "keri%" + to_string(acc_sizes_kernel[d - 1]);
-		convc += ")/" + to_string(acc_sizes_kernel[d]) +
-				 ";\n"
-				 "   if(di + " +
-				 to_string(kernel.shape[d]) + " - (ki + io * " +
-				 to_string(steps[d]) + ") > " + to_string(op.shape[d]) +
-				 "){\n"
-				 "    if(!started_counting) actual_overlapping--;\n"
-				 "    skip_kernel = true;\n"
-				 "   }else if(ki + io * " +
-				 to_string(steps[d]) + " >= " + to_string(kernel.shape[d]) +
-				 " || di < ki + io * " + to_string(steps[d]) +
-				 "){\n"
-				 "    skip_kernel = true;\n"
-				 "   }\n"
-				 "   adjo += ao * " +
-				 to_string(acc_sizes[d]) +
-				 ";\n"
-				 "   kero += io * " +
-				 to_string(steps[d] * acc_sizes_kernel[d]) + ";\n  }\n";
+			convc +=
+				"keri%" + to_string(acc_sizes_kernel[multifilter ? d : d - 1]);
+		convc +=
+			")/" + to_string(acc_sizes_kernel[multifilter ? d + 1 : d]) +
+			";\n"
+			"   if(di + " +
+			to_string(kernel.shape[multifilter ? d + 1 : d]) +
+			" - (ki + io * " + to_string(steps[d]) + ") > " +
+			to_string(op.shape[d]) +
+			"){\n"
+			"    if(!started_counting) actual_overlapping--;\n"
+			"    skip_kernel = true;\n"
+			"   }else if(ki + io * " +
+			to_string(steps[d]) +
+			" >= " + to_string(kernel.shape[multifilter ? d + 1 : d]) +
+			" || di < ki + io * " + to_string(steps[d]) +
+			"){\n"
+			"    skip_kernel = true;\n"
+			"   }\n"
+			"   adjo += ao * " +
+			to_string(acc_sizes[d]) +
+			";\n"
+			"   kero += io * " +
+			to_string(steps[d] * acc_sizes_kernel[multifilter ? d + 1 : d]) +
+			";\n  }\n";
 	}
 	convc += "  if(!skip_kernel){\n"
 			 "   started_counting = true;\n"
 			 "   " +
-			 name + " += " + par1 + "[keri + kero] * " + par2 +
+			 name + " += " + par1 + "[filter * " +
+			 to_string(acc_sizes_kernel[0]) + " + keri + kero] * " + par2 +
 			 "[adji + adjo];\n"
 			 " }\n"
 			 " actual_overlapping++;\n}\n}\n}\n";
@@ -706,7 +712,8 @@ GradientConvolve1Impl::generate_ocl_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
 	return "if(index >= num_entriesR) return;\n"
 		   "const bool multifilter = dimensionsR != dimensions0;\n"
-		   "const long overlapping = max(1l, (long)ceil(kernel_shape[multifilter ? 1 : 0] / "
+		   "const long overlapping = max(1l, "
+		   "(long)ceil(kernel_shape[multifilter ? 1 : 0] / "
 		   "(double)steps[0])) * acc_overlapping[0];\n" +
 		   type_string(res_type) +
 		   " res = 0;\n"
@@ -721,14 +728,16 @@ GradientConvolve1Impl::generate_ocl_eager(FType res_type,
 		   "  in_steps = false;\n"
 		   "  break;\n"
 		   " }\n"
-		   " const long wdf = (long)ceil(max(0l, di - kernel_shape[multifilter ? d + 1 : d] + 1) / "
+		   " const long wdf = (long)ceil(max(0l, di - kernel_shape[multifilter "
+		   "? d + 1 : d] + 1) / "
 		   "(double)steps[d]);\n"
 		   " keri += ki * acc_sizes_kernel[multifilter ? d + 1 : d];\n"
 		   " adji += wdf * acc_sizes[d];\n"
 		   "}\n"
 		   "if(in_steps){\n"
 		   " keri += index % op_shape[dimensionsR - 1];\n"
-       " for(long filter = 0; filter < (multifilter ? kernel_shape[0] : 1); filter++){\n"
+		   " for(long filter = 0; filter < (multifilter ? kernel_shape[0] : "
+		   "1); filter++){\n"
 		   "  int started_counting = false;\n"
 		   "  long actual_overlapping = 0;\n"
 		   "  for(long o = 0; o < overlapping; o++){\n"
@@ -742,26 +751,30 @@ GradientConvolve1Impl::generate_ocl_eager(FType res_type,
 		   "acc_overlapping[d];\n"
 		   "    const long ao = (d == 0 ? actual_overlapping : "
 		   "actual_overlapping % acc_overlapping[d-1]) / acc_overlapping[d];\n"
-		   "    const long ki = (d == 0 ? keri : keri % acc_sizes_kernel[multifilter ? d : d-1]) "
+		   "    const long ki = (d == 0 ? keri : keri % "
+		   "acc_sizes_kernel[multifilter ? d : d-1]) "
 		   "/ acc_sizes_kernel[multifilter ? d + 1 : d];\n"
-		   "    if(di+kernel_shape[multifilter ? d + 1 : d]-(ki+io*steps[d]) > op_shape[d]){\n"
+		   "    if(di+kernel_shape[multifilter ? d + 1 : d]-(ki+io*steps[d]) > "
+		   "op_shape[d]){\n"
 		   "     if(!started_counting) actual_overlapping--;\n"
 		   "     skip_kernel = true;\n"
 		   "     break;\n"
-		   "    }else if(ki+io*steps[d] >= kernel_shape[multifilter ? d + 1 : d] || di < "
+		   "    }else if(ki+io*steps[d] >= kernel_shape[multifilter ? d + 1 : "
+		   "d] || di < "
 		   "ki+io*steps[d]){\n"
 		   "     skip_kernel = true;\n"
 		   "     break;\n"
 		   "    }\n"
 		   "    adjo += ao*acc_sizes[d];\n"
-		   "    kero += io*steps[d]*acc_sizes_kernel[multifilter ? d + 1 : d];\n"
+		   "    kero += io*steps[d]*acc_sizes_kernel[multifilter ? d + 1 : "
+		   "d];\n"
 		   "   }\n"
 		   "   if(!skip_kernel){\n"
 		   "    started_counting = true;\n"
 		   "    res+=P0[filter*acc_sizes_kernel[0]+kero+keri]*P1[adjo+adji];\n"
 		   "   }\n"
 		   "   actual_overlapping++;\n"
-       "  }\n"
+		   "  }\n"
 		   " }\n"
 		   "}\n"
 		   "R[index] = res;\n";
@@ -793,8 +806,10 @@ void GradientConvolve1Impl::push_additional_kernel_parameters(
 	acc_overlapping[acc_overlapping.size() - 1] = 1;
 	for (int i = acc_overlapping.size() - 2; i >= 0; i--) {
 		acc_overlapping[i] =
-			std::max(1l, (long)std::ceil((double)kernel_op.shape[multifilter ? i + 2 : i + 1] /
-										 (double)steps[i + 1])) *
+			std::max(1l,
+					 (long)std::ceil(
+						 (double)kernel_op.shape[multifilter ? i + 2 : i + 1] /
+						 (double)steps[i + 1])) *
 			acc_overlapping[i + 1];
 	}
 	to_free.push_back(push_array(acc_overlapping.size(), acc_overlapping.data(),

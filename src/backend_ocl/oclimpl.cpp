@@ -745,7 +745,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			return node;
 	}
 	// eager if all parameters have result
-	bool all_have_result = true;
+	bool all_have_result = false; // TODO should be true, but does not work
 	for (int i = 0; i < node->num_predecessor; i++)
 		if (!node->predecessors[i]->result_data) {
 			all_have_result = false;
