@@ -87,32 +87,6 @@ FGraphNode *ConvolveImpl::local_gradient(FGraphNode *y, int dx_i,
 	FGraphNode *kernel = y->predecessors[1];
 	const unsigned int *steps = (unsigned int *)y->operation.additional_data;
 	if (0 == dx_i) {
-		// if (a->operation.dimensions != kernel->operation.dimensions) {
-		// 	FGraphNode *res =
-		// 		fconstant_d(0.0, a->operation.shape, a->operation.dimensions);
-		// 	for (int i = 0; i < kernel->operation.shape[0]; i++) {
-		// 		using namespace std;
-		// 		vector<long> start_kernel(kernel->operation.dimensions, 0);
-		// 		vector<long> end_kernel(kernel->operation.shape,
-		// 								kernel->operation.shape +
-		// 									kernel->operation.dimensions);
-		// 		start_kernel[0] = i;
-		// 		end_kernel[0] = i + 1;
-		// 		FGraphNode *sk = fflatten_dimension(
-		// 			fslice(kernel, start_kernel.data(), end_kernel.data()), 1);
-		// 		vector<long> start_adj(prev_adj->operation.dimensions, 0);
-		// 		vector<long> end_adj(prev_adj->operation.shape,
-		// 							 prev_adj->operation.shape +
-		// 								 prev_adj->operation.dimensions);
-		// 		FGraphNode *sa = fflatten_dimension(
-		// 			fslice(prev_adj, start_adj.data(), end_adj.data()),
-		// 			prev_adj->operation.dimensions - 1);
-		// 		FGraphNode *curr =
-		// 			fExecuteGraph(gradient_convolve1(a, sk, sa, steps));
-		// 		res = fadd(res, curr);
-		// 	}
-		// 	return res;
-		// } else
 		return gradient_convolve1(a, kernel, prev_adj, steps);
 	} else if (1 == dx_i) {
 		if (y->operation.op_type == FCONVOLVE)

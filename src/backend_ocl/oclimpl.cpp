@@ -326,6 +326,7 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
 }
 // pushes additional per-parameter parameters to a opencl function
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
+	// TODO include correct constants
 	if (node->result_data)
 		return node;
 	if (node->operation.op_type == FSTORE) {
@@ -745,12 +746,22 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			return node;
 	}
 	// eager if all parameters have result
-	bool all_have_result = false; // TODO should be true, but does not work
-	for (int i = 0; i < node->num_predecessor; i++)
-		if (!node->predecessors[i]->result_data) {
+	bool all_have_result = true; // TODO should be true, but does not work
+	std::cout << "preds: " << fop_to_string[node->operation.op_type] << " ";
+	for (int i = 0; i < node->num_predecessor; i++) {
+		if (i)
+			std::cout << ", ";
+		const FGraphNode *pred = node->predecessors[i];
+		if (!pred->result_data ||
+			(!pred->result_data->data && !pred->result_data->mem_id)) {
+			std::cout << "true";
 			all_have_result = false;
 			break;
 		}
+		std::cout << "false (" << pred->result_data->mem_id << ", "
+				  << fop_to_string[pred->operation.op_type] << ")";
+	}
+	std::cout << std::endl;
 	// then execute eagerly
 	if (all_have_result)
 		return fExecuteGraph_gpu_eagerly(node);
