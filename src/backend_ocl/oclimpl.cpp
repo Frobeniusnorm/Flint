@@ -419,9 +419,13 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 			!res_mem && pred->reference_counter == 1 && !reusage.empty() &&
 			reusage[i] && (op.op_type != FSTORE || !node->gradient_data) &&
 			((pred->result_data && pred->result_data->mem_id) ||
-			 pred->operation.op_type == FSTORE);
+			 pred->operation.op_type == FSTORE) &&
+			op.op_type != FGEN_CONSTANT;
 		if (pred->result_data) {
-			total_size = pred->result_data->num_entries;
+			// TODO is this test necessary?
+			total_size = pred->operation.op_type == FGEN_CONSTANT
+							 ? 1
+							 : pred->result_data->num_entries;
 			mem_id = pred->result_data->mem_id;
 			if (recycle) {
 				pred->result_data->mem_id = nullptr;
@@ -462,9 +466,10 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 			res_mem = mem_obj;
 		}
 		if (do_write) {
-			void *data = op.op_type == FSTORE
-							 ? ((FStore *)op.additional_data)->data
-							 : pred->result_data->data;
+			void *data =
+				op.op_type == FSTORE ? ((FStore *)op.additional_data)->data
+				: op.op_type == FGEN_CONSTANT ? op.additional_data
+											  : pred->result_data->data;
 			if (!data) {
 				flogging(F_WARNING,
 						 "No gpu memory is found, but no cpu either! " +
@@ -745,26 +750,20 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		if (node->result_data)
 			return node;
 	}
-	// eager if all parameters have result
-	bool all_have_result = true; // TODO should be true, but does not work
-	std::cout << "preds: " << fop_to_string[node->operation.op_type] << " ";
-	for (int i = 0; i < node->num_predecessor; i++) {
-		if (i)
-			std::cout << ", ";
-		const FGraphNode *pred = node->predecessors[i];
-		if (!pred->result_data ||
-			(!pred->result_data->data && !pred->result_data->mem_id)) {
-			std::cout << "true";
-			all_have_result = false;
-			break;
-		}
-		std::cout << "false (" << pred->result_data->mem_id << ", "
-				  << fop_to_string[pred->operation.op_type] << ")";
-	}
-	std::cout << std::endl;
-	// then execute eagerly
-	if (all_have_result)
-		return fExecuteGraph_gpu_eagerly(node);
+//	// eager if all parameters have result
+//	bool all_have_result = true; // TODO should be true, but does not work,
+//								 // probably because of constants
+//	for (int i = 0; i < node->num_predecessor; i++) {
+//		const FGraphNode *pred = node->predecessors[i];
+//		if (!pred->result_data ||
+//			(!pred->result_data->data && !pred->result_data->mem_id)) {
+//			all_have_result = false;
+//			break;
+//		}
+//	}
+//	// then execute eagerly
+//	if (all_have_result)
+//		return fExecuteGraph_gpu_eagerly(node);
 	auto start = chrono::high_resolution_clock::now();
 	FResultData *resultData = new FResultData();
 	const FOperation node_op = node->operation;
