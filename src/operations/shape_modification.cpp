@@ -44,7 +44,7 @@ void FlattenImpl::execute_cpu(const FGraphNode *node,
 int FlattenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name + " = v" +
+		"const " + type_string(node->operation.data_type) + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
@@ -66,7 +66,7 @@ void ConversionImpl::unary_expression(T *__restrict__ result,
 }
 int ConversionImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 									  OCLLazyCodegenState &compiler_state) {
-	const string type = typeString(node->operation.data_type);
+	const string type = type_string(node->operation.data_type);
 	compiler_state.code.prepend(
 		"const " + type + " " + name + " = (" + type + ")v" +
 		to_string(compiler_state.variable_index + 1) + ";\n");
@@ -77,7 +77,7 @@ ConversionImpl::generate_ocl_eager(FType res_type,
 								   std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = (" +
-		   typeString(res_type) + ")P0[index];";
+		   type_string(res_type) + ")P0[index];";
 }
 void ConversionImpl::execute_cpu(const FGraphNode *node,
 								 vector<CPUResultData> predecessor_data,
@@ -120,8 +120,8 @@ void RepeatImpl::unary_expression(T *__restrict__ result,
 	const FOperation pred = curr->predecessors[0]->operation;
 	// calculate number of elements per dimension entry for destination and
 	// source
-	vector<size_t> acc_sizes_d = calcAccSizes(op);
-	vector<size_t> acc_sizes_s = calcAccSizes(pred.dimensions, pred.shape);
+	vector<size_t> acc_sizes_d = calc_acc_sizes(op);
+	vector<size_t> acc_sizes_s = calc_acc_sizes(pred.dimensions, pred.shape);
 	for (int i = from; i < from + size; i++) {
 		// to get the index in the source array we first calculate the
 		// indices and reproject
@@ -168,14 +168,14 @@ int RepeatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
 								";\n");
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name + " = v" +
+		"const " + type_string(node->operation.data_type) + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
 std::string
 RepeatImpl::generate_ocl_parameters_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0"
 		   ", const long num_entries0, const int dimensions0"
 		   ", __constant long* acc_sizes_d, __constant long* acc_sizes_s"
@@ -229,8 +229,8 @@ void TransposeImpl::unary_expression(T *__restrict__ result,
 	const FOperation pred = curr->predecessors[0]->operation;
 	// calculate number of elements per dimension entry for destination and
 	// source
-	vector<size_t> acc_sizes_d = calcAccSizes(op);
-	vector<size_t> acc_sizes_s = calcAccSizes(pred.dimensions, pred.shape);
+	vector<size_t> acc_sizes_d = calc_acc_sizes(op);
+	vector<size_t> acc_sizes_s = calc_acc_sizes(pred.dimensions, pred.shape);
 	for (int i = from; i < from + size; i++) {
 		// to get the index in the source array we first calculate the
 		// indices and reproject
@@ -278,13 +278,13 @@ int TransposeImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
 								";\n");
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name + " = v" +
+		"const " + type_string(node->operation.data_type) + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
 std::string TransposeImpl::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0, const long num_entries0, const int dimensions0, __constant "
 		   "long* acc_sizes_d, __constant long* acc_sizes_s";
 }
@@ -433,7 +433,7 @@ int ConcatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	compiler_state.index_defs = index_defs;
 	compiler_state.code.prepend(
 		"index = old_index" + to_string(old_idx) + ";\n" +
-		typeString(node->operation.data_type) + " " + name + " = " + if_em +
+		type_string(node->operation.data_type) + " " + name + " = " + if_em +
 		" ? v" + to_string(compiler_state.variable_index + 1) + " : v" +
 		to_string(compiler_state.variable_index + 2) + ";\n");
 	return 0;
@@ -442,9 +442,9 @@ int ConcatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 std::string
 ConcatImpl::generate_ocl_parameters_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0, const long num_entries0, const __global " +
-		   typeString(parameter_types[1]) +
+		   type_string(parameter_types[1]) +
 		   "* P1, const long num_entries1, const long acc_size_last,"
 		   "const long shape_ax, const long a_shape_ax, const long "
 		   "b_shape_ax, const int ax";

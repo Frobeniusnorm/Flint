@@ -150,7 +150,7 @@ std::string OperationImplementation::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
 	Twine code;
 	for (int i = 0; i < parameter_types.size(); i++)
-		code += ", const __global " + typeString(parameter_types[i]) + "* P" +
+		code += ", const __global " + type_string(parameter_types[i]) + "* P" +
 				std::to_string(i) + ", long num_entries" + std::to_string(i);
 	return code;
 }
@@ -158,11 +158,11 @@ std::string OperationImplementation::generate_ocl_parameters_eager(
 std::vector<std::vector<FType>>
 OperationImplementation::kernel_type_combinations(const FGraphNode *node) {
 	std::vector<std::vector<FType>> par_poss =
-		allTypePermutations(node->num_predecessor);
+		all_type_permutations(node->num_predecessor);
 	for (int i = 0; i < par_poss.size(); i++) {
 		FType highest = par_poss[i][0];
 		for (int j = 1; j < par_poss[i].size(); j++)
-			highest = higherType(highest, par_poss[i][j]);
+			highest = higher_type(highest, par_poss[i][j]);
 		par_poss[i].insert(par_poss[i].begin(), highest);
 	}
 	return par_poss;

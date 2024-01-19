@@ -87,14 +87,14 @@ struct LessImpl : OperationImplementation {
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
 			using namespace std;
-			vector<vector<FType>> all_comb = allTypePermutations(2);
+			vector<vector<FType>> all_comb = all_type_permutations(2);
 			for (vector<FType> &comb : all_comb)
 				comb.insert(comb.begin(), F_INT32);
 			return all_comb;
 		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
-			return {typeSize(node->predecessors[0]->operation.data_type) == typeSize(F_INT32)};
+			return {type_size(node->predecessors[0]->operation.data_type) == type_size(F_INT32)};
 		}
 };
 struct GreaterImpl : OperationImplementation {
@@ -119,14 +119,14 @@ struct GreaterImpl : OperationImplementation {
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
 			using namespace std;
-			vector<vector<FType>> all_comb = allTypePermutations(2);
+			vector<vector<FType>> all_comb = all_type_permutations(2);
 			for (vector<FType> &comb : all_comb)
 				comb.insert(comb.begin(), F_INT32);
 			return all_comb;
 		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
-			return {typeSize(node->predecessors[0]->operation.data_type) == typeSize(F_INT32)};
+			return {type_size(node->predecessors[0]->operation.data_type) == type_size(F_INT32)};
 		}
 };
 struct EqualImpl : OperationImplementation {
@@ -151,14 +151,14 @@ struct EqualImpl : OperationImplementation {
 		std::vector<std::vector<FType>>
 		kernel_type_combinations(const FGraphNode *node) override {
 			using namespace std;
-			vector<vector<FType>> all_comb = allTypePermutations(2);
+			vector<vector<FType>> all_comb = all_type_permutations(2);
 			for (vector<FType> &comb : all_comb)
 				comb.insert(comb.begin(), F_INT32);
 			return all_comb;
 		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
-			return {typeSize(node->predecessors[0]->operation.data_type) == typeSize(F_INT32)};
+			return {type_size(node->predecessors[0]->operation.data_type) == type_size(F_INT32)};
 		}
 };
 struct DropoutImpl : OperationImplementation {

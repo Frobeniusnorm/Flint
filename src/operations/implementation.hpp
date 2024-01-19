@@ -25,8 +25,8 @@
 	const CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];    \
 	size_t im1 = p1.num_entries, im2 = p2.num_entries;                         \
 	size_t iv1 = 1, iv2 = 1;                                                   \
-	calculateDivisorForInverseBroadcasting(node->predecessors[0], iv1,         \
-										   node->predecessors[1], iv2);        \
+	calculate_divisor_for_inverse_broadcasting(node->predecessors[0], iv1,     \
+											   node->predecessors[1], iv2);    \
 	switch (p1.type) {                                                         \
 	case F_INT32:                                                              \
 		switch (p2.type) {                                                     \
@@ -258,7 +258,7 @@
 	const CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];    \
 	size_t im1 = p1.num_entries, im2 = p2.num_entries;                         \
 	size_t iv1 = 1, iv2 = 1;                                                   \
-	calculateDivisorForInverseBroadcasting(node->predecessors[0], iv1,         \
+	calculate_divisor_for_inverse_broadcasting(node->predecessors[0], iv1,         \
 										   node->predecessors[1], iv2);        \
 	switch (node->operation.data_type) {                                       \
 	case F_INT32: {                                                            \
@@ -328,7 +328,7 @@ struct OperationImplementation {
 		 * node request it */
 		static const int OCL_LAZY_INVERSE_BROADCASTING = 2;
 		static std::vector<OperationImplementation *> implementations;
-    virtual ~OperationImplementation() {}
+		virtual ~OperationImplementation() {}
 		/** Calculates the local gradient for the operation.
 		 * `y` is the node from which the gradient has to be calculated,
 		 * `dx_i` denotes the variable for which `y` is derived (0 means first

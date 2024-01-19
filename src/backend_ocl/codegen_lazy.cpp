@@ -49,7 +49,7 @@ generateCode(FGraphNode *node,
 			continue;
 		}
 		// cash var
-		string type = typeString(node->operation.data_type);
+		string type = type_string(node->operation.data_type);
 		bool push_pred = true;
 		// write code
 		const string opstr = string(fop_to_string[node->operation.op_type]);
@@ -87,7 +87,7 @@ generateCode(FGraphNode *node,
 		if (inverse_broadcasting) {
 			// manipulate for invserse broadcasting
 			size_t iv1 = 1, iv2 = 1;
-			calculateDivisorForInverseBroadcasting(node->predecessors[0], iv1,
+			calculate_divisor_for_inverse_broadcasting(node->predecessors[0], iv1,
 												   node->predecessors[1], iv2);
 			if (iv1 != 1 || iv2 != 1) {
 				push_pred = false;

@@ -26,7 +26,7 @@ void SlidingWindowImpl::unary_expression(T *__restrict__ result,
 		(FSlidingWindow *)curr->operation.additional_data;
 	size_t acc_size = curr->operation.shape[1];
 	std::vector<size_t> acc_sizes_pred =
-		calcAccSizes(pred.dimensions, pred.shape);
+		calc_acc_sizes(pred.dimensions, pred.shape);
 	std::vector<size_t> acc_sizes_win(pred.dimensions);
 	std::vector<size_t> acc_sizes_rest(pred.dimensions);
 	acc_sizes_win[acc_sizes_win.size() - 1] = 1;
@@ -116,7 +116,7 @@ int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 	index_defs += "}\n";
 	compiler_state.index_defs = index_defs;
 	compiler_state.code.prepend(
-		"const " + typeString(node->operation.data_type) + " " + name + " = v" +
+		"const " + type_string(node->operation.data_type) + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) +
 		";\n"
 		"index = old_index" +
@@ -125,7 +125,7 @@ int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 }
 std::string SlidingWindowImpl::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0"
 		   ", const long num_entries0, const int dimensions0"
 		   ", __constant long* acc_sizes_pred, __constant long* "
@@ -223,9 +223,9 @@ void UnslideWindowImpl::unary_expression(T *__restrict__ result,
 	const FOperation pred = curr->predecessors[0]->operation;
 	const unsigned int *steps = (unsigned int *)curr->operation.additional_data;
 	const std::vector<size_t> acc_sizes =
-		calcAccSizes(curr->operation.dimensions, curr->operation.shape);
+		calc_acc_sizes(curr->operation.dimensions, curr->operation.shape);
 	const std::vector<size_t> acc_sizes_pred =
-		calcAccSizes(pred.dimensions, pred.shape);
+		calc_acc_sizes(pred.dimensions, pred.shape);
 	size_t no_windows[pred.dimensions - 1];
 	for (int i = 0; i < pred.dimensions - 1; i++) {
 		size_t window_size = curr->operation.shape[i] - pred.shape[i + 1] + 1;
@@ -234,7 +234,7 @@ void UnslideWindowImpl::unary_expression(T *__restrict__ result,
 							: window_size / steps[i] + 1;
 	}
 	const std::vector<size_t> acc_no_windows =
-		calcAccSizes(pred.dimensions - 1, no_windows);
+		calc_acc_sizes(pred.dimensions - 1, no_windows);
 	for (size_t i = from; i < from + size; i++) {
 		result[i] = 0;
 		size_t first_w = 0, last_w = 0;
@@ -290,9 +290,9 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 	const string par1 = compiler_state.findOrInsertParameter(gnp1);
 	const unsigned int *steps = (unsigned int *)node->operation.additional_data;
 	const vector<size_t> acc_sizes =
-		calcAccSizes(node->operation.dimensions, node->operation.shape);
+		calc_acc_sizes(node->operation.dimensions, node->operation.shape);
 	const vector<size_t> acc_sizes_pred =
-		calcAccSizes(pred.dimensions, pred.shape);
+		calc_acc_sizes(pred.dimensions, pred.shape);
 	size_t no_windows[pred.dimensions - 1];
 	for (int i = 0; i < pred.dimensions - 1; i++) {
 		size_t window_size = node->operation.shape[i] - pred.shape[i + 1] + 1;
@@ -301,8 +301,8 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 							: window_size / steps[i] + 1;
 	}
 	const vector<size_t> acc_no_windows =
-		calcAccSizes(pred.dimensions - 1, no_windows);
-	Twine local_code = typeString(node->operation.data_type) + " " + name +
+		calc_acc_sizes(pred.dimensions - 1, no_windows);
+	Twine local_code = type_string(node->operation.data_type) + " " + name +
 					   " = 0;\n"
 					   "{\n"
 					   "const long first_w = 0";
@@ -361,7 +361,7 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 }
 std::string UnslideWindowImpl::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0"
 		   ", const long num_entries0, const int dimensions0"
 		   ", __constant long* shapeR, __constant "

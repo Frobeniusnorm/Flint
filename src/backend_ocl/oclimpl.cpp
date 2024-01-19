@@ -170,7 +170,7 @@ FErrorType flintInit_gpu() {
 static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
 								size_t *total_size = nullptr) {
 	cl_int err_code;
-	size_t type_size_node = typeSize(node->operation.data_type);
+	size_t type_size_node = type_size(node->operation.data_type);
 	size_t total_size_node = 1;
 	for (int i = 0; i < node->operation.dimensions; i++)
 		total_size_node *= node->operation.shape[i];
@@ -213,7 +213,7 @@ cl_mem OCLCompilerThread::copy_memory(const cl_mem other, size_t num_bytes,
 }
 #include <chrono>
 #include <unordered_map>
-cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
+cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
 	cl_int err_code;
 	cl_kernel kernel = nullptr;
 	auto start = chrono::high_resolution_clock::now();
@@ -240,7 +240,7 @@ cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
 			correct &= types[i] == node->predecessors[i]->operation.data_type;
 		if (correct)
 			our_kernel = kernel_name;
-		all_kernels.push_back({OCLCompilerThread::generateKernelHash(
+		all_kernels.push_back({OCLCompilerThread::generate_kernel_hash(
 								   node->operation.op_type, ret, types),
 							   kernel_name});
 	}
@@ -326,6 +326,7 @@ cl_kernel OCLCompilerThread::eagerCompile(FGraphNode *node, int hash) {
 }
 // pushes additional per-parameter parameters to a opencl function
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
+	// TODO include correct constants
 	if (node->result_data)
 		return node;
 	if (node->operation.op_type == FSTORE) {
@@ -357,33 +358,33 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		rd->data = nullptr;
 		rd->num_entries = num_elems;
 		rd->mem_id = nullptr;
-		int type_size = typeSize(node->operation.data_type);
+		int type_s = type_size(node->operation.data_type);
 		if (data) {
-			rd->data = malloc(type_size * num_elems);
+			rd->data = malloc(type_s * num_elems);
 			if (!rd->data) {
 				setErrorType(OUT_OF_MEMORY);
 				flogging(F_ERROR, "Not enough memory to store result! " +
 									  to_string(num_elems));
 				return nullptr;
 			}
-			memcpy(rd->data, data, type_size * num_elems);
+			memcpy(rd->data, data, type_s * num_elems);
 		} else if (gpu_data) {
 			rd->mem_id = OCLCompilerThread::copy_memory(
-				gpu_data, type_size * num_elems, CL_MEM_READ_WRITE);
+				gpu_data, type_s * num_elems, CL_MEM_READ_WRITE);
 		}
 		node->result_data = rd;
 		return node;
 	}
 	size_t inv_broad[2];
 	if (node->num_predecessor == 2)
-		calculateDivisorForInverseBroadcasting(
+		calculate_divisor_for_inverse_broadcasting(
 			node->predecessors[0], inv_broad[0], node->predecessors[1],
 			inv_broad[1]);
 	vector<FType> params_types(node->num_predecessor);
 	for (int i = 0; i < node->num_predecessor; i++)
 		params_types[i] = node->predecessors[i]->operation.data_type;
 	// because the operation type should be at the same position
-	int hash = OCLCompilerThread::generateKernelHash(
+	int hash = OCLCompilerThread::generate_kernel_hash(
 		node->operation.op_type, node->operation.data_type, params_types);
 	const auto prog = OCLCompilerThread::eager_cache.find(hash);
 	cl_kernel kernel = nullptr;
@@ -391,7 +392,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 	list<cl_mem> to_free;
 	// check if the kernel already exists or if it has to be generated
 	if (prog == OCLCompilerThread::eager_cache.end()) {
-		kernel = OCLCompilerThread::eagerCompile(node, hash);
+		kernel = OCLCompilerThread::eager_compile(node, hash);
 	} else {
 		kernel = prog->second;
 		flogging(F_DEBUG, "Loaded existing eager kernel");
@@ -411,16 +412,20 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		const FOperation op = pred->operation;
 		cl_mem mem_obj = nullptr;
 		bool do_write = false;
-		const size_t type_size = typeSize(op.data_type);
+		const size_t type_s = type_size(op.data_type);
 		size_t total_size;
 		cl_mem mem_id = nullptr;
 		const bool recycle =
 			!res_mem && pred->reference_counter == 1 && !reusage.empty() &&
 			reusage[i] && (op.op_type != FSTORE || !node->gradient_data) &&
 			((pred->result_data && pred->result_data->mem_id) ||
-			 pred->operation.op_type == FSTORE);
+			 pred->operation.op_type == FSTORE) &&
+			op.op_type != FGEN_CONSTANT;
 		if (pred->result_data) {
-			total_size = pred->result_data->num_entries;
+			// TODO is this test necessary?
+			total_size = pred->operation.op_type == FGEN_CONSTANT
+							 ? 1
+							 : pred->result_data->num_entries;
 			mem_id = pred->result_data->mem_id;
 			if (recycle) {
 				pred->result_data->mem_id = nullptr;
@@ -461,9 +466,10 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 			res_mem = mem_obj;
 		}
 		if (do_write) {
-			void *data = op.op_type == FSTORE
-							 ? ((FStore *)op.additional_data)->data
-							 : pred->result_data->data;
+			void *data =
+				op.op_type == FSTORE ? ((FStore *)op.additional_data)->data
+				: op.op_type == FGEN_CONSTANT ? op.additional_data
+											  : pred->result_data->data;
 			if (!data) {
 				flogging(F_WARNING,
 						 "No gpu memory is found, but no cpu either! " +
@@ -472,7 +478,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 							 fop_to_string[op.op_type]);
 			}
 			err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_TRUE, 0,
-											total_size * type_size, data, 0,
+											total_size * type_s, data, 0,
 											nullptr, nullptr);
 			if (err_code != CL_SUCCESS) {
 				string msg = "Unknown Error while loading data to GPU! Error: ";
@@ -575,7 +581,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		clReleaseMemObject(tfn);
 	return node;
 }
-cl_kernel OCLCompilerThread::lazyCompile(FGraphNode *node, string code) {
+cl_kernel OCLCompilerThread::lazy_compile(FGraphNode *node, string code) {
 	using namespace std;
 	cl_kernel kernel;
 	cl_int err_code;
@@ -664,7 +670,7 @@ FResultData *fSyncMemory(FGraphNode *node) {
 	FResultData *res = node->result_data;
 	if (res && res->mem_id && !res->data) {
 		// read result to cpu
-		int type_size_node = typeSize(node->operation.data_type);
+		int type_size_node = type_size(node->operation.data_type);
 		res->data = malloc(res->num_entries * type_size_node);
 		if (store_data)
 			*store_data = res->data;
@@ -744,8 +750,22 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		if (node->result_data)
 			return node;
 	}
+//	// eager if all parameters have result
+//	bool all_have_result = true; // TODO should be true, but does not work,
+//								 // probably because of constants
+//	for (int i = 0; i < node->num_predecessor; i++) {
+//		const FGraphNode *pred = node->predecessors[i];
+//		if (!pred->result_data ||
+//			(!pred->result_data->data && !pred->result_data->mem_id)) {
+//			all_have_result = false;
+//			break;
+//		}
+//	}
+//	// then execute eagerly
+//	if (all_have_result)
+//		return fExecuteGraph_gpu_eagerly(node);
 	auto start = chrono::high_resolution_clock::now();
-	FResultData *resultData = new FResultData(); // TODO mem leak
+	FResultData *resultData = new FResultData();
 	const FOperation node_op = node->operation;
 	size_t total_size_node = 1;
 	for (int i = 0; i < node_op.dimensions; i++)
@@ -756,11 +776,11 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	string code =
 		"#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void "
 		"execute_graph(__global ";
-	code += typeString(node->operation.data_type);
+	code += type_string(node->operation.data_type);
 	code += " *R";
 	// insert parameters
 	for (auto &[op, name] : parameters)
-		code += ", __global const " + typeString(op->operation.data_type) +
+		code += ", __global const " + type_string(op->operation.data_type) +
 				" *" + name;
 	code += "){\n";
 	// add the execution code
@@ -776,7 +796,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	if (cache_val == OCLCompilerThread::kernel_cache.end()) {
 		flogging(F_DEBUG, "code generation finished (in " +
 							  to_string(elapsed.count()) + " ms): \n" + code);
-		kernel = OCLCompilerThread::lazyCompile(node, code);
+		kernel = OCLCompilerThread::lazy_compile(node, code);
 	} else {
 		flogging(F_DEBUG, "code from cache");
 		kernel = cache_val->second.second;
@@ -785,7 +805,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		chrono::high_resolution_clock::now() - start;
 	start = chrono::high_resolution_clock::now();
 	// result buffer
-	size_t type_size_node = typeSize(node_op.data_type);
+	size_t type_size_node = type_size(node_op.data_type);
 	cl_mem result_mem = nullptr;
 	vector<cl_event> writeEvents;
 	// upload or link parameters
@@ -800,7 +820,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			// The problem here: optimized memory is a store
 			cl_mem mem_obj = nullptr;
 			bool do_write = false;
-			const size_t type_size = typeSize(op.data_type);
+			const size_t type_s = type_size(op.data_type);
 			const size_t total_size =
 				op.op_type == FSTORE
 					? ((FStore *)op.additional_data)->num_entries
@@ -825,7 +845,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			} else {
 				mem_obj =
 					clCreateBuffer(context, CL_MEM_READ_WRITE,
-								   total_size * type_size, nullptr, &err_code);
+								   total_size * type_s, nullptr, &err_code);
 				if (err_code == CL_OUT_OF_HOST_MEMORY) {
 					setErrorType(OUT_OF_MEMORY);
 					flogging(F_ERROR, "Not enough memory to create buffer!");
@@ -846,7 +866,7 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			mem_objs[index++] = mem_obj;
 			if (recycle) {
 				result_mem = mem_obj;
-      }
+			}
 			// actually write the buffer
 			if (do_write) {
 				void *data = op.op_type == FSTORE
@@ -858,8 +878,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 					flogging(F_ERROR, "parameter has no data!");
 				writeEvents.emplace_back();
 				err_code = clEnqueueWriteBuffer(
-					clqueue, mem_obj, CL_FALSE, 0, total_size * type_size, data,
-					0, nullptr, &writeEvents[writeEvents.size() - 1]);
+					clqueue, mem_obj, CL_FALSE, 0, total_size * type_s, data, 0,
+					nullptr, &writeEvents[writeEvents.size() - 1]);
 				if (err_code != CL_SUCCESS) {
 					string msg = "Unknown Error while loading data to GPU!";
 					flogging(F_ERROR, msg);

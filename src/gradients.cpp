@@ -88,37 +88,6 @@ static FGraphNode *unbroadcast(FGraphNode *adjoint, const FGraphNode *node) {
 	}
 	return adjoint;
 }
-static std::string printShape(size_t *shape, int dim) {
-	std::vector<size_t> sh(shape, shape + dim);
-	return vectorString(sh);
-}
-template <typename T>
-static std::string printNode(FGraphNode *node, int dim, int *b) {
-	std::string prev = "";
-	for (int i = 0; i < dim; i++)
-		prev += " ";
-	std::string s = "[";
-	if (dim == node->operation.dimensions - 1) {
-		for (int i = 0; i < node->operation.shape[dim]; i++) {
-			s += std::to_string(((T *)node->result_data->data)[*b + i]);
-			if (i != node->operation.shape[dim] - 1)
-				s += ", ";
-		}
-		(*b) += node->operation.shape[dim];
-	} else {
-		for (int i = 0; i < node->operation.shape[dim]; i++)
-			s += printNode<T>(node, dim + 1, b) + ",\n" + prev;
-		s = s.substr(0, s.size() - 2 - prev.size());
-	}
-	return s + "]";
-}
-template <typename T> static std::string printNode(FGraphNode *node) {
-	if (!node->result_data) {
-		fSyncMemory(fExecuteGraph(node));
-	}
-	int b = 0;
-	return printNode<T>(node, 0, &b);
-}
 static void collect(FGraphNode *x, std::list<FGraphNode *> &stack,
 					std::unordered_set<FGraphNode *> &visited,
 					const std::unordered_set<const FGraphNode *> dxs) {
@@ -160,6 +129,7 @@ FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
 FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 							   const unsigned int num_gradients,
 							   FGraphNode **gradients) {
+	// TODO memory optimizations here
 	using namespace std;
 	unordered_set<const FGraphNode *> *gd =
 		(unordered_set<const FGraphNode *> *)y->gradient_data;
@@ -202,7 +172,7 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 			FGraphNode *parent = curr->predecessors[i];
 			if (!visited.contains(parent))
 				continue;
-			// auto start = std::chrono::high_resolution_clock::now();
+			auto start = std::chrono::high_resolution_clock::now();
 			FGraphNode *local_grad = unbroadcast(
 				OperationImplementation::implementations[curr->operation
 															 .op_type]
@@ -216,10 +186,10 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 				if (local_grad == adj)
 					allowed_to_free = false;
 			}
-			// std::chrono::duration<double, std::milli> elapsed =
-			//     std::chrono::high_resolution_clock::now() - start;
-			// std::cout << fop_to_string[curr->operation.op_type] << " took "
-			//           << elapsed.count() << std::endl;
+			std::chrono::duration<double, std::milli> elapsed =
+			    std::chrono::high_resolution_clock::now() - start;
+			std::cout << fop_to_string[curr->operation.op_type] << " took "
+			          << elapsed.count() << " for " << i << std::endl;
 			fOptimizeMemory(adjoints[parent]);
 		}
 		if (!vars.contains(curr)) {

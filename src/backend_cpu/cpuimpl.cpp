@@ -251,7 +251,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 					FGraphNode *p = curr->predecessors[i];
 					// execute on GPU if it makes more sense
 					if (is_gpu_backend) {
-						const size_t score = computeScore(p, true);
+						const size_t score = compute_score(p, true);
 						if (score >= 1024) {
 							if (inExecuteList.find(p) != inExecuteList.end())
 								toExecute.remove(p);

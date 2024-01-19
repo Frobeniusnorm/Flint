@@ -51,7 +51,7 @@ void MinImpl::execute_cpu(const FGraphNode *node,
 }
 int MinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 							   OCLLazyCodegenState &compiler_state) {
-	const std::string type = typeString(node->operation.data_type);
+	const std::string type = type_string(node->operation.data_type);
 	compiler_state.code.prepend(
 		"const " + type + " " + name + " = min((" + type + ")v" +
 		to_string(compiler_state.variable_index + 1) + ", (" + type + ")v" +
@@ -61,9 +61,9 @@ int MinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 std::string MinImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
-		   typeString(parameter_types[0]) +
+		   type_string(parameter_types[0]) +
 		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
-		   typeString(parameter_types[1]) +
+		   type_string(parameter_types[1]) +
 		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
 		   "R[index] = a < b ? a : b;";
 }
@@ -91,7 +91,7 @@ void MaxImpl::binary_expression(T *__restrict__ result,
 }
 int MaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 							   OCLLazyCodegenState &compiler_state) {
-	const std::string type = typeString(node->operation.data_type);
+	const std::string type = type_string(node->operation.data_type);
 	compiler_state.code.prepend(
 		"const " + type + " " + name + " = max((" + type + ")v" +
 		to_string(compiler_state.variable_index + 1) + ", (" + type + ")v" +
@@ -101,9 +101,9 @@ int MaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 std::string MaxImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
-		   typeString(parameter_types[0]) +
+		   type_string(parameter_types[0]) +
 		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
-		   typeString(parameter_types[1]) +
+		   type_string(parameter_types[1]) +
 		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
 		   "R[index] = a >= b ? a : b;";
 }
@@ -132,7 +132,7 @@ void LessImpl::binary_expression(int *__restrict__ result,
 }
 int LessImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								OCLLazyCodegenState &compiler_state) {
-	const std::string type = typeString(node->operation.data_type);
+	const std::string type = type_string(node->operation.data_type);
 	compiler_state.code.prepend(
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " < v" +
@@ -142,9 +142,9 @@ int LessImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 std::string LessImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
-		   typeString(parameter_types[0]) +
+		   type_string(parameter_types[0]) +
 		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
-		   typeString(parameter_types[1]) +
+		   type_string(parameter_types[1]) +
 		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
 		   "R[index] = a < b ? 1 : 0;";
 }
@@ -173,7 +173,7 @@ void GreaterImpl::binary_expression(int *__restrict__ result,
 }
 int GreaterImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								   OCLLazyCodegenState &compiler_state) {
-	const std::string type = typeString(node->operation.data_type);
+	const std::string type = type_string(node->operation.data_type);
 	compiler_state.code.prepend(
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " > v" +
@@ -184,9 +184,9 @@ std::string
 GreaterImpl::generate_ocl_eager(FType res_type,
 								std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
-		   typeString(parameter_types[0]) +
+		   type_string(parameter_types[0]) +
 		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
-		   typeString(parameter_types[1]) +
+		   type_string(parameter_types[1]) +
 		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
 		   "R[index] = a > b ? 1 : 0;";
 }
@@ -215,30 +215,30 @@ void EqualImpl::binary_expression(int *__restrict__ result,
 }
 int EqualImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								 OCLLazyCodegenState &compiler_state) {
-	const std::string type = typeString(node->operation.data_type);
+	const std::string type = type_string(node->operation.data_type);
 	const FOperation x = node->predecessors[0]->operation;
 	const FOperation y = node->predecessors[1]->operation;
 	compiler_state.code.prepend(
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " + " +
-		epsilonForType(x.data_type) + " >= v" +
+		epsilon_for_type(x.data_type) + " >= v" +
 		to_string(compiler_state.variable_index + 2) +
 		" && "
 		"v" +
 		to_string(compiler_state.variable_index + 1) + " <= v" +
 		to_string(compiler_state.variable_index + 2) + " + " +
-		epsilonForType(y.data_type) + "? 1 : 0;\n");
+		epsilon_for_type(y.data_type) + "? 1 : 0;\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
 std::string EqualImpl::generate_ocl_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
-		   typeString(parameter_types[0]) +
+		   type_string(parameter_types[0]) +
 		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
-		   typeString(parameter_types[1]) +
+		   type_string(parameter_types[1]) +
 		   " b = P1[(index/inv_broad1)%num_entries1];\n" + "R[index] = a + " +
-		   epsilonForType(parameter_types[0]) + " >= b && a <= b + " +
-		   epsilonForType(parameter_types[1]) + " ? 1 : 0;";
+		   epsilon_for_type(parameter_types[0]) + " >= b && a <= b + " +
+		   epsilon_for_type(parameter_types[1]) + " ? 1 : 0;";
 }
 void EqualImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
@@ -267,7 +267,7 @@ void DropoutImpl::execute_cpu(const FGraphNode *node,
 int DropoutImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								   OCLLazyCodegenState &compiler_state) {
 
-	const string type = typeString(node->operation.data_type);
+	const string type = type_string(node->operation.data_type);
 	const double seed = ((double *)node->operation.additional_data)[0];
 	const double prob = ((double *)node->operation.additional_data)[1];
 	compiler_state.code.prepend(
@@ -308,7 +308,7 @@ FGraphNode *DropoutImpl::local_gradient(FGraphNode *y, int dx_i,
 std::string
 DropoutImpl::generate_ocl_parameters_eager(FType res_type,
 										   std::vector<FType> parameter_types) {
-	return ", const __global " + typeString(parameter_types[0]) +
+	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0, const long num_entries0, const double "
 		   "time, const double prob";
 }
