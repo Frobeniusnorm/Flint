@@ -407,7 +407,7 @@ TEST_SUITE("C++ Bindings") {
 			for (int j = 0; j < 10; j++)
 				for (int k = 0; k < 2; k++)
 					CHECK_EQ(doctest::Approx(0.0), t3[i][j][k]);
-		fSetLoggingLevel(F_DEBUG);
+    fSetLoggingLevel(F_DEBUG);
 		Tensor<double, 3> t4 = Flint::constant(1.0, 4, 2, 2);
 		Tensor<double, 2> t5 = (t1 - t2).convolve(t4, 4, 2);
 		for (int i = 0; i < t5.get_shape()[0]; i++)

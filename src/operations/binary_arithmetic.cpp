@@ -42,7 +42,7 @@ int AddImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string AddImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0 && index >= num_entries1) "
+	return "if(index >= num_entriesR) "
 		   " return;\n"
 		   "R[index] = P0[(index/inv_broad0)%num_entries0] + "
 		   "P1[(index/inv_broad1)%num_entries1];";
@@ -97,7 +97,7 @@ int SubImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string SubImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0 && index >= num_entries1) "
+	return "if(index >= num_entriesR) "
 		   "return;\nR[index] = "
 		   "P0[(index/inv_broad0)%num_entries0] - "
 		   "P1[(index/inv_broad1)%num_entries1];";

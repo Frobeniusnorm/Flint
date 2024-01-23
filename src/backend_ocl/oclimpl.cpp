@@ -14,10 +14,10 @@
 
 #include "../../flint.h"
 #include "../errors.hpp"
+#include "../operations/implementation.hpp"
 #include "../utils.hpp"
 #include "codegen.hpp"
 #include "comp.hpp"
-#include "src/operations/implementation.hpp"
 #include "utils.hpp"
 #include <CL/cl.h>
 #include <iostream>
@@ -172,8 +172,9 @@ static cl_mem create_gpu_memory(FGraphNode *node, cl_mem_flags memory_type,
 	cl_int err_code;
 	size_t type_size_node = type_size(node->operation.data_type);
 	size_t total_size_node = 1;
-	for (int i = 0; i < node->operation.dimensions; i++)
-		total_size_node *= node->operation.shape[i];
+	if (node->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < node->operation.dimensions; i++)
+			total_size_node *= node->operation.shape[i];
 	const cl_mem result_mem =
 		clCreateBuffer(context, memory_type, total_size_node * type_size_node,
 					   nullptr, &err_code);
@@ -750,26 +751,27 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		if (node->result_data)
 			return node;
 	}
-//	// eager if all parameters have result
-//	bool all_have_result = true; // TODO should be true, but does not work,
-//								 // probably because of constants
-//	for (int i = 0; i < node->num_predecessor; i++) {
-//		const FGraphNode *pred = node->predecessors[i];
-//		if (!pred->result_data ||
-//			(!pred->result_data->data && !pred->result_data->mem_id)) {
-//			all_have_result = false;
-//			break;
-//		}
-//	}
-//	// then execute eagerly
-//	if (all_have_result)
-//		return fExecuteGraph_gpu_eagerly(node);
+	// eager if all parameters have result
+	bool all_have_result = true; // TODO should be true, but does not work,
+								 // probably because of constants
+	for (int i = 0; i < node->num_predecessor; i++) {
+		const FGraphNode *pred = node->predecessors[i];
+		if (!pred->result_data ||
+			(!pred->result_data->data && !pred->result_data->mem_id)) {
+			all_have_result = false;
+			break;
+		}
+	}
+	// then execute eagerly
+	if (all_have_result)
+		return fExecuteGraph_gpu_eagerly(node);
 	auto start = chrono::high_resolution_clock::now();
 	FResultData *resultData = new FResultData();
 	const FOperation node_op = node->operation;
 	size_t total_size_node = 1;
-	for (int i = 0; i < node_op.dimensions; i++)
-		total_size_node *= node_op.shape[i];
+	if (node_op.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < node_op.dimensions; i++)
+			total_size_node *= node_op.shape[i];
 	// calculate Code and Parameters
 	list<pair<FGraphNode *, string>> parameters;
 	string graph_code = generateCode(node, parameters);

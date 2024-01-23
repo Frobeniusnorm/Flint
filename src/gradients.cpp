@@ -159,8 +159,6 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 	collect(y, todo, visited, vars);
 	// used to determine when a node may be freed
 	unordered_map<const FGraphNode *, unsigned int> needed_by(adjoints.size());
-	for (FGraphNode *curr : todo) {
-	}
 	// initialize
 	adjoints[y] = constant_tensor(1., F_FLOAT64, y->operation.shape,
 								  y->operation.dimensions);
@@ -186,10 +184,10 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 				if (local_grad == adj)
 					allowed_to_free = false;
 			}
-			std::chrono::duration<double, std::milli> elapsed =
-			    std::chrono::high_resolution_clock::now() - start;
-			std::cout << fop_to_string[curr->operation.op_type] << " took "
-			          << elapsed.count() << " for " << i << std::endl;
+		//	std::chrono::duration<double, std::milli> elapsed =
+		//	    std::chrono::high_resolution_clock::now() - start;
+		//	std::cout << fop_to_string[curr->operation.op_type] << " took "
+		//	          << elapsed.count() << " for " << i << std::endl;
 			fOptimizeMemory(adjoints[parent]);
 		}
 		if (!vars.contains(curr)) {
