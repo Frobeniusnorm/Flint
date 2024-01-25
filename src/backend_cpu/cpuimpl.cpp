@@ -261,8 +261,6 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 							continue;
 						}
 					}
-					if ((long)p == 0x64)
-						flogging(F_ERROR, "FOOO");
 					workList.push_back(p);
 				}
 		}
@@ -272,8 +270,9 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 		// collect predecessor results
 		// calculate total size
 		size_t size = 1;
-		for (int j = 0; j < curr->operation.dimensions; j++)
-			size *= curr->operation.shape[j];
+		if (curr->operation.op_type != FGEN_CONSTANT)
+			for (int j = 0; j < curr->operation.dimensions; j++)
+				size *= curr->operation.shape[j];
 		if (size == 0)
 			flogging(F_ERROR, "Illegal number of entries!");
 		if (curr->operation.op_type == FSTORE || curr->result_data) {
@@ -287,14 +286,19 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 				if (!rd->data)
 					fSyncMemory(curr);
 				foo.num_entries = rd->num_entries;
-				if (foo.num_entries != size && curr->operation.op_type != FGEN_CONSTANT)
-					flogging(F_ERROR, "Wrong number of entries! " + to_string(rd->num_entries) + " vs " + to_string(size));
+				if (foo.num_entries != size &&
+					curr->operation.op_type != FGEN_CONSTANT)
+					flogging(F_ERROR, "Wrong number of entries! " +
+										  to_string(rd->num_entries) + " vs " +
+										  to_string(size));
 				foo.data = rd->data;
 			} else {
 				FStore *store = (FStore *)curr->operation.additional_data;
 				foo.num_entries = store->num_entries;
 				if (foo.num_entries != size)
-					flogging(F_ERROR, "Wrong number of entries! " + to_string(store->num_entries) + " vs " + to_string(size));
+					flogging(F_ERROR, "Wrong number of entries! " +
+										  to_string(store->num_entries) +
+										  " vs " + to_string(size));
 				foo.data = store->data;
 			}
 			results.insert({curr, foo});
