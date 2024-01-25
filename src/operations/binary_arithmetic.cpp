@@ -134,7 +134,7 @@ int MulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string MulImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0 && index >= num_entries1) "
+	return "if(index >= num_entriesR) "
 		   "return;\nR[index] = "
 		   "P0[(index/inv_broad0)%num_entries0] * "
 		   "P1[(index/inv_broad1)%num_entries1];";
@@ -175,7 +175,7 @@ int DivImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string DivImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0 && index >= num_entries1) "
+	return "if(index >= num_entriesR) "
 		   "return;\nR[index] = "
 		   "P0[(index/inv_broad0)%num_entries0] / "
 		   "P1[(index/inv_broad1)%num_entries1];";
@@ -237,8 +237,7 @@ int PowImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string PowImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
-	std::string code =
-		"if(index >= num_entries0 && index >= num_entries1) return;\n";
+	std::string code = "if(index >= num_entriesR) return;\n";
 	string type = type_string(res_type);
 	if ((parameter_types[0] == F_FLOAT32 || parameter_types[0] == F_FLOAT64) &&
 		(parameter_types[1] == F_FLOAT32 || parameter_types[1] == F_FLOAT64))
@@ -292,6 +291,12 @@ void MatMulImpl::binary_expression(T *__restrict__ result,
 								   size_t inv_man_2, const FGraphNode *curr) {
 	const FGraphNode *gnp1 = curr->predecessors[0],
 					 *gnp2 = curr->predecessors[1];
+	// total size of each parameter
+	size_t num_entries0 = 1, num_entries1 = 1;
+	for (int i = 0; i < gnp1->operation.dimensions; i++)
+		num_entries0 *= gnp1->operation.shape[i];
+	for (int i = 0; i < gnp2->operation.dimensions; i++)
+		num_entries1 *= gnp2->operation.shape[i];
 	const size_t l = gnp1->operation.shape[gnp1->operation.dimensions - 2];
 	const size_t m = gnp1->operation.shape[gnp1->operation.dimensions - 1];
 	const size_t n = gnp2->operation.shape[gnp2->operation.dimensions - 1];
@@ -314,7 +319,7 @@ void MatMulImpl::binary_expression(T *__restrict__ result,
 			// get matrix number of index and then reproject
 			base_p1 = (index / (l * n)) * (l * m);
 		size_t base_p2 = 0;
-		if (gnp2->operation.dimensions > 2) 
+		if (gnp2->operation.dimensions > 2)
 			// get matrix number of index and then reproject
 			base_p2 = (index / (l * n)) * (m * n);
 		// initialize all results
@@ -322,9 +327,9 @@ void MatMulImpl::binary_expression(T *__restrict__ result,
 			result[index + k] = 0;
 		// do the cache optimized iteration
 		for (size_t i = 0; i < m; i++) {
-			const A a = data1[base_p1 + j * m + i];
+			const A a = data1[(base_p1 + j * m + i) % num_entries0];
 			for (size_t k = 0; k <= k_end_actual - k_start; k++) {
-				result[index + k] += a * data2[base_p2 + i * n + k];
+				result[index + k] += a * data2[(base_p2 + i * n + k) % num_entries1];
 			}
 		}
 		index += k_end_actual - k_start + 1;
@@ -356,6 +361,12 @@ int MatMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		compiler_state.assigned_params.insert({gnp2, par2});
 		parameters->push_back({gnp2, par2});
 	}
+	// total size of each parameter
+	size_t num_entries0 = 1, num_entries1 = 1;
+	for (int i = 0; i < gnp1->operation.dimensions; i++)
+		num_entries0 *= gnp1->operation.shape[i];
+	for (int i = 0; i < gnp2->operation.dimensions; i++)
+		num_entries1 *= gnp2->operation.shape[i];
 	size_t l = gnp1->operation.shape[gnp1->operation.dimensions - 2];
 	size_t m = gnp1->operation.shape[gnp1->operation.dimensions - 1];
 	size_t n = gnp2->operation.shape[gnp2->operation.dimensions - 1];
@@ -379,9 +390,10 @@ int MatMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	code.prepend("for(int i = 0; i < " + to_string(m) +
 				 "; i++){\n"
 				 "  " +
-				 name + " += " + par1 + "[" + base_p1 + " + " + j + " * " +
-				 to_string(m) + " + i] * " + par2 + "[" + base_p2 + " + i * " +
-				 to_string(n) + " + " + k + "];\n}\n");
+				 name + " += " + par1 + "[(" + base_p1 + " + " + j + " * " +
+				 to_string(m) + " + i) % " + to_string(num_entries0) + "] * " +
+				 par2 + "[(" + base_p2 + " + i * " + to_string(n) + " + " + k +
+				 ") % " + to_string(num_entries1) + "];\n}\n");
 	code.prepend(type + " " + name + " = 0;\n");
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
@@ -407,8 +419,9 @@ std::string MatMulImpl::generate_ocl_eager(FType res_type,
 		   "0;\n"
 		   "long base_p1 = dimensions1 > 2 ? (index / (l * n)) * (m * n) : "
 		   "0;\n"
-		   "for(int i = 0; i < m; i++){\n res += P0[base_p0 + j * m + i] * "
-		   "P1[base_p1 + i * n + k];\n}"
+		   "for(int i = 0; i < m; i++){\n res += P0[(base_p0 + j * m + i) % "
+		   "num_entries0] * "
+		   "P1[(base_p1 + i * n + k) % num_entries1];\n}"
 		   "R[index] = res;\n";
 }
 void MatMulImpl::push_additional_kernel_parameters(FGraphNode *node,

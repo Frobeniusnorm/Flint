@@ -419,6 +419,7 @@ TEST_SUITE("C++ Bindings") {
 			for (int j = 0; j < 10; j++)
 				for (int k = 0; k < 4; k++)
 					CHECK_EQ(doctest::Approx(2.0), t7[i][j][k]);
+    fSetLoggingLevel(F_VERBOSE);
 	}
 	TEST_CASE("Basic Functions and Classes") {
 		Tensor<float, 3> t1({{{0}, {1}}, {{2}, {3}}});

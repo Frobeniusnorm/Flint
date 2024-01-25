@@ -260,10 +260,10 @@ std::string ConvolveImpl::generate_ocl_parameters_eager(
 		   type_string(parameter_types[1]) +
 		   "* P1"
 		   ", const long num_entries1, const int dimensions1"
-
 		   ", __constant long* acc_sizes, __constant long* acc_sizes_pred, "
 		   "__constant long* acc_sizes_kernel"
-		   ", __constant int* steps";
+		   ", __constant int* steps, long total_elements_image, long "
+		   "total_elements_kernel";
 }
 std::string
 ConvolveImpl::generate_ocl_eager(FType res_type,
@@ -286,7 +286,7 @@ ConvolveImpl::generate_ocl_eager(FType res_type,
 		   " res = 0;\n"
 		   "const long kernel_num_elems = multi_filter ? acc_sizes_kernel[0] "
 		   ": "
-		   "num_entries1;\n"
+		   "total_elements_kernel;\n"
 		   "for(long k = 0; k < kernel_num_elems; k++){\n"
 		   " bool set_zero = false;\n"
 		   " long o = 0;\n"
@@ -300,7 +300,8 @@ ConvolveImpl::generate_ocl_eager(FType res_type,
 		   "  long dk = (kn_d == 0 ? k : k % acc_sizes_kernel[kn_d - 1]) / "
 		   "acc_sizes_kernel[kn_d];\n"
 		   "  if(d < dimensions0 - 1)\n"
-		   "   if(((di * steps[d]) + dk) * acc_sizes_pred[d] >= num_entries0 "
+		   "   if(((di * steps[d]) + dk) * acc_sizes_pred[d] >= "
+		   "total_elements_image"
 		   "||\n"
 		   "        (d > 0 && ((di * steps[d]) + dk) * acc_sizes_pred[d] >= \n"
 		   "acc_sizes_pred[d - 1])) {\n"
@@ -308,7 +309,8 @@ ConvolveImpl::generate_ocl_eager(FType res_type,
 		   "  o += dk * acc_sizes_pred[d];\n"
 		   " }\n"
 		   " if (set_zero) continue;\n"
-		   " res += P1[k + kernel_offset] * P0[j + o];\n"
+		   " res += P1[(k + kernel_offset) % num_entries1] * P0[(j + o) % "
+		   "num_entries0];\n"
 		   "}\n"
 		   "R[index] = res;";
 }
@@ -339,6 +341,20 @@ void ConvolveImpl::push_additional_kernel_parameters(
 		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
 							  std::to_string(err_code));
 	to_free.push_back(steps_mem);
+	// total size of image (because of constants that have size of 1 in result
+	size_t total_elements_image = 1, total_elements_kernel = 1;
+	for (int i = 0; i < gnp1->operation.dimensions; i++)
+		total_elements_image *= gnp1->operation.shape[i];
+	for (int i = 0; i < gnp2->operation.dimensions; i++)
+		total_elements_kernel *= gnp2->operation.shape[i];
+	if (clSetKernelArg(kernel, par_index++, sizeof(size_t),
+					   (void *)&total_elements_image) != CL_SUCCESS)
+		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+							  std::to_string(err_code));
+	if (clSetKernelArg(kernel, par_index++, sizeof(size_t),
+					   (void *)&total_elements_kernel) != CL_SUCCESS)
+		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
+							  std::to_string(err_code));
 }
 FGraphNode *GradientConvolve1Impl::local_gradient(FGraphNode *y, int dx_i,
 												  FGraphNode *prev_adj) {
