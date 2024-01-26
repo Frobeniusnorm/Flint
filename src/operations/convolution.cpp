@@ -108,6 +108,14 @@ void ConvolveImpl::binary_expression(T *__restrict__ result,
 	const unsigned int *steps = (unsigned int *)op.additional_data;
 	const bool multiple_filter =
 		gnp2->operation.dimensions != gnp1->operation.dimensions;
+	// total sizes
+	size_t num_entries1 = 1, num_entries2 = 1;
+	if (gnp1->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < gnp1->operation.dimensions; i++)
+			num_entries1 *= gnp1->operation.shape[i];
+	if (gnp2->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < gnp2->operation.dimensions; i++)
+			num_entries2 *= gnp2->operation.shape[i];
 	// calculate accumulated sizes for result, kernel and source (pred)
 	std::vector<size_t> acc_sizes = calc_acc_sizes(op);
 	std::vector<size_t> acc_sizes_pred = calc_acc_sizes(pred);
@@ -169,7 +177,8 @@ void ConvolveImpl::binary_expression(T *__restrict__ result,
 			}
 			if (set_zero)
 				continue;
-			res += data2[k + kernel_offset] * data1[j + o];
+			res += data2[(k + kernel_offset) % num_entries2] *
+				   data1[(j + o) % num_entries1];
 		}
 		result[i] = res;
 	}

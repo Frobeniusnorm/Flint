@@ -13,6 +13,7 @@
  * limitations under the License. */
 #include "binary_arithmetic.hpp"
 #include "../utils.hpp"
+#include "flint.h"
 
 using namespace std;
 FGraphNode *AddImpl::local_gradient(FGraphNode *y, int dx_i,
@@ -293,10 +294,12 @@ void MatMulImpl::binary_expression(T *__restrict__ result,
 					 *gnp2 = curr->predecessors[1];
 	// total size of each parameter
 	size_t num_entries0 = 1, num_entries1 = 1;
-	for (int i = 0; i < gnp1->operation.dimensions; i++)
-		num_entries0 *= gnp1->operation.shape[i];
-	for (int i = 0; i < gnp2->operation.dimensions; i++)
-		num_entries1 *= gnp2->operation.shape[i];
+	if (gnp1->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < gnp1->operation.dimensions; i++)
+			num_entries0 *= gnp1->operation.shape[i];
+	if (gnp2->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < gnp2->operation.dimensions; i++)
+			num_entries1 *= gnp2->operation.shape[i];
 	const size_t l = gnp1->operation.shape[gnp1->operation.dimensions - 2];
 	const size_t m = gnp1->operation.shape[gnp1->operation.dimensions - 1];
 	const size_t n = gnp2->operation.shape[gnp2->operation.dimensions - 1];
@@ -329,7 +332,8 @@ void MatMulImpl::binary_expression(T *__restrict__ result,
 		for (size_t i = 0; i < m; i++) {
 			const A a = data1[(base_p1 + j * m + i) % num_entries0];
 			for (size_t k = 0; k <= k_end_actual - k_start; k++) {
-				result[index + k] += a * data2[(base_p2 + i * n + k) % num_entries1];
+				result[index + k] +=
+					a * data2[(base_p2 + i * n + k) % num_entries1];
 			}
 		}
 		index += k_end_actual - k_start + 1;
