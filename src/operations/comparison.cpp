@@ -250,12 +250,18 @@ template <typename T>
 void DropoutImpl::unary_expression(T *__restrict__ result,
 								   const T *__restrict__ data1, size_t from,
 								   size_t size, const FGraphNode *curr) {
-
+	size_t num_entries0 = 1;
+	const FGraphNode *gnp1 = curr->predecessors[0];
+	if (gnp1->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < gnp1->operation.dimensions; i++)
+			num_entries0 *= gnp1->operation.shape[i];
 	const double seed = ((double *)curr->operation.additional_data)[0];
 	const double prob = ((double *)curr->operation.additional_data)[1];
 	std::minstd_rand0 g1(seed * 1000 + from);
 	for (size_t i = from; i < from + size; i++) {
-		result[i] = ((g1() % 100000000) / 100000000.0) > prob ? data1[i] : 0;
+		result[i] = ((g1() % 100000000) / 100000000.0) > prob
+						? data1[i % num_entries0]
+						: 0;
 	}
 }
 void DropoutImpl::execute_cpu(const FGraphNode *node,
@@ -289,7 +295,7 @@ DropoutImpl::generate_ocl_eager(FType res_type,
 	return "if(index >= num_entriesR) return;\n"
 		   "const double v = sin(index + time) * 43758.5453123;\n"
 		   "const double r = min(v - floor(v), 0.99999);\n"
-		   "R[index] = r > prob ? P0[index] : 0;\n";
+		   "R[index] = r > prob ? P0[index % num_entries0] : 0;\n";
 }
 FGraphNode *DropoutImpl::local_gradient(FGraphNode *y, int dx_i,
 										FGraphNode *prev_adj) {
@@ -317,6 +323,10 @@ void DropoutImpl::push_additional_kernel_parameters(
 	std::list<cl_mem> &to_free) {
 	const double seed = ((double *)node->operation.additional_data)[0];
 	const double prob = ((double *)node->operation.additional_data)[1];
+	size_t num_entries0 = 1;
+	if (node->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < node->operation.dimensions; i++)
+			num_entries0 *= node->operation.shape[i];
 	if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&seed) !=
 		CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
