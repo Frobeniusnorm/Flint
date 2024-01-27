@@ -255,8 +255,14 @@ int ConvolveImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		}
 		conv_code += "o += dk * " + to_string(acc_sizes_pred[d]) + ";\n}\n";
 	}
-	conv_code += "res += " + par2 + "[k + kernel_offset] * " + par1 +
-				 "[j + o];\n}\n" + name + " = res;\n}\n";
+	string ind1 = "j + o";
+	string ind2 = "k + kernel_offset";
+	if (gnp1->operation.op_type == FGEN_CONSTANT)
+		ind1 = "0";
+	if (gnp2->operation.op_type == FGEN_CONSTANT)
+		ind2 = "0";
+	conv_code += "res += " + par2 + "[" + ind2 + "] * " + par1 + "[" + ind2 +
+				 "];\n}\n" + name + " = res;\n}\n";
 	compiler_state.code.prepend(conv_code);
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
@@ -542,9 +548,13 @@ void GradientConvolve1Impl::binary_expression(
 					}
 					if (!skip_kernel) {
 						started_counting = true;
-						res +=
-							data1[filter * acc_sizes_kernel[0] + keri + kero] *
-							data2[adjo + adji];
+						res += data1[gnp1->operation.op_type == FGEN_CONSTANT
+										 ? 0
+										 : filter * acc_sizes_kernel[0] + keri +
+											   kero] *
+							   data2[gnp2->operation.op_type == FGEN_CONSTANT
+										 ? 0
+										 : adjo + adji];
 					}
 					actual_overlapping++;
 				}
@@ -680,12 +690,18 @@ int GradientConvolve1Impl::generate_ocl_lazy(
 			to_string(steps[d] * acc_sizes_kernel[multifilter ? d + 1 : d]) +
 			";\n  }\n";
 	}
+	string ind1 =
+		"filter * " + to_string(acc_sizes_kernel[0]) + " + keri + kero";
+	string ind2 = "adji + adjo";
+	if (gnp1->operation.op_type == FGEN_CONSTANT)
+		ind1 = "0";
+	if (gnp2->operation.op_type == FGEN_CONSTANT)
+		ind2 = "0";
 	convc += "  if(!skip_kernel){\n"
 			 "   started_counting = true;\n"
 			 "   " +
-			 name + " += " + par1 + "[filter * " +
-			 to_string(acc_sizes_kernel[0]) + " + keri + kero] * " + par2 +
-			 "[adji + adjo];\n"
+			 name + " += " + par1 + "[" + ind1 + "] * " + par2 + "[" + ind2 +
+			 "];\n"
 			 " }\n"
 			 " actual_overlapping++;\n}\n}\n}\n";
 	compiler_state.code.prepend(convc);
@@ -898,7 +914,12 @@ void GradientConvolve2Impl::binary_expression(
 				size_t wj = (w / acc_sizes_windows[j]) % prev_adj.shape[j];
 				a += wj * acc_sizes_pred[j] * steps[j];
 			}
-			result[i] += data1[a + a_offset] * data2[w * num_filter + f];
+			result[i] +=
+				data1[gnp1->operation.op_type == FGEN_CONSTANT ? 0
+															   : a + a_offset] *
+				data2[gnp2->operation.op_type == FGEN_CONSTANT
+						  ? 0
+						  : w * num_filter + f];
 		}
 	}
 }

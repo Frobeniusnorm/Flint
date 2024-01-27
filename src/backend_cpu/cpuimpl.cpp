@@ -290,12 +290,12 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 					curr->operation.op_type != FGEN_CONSTANT)
 					flogging(F_ERROR, "Wrong number of entries! " +
 										  to_string(rd->num_entries) + " vs " +
-										  to_string(size));
+										  to_string(size) + " for " + fop_to_string[curr->operation.op_type]);
 				foo.data = rd->data;
 			} else {
 				FStore *store = (FStore *)curr->operation.additional_data;
 				foo.num_entries = store->num_entries;
-				if (foo.num_entries != size)
+				if (foo.num_entries != size && curr->operation.op_type != FGEN_CONSTANT)
 					flogging(F_ERROR, "Wrong number of entries! " +
 										  to_string(store->num_entries) +
 										  " vs " + to_string(size));
