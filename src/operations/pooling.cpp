@@ -1,8 +1,8 @@
 #include "pooling.hpp"
+#include "../../flint.h"
 #include "../backend_ocl/utils.hpp"
 #include "../utils.hpp"
 #include "convolution.hpp"
-#include "../../flint.h"
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
@@ -37,9 +37,8 @@ static void pooling(T *__restrict__ result, const T *__restrict__ data,
 			j += di * window->step[d] * acc_sizes_pred[d];
 		}
 		T res = 0;
-		if (op.op_type == FPOOLING_MAX) {
+		if (op.op_type == FPOOLING_MAX)
 			res = std::numeric_limits<T>::lowest();
-		}
 		for (size_t k = 0; k < kernel_num_elems; k++) {
 			size_t o = 0; // source offset
 			for (unsigned int d = 0; d < op.dimensions; d++) {
@@ -49,12 +48,14 @@ static void pooling(T *__restrict__ result, const T *__restrict__ data,
 			}
 			// full reduction in last dimension so iterate over it too
 			for (size_t ld = 0; ld < pred.shape[pred.dimensions - 1]; ld++) {
+				const T val =
+					pred.op_type == FGEN_CONSTANT ? data[0] : data[j + o + ld];
 				switch (op.op_type) {
 				case FPOOLING_SUM:
-					res += data[j + o + ld];
+					res += val;
 					break;
 				case FPOOLING_MAX:
-					res = MAX_VAL(data[j + o + ld], res);
+					res = MAX_VAL(val, res);
 				default:
 					break;
 				}
@@ -139,7 +140,8 @@ pooling_gpu_eager_params(FType res_type, std::vector<FType> parameter_types) {
 		   ", const long num_entries0, const int dimensions0"
 		   ", __constant long* acc_sizes_pred, __constant long* "
 		   "acc_sizes_kernel, __constant long* acc_sizes, __constant int* "
-		   "steps, const long pred_last_shape, const long kernel_num_elems";
+		   "steps, const long pred_last_shape, const long kernel_num_elems, "
+		   "const long total_op_size";
 }
 template <FOperationType operation>
 static std::string pooling_gpu_eager(FType res_type,
@@ -168,9 +170,9 @@ static std::string pooling_gpu_eager(FType res_type,
 			" }"
 			" for(long ld = 0; ld < pred_last_shape; ld++){";
 	if constexpr (operation == FPOOLING_SUM) {
-		code += "  res += P0[j + o + ld];\n";
+		code += "  res += P0[(j + o + ld) % total_op_size];\n";
 	} else {
-		code += "  res = max(res, P0[j + o + ld]);\n";
+		code += "  res = max(res, P0[(j + o + ld) % total_op_size]);\n";
 	}
 	code += " }\n"
 			"}\n"
@@ -209,6 +211,13 @@ static void push_pooling_parameters(FGraphNode *node, cl_kernel kernel,
 					   &pred.shape[pred.dimensions - 1]) != CL_SUCCESS)
 		flogging(F_ERROR, "Could not load Arguments to kernel!");
 	if (clSetKernelArg(kernel, par_index++, sizeof(long), &kernel_num_elems) !=
+		CL_SUCCESS)
+		flogging(F_ERROR, "Could not load Arguments to kernel!");
+	size_t total_op_size = 1;
+	if (pred.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < pred.dimensions; i++)
+			total_op_size *= pred.shape[i];
+	if (clSetKernelArg(kernel, par_index++, sizeof(long), &total_op_size) !=
 		CL_SUCCESS)
 		flogging(F_ERROR, "Could not load Arguments to kernel!");
 }
@@ -258,45 +267,43 @@ void PoolingSumImpl::push_additional_kernel_parameters(
 void PoolingSumImpl::execute_cpu(const FGraphNode *node,
 								 std::vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
-								 size_t size) {
-	UNARY_EXECUTE_MONOTON_IMPL
-}
+								 size_t size){UNARY_EXECUTE_MONOTON_IMPL}
 
 FGraphNode *PoolingMaxImpl::local_gradient(FGraphNode *y, int dx_i,
 										   FGraphNode *prev_adj) {
-		FGraphNode *a = y->predecessors[0];
-		if (0 == dx_i) {
-			FGraphNode *dx = new FGraphNode();
-			dx->num_predecessor = 3;
-			dx->predecessors = safe_mal<FGraphNode *>(3);
-			if (!dx->predecessors) {
-				return nullptr;
-			}
-			fExecuteGraph(y);
-			fExecuteGraph(prev_adj);
-			fExecuteGraph(a);
-			y->reference_counter++;
-			dx->predecessors[0] = y;
-			prev_adj->reference_counter++;
-			dx->predecessors[1] = prev_adj;
-			a->reference_counter++;
-			dx->predecessors[2] = a;
-			dx->reference_counter = 0;
-			dx->result_data = nullptr;
-			dx->gradient_data = nullptr;
-			dx->operation.op_type = FGRADIENT_POOLING_MAX;
-			dx->operation.data_type = y->operation.data_type;
-			dx->operation.dimensions = a->operation.dimensions;
-			dx->operation.shape = safe_mal<size_t>(a->operation.dimensions);
-			if (!dx->operation.shape)
-				return nullptr;
-			memcpy(dx->operation.shape, a->operation.shape,
-				   a->operation.dimensions * sizeof(size_t));
-			dx->operation.additional_data = nullptr;
-			dx->operation.broadcasting_mode = 0;
-			return dx;
-		} else
+	FGraphNode *a = y->predecessors[0];
+	if (0 == dx_i) {
+		FGraphNode *dx = new FGraphNode();
+		dx->num_predecessor = 3;
+		dx->predecessors = safe_mal<FGraphNode *>(3);
+		if (!dx->predecessors) {
 			return nullptr;
+		}
+		fExecuteGraph(y);
+		fExecuteGraph(prev_adj);
+		fExecuteGraph(a);
+		y->reference_counter++;
+		dx->predecessors[0] = y;
+		prev_adj->reference_counter++;
+		dx->predecessors[1] = prev_adj;
+		a->reference_counter++;
+		dx->predecessors[2] = a;
+		dx->reference_counter = 0;
+		dx->result_data = nullptr;
+		dx->gradient_data = nullptr;
+		dx->operation.op_type = FGRADIENT_POOLING_MAX;
+		dx->operation.data_type = y->operation.data_type;
+		dx->operation.dimensions = a->operation.dimensions;
+		dx->operation.shape = safe_mal<size_t>(a->operation.dimensions);
+		if (!dx->operation.shape)
+			return nullptr;
+		memcpy(dx->operation.shape, a->operation.shape,
+			   a->operation.dimensions * sizeof(size_t));
+		dx->operation.additional_data = nullptr;
+		dx->operation.broadcasting_mode = 0;
+		return dx;
+	} else
+		return nullptr;
 }
 template <typename T>
 void PoolingMaxImpl::unary_expression(T *__restrict__ result,
@@ -325,13 +332,13 @@ void PoolingMaxImpl::push_additional_kernel_parameters(
 void PoolingMaxImpl::execute_cpu(const FGraphNode *node,
 								 std::vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
-								 size_t size) {
-	UNARY_EXECUTE_MONOTON_IMPL
-}
-FGraphNode *GradientPoolingMax::local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) {
-  // TODO
-  return nullptr;
+								 size_t size){
+	UNARY_EXECUTE_MONOTON_IMPL} FGraphNode
+	*GradientPoolingMax::local_gradient(FGraphNode *y, int dx_i,
+										FGraphNode *prev_adj) {
+	// TODO
+	flogging(F_ERROR, "The gradient of the max pooling gradient is not yet implemented!");
+	return nullptr;
 }
 template <typename T>
 void GradientPoolingMax::execute_cpu_typed(
