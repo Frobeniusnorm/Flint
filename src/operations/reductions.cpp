@@ -148,13 +148,24 @@ reducing_parameters_eager(FType res_type, std::vector<FType> parameter_types) {
 	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0, const long num_entries0, const int dimensions0, const long "
 		   "it_dim0, const long shape_dim0"
-		   ", const int reduce_dim, const total_el_size";
+		   ", const int reduce_dim, const long total_el_size";
 }
 static void reducing_push_parameters(FGraphNode *node, cl_kernel kernel,
 									 cl_context context, int &par_index,
 									 std::list<cl_mem> &to_free) {
 	int *dim = ((int *)node->operation.additional_data);
 	if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)dim) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	const FGraphNode *prev = node->predecessors[0];
+	size_t total_el_size = 1;
+	if (prev->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < prev->operation.dimensions; i++)
+			total_el_size *= prev->operation.shape[i];
+	if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&total_el_size) !=
 		CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Could not load Argument to kernel!");
@@ -183,17 +194,6 @@ static void reducing_push_per_parameter(FGraphNode *node, cl_kernel kernel,
 		return;
 	}
 	if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&shape_dim) !=
-		CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	const FGraphNode *prev = node->predecessors[0];
-	size_t total_el_size = 1;
-	if (prev->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < prev->operation.dimensions; i++)
-			total_el_size *= prev->operation.shape[i];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&total_el_size) !=
 		CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Could not load Argument to kernel!");
