@@ -36,8 +36,9 @@ static inline int reducing(const FGraphNode *node, std::string name,
 	Twine index_defs;
 	index_defs += type + " " + name + " = ";
 	size_t total_el_size = 1;
-	for (int i = 0; i < prev->operation.dimensions; i++)
-		total_el_size *= prev->operation.shape[i];
+	if (prev->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < prev->operation.dimensions; i++)
+			total_el_size *= prev->operation.shape[i];
 	switch (op_type) {
 	case FREDUCE_SUM:
 		index_defs += "0";
@@ -106,12 +107,12 @@ static std::string reducing_eager(FType res_type,
 		code += "1";
 		break;
 	case FREDUCE_MIN:
-		code += "P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % "
-				"it_dim0]";
+		code += "P0[((index / it_dim0) * it_dim0 * shape_dim0 + index % "
+				"it_dim0) % total_el_size]";
 		break;
 	case FREDUCE_MAX:
-		code += "P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % "
-				"it_dim0]";
+		code += "P0[((index / it_dim0) * it_dim0 * shape_dim0 + index % "
+				"it_dim0) % total_el_size]";
 		break;
 	default:
 		break;
@@ -120,9 +121,9 @@ static std::string reducing_eager(FType res_type,
 			"for(long i = 0; i < shape_dim0; i++){\n"
 			" const " +
 			type_string(res_type) +
-			" curr = P0[(index / it_dim0) * it_dim0 * shape_dim0 + index % "
+			" curr = P0[((index / it_dim0) * it_dim0 * shape_dim0 + index % "
 			"it_dim0 "
-			"+ i * it_dim0];\n";
+			"+ i * it_dim0) % total_el_size];\n";
 	switch (operation) {
 	case FREDUCE_SUM:
 		code += " res += curr;";
@@ -147,7 +148,7 @@ reducing_parameters_eager(FType res_type, std::vector<FType> parameter_types) {
 	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0, const long num_entries0, const int dimensions0, const long "
 		   "it_dim0, const long shape_dim0"
-		   ", int reduce_dim";
+		   ", const int reduce_dim, const total_el_size";
 }
 static void reducing_push_parameters(FGraphNode *node, cl_kernel kernel,
 									 cl_context context, int &par_index,
@@ -187,10 +188,21 @@ static void reducing_push_per_parameter(FGraphNode *node, cl_kernel kernel,
 		flogging(F_ERROR, "Could not load Argument to kernel!");
 		return;
 	}
+	const FGraphNode *prev = node->predecessors[0];
+	size_t total_el_size = 1;
+	if (prev->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < prev->operation.dimensions; i++)
+			total_el_size *= prev->operation.shape[i];
+	if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&total_el_size) !=
+		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
 }
 static std::vector<bool> reducing_reuse_params(const FGraphNode *node) {
 	// const int ax = ((const int *)node->operation.additional_data)[0];
-  return {false};
+	return {false};
 	// return {node->predecessors[0]->operation.shape[ax] == 1};
 }
 FGraphNode *ReduceSumImpl::local_gradient(FGraphNode *y, int dx_i,
@@ -218,11 +230,16 @@ void ReduceSumImpl::unary_expression(T *__restrict__ result,
 	size_t it_dim = 1; // iteration size <=> product of all dimensions along dim
 	for (size_t d = dim + 1; d < pred.dimensions; d++)
 		it_dim *= pred.shape[d];
+	size_t total_size = 1;
+	if (pred.op_type != FGEN_CONSTANT)
+		for (size_t d = 0; d < pred.dimensions; d++)
+			total_size *= pred.shape[d];
 	for (size_t i = from; i < from + size; i++) {
 		result[i] = 0;
 		for (size_t j = 0; j < pred.shape[dim]; j++) {
-			const T curr = data[(i / it_dim) * it_dim * pred.shape[dim] +
-								i % it_dim + j * it_dim];
+			const T curr = data[((i / it_dim) * it_dim * pred.shape[dim] +
+								 i % it_dim + j * it_dim) %
+								total_size];
 			result[i] += curr;
 		}
 	}
@@ -301,11 +318,16 @@ void ReduceMulImpl::unary_expression(T *__restrict__ result,
 	size_t it_dim = 1; // iteration size <=> product of all dimensions along dim
 	for (size_t d = dim + 1; d < pred.dimensions; d++)
 		it_dim *= pred.shape[d];
+	size_t total_size = 1;
+	if (pred.op_type != FGEN_CONSTANT)
+		for (size_t d = 0; d < pred.dimensions; d++)
+			total_size *= pred.shape[d];
 	for (size_t i = from; i < from + size; i++) {
 		result[i] = 1;
 		for (size_t j = 0; j < pred.shape[dim]; j++) {
-			const T curr = data[(i / it_dim) * it_dim * pred.shape[dim] +
-								i % it_dim + j * it_dim];
+			const T curr = data[((i / it_dim) * it_dim * pred.shape[dim] +
+								 i % it_dim + j * it_dim) %
+								total_size];
 			result[i] *= curr;
 		}
 	}
@@ -356,11 +378,16 @@ void ReduceMinImpl::unary_expression(T *__restrict__ result,
 	size_t it_dim = 1; // iteration size <=> product of all dimensions along dim
 	for (size_t d = dim + 1; d < pred.dimensions; d++)
 		it_dim *= pred.shape[d];
+	size_t total_size = 1;
+	if (pred.op_type != FGEN_CONSTANT)
+		for (size_t d = 0; d < pred.dimensions; d++)
+			total_size *= pred.shape[d];
 	for (size_t i = from; i < from + size; i++) {
 		result[i] = std::numeric_limits<T>::max();
 		for (size_t j = 0; j < pred.shape[dim]; j++) {
-			const T curr = data[(i / it_dim) * it_dim * pred.shape[dim] +
-								i % it_dim + j * it_dim];
+			const T curr = data[((i / it_dim) * it_dim * pred.shape[dim] +
+								 i % it_dim + j * it_dim) %
+								total_size];
 			result[i] = MIN_VAL(result[i], curr);
 		}
 	}
@@ -408,11 +435,16 @@ void ReduceMaxImpl::unary_expression(T *__restrict__ result,
 	size_t it_dim = 1; // iteration size <=> product of all dimensions along dim
 	for (size_t d = dim + 1; d < pred.dimensions; d++)
 		it_dim *= pred.shape[d];
+	size_t total_size = 1;
+	if (pred.op_type != FGEN_CONSTANT)
+		for (size_t d = 0; d < pred.dimensions; d++)
+			total_size *= pred.shape[d];
 	for (size_t i = from; i < from + size; i++) {
 		result[i] = std::numeric_limits<T>::lowest();
 		for (size_t j = 0; j < pred.shape[dim]; j++) {
-			const T curr = data[(i / it_dim) * it_dim * pred.shape[dim] +
-								i % it_dim + j * it_dim];
+			const T curr = data[((i / it_dim) * it_dim * pred.shape[dim] +
+								 i % it_dim + j * it_dim) %
+								total_size];
 			result[i] = MAX_VAL(result[i], curr);
 		}
 	}
