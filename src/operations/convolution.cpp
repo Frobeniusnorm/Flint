@@ -261,7 +261,7 @@ int ConvolveImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		ind1 = "0";
 	if (gnp2->operation.op_type == FGEN_CONSTANT)
 		ind2 = "0";
-	conv_code += "res += " + par2 + "[" + ind2 + "] * " + par1 + "[" + ind2 +
+	conv_code += "res += " + par2 + "[" + ind2 + "] * " + par1 + "[" + ind1 +
 				 "];\n}\n" + name + " = res;\n}\n";
 	compiler_state.code.prepend(conv_code);
 	return OCL_LAZY_DONT_PUSH_PREDS;
