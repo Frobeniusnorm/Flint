@@ -210,8 +210,12 @@ template <typename T> class TensorView<T, 1> {
 		T *data;
 		const size_t already_indexed;
 		const size_t shape;
+		const bool is_constant = false;
 
 	public:
+		TensorView(T *data, const bool is_constant = false)
+			: data(data), already_indexed(0), shape{},
+			  is_constant(is_constant) {}
 		TensorView(T *data, const std::vector<size_t> shape,
 				   const size_t already_indexed)
 			: data(data), already_indexed(already_indexed), shape(shape[0]) {}
@@ -219,7 +223,9 @@ template <typename T> class TensorView<T, 1> {
 		 * Returns a read-write-reference to the index data entry of the
 		 * Tensor-data. Only valid as long as the original Tensor is valid.
 		 */
-		T &operator[](size_t index) { return data[already_indexed + index]; }
+		T &operator[](size_t index) {
+			return is_constant ? data[0] : data[already_indexed + index];
+		}
 		size_t size() const { return shape; }
 };
 /** Multi dimensional TensorView. Indirectly indexes the data, which is only
@@ -230,8 +236,12 @@ template <typename T, unsigned int n> class TensorView {
 		T *data;
 		const size_t already_indexed;
 		const std::vector<size_t> shape;
+		const bool is_constant = false;
 
 	public:
+		TensorView(T *data, const bool is_constant = false)
+			: data(data), already_indexed(0), shape{},
+			  is_constant(is_constant) {}
 		TensorView(T *data, const std::vector<size_t> shape,
 				   const size_t already_indexed)
 			: data(data), already_indexed(already_indexed), shape(shape) {}
@@ -241,6 +251,8 @@ template <typename T, unsigned int n> class TensorView {
 		 * valid as long as the original Tensor is valid.
 		 */
 		TensorView<T, n - 1> operator[](size_t index) {
+			if (is_constant)
+				return TensorView<T, n - 1>(data, true);
 			std::vector<size_t> ns(shape.size() - 1);
 			for (size_t i = 0; i < shape.size() - 1; i++) {
 				ns[i] = shape[i + 1];
@@ -298,7 +310,7 @@ struct FlintContext {
 		 * (default is `F_INFO`). */
 		FlintContext(int backends, FLogType logging = F_INFO) {
 			flintInit(backends);
-      fSetLoggingLevel(logging);
+			fSetLoggingLevel(logging);
 		}
 		~FlintContext() { flintCleanup(); }
 };
