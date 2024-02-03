@@ -22,6 +22,10 @@ void SlidingWindowImpl::unary_expression(T *__restrict__ result,
 										 size_t from, size_t size,
 										 const FGraphNode *curr) {
 	const FOperation pred = curr->predecessors[0]->operation;
+	size_t total_el_size = 1;
+	if (pred.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < pred.dimensions; i++)
+			total_el_size *= pred.shape[i];
 	const FSlidingWindow *slidewin =
 		(FSlidingWindow *)curr->operation.additional_data;
 	size_t acc_size = curr->operation.shape[1];
@@ -60,7 +64,7 @@ void SlidingWindowImpl::unary_expression(T *__restrict__ result,
 			offset += local_ri * acc_sizes_pred[d];
 			rest %= acc_sizes_rest[d];
 		}
-		result[i] = data[base + offset];
+		result[i] = data[(base + offset) % total_el_size];
 	}
 }
 int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
@@ -116,8 +120,8 @@ int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 	index_defs += "}\n";
 	compiler_state.index_defs = index_defs;
 	compiler_state.code.prepend(
-		"const " + type_string(node->operation.data_type) + " " + name + " = v" +
-		to_string(compiler_state.variable_index + 1) +
+		"const " + type_string(node->operation.data_type) + " " + name +
+		" = v" + to_string(compiler_state.variable_index + 1) +
 		";\n"
 		"index = old_index" +
 		to_string(old_idx) + ";\n");
@@ -130,7 +134,7 @@ std::string SlidingWindowImpl::generate_ocl_parameters_eager(
 		   ", const long num_entries0, const int dimensions0"
 		   ", __constant long* acc_sizes_pred, __constant long* "
 		   "acc_sizes_win, __constant long* acc_sizes_rest, const long "
-		   "acc_sizes, __constant int* steps";
+		   "acc_sizes, __constant int* steps, const long total_el_size";
 }
 std::string
 SlidingWindowImpl::generate_ocl_eager(FType res_type,
@@ -148,7 +152,7 @@ SlidingWindowImpl::generate_ocl_eager(FType res_type,
 		   " offset += local_ri * acc_sizes_pred[d];\n"
 		   " rest %= acc_sizes_rest[d];\n"
 		   "}\n"
-		   "R[index] = P0[base + offset];\n";
+		   "R[index] = P0[(base + offset) % total_el_size];\n";
 }
 void SlidingWindowImpl::push_parameter_kernel_parameters(
 	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
@@ -157,6 +161,10 @@ void SlidingWindowImpl::push_parameter_kernel_parameters(
 		cl_int err_code;
 		const FOperation op = pred->operation;
 		const FOperation pred = node->predecessors[0]->operation;
+		size_t total_el_size = 1;
+		if (pred.op_type != FGEN_CONSTANT)
+			for (int i = 0; i < pred.dimensions; i++)
+				total_el_size *= pred.shape[i];
 		const FSlidingWindow *slidewin =
 			(FSlidingWindow *)node->operation.additional_data;
 		size_t acc_size = node->operation.shape[1];
@@ -203,6 +211,12 @@ void SlidingWindowImpl::push_parameter_kernel_parameters(
 		to_free.push_back(push_array(pred.dimensions, slidewin->step, kernel,
 									 context, par_index));
 		to_free.push_back(steps);
+		if (clSetKernelArg(kernel, par_index++, sizeof(long),
+						   (void *)&total_el_size) != CL_SUCCESS) {
+			setErrorType(OCL_ERROR);
+			flogging(F_ERROR, "Could not load Argument to kernel!");
+			return;
+		}
 	}
 }
 void SlidingWindowImpl::execute_cpu(const FGraphNode *node,
@@ -221,6 +235,10 @@ void UnslideWindowImpl::unary_expression(T *__restrict__ result,
 										 size_t from, size_t size,
 										 const FGraphNode *curr) {
 	const FOperation pred = curr->predecessors[0]->operation;
+	size_t total_el_size = 1;
+	if (pred.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < pred.dimensions; i++)
+			total_el_size *= pred.shape[i];
 	const unsigned int *steps = (unsigned int *)curr->operation.additional_data;
 	const std::vector<size_t> acc_sizes =
 		calc_acc_sizes(curr->operation.dimensions, curr->operation.shape);
@@ -274,7 +292,7 @@ void UnslideWindowImpl::unary_expression(T *__restrict__ result,
 				}
 			}
 			if (contained) {
-				result[i] += data[wi + w * acc_sizes_pred[0]];
+				result[i] += data[(wi + w * acc_sizes_pred[0]) % total_el_size];
 				wpp = 1;
 			}
 			w += wpp;
@@ -287,6 +305,10 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 
 	FGraphNode *gnp1 = node->predecessors[0];
 	const FOperation pred = gnp1->operation;
+	size_t total_el_size = 1;
+	if (pred.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < pred.dimensions; i++)
+			total_el_size *= pred.shape[i];
 	const string par1 = compiler_state.findOrInsertParameter(gnp1);
 	const unsigned int *steps = (unsigned int *)node->operation.additional_data;
 	const vector<size_t> acc_sizes =
@@ -350,7 +372,9 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 	}
 	local_code += " if(contained) {"
 				  "  " +
-				  name + "+=" + par1 + "[wi+w*" + to_string(acc_sizes_pred[0]) +
+				  name + "+=" + par1 + "[(wi+w*" +
+				  to_string(acc_sizes_pred[0]) + ")%" +
+				  to_string(total_el_size) +
 				  "];\n"
 				  "  wpp = 1;\n}\n"
 				  " w += wpp;\n"
@@ -368,7 +392,7 @@ std::string UnslideWindowImpl::generate_ocl_parameters_eager(
 		   "long* acc_sizes"
 		   ", __constant long* shape0,  __constant long* acc_sizes_pred"
 		   ", __constant long* acc_no_windows, __constant long* no_windows"
-		   ", __constant int* steps";
+		   ", __constant int* steps, const long total_el_size";
 }
 std::string
 UnslideWindowImpl::generate_ocl_eager(FType res_type,
@@ -400,7 +424,7 @@ UnslideWindowImpl::generate_ocl_eager(FType res_type,
 		   "  }\n"
 		   " }\n"
 		   " if (contained) {\n"
-		   "   R[index] += P0[wi + w * acc_sizes_pred[0]];\n"
+		   "   R[index] += P0[(wi + w * acc_sizes_pred[0]) % total_el_size];\n"
 		   "   wpp = 1;\n"
 		   " }\n"
 		   " w += wpp;\n"
@@ -452,6 +476,16 @@ void UnslideWindowImpl::push_parameter_kernel_parameters(
 		// steps
 		to_free.push_back(
 			push_array(pred.dimensions - 1, steps, kernel, context, par_index));
+		size_t total_el_size = 1;
+		if (pred.op_type != FGEN_CONSTANT)
+			for (int i = 0; i < pred.dimensions; i++)
+				total_el_size *= pred.shape[i];
+		if (clSetKernelArg(kernel, par_index++, sizeof(long),
+						   (void *)&total_el_size) != CL_SUCCESS) {
+			setErrorType(OCL_ERROR);
+			flogging(F_ERROR, "Could not load Argument to kernel!");
+			return;
+		}
 	}
 }
 void UnslideWindowImpl::execute_cpu(const FGraphNode *node,
