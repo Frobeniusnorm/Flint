@@ -29,7 +29,10 @@ void NegImpl::unary_expression(T *__restrict__ result,
 							   const T *__restrict__ data, size_t from,
 							   size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = -data[i];
+		result[i] =
+			-data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+					  ? 0
+					  : i];
 }
 int NegImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
@@ -42,7 +45,7 @@ std::string NegImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
-		   "-P0[index];";
+		   "-P0[p0_is_constant ? 0 : index];";
 }
 void NegImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
@@ -62,7 +65,10 @@ void LogImpl::unary_expression(T *__restrict__ result,
 							   const A *__restrict__ data, size_t from,
 							   size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = log(data[i]);
+		result[i] =
+			log(data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+						 ? 0
+						 : i]);
 }
 int LogImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
@@ -79,7 +85,7 @@ std::string LogImpl::generate_ocl_eager(FType res_type,
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
 		   "log(" +
-		   conv + "P0[index]);";
+		   conv + "P0[p0_is_constant ? 0 : index]);";
 }
 void LogImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
@@ -99,7 +105,10 @@ void Log2Impl::unary_expression(T *__restrict__ result,
 								const A *__restrict__ data, size_t from,
 								size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = log2(data[i]);
+		result[i] =
+			log2(data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+						  ? 0
+						  : i]);
 }
 int Log2Impl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
@@ -116,7 +125,7 @@ std::string Log2Impl::generate_ocl_eager(FType res_type,
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
 		   "log2(" +
-		   conv + "P0[index]);";
+		   conv + "P0[p0_is_constant ? 0 : index]);";
 }
 void Log2Impl::execute_cpu(const FGraphNode *node,
 						   vector<CPUResultData> predecessor_data,
@@ -136,7 +145,10 @@ void Log10Impl::unary_expression(T *__restrict__ result,
 								 const A *__restrict__ data, size_t from,
 								 size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = log10(data[i]);
+		result[i] =
+			log10(data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+						   ? 0
+						   : i]);
 }
 int Log10Impl::generate_ocl_lazy(const FGraphNode *node, string name,
 								 OCLLazyCodegenState &compiler_state) {
@@ -153,7 +165,7 @@ std::string Log10Impl::generate_ocl_eager(FType res_type,
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
 		   "log10(" +
-		   conv + "P0[index]);";
+		   conv + "P0[p0_is_constant ? 0 : index]);";
 }
 void Log10Impl::execute_cpu(const FGraphNode *node,
 							vector<CPUResultData> predecessor_data,
@@ -167,21 +179,27 @@ void SignImpl::unary_expression(int *__restrict result,
 								const A *__restrict data1, size_t from,
 								size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = data1[i] < 0 ? -1 : 1;
+		result[i] =
+			data1[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+					  ? 0
+					  : i] < 0
+				? -1
+				: 1;
 }
 int SignImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 
 	compiler_state.code.prepend(
-		"const " + type_string(node->operation.data_type) + " " + name + " = v" +
-		to_string(compiler_state.variable_index + 1) + " < 0 ? -1 : 1;\n");
+		"const " + type_string(node->operation.data_type) + " " + name +
+		" = v" + to_string(compiler_state.variable_index + 1) +
+		" < 0 ? -1 : 1;\n");
 	return 0;
 }
 std::string SignImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
-		   "P0[index] >= 0 ? 1 : -1;";
+		   "P0[p0_is_constant ? 0 : index] >= 0 ? 1 : -1;";
 }
 void SignImpl::execute_cpu(const FGraphNode *node,
 						   vector<CPUResultData> predecessor_data,
@@ -197,32 +215,55 @@ void EvenImpl::execute_cpu(const FGraphNode *node,
 		switch (predecessor_data[0].type) {
 		case F_INT32:
 			((int *__restrict__)result)[i] =
-				((int *__restrict__)predecessor_data[0].data)[i] % 2 ? 0 : 1;
+				((int *__restrict__)predecessor_data[0]
+					 .data)[node->predecessors[0]->operation.op_type ==
+									FGEN_CONSTANT
+								? 0
+								: i] %
+						2
+					? 0
+					: 1;
 			break;
 		case F_INT64:
 			((int *__restrict__)result)[i] =
-				((long *__restrict__)predecessor_data[0].data)[i] % 2 ? 0 : 1;
+				((long *__restrict__)predecessor_data[0]
+					 .data)[node->predecessors[0]->operation.op_type ==
+									FGEN_CONSTANT
+								? 0
+								: i] %
+						2
+					? 0
+					: 1;
 			break;
 		case F_FLOAT32:
-			((int *__restrict__)result)[i] = 0;
+			((int *__restrict__)
+				 result)[node->predecessors[0]->operation.op_type ==
+								 FGEN_CONSTANT
+							 ? 0
+							 : i] = 0;
 			break;
 		case F_FLOAT64:
-			((int *__restrict__)result)[i] = 0;
+			((int *__restrict__)
+				 result)[node->predecessors[0]->operation.op_type ==
+								 FGEN_CONSTANT
+							 ? 0
+							 : i] = 0;
 			break;
 		}
 }
 int EvenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + type_string(node->operation.data_type) + " " + name + " = v" +
-		to_string(compiler_state.variable_index + 1) + " % 2 == 0 ? 1 : 0;\n");
+		"const " + type_string(node->operation.data_type) + " " + name +
+		" = v" + to_string(compiler_state.variable_index + 1) +
+		" % 2 == 0 ? 1 : 0;\n");
 	return 0;
 }
 std::string EvenImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
-		   "P0[index] % 2 == 0 ? 1 : 0;";
+		   "P0[p0_is_constant ? 0 : index] % 2 == 0 ? 1 : 0;";
 }
 FGraphNode *SinImpl::local_gradient(FGraphNode *y, int dx_i,
 									FGraphNode *prev_adj) {
@@ -237,7 +278,10 @@ void SinImpl::unary_expression(T *__restrict__ result,
 							   const A *__restrict__ data, size_t from,
 							   size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = sin(data[i]);
+		result[i] =
+			sin(data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+						 ? 0
+						 : i]);
 }
 int SinImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
@@ -250,7 +294,7 @@ std::string SinImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
-		   "sin(P0[index]);";
+		   "sin(P0[p0_is_constant ? 0 : index]);";
 }
 void SinImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
@@ -270,7 +314,10 @@ void CosImpl::unary_expression(T *__restrict__ result,
 							   const A *__restrict__ data, size_t from,
 							   size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = cos(data[i]);
+		result[i] =
+			cos(data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+						 ? 0
+						 : i]);
 }
 int CosImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
@@ -283,7 +330,7 @@ std::string CosImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
-		   "cos(P0[index]);";
+		   "cos(P0[p0_is_constant ? 0 : index]);";
 }
 void CosImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
@@ -303,7 +350,10 @@ void TanImpl::unary_expression(T *__restrict__ result,
 							   const A *__restrict__ data, size_t from,
 							   size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = tan(data[i]);
+		result[i] =
+			tan(data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+						 ? 0
+						 : i]);
 }
 int TanImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
@@ -316,7 +366,7 @@ std::string TanImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
-		   "tan(P0[index]);";
+		   "tan(P0[p0_is_constant ? 0 : index]);";
 }
 void TanImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
@@ -336,7 +386,10 @@ void ASinImpl::unary_expression(T *__restrict__ result,
 								const A *__restrict__ data, size_t from,
 								size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = asin(data[i]);
+		result[i] =
+			asin(data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+						  ? 0
+						  : i]);
 }
 int ASinImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
@@ -349,7 +402,7 @@ std::string ASinImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
-		   "asin(P0[index]);";
+		   "asin(P0[p0_is_constant ? 0 : index]);";
 }
 void ASinImpl::execute_cpu(const FGraphNode *node,
 						   vector<CPUResultData> predecessor_data,
@@ -369,7 +422,10 @@ void ACosImpl::unary_expression(T *__restrict__ result,
 								const A *__restrict__ data, size_t from,
 								size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = acos(data[i]);
+		result[i] =
+			acos(data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+						  ? 0
+						  : i]);
 }
 int ACosImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
@@ -382,7 +438,7 @@ std::string ACosImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
-		   "acos(P0[index]);";
+		   "acos(P0[p0_is_constant ? 0 : index]);";
 }
 void ACosImpl::execute_cpu(const FGraphNode *node,
 						   vector<CPUResultData> predecessor_data,
@@ -402,13 +458,16 @@ void ATanImpl::unary_expression(T *__restrict__ result,
 								const A *__restrict__ data, size_t from,
 								size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = atan(data[i]);
+		result[i] =
+			atan(data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+						  ? 0
+						  : i]);
 }
 std::string ATanImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
-		   "atan(P0[index]);";
+		   "atan(P0[p0_is_constant ? 0 : index]);";
 }
 int ATanImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
@@ -435,7 +494,10 @@ void SqrtImpl::unary_expression(T *__restrict__ result,
 								const A *__restrict__ data, size_t from,
 								size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = sqrt(data[i]);
+		result[i] =
+			sqrt(data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+						  ? 0
+						  : i]);
 }
 int SqrtImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								OCLLazyCodegenState &compiler_state) {
@@ -448,7 +510,7 @@ std::string SqrtImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
-		   "sqrt(P0[index]);";
+		   "sqrt(P0[p0_is_constant ? 0 : index]);";
 }
 void SqrtImpl::execute_cpu(const FGraphNode *node,
 						   vector<CPUResultData> predecessor_data,
@@ -468,7 +530,10 @@ void ExpImpl::unary_expression(T *__restrict__ result,
 							   const A *__restrict__ data, size_t from,
 							   size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = exp(data[i]);
+		result[i] =
+			exp(data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+						 ? 0
+						 : i]);
 }
 int ExpImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
@@ -481,7 +546,7 @@ std::string ExpImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
-		   "exp(P0[index]);";
+		   "exp(P0[p0_is_constant ? 0 : index]);";
 }
 void ExpImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,
@@ -501,13 +566,16 @@ void AbsImpl::unary_expression(T *__restrict__ result,
 							   const T *__restrict__ data, size_t from,
 							   size_t size, const FGraphNode *curr) {
 	for (size_t i = from; i < from + size; i++)
-		result[i] = abs(data[i]);
+		result[i] =
+			abs(data[curr->predecessors[0]->operation.op_type == FGEN_CONSTANT
+						 ? 0
+						 : i]);
 }
 int AbsImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 							   OCLLazyCodegenState &compiler_state) {
 	compiler_state.code.prepend(
-		"const " + type_string(node->operation.data_type) + " " + name + " = v" +
-		to_string(compiler_state.variable_index + 1) + " < 0 ? -v" +
+		"const " + type_string(node->operation.data_type) + " " + name +
+		" = v" + to_string(compiler_state.variable_index + 1) + " < 0 ? -v" +
 		to_string(compiler_state.variable_index + 1) + ": v" +
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
@@ -516,7 +584,8 @@ std::string AbsImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
 	return "if(index >= num_entries0) return;\n"
 		   "R[index] = "
-		   "P0[index] < 0 ? -P0[index] : P0[index];";
+		   "P0[p0_is_constant ? 0 : index] < 0 ? -P0[p0_is_constant ? 0 : "
+		   "index] : P0[p0_is_constant ? 0 : index];";
 }
 void AbsImpl::execute_cpu(const FGraphNode *node,
 						  vector<CPUResultData> predecessor_data,

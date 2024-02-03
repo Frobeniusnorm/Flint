@@ -13,8 +13,30 @@
  * limitations under the License. */
 #ifndef FLINT_UNARY_ARITHMETIC_HPP
 #define FLINT_UNARY_ARITHMETIC_HPP
+#include "flint.h"
 #include "implementation.hpp"
 #include "src/utils.hpp"
+
+static std::string
+unary_impl_generate_ocl_parameters_eager(FType res_type,
+										 std::vector<FType> parameter_types) {
+	return ", const __global " + type_string(parameter_types[0]) +
+		   "* P0"
+		   ", const long num_entries0, const int p0_is_constant";
+}
+static void
+unary_impl_push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+											 cl_context context, int &par_index,
+											 std::list<cl_mem> &to_free) {
+	const int is_constant =
+		node->predecessors[0]->operation.op_type == FGEN_CONSTANT ? 1 : 0;
+	if (clSetKernelArg(kernel, par_index++, sizeof(int),
+					   (void *)&is_constant) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+}
 
 struct NegImpl : OperationImplementation {
 		template <typename T>
@@ -36,6 +58,18 @@ struct NegImpl : OperationImplementation {
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
+		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
 		}
 };
 struct LogImpl : OperationImplementation {
@@ -63,6 +97,18 @@ struct LogImpl : OperationImplementation {
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
 		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
+		}
 };
 struct Log2Impl : OperationImplementation {
 		template <typename T, typename A>
@@ -89,6 +135,18 @@ struct Log2Impl : OperationImplementation {
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
 		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
+		}
 };
 struct Log10Impl : OperationImplementation {
 		template <typename T, typename A>
@@ -114,6 +172,18 @@ struct Log10Impl : OperationImplementation {
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
+		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
 		}
 };
 struct SignImpl : OperationImplementation {
@@ -144,7 +214,20 @@ struct SignImpl : OperationImplementation {
 		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
-			return {type_size(node->predecessors[0]->operation.data_type) == type_size(F_INT32)};
+			return {type_size(node->predecessors[0]->operation.data_type) ==
+					type_size(F_INT32)};
+		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
 		}
 };
 struct EvenImpl : OperationImplementation {
@@ -168,7 +251,20 @@ struct EvenImpl : OperationImplementation {
 		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
-			return {type_size(node->predecessors[0]->operation.data_type) == type_size(F_INT32)};
+			return {type_size(node->predecessors[0]->operation.data_type) ==
+					type_size(F_INT32)};
+		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
 		}
 };
 struct SinImpl : OperationImplementation {
@@ -196,6 +292,18 @@ struct SinImpl : OperationImplementation {
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
 		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
+		}
 };
 struct CosImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -221,6 +329,18 @@ struct CosImpl : OperationImplementation {
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
+		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
 		}
 };
 struct TanImpl : OperationImplementation {
@@ -248,6 +368,18 @@ struct TanImpl : OperationImplementation {
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
 		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
+		}
 };
 struct ASinImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -273,6 +405,18 @@ struct ASinImpl : OperationImplementation {
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
+		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
 		}
 };
 struct ACosImpl : OperationImplementation {
@@ -300,6 +444,18 @@ struct ACosImpl : OperationImplementation {
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
 		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
+		}
 };
 struct ATanImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -325,6 +481,18 @@ struct ATanImpl : OperationImplementation {
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
+		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
 		}
 };
 struct SqrtImpl : OperationImplementation {
@@ -352,6 +520,18 @@ struct SqrtImpl : OperationImplementation {
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
 		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
+		}
 };
 struct ExpImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -378,6 +558,18 @@ struct ExpImpl : OperationImplementation {
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
 		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
+		}
 };
 struct AbsImpl : OperationImplementation {
 		template <typename T>
@@ -399,6 +591,18 @@ struct AbsImpl : OperationImplementation {
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
+		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override {
+			return unary_impl_generate_ocl_parameters_eager(res_type,
+															parameter_types);
+		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override {
+			unary_impl_push_additional_kernel_parameters(node, kernel, context,
+														 par_index, to_free);
 		}
 };
 #endif
