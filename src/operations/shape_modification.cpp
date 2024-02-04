@@ -33,11 +33,21 @@ void FlattenImpl::execute_cpu(const FGraphNode *node,
 	switch (predecessor_data[0].type) {
 	case F_INT32:
 	case F_FLOAT32:
-		memcpy((int *)result + from, (int *)pred.data + from, 4 * size);
+		if (node->predecessors[0]->operation.op_type != FGEN_CONSTANT) {
+			memcpy((int *)result + from, (int *)pred.data + from, 4 * size);
+		} else {
+			for (int i = from; i < from + size; i++)
+				((int *)result)[i] = ((int *)pred.data)[0];
+		}
 		break;
 	case F_INT64:
 	case F_FLOAT64:
-		memcpy((long *)result + from, (long *)pred.data + from, 8 * size);
+		if (node->predecessors[0]->operation.op_type != FGEN_CONSTANT) {
+			memcpy((long *)result + from, (long *)pred.data + from, 8 * size);
+		} else {
+			for (int i = from; i < from + size; i++)
+				((long *)result)[i] = ((long *)pred.data)[0];
+		}
 		break;
 	}
 }
@@ -319,7 +329,8 @@ std::string TransposeImpl::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
 	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P0, const long num_entries0, const int dimensions0, __constant "
-		   "long* acc_sizes_d, __constant long* acc_sizes_s, const long total_el_size";
+		   "long* acc_sizes_d, __constant long* acc_sizes_s, const long "
+		   "total_el_size";
 }
 std::string
 TransposeImpl::generate_ocl_eager(FType res_type,
@@ -498,7 +509,8 @@ ConcatImpl::generate_ocl_parameters_eager(FType res_type,
 		   type_string(parameter_types[1]) +
 		   "* P1, const long num_entries1, const long acc_size_last,"
 		   "const long shape_ax, const long a_shape_ax, const long "
-		   "b_shape_ax, const int ax, const long total_el_size0, const long total_el_size1";
+		   "b_shape_ax, const int ax, const long total_el_size0, const long "
+		   "total_el_size1";
 }
 std::string ConcatImpl::generate_ocl_eager(FType res_type,
 										   std::vector<FType> parameter_types) {

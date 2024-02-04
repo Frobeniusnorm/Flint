@@ -386,8 +386,10 @@ void ExtendImpl::push_parameter_kernel_parameters(
 void ExtendImpl::execute_cpu(const FGraphNode *node,
 							 std::vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
-							 size_t size){UNARY_EXECUTE_MONOTON_IMPL} FGraphNode
-	*IndexImpl::local_gradient(FGraphNode *y, int dx_i, FGraphNode *prev_adj) {
+							 size_t size){UNARY_EXECUTE_MONOTON_IMPL}
+
+FGraphNode *IndexImpl::local_gradient(FGraphNode *y, int dx_i,
+									  FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
 	FGraphNode *b = y->predecessors[1];
 	if (0 == dx_i) {
@@ -609,7 +611,7 @@ void SetIndexImpl::execute_cpu_typed(
 										 : ((long *)c.data)[cc ? 0 : j]);
 			if (ind == axi) {
 				found_something = true;
-				result[i] += ((T *)b.data)[bc ? 0 : j * acc_sizes_ax + rest];
+				result[i] += ((T *)b.data)[bc ? 0 : (j * acc_sizes_ax + rest)];
 			}
 		}
 		// if at least one index was found -> only sum of elements of b

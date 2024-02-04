@@ -288,14 +288,17 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 				foo.num_entries = rd->num_entries;
 				if (foo.num_entries != size &&
 					curr->operation.op_type != FGEN_CONSTANT)
-					flogging(F_ERROR, "Wrong number of entries! " +
-										  to_string(rd->num_entries) + " vs " +
-										  to_string(size) + " for " + fop_to_string[curr->operation.op_type]);
+					flogging(F_ERROR,
+							 "Wrong number of entries! " +
+								 to_string(rd->num_entries) + " vs " +
+								 to_string(size) + " for " +
+								 fop_to_string[curr->operation.op_type]);
 				foo.data = rd->data;
 			} else {
 				FStore *store = (FStore *)curr->operation.additional_data;
 				foo.num_entries = store->num_entries;
-				if (foo.num_entries != size && curr->operation.op_type != FGEN_CONSTANT)
+				if (foo.num_entries != size &&
+					curr->operation.op_type != FGEN_CONSTANT)
 					flogging(F_ERROR, "Wrong number of entries! " +
 										  to_string(store->num_entries) +
 										  " vs " + to_string(size));
@@ -318,7 +321,7 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 					!reusage.empty() && reusage[i] &&
 					(pred->operation.op_type != FSTORE ||
 					 !curr->gradient_data) &&
-					pred != node) {
+					pred->operation.op_type != FGEN_CONSTANT && pred != node) {
 					if (pred->result_data) {
 						FResultData *data = pred->result_data;
 						if (data->mem_id)
