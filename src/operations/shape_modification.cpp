@@ -61,7 +61,7 @@ int FlattenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 std::string
 FlattenImpl::generate_ocl_eager(FType res_type,
 								std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = P0[p0_is_constant ? 0 : index];";
 }
 std::string
@@ -110,7 +110,7 @@ int ConversionImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 std::string
 ConversionImpl::generate_ocl_eager(FType res_type,
 								   std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = (" +
 		   type_string(res_type) + ")P0[index % total_el_size];";
 }
