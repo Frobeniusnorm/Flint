@@ -43,7 +43,7 @@ int NegImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 }
 std::string NegImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "-P0[p0_is_constant ? 0 : index];";
 }
@@ -82,7 +82,7 @@ std::string LogImpl::generate_ocl_eager(FType res_type,
 	const string conv = parameter_types[0] == F_INT32	? "(float)"
 						: parameter_types[0] == F_INT64 ? "(double)"
 														: "";
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "log(" +
 		   conv + "P0[p0_is_constant ? 0 : index]);";
@@ -122,7 +122,7 @@ std::string Log2Impl::generate_ocl_eager(FType res_type,
 	const string conv = parameter_types[0] == F_INT32	? "(float)"
 						: parameter_types[0] == F_INT64 ? "(double)"
 														: "";
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "log2(" +
 		   conv + "P0[p0_is_constant ? 0 : index]);";
@@ -162,7 +162,7 @@ std::string Log10Impl::generate_ocl_eager(FType res_type,
 	const string conv = parameter_types[0] == F_INT32	? "(float)"
 						: parameter_types[0] == F_INT64 ? "(double)"
 														: "";
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "log10(" +
 		   conv + "P0[p0_is_constant ? 0 : index]);";
@@ -197,7 +197,7 @@ int SignImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 }
 std::string SignImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "P0[p0_is_constant ? 0 : index] >= 0 ? 1 : -1;";
 }
@@ -261,7 +261,7 @@ int EvenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 }
 std::string EvenImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "P0[p0_is_constant ? 0 : index] % 2 == 0 ? 1 : 0;";
 }
@@ -292,7 +292,7 @@ int SinImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 }
 std::string SinImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "sin(P0[p0_is_constant ? 0 : index]);";
 }
@@ -328,7 +328,7 @@ int CosImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 }
 std::string CosImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "cos(P0[p0_is_constant ? 0 : index]);";
 }
@@ -364,7 +364,7 @@ int TanImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 }
 std::string TanImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "tan(P0[p0_is_constant ? 0 : index]);";
 }
@@ -400,7 +400,7 @@ int ASinImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 }
 std::string ASinImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "asin(P0[p0_is_constant ? 0 : index]);";
 }
@@ -436,7 +436,7 @@ int ACosImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 }
 std::string ACosImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "acos(P0[p0_is_constant ? 0 : index]);";
 }
@@ -465,7 +465,7 @@ void ATanImpl::unary_expression(T *__restrict__ result,
 }
 std::string ATanImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "atan(P0[p0_is_constant ? 0 : index]);";
 }
@@ -508,7 +508,7 @@ int SqrtImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 }
 std::string SqrtImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "sqrt(P0[p0_is_constant ? 0 : index]);";
 }
@@ -544,7 +544,7 @@ int ExpImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 }
 std::string ExpImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "exp(P0[p0_is_constant ? 0 : index]);";
 }
@@ -582,7 +582,7 @@ int AbsImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 }
 std::string AbsImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0) return;\n"
+	return "if(index >= num_entriesR) return;\n"
 		   "R[index] = "
 		   "P0[p0_is_constant ? 0 : index] < 0 ? -P0[p0_is_constant ? 0 : "
 		   "index] : P0[p0_is_constant ? 0 : index];";

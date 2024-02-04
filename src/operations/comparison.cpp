@@ -100,7 +100,7 @@ int MaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string MaxImpl::generate_ocl_eager(FType res_type,
 										std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
+	return "if(index >= num_entriesR) return;\n" +
 		   type_string(parameter_types[0]) +
 		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
 		   type_string(parameter_types[1]) +
@@ -141,7 +141,7 @@ int LessImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string LessImpl::generate_ocl_eager(FType res_type,
 										 std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
+	return "if(index >= num_entriesR) return;\n" +
 		   type_string(parameter_types[0]) +
 		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
 		   type_string(parameter_types[1]) +
@@ -183,7 +183,7 @@ int GreaterImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 std::string
 GreaterImpl::generate_ocl_eager(FType res_type,
 								std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
+	return "if(index >= num_entriesR) return;\n" +
 		   type_string(parameter_types[0]) +
 		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
 		   type_string(parameter_types[1]) +
@@ -232,7 +232,7 @@ int EqualImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 }
 std::string EqualImpl::generate_ocl_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
+	return "if(index >= num_entriesR) return;\n" +
 		   type_string(parameter_types[0]) +
 		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
 		   type_string(parameter_types[1]) +

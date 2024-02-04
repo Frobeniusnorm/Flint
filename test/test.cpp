@@ -407,7 +407,6 @@ TEST_SUITE("Operation Implementations") {
 			for (int j = 0; j < 10; j++)
 				for (int k = 0; k < 2; k++)
 					CHECK_EQ(doctest::Approx(0.0), t3[i][j][k]);
-		fSetLoggingLevel(F_DEBUG);
 		Tensor<double, 3> t4 = Flint::constant(1.0, 4, 2, 2);
 		Tensor<double, 2> t5 = (t1 - t2).convolve(t4, 4, 2);
 		for (int i = 0; i < t5.get_shape()[0]; i++)
@@ -419,7 +418,6 @@ TEST_SUITE("Operation Implementations") {
 			for (int j = 0; j < 10; j++)
 				for (int k = 0; k < 4; k++)
 					CHECK_EQ(doctest::Approx(2.0), t7[i][j][k]);
-		fSetLoggingLevel(F_VERBOSE);
 	}
 	TEST_CASE("Basic Functions and Classes") {
 		Tensor<float, 3> t1({{{0}, {1}}, {{2}, {3}}});
@@ -1306,6 +1304,7 @@ TEST_SUITE("Known Bugs") {
 		}
 	}
 	TEST_CASE("Constants") {
+		fSetLoggingLevel(F_DEBUG);
 		Tensor<float, 1> c1 = Flint::constant(1.5f, 9);
 		Tensor<float, 2> c2 = Flint::constant(1.5f, 9, 2);
 		auto r1 = c1 + c2;
@@ -1324,6 +1323,7 @@ TEST_SUITE("Known Bugs") {
 			}
 			CHECK_EQ(doctest::Approx(r5[i]), 3.f);
 		}
+		fSetLoggingLevel(F_VERBOSE);
 	}
 }
 TEST_SUITE("Advanced Broadcasting") {

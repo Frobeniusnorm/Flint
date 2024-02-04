@@ -34,6 +34,13 @@ struct FlattenImpl : OperationImplementation {
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
 		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
+
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override; 
 };
 struct ConversionImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -65,9 +72,8 @@ struct ConversionImpl : OperationImplementation {
 		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
 										  cl_context context, int &par_index,
 										  std::list<cl_mem> &to_free) override;
-		std::string
-		generate_ocl_parameters_eager(FType res_type,
-									  std::vector<FType> parameter_types) override;
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
 };
 struct RepeatImpl : OperationImplementation {
 		template <typename T>

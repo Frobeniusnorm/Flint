@@ -338,8 +338,9 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		node->result_data->data = store->data;
 		return node;
 	}
-	if (node->operation.op_type == FLATTEN ||
-		node->operation.op_type == FRESHAPE) {
+	if ((node->operation.op_type == FLATTEN ||
+		 node->operation.op_type == FRESHAPE) &&
+		node->predecessors[0]->operation.op_type != FGEN_CONSTANT) {
 		// just copy previous data
 		const FGraphNode *prev = node->predecessors[0];
 		void const *data;

@@ -97,7 +97,7 @@ template <FOperationType operation>
 static std::string reducing_eager(FType res_type,
 								  std::vector<FType> parameter_types) {
 	Twine code;
-	code += "if(index >= num_entries0) return;\n";
+	code += "if(index >= num_entriesR) return;\n";
 	code += type_string(res_type) + " res = ";
 	switch (operation) {
 	case FREDUCE_SUM:
