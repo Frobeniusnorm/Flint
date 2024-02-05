@@ -1,8 +1,8 @@
 #include "pooling.hpp"
+#include "../../flint.h"
 #include "../backend_ocl/utils.hpp"
 #include "../utils.hpp"
 #include "convolution.hpp"
-#include "../../flint.h"
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
@@ -37,9 +37,8 @@ static void pooling(T *__restrict__ result, const T *__restrict__ data,
 			j += di * window->step[d] * acc_sizes_pred[d];
 		}
 		T res = 0;
-		if (op.op_type == FPOOLING_MAX) {
+		if (op.op_type == FPOOLING_MAX)
 			res = std::numeric_limits<T>::lowest();
-		}
 		for (size_t k = 0; k < kernel_num_elems; k++) {
 			size_t o = 0; // source offset
 			for (unsigned int d = 0; d < op.dimensions; d++) {
@@ -49,12 +48,14 @@ static void pooling(T *__restrict__ result, const T *__restrict__ data,
 			}
 			// full reduction in last dimension so iterate over it too
 			for (size_t ld = 0; ld < pred.shape[pred.dimensions - 1]; ld++) {
+				const T val =
+					pred.op_type == FGEN_CONSTANT ? data[0] : data[j + o + ld];
 				switch (op.op_type) {
 				case FPOOLING_SUM:
-					res += data[j + o + ld];
+					res += val;
 					break;
 				case FPOOLING_MAX:
-					res = MAX_VAL(data[j + o + ld], res);
+					res = MAX_VAL(val, res);
 				default:
 					break;
 				}
@@ -139,7 +140,8 @@ pooling_gpu_eager_params(FType res_type, std::vector<FType> parameter_types) {
 		   ", const long num_entries0, const int dimensions0"
 		   ", __constant long* acc_sizes_pred, __constant long* "
 		   "acc_sizes_kernel, __constant long* acc_sizes, __constant int* "
-		   "steps, const long pred_last_shape, const long kernel_num_elems";
+		   "steps, const long pred_last_shape, const long kernel_num_elems, "
+		   "const long total_op_size";
 }
 template <FOperationType operation>
 static std::string pooling_gpu_eager(FType res_type,
@@ -168,9 +170,9 @@ static std::string pooling_gpu_eager(FType res_type,
 			" }"
 			" for(long ld = 0; ld < pred_last_shape; ld++){";
 	if constexpr (operation == FPOOLING_SUM) {
-		code += "  res += P0[j + o + ld];\n";
+		code += "  res += P0[(j + o + ld) % total_op_size];\n";
 	} else {
-		code += "  res = max(res, P0[j + o + ld]);\n";
+		code += "  res = max(res, P0[(j + o + ld) % total_op_size]);\n";
 	}
 	code += " }\n"
 			"}\n"
@@ -209,6 +211,13 @@ static void push_pooling_parameters(FGraphNode *node, cl_kernel kernel,
 					   &pred.shape[pred.dimensions - 1]) != CL_SUCCESS)
 		flogging(F_ERROR, "Could not load Arguments to kernel!");
 	if (clSetKernelArg(kernel, par_index++, sizeof(long), &kernel_num_elems) !=
+		CL_SUCCESS)
+		flogging(F_ERROR, "Could not load Arguments to kernel!");
+	size_t total_op_size = 1;
+	if (pred.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < pred.dimensions; i++)
+			total_op_size *= pred.shape[i];
+	if (clSetKernelArg(kernel, par_index++, sizeof(long), &total_op_size) !=
 		CL_SUCCESS)
 		flogging(F_ERROR, "Could not load Arguments to kernel!");
 }
@@ -258,45 +267,43 @@ void PoolingSumImpl::push_additional_kernel_parameters(
 void PoolingSumImpl::execute_cpu(const FGraphNode *node,
 								 std::vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
-								 size_t size) {
-	UNARY_EXECUTE_MONOTON_IMPL
-}
+								 size_t size){UNARY_EXECUTE_MONOTON_IMPL}
 
 FGraphNode *PoolingMaxImpl::local_gradient(FGraphNode *y, int dx_i,
 										   FGraphNode *prev_adj) {
-		FGraphNode *a = y->predecessors[0];
-		if (0 == dx_i) {
-			FGraphNode *dx = new FGraphNode();
-			dx->num_predecessor = 3;
-			dx->predecessors = safe_mal<FGraphNode *>(3);
-			if (!dx->predecessors) {
-				return nullptr;
-			}
-			fExecuteGraph(y);
-			fExecuteGraph(prev_adj);
-			fExecuteGraph(a);
-			y->reference_counter++;
-			dx->predecessors[0] = y;
-			prev_adj->reference_counter++;
-			dx->predecessors[1] = prev_adj;
-			a->reference_counter++;
-			dx->predecessors[2] = a;
-			dx->reference_counter = 0;
-			dx->result_data = nullptr;
-			dx->gradient_data = nullptr;
-			dx->operation.op_type = FGRADIENT_POOLING_MAX;
-			dx->operation.data_type = y->operation.data_type;
-			dx->operation.dimensions = a->operation.dimensions;
-			dx->operation.shape = safe_mal<size_t>(a->operation.dimensions);
-			if (!dx->operation.shape)
-				return nullptr;
-			memcpy(dx->operation.shape, a->operation.shape,
-				   a->operation.dimensions * sizeof(size_t));
-			dx->operation.additional_data = nullptr;
-			dx->operation.broadcasting_mode = 0;
-			return dx;
-		} else
+	FGraphNode *a = y->predecessors[0];
+	if (0 == dx_i) {
+		FGraphNode *dx = new FGraphNode();
+		dx->num_predecessor = 3;
+		dx->predecessors = safe_mal<FGraphNode *>(3);
+		if (!dx->predecessors) {
 			return nullptr;
+		}
+		fExecuteGraph(y);
+		fExecuteGraph(prev_adj);
+		fExecuteGraph(a);
+		y->reference_counter++;
+		dx->predecessors[0] = y;
+		prev_adj->reference_counter++;
+		dx->predecessors[1] = prev_adj;
+		a->reference_counter++;
+		dx->predecessors[2] = a;
+		dx->reference_counter = 0;
+		dx->result_data = nullptr;
+		dx->gradient_data = nullptr;
+		dx->operation.op_type = FGRADIENT_POOLING_MAX;
+		dx->operation.data_type = y->operation.data_type;
+		dx->operation.dimensions = a->operation.dimensions;
+		dx->operation.shape = safe_mal<size_t>(a->operation.dimensions);
+		if (!dx->operation.shape)
+			return nullptr;
+		memcpy(dx->operation.shape, a->operation.shape,
+			   a->operation.dimensions * sizeof(size_t));
+		dx->operation.additional_data = nullptr;
+		dx->operation.broadcasting_mode = 0;
+		return dx;
+	} else
+		return nullptr;
 }
 template <typename T>
 void PoolingMaxImpl::unary_expression(T *__restrict__ result,
@@ -325,13 +332,15 @@ void PoolingMaxImpl::push_additional_kernel_parameters(
 void PoolingMaxImpl::execute_cpu(const FGraphNode *node,
 								 std::vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
-								 size_t size) {
-	UNARY_EXECUTE_MONOTON_IMPL
-}
-FGraphNode *GradientPoolingMax::local_gradient(FGraphNode *y, int dx_i,
-										   FGraphNode *prev_adj) {
-  // TODO
-  return nullptr;
+								 size_t size){
+	UNARY_EXECUTE_MONOTON_IMPL} FGraphNode
+	*GradientPoolingMax::local_gradient(FGraphNode *y, int dx_i,
+										FGraphNode *prev_adj) {
+	// TODO
+	flogging(
+		F_ERROR,
+		"The gradient of the max pooling gradient is not yet implemented!");
+	return nullptr;
 }
 template <typename T>
 void GradientPoolingMax::execute_cpu_typed(
@@ -348,6 +357,9 @@ void GradientPoolingMax::execute_cpu_typed(
 	const void *data1 = predecessor_data[0].data; // pooling
 	const void *data2 = predecessor_data[1].data; // adjoint
 	const void *data3 = predecessor_data[2].data; // image
+	const bool cd1 = gnp1->operation.op_type == FGEN_CONSTANT;
+	const bool cd2 = gnp2->operation.op_type == FGEN_CONSTANT;
+	const bool cd3 = gnp3->operation.op_type == FGEN_CONSTANT;
 	const unsigned int *steps = window->step;
 	// calculate accumulated sizes for result (pred), kernel and a
 	// (adjacent)
@@ -446,25 +458,30 @@ void GradientPoolingMax::execute_cpu_typed(
 				bool equal;
 				switch (predecessor_data[2].type) {
 				case F_INT32:
-					equal = ((const int *__restrict__)data3)[i] ==
-							((const int *__restrict__)data1)[adjo + adji];
+					equal =
+						((const int *__restrict__)data3)[cd3 ? 0 : i] ==
+						((const int *__restrict__)data1)[cd1 ? 0 : adjo + adji];
 					break;
 				case F_INT64:
-					equal = ((const long *__restrict__)data3)[i] ==
-							((const long *__restrict__)data1)[adjo + adji];
+					equal = ((const long *__restrict__)data3)[cd3 ? 0 : i] ==
+							((const long *__restrict__)
+								 data1)[cd1 ? 0 : adjo + adji];
 					break;
 				case F_FLOAT32:
-					equal = ((const float *__restrict__)data3)[i] ==
-							((const float *__restrict__)data1)[adjo + adji];
+					equal = ((const float *__restrict__)data3)[cd3 ? 0 : i] ==
+							((const float *__restrict__)
+								 data1)[cd1 ? 0 : adjo + adji];
 					break;
 				case F_FLOAT64:
-					equal = ((const double *__restrict__)data3)[i] ==
-							((const double *__restrict__)data1)[adjo + adji];
+					equal = ((const double *__restrict__)data3)[cd3 ? 0 : i] ==
+							((const double *__restrict__)
+								 data1)[cd1 ? 0 : adjo + adji];
 					break;
 				}
 				if (!skip_kernel && equal) {
 					started_counting = true;
-					res += ((const T *__restrict__)data2)[adjo + adji];
+					res +=
+						((const T *__restrict__)data2)[cd2 ? 0 : adjo + adji];
 				}
 				actual_overlapping++;
 			}
@@ -478,6 +495,9 @@ int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node,
 	FGraphNode *gnp3 = node->predecessors[2];
 	FGraphNode *gnp2 = node->predecessors[1];
 	FGraphNode *gnp1 = node->predecessors[0];
+	const bool cd1 = gnp1->operation.op_type == FGEN_CONSTANT;
+	const bool cd2 = gnp2->operation.op_type == FGEN_CONSTANT;
+	const bool cd3 = gnp3->operation.op_type == FGEN_CONSTANT;
 	const string par1 = compiler_state.findOrInsertParameter(gnp1),
 				 par2 = compiler_state.findOrInsertParameter(gnp2),
 				 par3 = compiler_state.findOrInsertParameter(gnp3);
@@ -591,13 +611,14 @@ int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node,
 				 "   adjo += ao * " +
 				 to_string(acc_sizes[d]) + ";\n  }\n";
 	}
-	convc += "  const int equal = " + par3 + "[index] == " + par1 +
-			 "[adjo + adji];\n"
+	convc += "  const int equal = " + par3 + (cd3 ? "[0]" : "[index]") +
+			 " == " + par1 + (cd1 ? "[0]" : "[adjo + adji]") +
+			 " ;\n"
 			 "  if(!skip_kernel && equal){\n"
 			 "   started_counting = true;\n"
 			 "   " +
-			 name + " += " + par2 +
-			 "[adji + adjo];\n"
+			 name + " += " + par2 + (cd1 ? "[0]" : "[adji + adjo]") +
+			 ";\n"
 			 " }\n"
 			 " actual_overlapping++;\n}\n}\n}\n";
 	compiler_state.code.prepend(convc);
@@ -618,7 +639,8 @@ std::string GradientPoolingMax::generate_ocl_parameters_eager(
 		   "__constant long* acc_sizes_kernel"
 		   ", __constant long* acc_sizes, __constant long* acc_overlapping"
 		   ", __constant int* steps, __constant long* op_shape, __constant "
-		   "long* kernel_shape";
+		   "long* kernel_shape, const long total_elements0, const long "
+		   "total_elements1, const long total_elements2";
 }
 std::string
 GradientPoolingMax::generate_ocl_eager(FType res_type,
@@ -671,9 +693,10 @@ GradientPoolingMax::generate_ocl_eager(FType res_type,
 		   "   }\n"
 		   "   adjo += ao * acc_sizes[d];\n"
 		   "  }\n"
-		   "  if(!skip_kernel && P0[adjo + adji] == P2[index]){\n"
+		   "  if(!skip_kernel && P0[(adjo + adji) % total_elements0] == "
+		   "P2[index % total_elements2]){\n"
 		   "   started_counting = true;\n"
-		   "   res+=P1[adjo+adji];\n"
+		   "   res+=P1[(adjo+adji) % total_elements1];\n"
 		   "  }\n"
 		   "  actual_overlapping++;\n"
 		   " }\n"
@@ -685,7 +708,8 @@ void GradientPoolingMax::push_additional_kernel_parameters(
 	std::list<cl_mem> &to_free) {
 	const FOperation op = node->operation;
 	const FGraphNode *gnp1 = node->predecessors[0],
-					 *gnp2 = node->predecessors[1];
+					 *gnp2 = node->predecessors[1],
+					 *gnp3 = node->predecessors[2];
 	const FOperation a = gnp2->operation;
 	const FSlidingWindow *window =
 		(FSlidingWindow *)gnp1->operation.additional_data;
@@ -719,6 +743,25 @@ void GradientPoolingMax::push_additional_kernel_parameters(
 		push_array(op.dimensions, op.shape, kernel, context, par_index));
 	to_free.push_back(push_array(kernel_shape.size(), kernel_shape.data(),
 								 kernel, context, par_index));
+	size_t total_elements0 = 1, total_elements1 = 1, total_elements2 = 1;
+	if (gnp1->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < gnp1->operation.dimensions; i++)
+			total_elements0 *= gnp1->operation.shape[i];
+	if (gnp2->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < gnp2->operation.dimensions; i++)
+			total_elements1 *= gnp2->operation.shape[i];
+	if (gnp3->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < gnp3->operation.dimensions; i++)
+			total_elements2 *= gnp3->operation.shape[i];
+	if (clSetKernelArg(kernel, par_index++, sizeof(long), &total_elements0) !=
+		CL_SUCCESS)
+		flogging(F_ERROR, "Could not load Arguments to kernel!");
+	if (clSetKernelArg(kernel, par_index++, sizeof(long), &total_elements1) !=
+		CL_SUCCESS)
+		flogging(F_ERROR, "Could not load Arguments to kernel!");
+	if (clSetKernelArg(kernel, par_index++, sizeof(long), &total_elements2) !=
+		CL_SUCCESS)
+		flogging(F_ERROR, "Could not load Arguments to kernel!");
 }
 void GradientPoolingMax::execute_cpu(
 	const FGraphNode *node, std::vector<CPUResultData> predecessor_data,

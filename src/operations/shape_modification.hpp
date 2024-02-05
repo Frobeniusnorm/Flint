@@ -14,9 +14,9 @@
 #ifndef FLINT_SHAPE_MODIFICATION_HPP
 #define FLINT_SHAPE_MODIFICATION_HPP
 #include "../utils.hpp"
+#include "binary_arithmetic.hpp"
 #include "flint.h"
 #include "implementation.hpp"
-#include "binary_arithmetic.hpp"
 
 struct FlattenImpl : OperationImplementation {
 		void execute_cpu(const FGraphNode *node,
@@ -34,6 +34,13 @@ struct FlattenImpl : OperationImplementation {
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
 		}
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
+
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override; 
 };
 struct ConversionImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -61,6 +68,12 @@ struct ConversionImpl : OperationImplementation {
 			return {type_size(node->predecessors[0]->operation.data_type) ==
 					type_size(node->operation.data_type)};
 		}
+		void
+		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
+										  cl_context context, int &par_index,
+										  std::list<cl_mem> &to_free) override;
+		std::string generate_ocl_parameters_eager(
+			FType res_type, std::vector<FType> parameter_types) override;
 };
 struct RepeatImpl : OperationImplementation {
 		template <typename T>

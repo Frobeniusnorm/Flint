@@ -44,14 +44,18 @@ void SliceImpl::unary_expression(T *__restrict__ result,
 	}
 	// calculate for each entry corresponding element
 	for (size_t i = from; i < from + size; i++) {
-		size_t j = start;
-		for (unsigned int d = 0; d < curr->operation.dimensions; d++) {
-			// get dimension index
-			size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
-			// reproject
-			j += di * slice->step[d] * acc_sizes_pred[d];
+		if (curr->operation.op_type == FGEN_CONSTANT)
+			result[i] = data[0];
+		else {
+			size_t j = start;
+			for (unsigned int d = 0; d < curr->operation.dimensions; d++) {
+				// get dimension index
+				size_t di = (d == 0 ? i : i % acc_sizes[d - 1]) / acc_sizes[d];
+				// reproject
+				j += di * slice->step[d] * acc_sizes_pred[d];
+			}
+			result[i] = data[j];
 		}
-		result[i] = data[j];
 	}
 }
 int SliceImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
@@ -106,7 +110,8 @@ SliceImpl::generate_ocl_parameters_eager(FType res_type,
 		   "* P0"
 		   ", const long num_entries0, const int dimensions0"
 		   ", __constant long* acc_sizes, __constant long* acc_sizes_pred"
-		   ", __constant long* steps, const long start";
+		   ", __constant long* steps, const long start, const long "
+		   "total_num_elems";
 }
 std::string SliceImpl::generate_ocl_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
@@ -116,7 +121,7 @@ std::string SliceImpl::generate_ocl_eager(FType res_type,
 		   " long di = (d == 0 ? index : index % acc_sizes[d - 1]) /"
 		   "acc_sizes[d];\n"
 		   " j += di * steps[d] * acc_sizes_pred[d];\n}\n"
-		   "R[index] = P0[j];\n";
+		   "R[index] = P0[j % total_num_elems];\n";
 }
 void SliceImpl::push_parameter_kernel_parameters(
 	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
@@ -164,6 +169,17 @@ void SliceImpl::push_parameter_kernel_parameters(
 		return;
 	}
 	to_free.push_back(steps);
+	// total size
+	size_t total_num_elems = 1;
+	if (pred->operation.op_type != FGEN_CONSTANT)
+		for (unsigned int d = 0; d < op.dimensions; d++)
+			total_num_elems *= op.shape[d];
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&total_num_elems) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
 }
 void SliceImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
@@ -225,6 +241,8 @@ void ExtendImpl::unary_expression(T *__restrict__ result,
 			// reproject
 			j += di * acc_sizes_pred[d];
 		}
+		if (pred.op_type == FGEN_CONSTANT)
+			j = 0;
 		result[i] = set_zero ? 0 : data[j];
 	}
 }
@@ -306,7 +324,7 @@ ExtendImpl::generate_ocl_parameters_eager(FType res_type,
 		   ", const long num_entries0, const int dimensions0"
 		   ", __constant long* acc_sizes, __constant long* acc_sizes_pred"
 		   ", __constant long* steps, __constant long* start, __constant "
-		   "long* pred_shape";
+		   "long* pred_shape, const long total_num_elems";
 }
 std::string ExtendImpl::generate_ocl_eager(FType res_type,
 										   std::vector<FType> parameter_types) {
@@ -328,7 +346,7 @@ std::string ExtendImpl::generate_ocl_eager(FType res_type,
 		   "  set_zero = 1;\n  break;\n }\n"
 		   " if(inv) di = pred_shape[d] - di - 1;\n"
 		   " j += di * acc_sizes_pred[d];\n}\n"
-		   "R[index] = set_zero ? 0 : P0[j];";
+		   "R[index] = set_zero ? 0 : P0[j % total_num_elems];";
 }
 void ExtendImpl::push_parameter_kernel_parameters(
 	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
@@ -353,12 +371,25 @@ void ExtendImpl::push_parameter_kernel_parameters(
 		push_array(op.dimensions, extend->start, kernel, context, par_index));
 	to_free.push_back(
 		push_array(op.dimensions, op.shape, kernel, context, par_index));
+	// total size
+	size_t total_num_elems = 1;
+	if (pred->operation.op_type != FGEN_CONSTANT)
+		for (unsigned int d = 0; d < op.dimensions; d++)
+			total_num_elems *= op.shape[d];
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&total_num_elems) != CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
 }
 void ExtendImpl::execute_cpu(const FGraphNode *node,
 							 std::vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
-							 size_t size){UNARY_EXECUTE_MONOTON_IMPL} FGraphNode
-	*IndexImpl::local_gradient(FGraphNode *y, int dx_i, FGraphNode *prev_adj) {
+							 size_t size){UNARY_EXECUTE_MONOTON_IMPL}
+
+FGraphNode *IndexImpl::local_gradient(FGraphNode *y, int dx_i,
+									  FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
 	FGraphNode *b = y->predecessors[1];
 	if (0 == dx_i) {
@@ -385,11 +416,18 @@ void IndexImpl::binary_expression(T *__restrict__ result,
 		acc_sizes_ax *= op.shape[i];
 
 	for (size_t i = from; i < from + size; i++) {
-		const size_t base = i / (acc_sizes_ax * op.shape[axis]);
-		const size_t rest = i % acc_sizes_ax;
-		const size_t ind = (size_t)data2[i / acc_sizes_ax];
-		result[i] = data1[(base * acc_sizes_ax * a->operation.shape[axis]) +
-						  (ind * acc_sizes_ax) + rest];
+		if (a->operation.op_type == FGEN_CONSTANT)
+			result[i] = data1[0];
+		else {
+			const size_t base = i / (acc_sizes_ax * op.shape[axis]);
+			const size_t rest = i % acc_sizes_ax;
+			const size_t ind =
+				(size_t)data2[b->operation.op_type == FGEN_CONSTANT
+								  ? 0
+								  : (i / acc_sizes_ax)];
+			result[i] = data1[(base * acc_sizes_ax * a->operation.shape[axis]) +
+							  (ind * acc_sizes_ax) + rest];
+		}
 	}
 }
 int IndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
@@ -442,7 +480,8 @@ IndexImpl::generate_ocl_parameters_eager(FType res_type,
 		   "* P1"
 		   ", const long num_entries1, const int dimensions1 "
 		   ", const long acc_sizes_ax, const long op_shape_ax, const long "
-		   "a_shape_ax";
+		   "a_shape_ax, const long total_num_elems0, const long "
+		   "total_num_elems1";
 }
 std::string IndexImpl::generate_ocl_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
@@ -450,9 +489,10 @@ std::string IndexImpl::generate_ocl_eager(FType res_type,
 		   "const int axis = dimensions1 - 1;\n"
 		   "const long base = index / (acc_sizes_ax * op_shape_ax);\n"
 		   "const long rest = index % acc_sizes_ax;\n"
-		   "const long ind = (long) P1[index / acc_sizes_ax];\n"
-		   "R[index] = P0[(base * acc_sizes_ax * a_shape_ax) + (ind * "
-		   "acc_sizes_ax) + rest];\n";
+		   "const long ind = (long) P1[(index / acc_sizes_ax) % "
+		   "total_num_elems1];\n"
+		   "R[index] = P0[((base * acc_sizes_ax * a_shape_ax) + (ind * "
+		   "acc_sizes_ax) + rest) % total_num_elems0];\n";
 }
 
 void IndexImpl::push_additional_kernel_parameters(FGraphNode *node,
@@ -486,6 +526,23 @@ void IndexImpl::push_additional_kernel_parameters(FGraphNode *node,
 	if (clSetKernelArg(kernel, par_index++, sizeof(long),
 					   (void *)&node->predecessors[0]->operation.shape[axis]) !=
 		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	size_t total_num_elems0 = 1, total_num_elems1 = 1;
+	if (node->predecessors[0]->operation.op_type != FGEN_CONSTANT)
+		for (unsigned int d = 0;
+			 d < node->predecessors[0]->operation.dimensions; d++)
+			total_num_elems0 *= node->predecessors[0]->operation.shape[d];
+	if (node->predecessors[1]->operation.op_type != FGEN_CONSTANT)
+		for (unsigned int d = 0;
+			 d < node->predecessors[1]->operation.dimensions; d++)
+			total_num_elems1 *= node->predecessors[1]->operation.shape[d];
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&total_num_elems0) != CL_SUCCESS ||
+		clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&total_num_elems1) != CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Could not load Argument to kernel!");
 		return;
@@ -530,6 +587,9 @@ void SetIndexImpl::execute_cpu_typed(
 	const CPUResultData a = predecessor_data[0];
 	const CPUResultData b = predecessor_data[1];
 	const CPUResultData c = predecessor_data[2];
+	const bool ac = node->predecessors[0]->operation.op_type == FGEN_CONSTANT;
+	const bool bc = node->predecessors[1]->operation.op_type == FGEN_CONSTANT;
+	const bool cc = node->predecessors[2]->operation.op_type == FGEN_CONSTANT;
 	const unsigned int axis = c.shape.size() - 1;
 	const FOperation op = node->operation;
 	// get index of result, index tensor, reproject index
@@ -546,16 +606,17 @@ void SetIndexImpl::execute_cpu_typed(
 		result[i] = 0;
 		// iterate over last dimension and find all correct indices
 		for (size_t j = base_ind; j < base_ind + c.shape[axis]; j++) {
-			const long ind = (long)(c.type == F_INT32 ? ((int *)c.data)[j]
-													  : ((long *)c.data)[j]);
+			const long ind =
+				(long)(c.type == F_INT32 ? ((int *)c.data)[cc ? 0 : j]
+										 : ((long *)c.data)[cc ? 0 : j]);
 			if (ind == axi) {
 				found_something = true;
-				result[i] += ((T *)b.data)[j * acc_sizes_ax + rest];
+				result[i] += ((T *)b.data)[bc ? 0 : (j * acc_sizes_ax + rest)];
 			}
 		}
 		// if at least one index was found -> only sum of elements of b
 		if (!found_something)
-			result[i] = ((T *)a.data)[i];
+			result[i] = ((T *)a.data)[ac ? 0 : i];
 	}
 }
 int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
@@ -567,6 +628,8 @@ int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	const unsigned int axis = c->operation.dimensions - 1;
 	const string par2 = compiler_state.findOrInsertParameter(b),
 				 par3 = compiler_state.findOrInsertParameter(c);
+	const bool bc = b->operation.op_type == FGEN_CONSTANT;
+	const bool cc = c->operation.op_type == FGEN_CONSTANT;
 	// a may be calculated lazily
 	const string par1 = "v" + to_string(++compiler_state.variable_index);
 	size_t acc_sizes_ax = 1;
@@ -582,35 +645,35 @@ int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	const std::string base_ind =
 		base + " * " + to_string(c->operation.shape[axis]);
 	const string type = type_string(node->operation.data_type);
-	compiler_state.code.prepend(type + " " + name +
-								" = 0;\n"
-								"{const long base_ind = " +
-								base_ind +
-								";\n"
-								" const long axi = " +
-								axi +
-								";\n"
-								" const long rest = " +
-								rest +
-								";\n"
-								"int found_something = false;\n"
-								" for(long j = 0; j < " +
-								to_string(c->operation.shape[axis]) +
-								"; j++){\n"
-								"  const long ind = " +
-								par3 +
-								"[base_ind + j];\n"
-								"  if(ind == axi) {\n   " +
-								name + " += " + par2 + "[(base_ind + j) * " +
-								to_string(acc_sizes_ax) +
-								" + rest];\n"
-								"   found_something = true;\n"
-								"  }\n"
-								" }\n"
-								" if(!found_something) " +
-								name + " = " + par1 +
-								";\n"
-								"}\n");
+	compiler_state.code.prepend(
+		type + " " + name +
+		" = 0;\n"
+		"{const long base_ind = " +
+		base_ind +
+		";\n"
+		" const long axi = " +
+		axi +
+		";\n"
+		" const long rest = " +
+		rest +
+		";\n"
+		"int found_something = false;\n"
+		" for(long j = 0; j < " +
+		to_string(c->operation.shape[axis]) +
+		"; j++){\n"
+		"  const long ind = " +
+		par3 + (cc ? "[0]" : "[base_ind + j];\n") + "  if(ind == axi) {\n   " +
+		name + " += " + par2 +
+		(bc ? "[0]"
+			: "[(base_ind + j) * " + to_string(acc_sizes_ax) + " + rest]") +
+		";\n"
+		"   found_something = true;\n"
+		"  }\n"
+		" }\n"
+		" if(!found_something) " +
+		name + " = " + par1 +
+		";\n"
+		"}\n");
 	compiler_state.todo.push_front({a, par1});
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
@@ -628,7 +691,8 @@ std::string SetIndexImpl::generate_ocl_parameters_eager(
 		   "* P2"
 		   ", const long num_entries2, const int dimensions2 "
 		   ", const long acc_sizes_ax, const long op_shape_ax, const long "
-		   "c_shape_ax";
+		   "c_shape_ax, const long total_num_elems0, const long "
+		   "total_num_elems1, const long total_num_elems2";
 }
 std::string
 SetIndexImpl::generate_ocl_eager(FType res_type,
@@ -642,13 +706,13 @@ SetIndexImpl::generate_ocl_eager(FType res_type,
 		   "R[index] = 0;\n"
 		   "int found_something = false;\n"
 		   "for (long j = base_ind; j < base_ind + c_shape_ax; j++) {\n"
-		   " const long ind = (long) P2[j];\n"
+		   " const long ind = (long) P2[j % total_num_elems2];\n"
 		   " if(ind == axi){"
-		   "   R[index] += P1[j * acc_sizes_ax + rest];\n"
+		   "   R[index] += P1[(j * acc_sizes_ax + rest) % total_num_elems1];\n"
 		   "   found_something = true;\n"
 		   " }\n"
 		   "}\n"
-		   "if(!found_something) R[index] = P0[index];\n";
+		   "if(!found_something) R[index] = P0[index % total_num_elems0];\n";
 }
 void SetIndexImpl::push_additional_kernel_parameters(
 	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
@@ -679,6 +743,29 @@ void SetIndexImpl::push_additional_kernel_parameters(
 	if (clSetKernelArg(kernel, par_index++, sizeof(long),
 					   (void *)&node->predecessors[2]->operation.shape[axis]) !=
 		CL_SUCCESS) {
+		setErrorType(OCL_ERROR);
+		flogging(F_ERROR, "Could not load Argument to kernel!");
+		return;
+	}
+	size_t total_num_elems0 = 1, total_num_elems1 = 1, total_num_elems2 = 1;
+	if (node->predecessors[0]->operation.op_type != FGEN_CONSTANT)
+		for (unsigned int d = 0;
+			 d < node->predecessors[0]->operation.dimensions; d++)
+			total_num_elems0 *= node->predecessors[0]->operation.shape[d];
+	if (node->predecessors[1]->operation.op_type != FGEN_CONSTANT)
+		for (unsigned int d = 0;
+			 d < node->predecessors[1]->operation.dimensions; d++)
+			total_num_elems1 *= node->predecessors[1]->operation.shape[d];
+	if (node->predecessors[2]->operation.op_type != FGEN_CONSTANT)
+		for (unsigned int d = 0;
+			 d < node->predecessors[2]->operation.dimensions; d++)
+			total_num_elems2 *= node->predecessors[2]->operation.shape[d];
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&total_num_elems0) != CL_SUCCESS ||
+		clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&total_num_elems1) != CL_SUCCESS ||
+		clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&total_num_elems2) != CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Could not load Argument to kernel!");
 		return;

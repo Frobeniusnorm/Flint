@@ -20,13 +20,6 @@
 #include <vector>
 
 #include "../flint.hpp"
-TEST_CASE("Arange") {
-	Tensor<long, 3> a1 = Flint::arange(1, 4, 4, 4);
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 4; j++)
-			for (int k = 0; k < 4; k++)
-				CHECK_EQ(a1[i][j][k], j);
-}
 TEST_SUITE("Graph implementation") {
 	TEST_CASE("createGraph, add, mul, sub, div") {
 		using namespace std;
@@ -126,12 +119,12 @@ TEST_SUITE("Execution") {
 			v3[i] = i + 1;
 		FGraphNode *gn2 =
 			fCreateGraph(v3.data(), v3.size(), F_FLOAT32, shape.data(), 1);
-    gn2->reference_counter++;
+		gn2->reference_counter++;
 		FGraphNode *gn3 = fadd(gn2, result);
 		gn3 = fadd(gn3, result);
 		gn3 = fsub(gn3, 80);
 		gn3 = fadd(gn3, gn2);
-    gn2->reference_counter--; // free handle
+		gn2->reference_counter--; // free handle
 		result = fCalculateResult(gn3);
 		rd = result->result_data;
 		CHECK_EQ(rd->num_entries, 10);
@@ -398,7 +391,14 @@ TEST_SUITE("Execution") {
 	}
 }
 #include <chrono>
-TEST_SUITE("C++ Bindings") {
+TEST_SUITE("Operation Implementations") {
+	TEST_CASE("Arange") {
+		Tensor<long, 3> a1 = Flint::arange(1, 4, 4, 4);
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				for (int k = 0; k < 4; k++)
+					CHECK_EQ(a1[i][j][k], j);
+	}
 	TEST_CASE("Constant Functions") {
 		Tensor<float, 3> t1 = Flint::constant(1.123f, 20, 10, 2);
 		Tensor<double, 3> t2 = Flint::constant(0.123, 20, 10, 2);
@@ -407,7 +407,6 @@ TEST_SUITE("C++ Bindings") {
 			for (int j = 0; j < 10; j++)
 				for (int k = 0; k < 2; k++)
 					CHECK_EQ(doctest::Approx(0.0), t3[i][j][k]);
-		fSetLoggingLevel(F_DEBUG);
 		Tensor<double, 3> t4 = Flint::constant(1.0, 4, 2, 2);
 		Tensor<double, 2> t5 = (t1 - t2).convolve(t4, 4, 2);
 		for (int i = 0; i < t5.get_shape()[0]; i++)
@@ -909,387 +908,422 @@ TEST_SUITE("C++ Bindings") {
 		CHECK_EQ(-6, f.reduce_min()[0]);
 		CHECK_EQ(32, f.reduce_max()[0]);
 	}
-}
-TEST_CASE("Convolve") {
-	Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
-						{{5, 6}, {7, 8}, {9, 0}},
-						{{1, 2}, {3, 4}, {5, 6}}};
-	Tensor<float, 3> k1{{{1, 1}, {2, 2}}, {{2, 2}, {1, 1}}};
-	Tensor<float, 2> r1 = t1.convolve(k1, 1, 1);
-	CHECK_EQ(44, r1[0][0]);
-	CHECK_EQ(56, r1[0][1]);
-	CHECK_EQ(54, r1[1][0]);
-	CHECK_EQ(58, r1[1][1]);
-	Tensor<float, 3> t2{{{0}, {1}, {2}, {3}}, {{3}, {2}, {1}, {0}}};
-	Tensor<float, 3> k2{{{1}, {2}}};
-	Tensor<float, 2> r2 = t2.convolve(k2, 1, 2);
-	CHECK_EQ(2, r2[0][0]);
-	CHECK_EQ(8, r2[0][1]);
-	CHECK_EQ(7, r2[1][0]);
-	CHECK_EQ(1, r2[1][1]);
-	// in context
-	Tensor<float, 3> t4{{{0}, {1}}};
-	Tensor<double, 3> k4{{{1}, {0}, {1}, {0}}};
-	Tensor<double, 2> r4 =
-		(t4 + 1).repeat(1, 1, 1).convolve(k4.pow(2).repeat(0, 0, 1));
-	CHECK_EQ(4, r4[0][0]);
-	CHECK_EQ(4, r4[1][0]);
-}
-TEST_CASE("Multifilter Convolve") {
-	Tensor<float, 3> t1{{{0, 1}, {1, 2}, {2, 3}}, {{3, 4}, {5, 6}, {7, 8}}};
-	Tensor<float, 4> k1{
-		{{{1, 1}, {2, -1}}}, {{{-1, 1}, {1, 0}}}, {{{-2, 1}, {2, -1}}}};
-	Tensor<float, 3> r1 = t1.convolve(k1, 1, 1);
-	Tensor<float, 3> e1{{{1, 2, 1}, {4, 3, 1}}, {{11, 6, 2}, {17, 8, 2}}};
-	for (int i = 0; i < e1.get_shape()[0]; i++)
-		for (int j = 0; j < e1.get_shape()[0]; j++)
-			for (int k = 0; k < e1.get_shape()[0]; k++)
-				CHECK_EQ(r1[i][j][k], e1[i][j][k]);
-}
-TEST_CASE("Total Reduce") {
-	Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
-	Tensor<float, 1> r1 = t1.flattened().reduce_sum();
-	CHECK_EQ(r1[0], 7);
-	r1 = t1.flattened().reduce_mul();
-	CHECK_EQ(r1[0], -2);
-}
-TEST_CASE("Concat") {
-	Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
-	Tensor<float, 2> t2{{0, 0}, {3.141592, 42}};
-	Tensor<float, 2> c1 = Flint::concat(t1, t2, 0);
-	for (int i = 0; i < 6; i++) {
-		for (int j = 0; j < 2; j++)
-			if (i < 4)
-				CHECK_EQ(t1[i][j], c1[i][j]);
-			else
-				CHECK_EQ(t2[i - 4][j], c1[i][j]);
-	}
-	Tensor<float, 2> t3{{1, 2, 3, 4}, {5, 6, 7, 8}};
-	Tensor<float, 2> c2 = Flint::concat(t2, t3, 1);
-	for (int i = 0; i < 2; i++) {
-		for (int j = 0; j < 6; j++) {
-			if (j < 2)
-				CHECK_EQ(t2[i][j], c2[i][j]);
-			else
-				CHECK_EQ(t3[i][j - 2], c2[i][j]);
-		}
-	}
-	Tensor<float, 1> t7 = t2.slice(TensorRange(1)).flattened().repeat(1);
-	Tensor<double, 2> t4 = t3.convert<double>() + t7;
-	Tensor<double, 2> t5 = t4 - t3;
-	Tensor<double, 2> t6 = Flint::concat(t4, t5, 0);
-	for (int i = 0; i < 4; i++) {
-		for (int j = 0; j < 4; j++) {
-			CHECK_EQ(doctest::Approx(t6[i][j]).epsilon(0.00001),
-					 (i >= 2) ? (j % 2 == 0 ? 3.141592 : 42)
-							  : t3[i][j] + (j % 2 == 0 ? 3.141592 : 42));
-		}
-	}
-}
-TEST_CASE("Index") {
-	Tensor<double, 3> a = {
-		{{0, 1}, {2, 3}}, {{4, 5}, {6, 7}}, {{8, 9}, {10, 11}}};
-	Tensor<int, 1> i1 = {0, 2};
-	Tensor<double, 3> a1 = a.index(i1);
-	for (int i = 0; i < 2; i++)
-		for (int j = 0; j < 2; j++)
-			for (int k = 0; k < 2; k++)
-				CHECK_EQ(a1[i][j][k], i == 0 ? j * 2 + k : 8 + j * 2 + k);
-	Tensor<int, 1> i2 = {0, 1, 1, 2};
-	Tensor<double, 3> a2 = a.index(i2);
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 2; j++)
-			for (int k = 0; k < 2; k++)
-				CHECK_EQ(a2[i][j][k],
-						 i == 0 ? j * 2 + k
-								: (i < 3 ? 4 + j * 2 + k : 8 + j * 2 + k));
-	Tensor<int, 2> i3 = {{0}, {1}, {0}};
-	Tensor<double, 3> a3 = a.index(i3);
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 1; j++)
-			for (int k = 0; k < 2; k++)
-				CHECK_EQ(a3[i][j][k], i == 0 ? k : i == 1 ? 6 + k : 8 + k);
-	Tensor<int, 3> i4 = {{{0, 0}, {1, 0}}, {{0, 1}, {1, 1}}, {{1, 1}, {0, 0}}};
-	Tensor<double, 3> a4 = a.index(i4);
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 2; j++)
-			for (int k = 0; k < 2; k++)
-				CHECK_EQ(a4[i][j][k], a[i][j][i4[i][j][k]]);
-	Tensor<int, 2> i5 = {{0, 0, 1, 1}, {1, 0, 1, 0}, {0, 1, 1, 0}};
-	Tensor<double, 3> a5 = a.index(i5);
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 4; j++)
-			for (int k = 0; k < 2; k++)
-				CHECK_EQ(a5[i][j][k], a[i][i5[i][j]][k]);
-	Tensor<double, 3> c = {{{1, 2, 3}}};
-	c = c.repeat(2, 5, 1); // new shape: [3, 6, 6]
-	c = c + 2;
-	c = c.max(4);
-	Tensor<int, 2> i6 = {{4, 5}, {3, 3}, {0, 1}};
-	Tensor<double, 3> c1 = c.index(i6);
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 2; j++)
-			for (int k = 0; k < 6; k++)
-				CHECK_EQ(c1[i][j][k], c[i][i6[i][j]][k]);
-}
-TEST_CASE("Set by index") {
-	Tensor<int, 2> a3 = {{0, 1}, {2, 3}, {4, 5}, {6, 7}};
-	Tensor<int, 2> b3 = {{4, 5}, {6, 7}, {8, 9}};
-	Tensor<int, 1> i3 = {0, 0, 2};
-	Tensor<int, 2> e3 = {{10, 12}, {2, 3}, {8, 9}, {6, 7}};
-	Tensor<int, 2> c3 = a3.index_set(b3, i3);
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 2; j++)
-			CHECK_EQ(c3[i][j], e3[i][j]);
-	Tensor<int, 2> i4 = {{-1, 0}, {1, 1}, {1, 0}, {1, -1}};
-	Tensor<int, 2> b4 = {{4, 5}, {6, 7}, {8, 9}, {10, 11}};
-	Tensor<int, 2> e4 = {{5, 1}, {2, 13}, {9, 8}, {6, 10}};
-	Tensor<int, 2> c4 = a3.index_set(b4, i4);
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 2; j++)
-			CHECK_EQ(c4[i][j], e4[i][j]);
-}
-TEST_CASE("Random") {
-	Tensor<double, 4> r1 = Flint::random(4, 4, 4, 4) + 1.0;
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 4; j++)
-			for (int k = 0; k < 4; k++)
-				for (int l = 0; l < 4; l++)
-					CHECK_LT(1.0, r1[i][j][k][l]);
-}
-TEST_CASE("Sliding Window") {
-	// basic functionality without sharing
-	// TODO optimize those cases
-
-	Tensor<double, 3> a = Flint::random(9, 9, 2);
-	Tensor<double, 4> b = a.sliding_window(
-		std::array<size_t, 3>{3, 3, 2}, std::array<unsigned int, 3>{3, 3, 1});
-	CHECK_EQ(9, b.get_shape()[0]);
-	for (int i = 0; i < 9; i++)
-		for (int j = 0; j < 3; j++)
-			for (int k = 0; k < 3; k++)
-				for (int l = 0; l < 2; l++) {
-					CHECK_EQ(a[j + (i / 3) * 3][k + (i % 3) * 3][l],
-							 b[i][j][k][l]);
-				}
-	Tensor<double, 3> ao =
-		b.unslide_window(a.get_shape(), std::array<unsigned int, 3>{3, 3, 1});
-	CHECK_EQ(1, (ao.equal(a)).reduce_mul()[0]);
-	// overlapping windows
-	Tensor<int, 3> a2 = {{{1, 2}, {3, 4}, {5, 6}, {7, 8}},
-						 {{9, 10}, {11, 12}, {13, 14}, {15, 16}},
-						 {{17, 18}, {19, 20}, {21, 22}, {23, 24}}};
-	Tensor<int, 4> b2 = a2.sliding_window(std::array<size_t, 3>{2, 2, 1},
-										  std::array<unsigned int, 3>{1, 1, 1});
-	Tensor<int, 4> exp = {
-		{{{1}, {3}}, {{9}, {11}}},	  {{{2}, {4}}, {{10}, {12}}},
-		{{{3}, {5}}, {{11}, {13}}},	  {{{4}, {6}}, {{12}, {14}}},
-		{{{5}, {7}}, {{13}, {15}}},	  {{{6}, {8}}, {{14}, {16}}},
-		{{{9}, {11}}, {{17}, {19}}},  {{{10}, {12}}, {{18}, {20}}},
-		{{{11}, {13}}, {{19}, {21}}}, {{{12}, {14}}, {{20}, {22}}},
-		{{{13}, {15}}, {{21}, {23}}}, {{{14}, {16}}, {{22}, {24}}}};
-	for (int i = 0; i < exp.get_shape()[0]; i++)
-		for (int j = 0; j < exp.get_shape()[1]; j++)
-			for (int k = 0; k < exp.get_shape()[2]; k++)
-				for (int l = 0; l < exp.get_shape()[3]; l++)
-					CHECK_EQ(b2[i][j][k][l], exp[i][j][k][l]);
-	Tensor<int, 3> a3 = {{{1, 2}, {3, 4}}, {{5, 6}, {7, 8}}, {{9, 0}, {1, 2}},
-						 {{3, 4}, {5, 6}}, {{7, 8}, {9, 0}}, {{1, 2}, {3, 4}},
-						 {{5, 6}, {7, 8}}, {{9, 0}, {1, 2}}, {{3, 4}, {5, 6}}};
-	Tensor<int, 2> e3 = {
-		{1, 7, 15, 0}, {6, 22, 18, 4}, {10, 30, 6, 8}, {7, 9, 7, 6}};
-	Tensor<int, 2> b3 = a3.unslide_window({4, 4}, {1, 1});
-	for (int i = 0; i < e3.get_shape()[0]; i++)
-		for (int j = 0; j < e3.get_shape()[1]; j++)
-			CHECK_EQ(b3[i][j], e3[i][j]);
-}
-TEST_CASE("Saving and Loading to files") {
-	Tensor<double, 3> a = Flint::constant(3.0, 9, 4, 1);
-	Tensor<float, 2> b{{1}, {-1}, {2}, {-2}};
-	Tensor<double, 3> c = a + b;
-	std::ofstream ofile;
-	ofile.open("test.flint");
-	ofile << c;
-	ofile.close();
-	std::ifstream ifile;
-	ifile.open("test.flint");
-	Tensor<double, 3> e = Tensor<double, 3>::read_from(ifile);
-	ifile.close();
-	for (int i = 0; i < 9; i++)
-		for (int j = 0; j < 4; j++)
-			CHECK_EQ(e[i][j][0], c[i][j][0]);
-	std::remove("test.flint");
-}
-TEST_CASE("Expand") {
-	Tensor<double, 2> a = {{0, 1}, {2, 3}};
-	Tensor<double, 3> e1 = a.expand(0, 3)();
-	Tensor<double, 3> e2 = a.expand(1, 3)();
-	Tensor<double, 3> e3 = a.expand(2, 3)();
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 2; j++)
-			for (int k = 0; k < 2; k++) {
-				CHECK_EQ(a[j][k], e1[i][j][k]);
-				CHECK_EQ(a[j][k], e2[j][i][k]);
-				CHECK_EQ(a[j][k], e3[j][k][i]);
-			}
-}
-TEST_CASE("Pooling") {
-	auto pooling_sum_ref_impl = [](FGraphNode *a, size_t *window_size,
-								   unsigned int *step_size) {
-		std::vector<size_t> windows(window_size,
-									window_size + a->operation.dimensions - 1);
-		std::vector<unsigned int> steps(
-			step_size, step_size + a->operation.dimensions - 1);
-		windows.push_back(a->operation.shape[a->operation.dimensions - 1]);
-		steps.push_back(a->operation.shape[a->operation.dimensions - 1]);
-		FGraphNode *res = fsliding_window(a, windows.data(), steps.data());
-		for (int i = 1; i < a->operation.dimensions; i++)
-			res = fflatten_dimension(res, 2);
-		res = freduce_sum(res, 1);
-		std::vector<size_t> no_windows(a->operation.dimensions - 1);
-		for (int i = 0; i < no_windows.size(); i++) {
-			size_t no_window = a->operation.shape[i] - window_size[i] + 1;
-			no_window = no_window % step_size[i] == 0
-							? no_window / step_size[i]
-							: no_window / step_size[i] + 1;
-			no_windows[i] = no_window;
-		}
-		return freshape(res, no_windows.data(), no_windows.size());
-	};
-	auto pooling_max_ref_impl = [](FGraphNode *a, size_t *window_size,
-								   unsigned int *step_size) {
-		std::vector<size_t> windows(window_size,
-									window_size + a->operation.dimensions - 1);
-		std::vector<unsigned int> steps(
-			step_size, step_size + a->operation.dimensions - 1);
-		windows.push_back(a->operation.shape[a->operation.dimensions - 1]);
-		steps.push_back(a->operation.shape[a->operation.dimensions - 1]);
-		FGraphNode *res = fsliding_window(a, windows.data(), steps.data());
-		for (int i = 1; i < a->operation.dimensions; i++)
-			res = fflatten_dimension(res, 2);
-		res = freduce_max(res, 1);
-		std::vector<size_t> no_windows(a->operation.dimensions - 1);
-		for (int i = 0; i < no_windows.size(); i++) {
-			size_t no_window = a->operation.shape[i] - window_size[i] + 1;
-			no_window = no_window % step_size[i] == 0
-							? no_window / step_size[i]
-							: no_window / step_size[i] + 1;
-			no_windows[i] = no_window;
-		}
-		return freshape(res, no_windows.data(), no_windows.size());
-	};
-	Tensor<int, 3> a1 = {{{1, 2}, {3, 4}, {5, 6}, {7, 8}},
-						 {{9, 10}, {11, 12}, {13, 14}, {15, 16}},
-						 {{17, 18}, {19, 20}, {21, 22}, {23, 24}}};
-	using std::array;
-	array<size_t, 2> w1 = {2, 2};
-	array<unsigned int, 2> s1 = {1, 2};
-	Tensor<int, 2> rs1 = a1.pooling_sum(w1, s1);
-	Tensor<int, 2> rm1 = a1.pooling_max(w1, s1);
-	Tensor<int, 2> es1 = Tensor<int, 2>(
-		pooling_sum_ref_impl(a1.get_graph_node(), w1.data(), s1.data()));
-	Tensor<int, 2> em1 = Tensor<int, 2>(
-		pooling_max_ref_impl(a1.get_graph_node(), w1.data(), s1.data()));
-	for (int i = 0; i < es1.get_shape()[0]; i++)
-		for (int j = 0; j < es1.get_shape()[1]; j++) {
-			CHECK_EQ(es1[i][j], rs1[i][j]);
-			CHECK_EQ(em1[i][j], rm1[i][j]);
-		}
-	for (unsigned int p = 1; p < 3; p++)
-		for (unsigned int q = 2; q < 4; q++)
-			for (unsigned int r = 2; r < 3; r++) {
-				array<size_t, 3> w2 = {2, 4, 3};
-				array<unsigned int, 3> s2 = {p, q, r};
-				Tensor<double, 4> a2 = Flint::random(15, 15, 15, 5);
-				Tensor<double, 3> rs2 = a2.pooling_sum(w2, s2);
-				Tensor<double, 3> rm2 = a2.pooling_max(w2, s2);
-				Tensor<double, 3> es2(pooling_sum_ref_impl(
-					a2.get_graph_node(), w2.data(), s2.data()));
-				Tensor<double, 3> em2(pooling_max_ref_impl(
-					a2.get_graph_node(), w2.data(), s2.data()));
-				for (int i = 0; i < es2.get_shape()[0]; i++)
-					for (int j = 0; j < es2.get_shape()[1]; j++)
-						for (int k = 0; k < es2.get_shape()[2]; k++) {
-							CHECK_EQ(es2[i][j][k], rs2[i][j][k]);
-							CHECK_EQ(em2[i][j][k], rm2[i][j][k]);
-						}
-			}
-}
-TEST_CASE("Dropout") {
-	Tensor<long, 1> c1 = Flint::constant(1l, 10000);
-	Tensor<long, 1> d1 = c1.dropout(0.5);
-	Tensor<long, 1> r1 = d1.reduce_sum();
-	int val = r1[0];
-	CHECK(val >= 3000);
-	CHECK(val <= 7000);
-	Tensor<double, 1> a = Flint::random(200);
-	CHECK_EQ(
-		doctest::Approx((a - a.dropout(0.0)).reduce_sum()[0]).epsilon(0.001),
-		0);
-	CHECK_EQ(doctest::Approx((a.dropout(1.0)).reduce_sum()[0]).epsilon(0.001),
-			 0);
-	Tensor<double, 1> b = a.dropout(0.25);
-	for (int i = 0; i < 200; i++) {
-		if (a[i] != b[i])
-			CHECK_EQ(b[i], 0);
-	}
-}
-TEST_CASE("Test Example 1") {
-	Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
-	Tensor<float, 1> c1{4.0f, 4.0f};
-	t1 = t1 + c1 - 1.0f;
-	Tensor<double, 3> t2{{{0.0, 1.0}, {2.0, 3.0}}, {{4.0, 5.0}, {6.0, 7.0}}};
-	Tensor<double, 3> t3 = t2.matmul(t1);
-	Tensor<double, 3> t4 =
-		t3.slice(TensorRange(0, 1), TensorRange(0, 1), TensorRange(0, 2));
-	Tensor<double, 1> t5 = t4.reduce_mul(2).flattened();
-	CHECK_EQ(20, t5[0]);
-}
-TEST_SUITE("Index operations and broadcasting") {
-	TEST_CASE("Slice") {
+	TEST_CASE("Convolve") {
 		Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
 							{{5, 6}, {7, 8}, {9, 0}},
-							{{-1, -2}, {-3, -4}, {-5, -6}}};
-		Tensor<float, 3> o = t1 * t1.slice(TensorRange(0, 1), TensorRange(0, 1),
-										   TensorRange(0, 2))
-									  .flattened();
-		auto exp = std::vector<std::vector<std::vector<float>>>{
-			{{0.000000, 1.000000}, {0.000000, 2.000000}, {0.000000, 4.000000}},
-			{{0.000000, 6.000000}, {0.000000, 8.000000}, {0.000000, 0.000000}},
-			{{-0.000000, -2.000000},
-			 {-0.000000, -4.000000},
-			 {-0.000000, -6.000000}}};
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 3; j++) {
-				for (int k = 0; k < 2; k++)
-					CHECK_EQ(doctest::Approx(exp[i][j][k]), o[i][j][k]);
+							{{1, 2}, {3, 4}, {5, 6}}};
+		Tensor<float, 3> k1{{{1, 1}, {2, 2}}, {{2, 2}, {1, 1}}};
+		Tensor<float, 2> r1 = t1.convolve(k1, 1, 1);
+		CHECK_EQ(44, r1[0][0]);
+		CHECK_EQ(56, r1[0][1]);
+		CHECK_EQ(54, r1[1][0]);
+		CHECK_EQ(58, r1[1][1]);
+		Tensor<float, 3> t2{{{0}, {1}, {2}, {3}}, {{3}, {2}, {1}, {0}}};
+		Tensor<float, 3> k2{{{1}, {2}}};
+		Tensor<float, 2> r2 = t2.convolve(k2, 1, 2);
+		CHECK_EQ(2, r2[0][0]);
+		CHECK_EQ(8, r2[0][1]);
+		CHECK_EQ(7, r2[1][0]);
+		CHECK_EQ(1, r2[1][1]);
+		// in context
+		Tensor<float, 3> t4{{{0}, {1}}};
+		Tensor<double, 3> k4{{{1}, {0}, {1}, {0}}};
+		Tensor<double, 2> r4 =
+			(t4 + 1).repeat(1, 1, 1).convolve(k4.pow(2).repeat(0, 0, 1));
+		CHECK_EQ(4, r4[0][0]);
+		CHECK_EQ(4, r4[1][0]);
+	}
+	TEST_CASE("Multifilter Convolve") {
+		Tensor<float, 3> t1{{{0, 1}, {1, 2}, {2, 3}}, {{3, 4}, {5, 6}, {7, 8}}};
+		Tensor<float, 4> k1{
+			{{{1, 1}, {2, -1}}}, {{{-1, 1}, {1, 0}}}, {{{-2, 1}, {2, -1}}}};
+		Tensor<float, 3> r1 = t1.convolve(k1, 1, 1);
+		Tensor<float, 3> e1{{{1, 2, 1}, {4, 3, 1}}, {{11, 6, 2}, {17, 8, 2}}};
+		for (int i = 0; i < e1.get_shape()[0]; i++)
+			for (int j = 0; j < e1.get_shape()[0]; j++)
+				for (int k = 0; k < e1.get_shape()[0]; k++)
+					CHECK_EQ(r1[i][j][k], e1[i][j][k]);
+	}
+	TEST_CASE("Total Reduce") {
+		Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
+		Tensor<float, 1> r1 = t1.flattened().reduce_sum();
+		CHECK_EQ(r1[0], 7);
+		r1 = t1.flattened().reduce_mul();
+		CHECK_EQ(r1[0], -2);
+	}
+	TEST_CASE("Concat") {
+		Tensor<float, 2> t1{{-1., 1.}, {1., 2.}, {4, 1}, {-0.5, -0.5}};
+		Tensor<float, 2> t2{{0, 0}, {3.141592, 42}};
+		Tensor<float, 2> c1 = Flint::concat(t1, t2, 0);
+		for (int i = 0; i < 6; i++) {
+			for (int j = 0; j < 2; j++)
+				if (i < 4)
+					CHECK_EQ(t1[i][j], c1[i][j]);
+				else
+					CHECK_EQ(t2[i - 4][j], c1[i][j]);
+		}
+		Tensor<float, 2> t3{{1, 2, 3, 4}, {5, 6, 7, 8}};
+		Tensor<float, 2> c2 = Flint::concat(t2, t3, 1);
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 6; j++) {
+				if (j < 2)
+					CHECK_EQ(t2[i][j], c2[i][j]);
+				else
+					CHECK_EQ(t3[i][j - 2], c2[i][j]);
+			}
+		}
+		Tensor<float, 1> t7 = t2.slice(TensorRange(1)).flattened().repeat(1);
+		Tensor<double, 2> t4 = t3.convert<double>() + t7;
+		Tensor<double, 2> t5 = t4 - t3;
+		Tensor<double, 2> t6 = Flint::concat(t4, t5, 0);
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				CHECK_EQ(doctest::Approx(t6[i][j]).epsilon(0.00001),
+						 (i >= 2) ? (j % 2 == 0 ? 3.141592 : 42)
+								  : t3[i][j] + (j % 2 == 0 ? 3.141592 : 42));
 			}
 		}
 	}
-	TEST_CASE("Repeat") {
-		Tensor<float, 2> t1{{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 0, 1}};
-		Tensor<float, 1> t2{2, 7};
-		Tensor<float, 2> o = t1 + t2.repeat(1);
+	TEST_CASE("Index") {
+		Tensor<double, 3> a = {
+			{{0, 1}, {2, 3}}, {{4, 5}, {6, 7}}, {{8, 9}, {10, 11}}};
+		Tensor<int, 1> i1 = {0, 2};
+		Tensor<double, 3> a1 = a.index(i1);
+		for (int i = 0; i < 2; i++)
+			for (int j = 0; j < 2; j++)
+				for (int k = 0; k < 2; k++)
+					CHECK_EQ(a1[i][j][k], i == 0 ? j * 2 + k : 8 + j * 2 + k);
+		Tensor<int, 1> i2 = {0, 1, 1, 2};
+		Tensor<double, 3> a2 = a.index(i2);
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 2; j++)
+				for (int k = 0; k < 2; k++)
+					CHECK_EQ(a2[i][j][k],
+							 i == 0 ? j * 2 + k
+									: (i < 3 ? 4 + j * 2 + k : 8 + j * 2 + k));
+		Tensor<int, 2> i3 = {{0}, {1}, {0}};
+		Tensor<double, 3> a3 = a.index(i3);
+		for (int i = 0; i < 3; i++)
+			for (int j = 0; j < 1; j++)
+				for (int k = 0; k < 2; k++)
+					CHECK_EQ(a3[i][j][k], i == 0 ? k : i == 1 ? 6 + k : 8 + k);
+		Tensor<int, 3> i4 = {
+			{{0, 0}, {1, 0}}, {{0, 1}, {1, 1}}, {{1, 1}, {0, 0}}};
+		Tensor<double, 3> a4 = a.index(i4);
+		for (int i = 0; i < 3; i++)
+			for (int j = 0; j < 2; j++)
+				for (int k = 0; k < 2; k++)
+					CHECK_EQ(a4[i][j][k], a[i][j][i4[i][j][k]]);
+		Tensor<int, 2> i5 = {{0, 0, 1, 1}, {1, 0, 1, 0}, {0, 1, 1, 0}};
+		Tensor<double, 3> a5 = a.index(i5);
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 4; j++)
-				CHECK_EQ(t1[i][j] + (j % 2 == 0 ? 2 : 7), o[i][j]);
+				for (int k = 0; k < 2; k++)
+					CHECK_EQ(a5[i][j][k], a[i][i5[i][j]][k]);
+		Tensor<double, 3> c = {{{1, 2, 3}}};
+		c = c.repeat(2, 5, 1); // new shape: [3, 6, 6]
+		c = c + 2;
+		c = c.max(4);
+		Tensor<int, 2> i6 = {{4, 5}, {3, 3}, {0, 1}};
+		Tensor<double, 3> c1 = c.index(i6);
+		for (int i = 0; i < 3; i++)
+			for (int j = 0; j < 2; j++)
+				for (int k = 0; k < 6; k++)
+					CHECK_EQ(c1[i][j][k], c[i][i6[i][j]][k]);
 	}
-	TEST_CASE("Transpose") {
-		Tensor<float, 2> t1{{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 0, 1}};
-		Tensor<float, 1> t2{2, 7, 8};
-		Tensor<float, 2> o = t1.transpose() + (t2 - 1);
-		for (int i = 0; i < 3; i++)
+	TEST_CASE("Set by index") {
+		Tensor<int, 2> a3 = {{0, 1}, {2, 3}, {4, 5}, {6, 7}};
+		Tensor<int, 2> b3 = {{4, 5}, {6, 7}, {8, 9}};
+		Tensor<int, 1> i3 = {0, 0, 2};
+		Tensor<int, 2> e3 = {{10, 12}, {2, 3}, {8, 9}, {6, 7}};
+		Tensor<int, 2> c3 = a3.index_set(b3, i3);
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 2; j++)
+				CHECK_EQ(c3[i][j], e3[i][j]);
+		Tensor<int, 2> i4 = {{-1, 0}, {1, 1}, {1, 0}, {1, -1}};
+		Tensor<int, 2> b4 = {{4, 5}, {6, 7}, {8, 9}, {10, 11}};
+		Tensor<int, 2> e4 = {{5, 1}, {2, 13}, {9, 8}, {6, 10}};
+		Tensor<int, 2> c4 = a3.index_set(b4, i4);
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 2; j++)
+				CHECK_EQ(c4[i][j], e4[i][j]);
+	}
+	TEST_CASE("Random") {
+		Tensor<double, 4> r1 = Flint::random(4, 4, 4, 4) + 1.0;
+		for (int i = 0; i < 4; i++)
 			for (int j = 0; j < 4; j++)
-				CHECK_EQ(t1[i][j] + t2[i] - 1, o[j][i]);
+				for (int k = 0; k < 4; k++)
+					for (int l = 0; l < 4; l++)
+						CHECK_LT(1.0, r1[i][j][k][l]);
+	}
+	TEST_CASE("Sliding Window") {
+		// basic functionality without sharing
+		// TODO optimize those cases
 
-		Tensor<float, 3> t3{
-			{{0, 1, 2}, {2, 3, 4}, {5, 6, 7}, {8, 9, -1}},
-			{{-3, -4, -5}, {-2, -6, -7}, {-8, -9, 0}, {1, 2, 3}}};
-		Tensor<float, 3> t4 = (t3 * t1.transpose());
-		for (int k = 0; k < 2; k++)
-			for (int i = 0; i < 4; i++)
-				for (int j = 0; j < 3; j++)
-					CHECK_EQ(t3[k][i][j] * t1[j][i], t4[k][i][j]);
+		Tensor<double, 3> a = Flint::random(9, 9, 2);
+		Tensor<double, 4> b =
+			a.sliding_window(std::array<size_t, 3>{3, 3, 2},
+							 std::array<unsigned int, 3>{3, 3, 1});
+		CHECK_EQ(9, b.get_shape()[0]);
+		for (int i = 0; i < 9; i++)
+			for (int j = 0; j < 3; j++)
+				for (int k = 0; k < 3; k++)
+					for (int l = 0; l < 2; l++) {
+						CHECK_EQ(a[j + (i / 3) * 3][k + (i % 3) * 3][l],
+								 b[i][j][k][l]);
+					}
+		Tensor<double, 3> ao = b.unslide_window(
+			a.get_shape(), std::array<unsigned int, 3>{3, 3, 1});
+		CHECK_EQ(1, (ao.equal(a)).reduce_mul()[0]);
+		// overlapping windows
+		Tensor<int, 3> a2 = {{{1, 2}, {3, 4}, {5, 6}, {7, 8}},
+							 {{9, 10}, {11, 12}, {13, 14}, {15, 16}},
+							 {{17, 18}, {19, 20}, {21, 22}, {23, 24}}};
+		Tensor<int, 4> b2 =
+			a2.sliding_window(std::array<size_t, 3>{2, 2, 1},
+							  std::array<unsigned int, 3>{1, 1, 1});
+		Tensor<int, 4> exp = {
+			{{{1}, {3}}, {{9}, {11}}},	  {{{2}, {4}}, {{10}, {12}}},
+			{{{3}, {5}}, {{11}, {13}}},	  {{{4}, {6}}, {{12}, {14}}},
+			{{{5}, {7}}, {{13}, {15}}},	  {{{6}, {8}}, {{14}, {16}}},
+			{{{9}, {11}}, {{17}, {19}}},  {{{10}, {12}}, {{18}, {20}}},
+			{{{11}, {13}}, {{19}, {21}}}, {{{12}, {14}}, {{20}, {22}}},
+			{{{13}, {15}}, {{21}, {23}}}, {{{14}, {16}}, {{22}, {24}}}};
+		for (int i = 0; i < exp.get_shape()[0]; i++)
+			for (int j = 0; j < exp.get_shape()[1]; j++)
+				for (int k = 0; k < exp.get_shape()[2]; k++)
+					for (int l = 0; l < exp.get_shape()[3]; l++)
+						CHECK_EQ(b2[i][j][k][l], exp[i][j][k][l]);
+		Tensor<int, 3> a3 = {
+			{{1, 2}, {3, 4}}, {{5, 6}, {7, 8}}, {{9, 0}, {1, 2}},
+			{{3, 4}, {5, 6}}, {{7, 8}, {9, 0}}, {{1, 2}, {3, 4}},
+			{{5, 6}, {7, 8}}, {{9, 0}, {1, 2}}, {{3, 4}, {5, 6}}};
+		Tensor<int, 2> e3 = {
+			{1, 7, 15, 0}, {6, 22, 18, 4}, {10, 30, 6, 8}, {7, 9, 7, 6}};
+		Tensor<int, 2> b3 = a3.unslide_window({4, 4}, {1, 1});
+		for (int i = 0; i < e3.get_shape()[0]; i++)
+			for (int j = 0; j < e3.get_shape()[1]; j++)
+				CHECK_EQ(b3[i][j], e3[i][j]);
+	}
+	TEST_CASE("Saving and Loading to files") {
+		Tensor<double, 3> a = Flint::constant(3.0, 9, 4, 1);
+		Tensor<float, 2> b{{1}, {-1}, {2}, {-2}};
+		Tensor<double, 3> c = a + b;
+		std::ofstream ofile;
+		ofile.open("test.flint");
+		ofile << c;
+		ofile.close();
+		std::ifstream ifile;
+		ifile.open("test.flint");
+		Tensor<double, 3> e = Tensor<double, 3>::read_from(ifile);
+		ifile.close();
+		for (int i = 0; i < 9; i++)
+			for (int j = 0; j < 4; j++)
+				CHECK_EQ(e[i][j][0], c[i][j][0]);
+		std::remove("test.flint");
+	}
+	TEST_CASE("Expand") {
+		Tensor<double, 2> a = {{0, 1}, {2, 3}};
+		Tensor<double, 3> e1 = a.expand(0, 3)();
+		Tensor<double, 3> e2 = a.expand(1, 3)();
+		Tensor<double, 3> e3 = a.expand(2, 3)();
+		for (int i = 0; i < 3; i++)
+			for (int j = 0; j < 2; j++)
+				for (int k = 0; k < 2; k++) {
+					CHECK_EQ(a[j][k], e1[i][j][k]);
+					CHECK_EQ(a[j][k], e2[j][i][k]);
+					CHECK_EQ(a[j][k], e3[j][k][i]);
+				}
+	}
+	TEST_CASE("Pooling") {
+		auto pooling_sum_ref_impl = [](FGraphNode *a, size_t *window_size,
+									   unsigned int *step_size) {
+			std::vector<size_t> windows(
+				window_size, window_size + a->operation.dimensions - 1);
+			std::vector<unsigned int> steps(
+				step_size, step_size + a->operation.dimensions - 1);
+			windows.push_back(a->operation.shape[a->operation.dimensions - 1]);
+			steps.push_back(a->operation.shape[a->operation.dimensions - 1]);
+			FGraphNode *res = fsliding_window(a, windows.data(), steps.data());
+			for (int i = 1; i < a->operation.dimensions; i++)
+				res = fflatten_dimension(res, 2);
+			res = freduce_sum(res, 1);
+			std::vector<size_t> no_windows(a->operation.dimensions - 1);
+			for (int i = 0; i < no_windows.size(); i++) {
+				size_t no_window = a->operation.shape[i] - window_size[i] + 1;
+				no_window = no_window % step_size[i] == 0
+								? no_window / step_size[i]
+								: no_window / step_size[i] + 1;
+				no_windows[i] = no_window;
+			}
+			return freshape(res, no_windows.data(), no_windows.size());
+		};
+		auto pooling_max_ref_impl = [](FGraphNode *a, size_t *window_size,
+									   unsigned int *step_size) {
+			std::vector<size_t> windows(
+				window_size, window_size + a->operation.dimensions - 1);
+			std::vector<unsigned int> steps(
+				step_size, step_size + a->operation.dimensions - 1);
+			windows.push_back(a->operation.shape[a->operation.dimensions - 1]);
+			steps.push_back(a->operation.shape[a->operation.dimensions - 1]);
+			FGraphNode *res = fsliding_window(a, windows.data(), steps.data());
+			for (int i = 1; i < a->operation.dimensions; i++)
+				res = fflatten_dimension(res, 2);
+			res = freduce_max(res, 1);
+			std::vector<size_t> no_windows(a->operation.dimensions - 1);
+			for (int i = 0; i < no_windows.size(); i++) {
+				size_t no_window = a->operation.shape[i] - window_size[i] + 1;
+				no_window = no_window % step_size[i] == 0
+								? no_window / step_size[i]
+								: no_window / step_size[i] + 1;
+				no_windows[i] = no_window;
+			}
+			return freshape(res, no_windows.data(), no_windows.size());
+		};
+		Tensor<int, 3> a1 = {{{1, 2}, {3, 4}, {5, 6}, {7, 8}},
+							 {{9, 10}, {11, 12}, {13, 14}, {15, 16}},
+							 {{17, 18}, {19, 20}, {21, 22}, {23, 24}}};
+		using std::array;
+		array<size_t, 2> w1 = {2, 2};
+		array<unsigned int, 2> s1 = {1, 2};
+		Tensor<int, 2> rs1 = a1.pooling_sum(w1, s1);
+		Tensor<int, 2> rm1 = a1.pooling_max(w1, s1);
+		Tensor<int, 2> es1 = Tensor<int, 2>(
+			pooling_sum_ref_impl(a1.get_graph_node(), w1.data(), s1.data()));
+		Tensor<int, 2> em1 = Tensor<int, 2>(
+			pooling_max_ref_impl(a1.get_graph_node(), w1.data(), s1.data()));
+		for (int i = 0; i < es1.get_shape()[0]; i++)
+			for (int j = 0; j < es1.get_shape()[1]; j++) {
+				CHECK_EQ(es1[i][j], rs1[i][j]);
+				CHECK_EQ(em1[i][j], rm1[i][j]);
+			}
+		for (unsigned int p = 1; p < 3; p++)
+			for (unsigned int q = 2; q < 4; q++)
+				for (unsigned int r = 2; r < 3; r++) {
+					array<size_t, 3> w2 = {2, 4, 3};
+					array<unsigned int, 3> s2 = {p, q, r};
+					Tensor<double, 4> a2 = Flint::random(15, 15, 15, 5);
+					Tensor<double, 3> rs2 = a2.pooling_sum(w2, s2);
+					Tensor<double, 3> rm2 = a2.pooling_max(w2, s2);
+					Tensor<double, 3> es2(pooling_sum_ref_impl(
+						a2.get_graph_node(), w2.data(), s2.data()));
+					Tensor<double, 3> em2(pooling_max_ref_impl(
+						a2.get_graph_node(), w2.data(), s2.data()));
+					for (int i = 0; i < es2.get_shape()[0]; i++)
+						for (int j = 0; j < es2.get_shape()[1]; j++)
+							for (int k = 0; k < es2.get_shape()[2]; k++) {
+								CHECK_EQ(es2[i][j][k], rs2[i][j][k]);
+								CHECK_EQ(em2[i][j][k], rm2[i][j][k]);
+							}
+				}
+	}
+	TEST_CASE("Dropout") {
+		Tensor<long, 1> c1 = Flint::constant(1l, 10000);
+		Tensor<long, 1> d1 = c1.dropout(0.5);
+		Tensor<long, 1> r1 = d1.reduce_sum();
+		int val = r1[0];
+		CHECK(val >= 3000);
+		CHECK(val <= 7000);
+		Tensor<double, 1> a = Flint::random(200);
+		CHECK_EQ(doctest::Approx((a - a.dropout(0.0)).reduce_sum()[0])
+					 .epsilon(0.001),
+				 0);
+		CHECK_EQ(
+			doctest::Approx((a.dropout(1.0)).reduce_sum()[0]).epsilon(0.001),
+			0);
+		Tensor<double, 1> b = a.dropout(0.25);
+		for (int i = 0; i < 200; i++) {
+			if (a[i] != b[i])
+				CHECK_EQ(b[i], 0);
+		}
+	}
+}
+TEST_SUITE("Known Bugs") {
+	TEST_CASE("Test Example 1") {
+		Tensor<float, 2> t1{{-1., 0.}, {1., 2.}};
+		Tensor<float, 1> c1{4.0f, 4.0f};
+		t1 = t1 + c1 - 1.0f;
+		Tensor<double, 3> t2{{{0.0, 1.0}, {2.0, 3.0}},
+							 {{4.0, 5.0}, {6.0, 7.0}}};
+		Tensor<double, 3> t3 = t2.matmul(t1);
+		Tensor<double, 3> t4 =
+			t3.slice(TensorRange(0, 1), TensorRange(0, 1), TensorRange(0, 2));
+		Tensor<double, 1> t5 = t4.reduce_mul(2).flattened();
+		CHECK_EQ(20, t5[0]);
+	}
+	TEST_SUITE("Index operations and broadcasting") {
+		TEST_CASE("Slice") {
+			Tensor<float, 3> t1{{{0, 1}, {1, 2}, {3, 4}},
+								{{5, 6}, {7, 8}, {9, 0}},
+								{{-1, -2}, {-3, -4}, {-5, -6}}};
+			Tensor<float, 3> o =
+				t1 * t1.slice(TensorRange(0, 1), TensorRange(0, 1),
+							  TensorRange(0, 2))
+						 .flattened();
+			auto exp = std::vector<std::vector<std::vector<float>>>{
+				{{0.000000, 1.000000},
+				 {0.000000, 2.000000},
+				 {0.000000, 4.000000}},
+				{{0.000000, 6.000000},
+				 {0.000000, 8.000000},
+				 {0.000000, 0.000000}},
+				{{-0.000000, -2.000000},
+				 {-0.000000, -4.000000},
+				 {-0.000000, -6.000000}}};
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
+					for (int k = 0; k < 2; k++)
+						CHECK_EQ(doctest::Approx(exp[i][j][k]), o[i][j][k]);
+				}
+			}
+		}
+		TEST_CASE("Repeat") {
+			Tensor<float, 2> t1{{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 0, 1}};
+			Tensor<float, 1> t2{2, 7};
+			Tensor<float, 2> o = t1 + t2.repeat(1);
+			for (int i = 0; i < 3; i++)
+				for (int j = 0; j < 4; j++)
+					CHECK_EQ(t1[i][j] + (j % 2 == 0 ? 2 : 7), o[i][j]);
+		}
+		TEST_CASE("Transpose") {
+			Tensor<float, 2> t1{{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 0, 1}};
+			Tensor<float, 1> t2{2, 7, 8};
+			Tensor<float, 2> o = t1.transpose() + (t2 - 1);
+			for (int i = 0; i < 3; i++)
+				for (int j = 0; j < 4; j++)
+					CHECK_EQ(t1[i][j] + t2[i] - 1, o[j][i]);
+
+			Tensor<float, 3> t3{
+				{{0, 1, 2}, {2, 3, 4}, {5, 6, 7}, {8, 9, -1}},
+				{{-3, -4, -5}, {-2, -6, -7}, {-8, -9, 0}, {1, 2, 3}}};
+			Tensor<float, 3> t4 = (t3 * t1.transpose());
+			for (int k = 0; k < 2; k++)
+				for (int i = 0; i < 4; i++)
+					for (int j = 0; j < 3; j++)
+						CHECK_EQ(t3[k][i][j] * t1[j][i], t4[k][i][j]);
+		}
+	}
+	TEST_CASE("Constants") {
+		fSetLoggingLevel(F_DEBUG);
+		Tensor<float, 1> c1 = Flint::constant(1.5f, 9);
+		Tensor<float, 2> c2 = Flint::constant(1.5f, 9, 2);
+		auto r1 = c1 + c2;
+		auto r2 = c1 / c2;
+		auto r3 = c2.sin();
+		auto r4 = c2.transpose();
+		auto r5 = c2.reduce_sum(1);
+		auto r6 = c1.expand(1, 2);
+		for (int i = 0; i < 9; i++) {
+			for (int j = 0; j < 2; j++) {
+				CHECK_EQ(doctest::Approx(r1[i][j]), 3.f);
+				CHECK_EQ(doctest::Approx(r2[i][j]), 1.f);
+				CHECK_EQ(doctest::Approx(r3[i][j]), sin(1.5f));
+				CHECK_EQ(doctest::Approx(r4[j][i]), 1.5f);
+				CHECK_EQ(doctest::Approx(r6[i][j]), c2[i][j]);
+			}
+			CHECK_EQ(doctest::Approx(r5[i]), 3.f);
+		}
+		fSetLoggingLevel(F_VERBOSE);
 	}
 }
 TEST_SUITE("Advanced Broadcasting") {
@@ -1323,7 +1357,7 @@ TEST_SUITE("Advanced Broadcasting") {
 	}
 }
 int main(int argc, char **argv) {
-  fSetLoggingLevel(F_VERBOSE);
+	fSetLoggingLevel(F_VERBOSE);
 	bool doCPU = false, doGPU = false, eager = false;
 	for (int i = 0; i < argc; i++) {
 		std::string arg(argv[i]);

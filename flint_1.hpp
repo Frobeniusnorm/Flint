@@ -189,7 +189,7 @@ template <typename T> struct Tensor<T, 1> {
 				execute();
 			if (!node->result_data->data)
 				fSyncMemory(node);
-			return ((T *)node->result_data->data)[index];
+			return ((T *)node->result_data->data)[node->operation.op_type == FGEN_CONSTANT ? 0 : index];
 		}
 		/**
 		 * Generates a Tensor containing the single given value in every entry.
@@ -815,8 +815,8 @@ template <typename T> struct Tensor<T, 1> {
 		 * repeats the following dimensions to match a given shape.
 		 *
 		 * - `ax` the dimension prior to which the new dimension will be
-		 * inserted (`0` means a new dimension in the front, `n + 1` means as a
-		 * new last dimension).
+		 *   inserted (`0` means a new dimension in the front, `n` means as a
+		 *   new last dimension).
 		 * - `ax_size` the new size of that dimension (repeats the following
 		 *    dimensions `ax_size - 1` times).
 		 */

@@ -431,7 +431,7 @@ void fUnmarkGradientVariable(FGraphNode *node) {
 	}
 }
 FGraphNode *fOptimizeMemory(FGraphNode *node) {
-	if (!node->gradient_data && node->operation.op_type != FSTORE &&
+	if (!node->gradient_data && node->operation.op_type != FSTORE && node->operation.op_type != FGEN_CONSTANT &&
 		node->result_data) {
 		FResultData *rd = node->result_data;
 		// we can modify this node to a STORE operation

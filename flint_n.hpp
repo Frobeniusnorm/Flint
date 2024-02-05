@@ -400,6 +400,8 @@ template <typename T, unsigned int n> struct Tensor {
 				fSyncMemory(node);
 			}
 			FResultData *store = node->result_data;
+			if (node->operation.op_type == FGEN_CONSTANT)
+				return TensorView<T, n - 1>((T *)store->data, true);
 			size_t alrdindx = index;
 			std::vector<size_t> ns(shape.size() - 1);
 			for (size_t i = 1; i < shape.size(); i++) {
