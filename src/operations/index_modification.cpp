@@ -394,10 +394,10 @@ FGraphNode *IndexImpl::local_gradient(FGraphNode *y, int dx_i,
 	FGraphNode *b = y->predecessors[1];
 	if (0 == dx_i) {
 		FGraphNode *g =
-			fconstant_d(0, a->operation.shape, a->operation.dimensions);
+			constant_tensor(0, a->operation.data_type, a->operation.shape, a->operation.dimensions);
 		return findex_set(g, prev_adj, b);
 	} else
-		return fconstant_d(0, b->operation.shape, b->operation.dimensions);
+		return constant_tensor(0, b->operation.data_type, b->operation.shape, b->operation.dimensions);
 }
 template <typename T, typename A, typename B>
 void IndexImpl::binary_expression(T *__restrict__ result,
@@ -571,7 +571,7 @@ FGraphNode *SetIndexImpl::local_gradient(FGraphNode *y, int dx_i,
 	// a[i] = b
 	if (0 == dx_i) {
 		FGraphNode *g =
-			fconstant_d(0, b->operation.shape, b->operation.dimensions);
+			constant_tensor(0, b->operation.data_type, b->operation.shape, b->operation.dimensions);
 		// remove values that have been overwritten
 		return findex_set(prev_adj, g, i);
 	} else {

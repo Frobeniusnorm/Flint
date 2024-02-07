@@ -114,7 +114,7 @@ void MaxImpl::execute_cpu(const FGraphNode *node,
 
 FGraphNode *LessImpl::local_gradient(FGraphNode *y, int dx_i,
 									 FGraphNode *prev_adj) {
-	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
+	return constant_tensor(0.0, y->operation.data_type, y->operation.shape,
 						   y->operation.dimensions);
 }
 template <typename A, typename B>
@@ -155,7 +155,7 @@ void LessImpl::execute_cpu(const FGraphNode *node,
 
 FGraphNode *GreaterImpl::local_gradient(FGraphNode *y, int dx_i,
 										FGraphNode *prev_adj) {
-	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
+	return constant_tensor(0.0, y->operation.data_type, y->operation.shape,
 						   y->operation.dimensions);
 }
 template <typename A, typename B>
@@ -197,7 +197,7 @@ void GreaterImpl::execute_cpu(const FGraphNode *node,
 
 FGraphNode *EqualImpl::local_gradient(FGraphNode *y, int dx_i,
 									  FGraphNode *prev_adj) {
-	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
+	return constant_tensor(0.0, y->operation.data_type, y->operation.shape,
 						   y->operation.dimensions);
 }
 template <typename A, typename B>

@@ -13,6 +13,7 @@
  * limitations under the License. */
 #include "unary_arithmetic.hpp"
 #include "../utils.hpp"
+#include "flint.h"
 
 using namespace std;
 
@@ -95,9 +96,12 @@ void LogImpl::execute_cpu(const FGraphNode *node,
 FGraphNode *Log2Impl::local_gradient(FGraphNode *y, int dx_i,
 									 FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
-	if (0 == dx_i)
-		return fdiv(prev_adj, fmul(a, log(2.0)));
-	else
+	if (0 == dx_i) {
+		const double log2 = log(2);
+		return fdiv(
+			prev_adj,
+			fmul(a, a->operation.data_type == F_FLOAT32 ? (float)log2 : log2));
+	} else
 		return nullptr;
 }
 template <typename T, typename A>
@@ -135,9 +139,12 @@ void Log2Impl::execute_cpu(const FGraphNode *node,
 FGraphNode *Log10Impl::local_gradient(FGraphNode *y, int dx_i,
 									  FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
-	if (0 == dx_i)
-		return fdiv(prev_adj, fmul(a, log(10.0)));
-	else
+	if (0 == dx_i) {
+		const double log10 = log(10.0);
+		return fdiv(prev_adj,
+					fmul(a, a->operation.data_type == F_FLOAT32 ? (float)log10
+																: log10));
+	} else
 		return nullptr;
 }
 template <typename T, typename A>
@@ -377,7 +384,7 @@ FGraphNode *ASinImpl::local_gradient(FGraphNode *y, int dx_i,
 									 FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
 	if (0 == dx_i) {
-		return fdiv(prev_adj, fsqrt_g(fsub_icd(1.0, fmul(a, a))));
+		return fdiv(prev_adj, fsqrt_g(fsub_icd(1, fmul(a, a))));
 	} else
 		return nullptr;
 }
@@ -413,7 +420,7 @@ FGraphNode *ACosImpl::local_gradient(FGraphNode *y, int dx_i,
 									 FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
 	if (0 == dx_i) {
-		return fdiv(prev_adj, fneg(fsqrt_g(fsub_icd(1.0, fmul(a, a)))));
+		return fdiv(prev_adj, fneg(fsqrt_g(fsub_icd(1, fmul(a, a)))));
 	} else
 		return nullptr;
 }
@@ -557,7 +564,7 @@ FGraphNode *AbsImpl::local_gradient(FGraphNode *y, int dx_i,
 									FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
 	if (0 == dx_i) {
-		return fmul(prev_adj, fsub(fsign(a), fequal(a, 0.0)));
+		return fmul(prev_adj, fsub(fsign(a), fequal(a, 0)));
 	} else
 		return nullptr;
 }

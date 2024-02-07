@@ -129,7 +129,6 @@ FGraphNode *fCalculateGradient(FGraphNode *y, FGraphNode *dx) {
 FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 							   const unsigned int num_gradients,
 							   FGraphNode **gradients) {
-	// TODO memory optimizations here
 	using namespace std;
 	unordered_set<const FGraphNode *> *gd =
 		(unordered_set<const FGraphNode *> *)y->gradient_data;
@@ -160,7 +159,7 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 	// used to determine when a node may be freed
 	unordered_map<const FGraphNode *, unsigned int> needed_by(adjoints.size());
 	// initialize
-	adjoints[y] = constant_tensor(1., F_FLOAT64, y->operation.shape,
+	adjoints[y] = constant_tensor(1., y->operation.data_type, y->operation.shape,
 								  y->operation.dimensions);
 	for (FGraphNode *curr : todo) {
 		FGraphNode *adj = adjoints[curr];

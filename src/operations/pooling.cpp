@@ -234,7 +234,7 @@ FGraphNode *PoolingSumImpl::local_gradient(FGraphNode *y, int dx_i,
 										window.step + y->operation.dimensions);
 		window_size.push_back(a->operation.shape[a->operation.dimensions - 1]);
 		FGraphNode *constant_1 =
-			fconstant_d(1, window_size.data(), a->operation.dimensions);
+			constant_tensor(1, a->operation.data_type, window_size.data(), a->operation.dimensions);
 		return ConvolveImpl::gradient_convolve1(a, constant_1, prev_adj,
 												window.step);
 	} else

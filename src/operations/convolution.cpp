@@ -392,7 +392,7 @@ FGraphNode *GradientConvolve1Impl::local_gradient(FGraphNode *y, int dx_i,
 		gradient->result_data = nullptr;
 		gradient->reference_counter = 0;
 		FOperation op;
-		op.data_type = F_FLOAT64;
+		op.data_type = higher_type(kernel->operation.data_type, prev_adj->operation.data_type);
 		op.dimensions = a->operation.dimensions;
 		op.shape = safe_mal<size_t>(op.dimensions);
 		if (!op.shape)

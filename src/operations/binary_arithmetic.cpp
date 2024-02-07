@@ -149,7 +149,7 @@ FGraphNode *DivImpl::local_gradient(FGraphNode *y, int dx_i,
 		return fdiv(prev_adj, b);
 	} else if (1 == dx_i) {
 		// d(a / b)/db = d(a * b^(-1))/db = -a * b^(-2)
-		return fneg(fdiv(fmul(prev_adj, a), fpow(b, 2.)));
+		return fneg(fdiv(fmul(prev_adj, a), fpow(b, 2.f)));
 	} else
 		return nullptr;
 }
@@ -191,7 +191,7 @@ FGraphNode *PowImpl::local_gradient(FGraphNode *y, int dx_i,
 	} else if (1 == dx_i) {
 		// a^x / dx = a^x * ln(a)
 		// has to be zero when a < 0 since not differentiable
-		return fmul(prev_adj, fmul(fmul(fadd(fsign(a), 1), 0.5),
+		return fmul(prev_adj, fmul(fmul(fadd(fsign(a), 1), 0.5f),
 								   fmul(fpow(a, b), flog(fabs_g(a)))));
 	} else
 		return nullptr;
