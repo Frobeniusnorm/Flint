@@ -23,32 +23,30 @@
  * It then calculates the loss as a double Tensor (since the weights are always
  * double Tensors as well).
  */
-template <typename T>
+template <typename T=float>
 concept GenericLoss = requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
 							   Tensor<double, 2> &t3, Tensor<long, 2> &t4) {
 	{
 		a.calculate_error(t1, t1)
 	} -> std::convertible_to<
-		Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
+		Tensor<float,
 			   T::transform_dimensionality(2)>>;
 	{
 		a.calculate_error(t2, t2)
 	} -> std::convertible_to<
-		Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
+		Tensor<double,
 			   T::transform_dimensionality(2)>>;
 	{
 		a.calculate_error(t3, t3)
 	} -> std::convertible_to<
-		Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
+		Tensor<double,
 			   T::transform_dimensionality(2)>>;
 	{
 		a.calculate_error(t4, t4)
 	} -> std::convertible_to<
-		Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_FLOAT32)>,
+		Tensor<double,
 			   T::transform_dimensionality(2)>>;
-  {
-    a.name()
-  } -> std::convertible_to<std::string>;
+	{ a.name() } -> std::convertible_to<std::string>;
 };
 
 /** Calculates the Categorical Cross Entropy Loss with full summation. It is
@@ -57,26 +55,27 @@ concept GenericLoss = requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
  *
  * Calculates: `sum(-expected * log(in))`
  * */
-struct CrossEntropyLoss {
-		static constexpr FType transform_type(FType t) { return F_FLOAT64; }
+ struct CrossEntropyLoss {
+		CrossEntropyLoss() {
+		}
 		static constexpr unsigned int transform_dimensionality(int n) {
 			return 1;
 		}
 		template <typename T, unsigned int n>
-		Tensor<double, transform_dimensionality(n)>
+		Tensor<
+			to_float<T>,
+			transform_dimensionality(n)>
 		calculate_error(Tensor<T, n> &in, Tensor<T, n> &expected) {
 			auto pred =
 				(in / in.reduce_sum(n - 1).expand(n - 1, in.get_shape()[n - 1]))
-					.max(1e-7)
-					.min(1 - 1e-7);
+					.max((to_float<T>)1e-7)
+					.min((to_float<T>)(1 - 1e-7));
 			auto t1 = (expected * -pred.log()).reduce_sum();
 			size_t total_size = 1;
 			for (unsigned int i = 0; i < n - 1; i++)
 				total_size *= in.get_shape()[i];
-			return (t1 / (double)total_size);
+			return (t1 / (to_float<T>)total_size);
 		}
-    std::string name() {
-      return "Cross Entropy Loss";
-    }
+		std::string name() { return "Cross Entropy Loss"; }
 };
 #endif

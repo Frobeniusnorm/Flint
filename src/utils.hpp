@@ -15,6 +15,7 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 #include "../flint.h"
+#include "../flint_helper.hpp"
 #include "src/errors.hpp"
 #include "src/operations/implementation.hpp"
 #include <cmath>
@@ -135,16 +136,6 @@ inline size_t type_size(FType t) {
 	}
 	return 1;
 }
-inline FType higher_type(const FType a, const FType b) {
-	FType highest = F_INT32;
-	if (a == F_FLOAT64 || (b == F_FLOAT64))
-		highest = F_FLOAT64;
-	else if (a == F_FLOAT32 || (b == F_FLOAT32))
-		highest = F_FLOAT32;
-	else if (a == F_INT64 || (b == F_INT64))
-		highest = F_INT64;
-	return highest;
-}
 inline std::vector<size_t> calc_acc_sizes(const int dimensions,
 										const size_t *shape) {
 	std::vector<size_t> acc_sizes(dimensions);
@@ -175,17 +166,6 @@ inline std::vector<std::vector<FType>> all_type_permutations(int num) {
 		}
 	}
 	return res;
-}
-template <typename T> static constexpr FType to_flint_type() {
-	if (std::is_same<T, int>())
-		return F_INT32;
-	if (std::is_same<T, long>())
-		return F_INT64;
-	if (std::is_same<T, float>())
-		return F_FLOAT32;
-	if (std::is_same<T, double>())
-		return F_FLOAT64;
-	return F_INT32;
 }
 static std::string epsilon_for_type(FType type) {
 	switch (type) {

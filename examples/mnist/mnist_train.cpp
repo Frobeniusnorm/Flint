@@ -80,11 +80,11 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 int main() {
 	FlintContext _(FLINT_BACKEND_BOTH, F_VERBOSE);
 	Tensor<float, 3> X = load_mnist_images("train-images-idx3-ubyte");
-	Tensor<double, 2> Y =
-		load_mnist_labels("train-labels-idx1-ubyte").convert<double>();
+	Tensor<float, 2> Y =
+		load_mnist_labels("train-labels-idx1-ubyte").convert<float>();
 	Tensor<float, 3> vX = load_mnist_images("t10k-images-idx3-ubyte");
-	Tensor<double, 2> vY =
-		load_mnist_labels("t10k-labels-idx1-ubyte").convert<double>();
+	Tensor<float, 2> vY =
+		load_mnist_labels("t10k-labels-idx1-ubyte").convert<float>();
 	auto data = TrainingData(
 		X.reshape(X.get_shape()[0], X.get_shape()[1], X.get_shape()[2], 1), Y,
 		vX.reshape(vX.get_shape()[0], vX.get_shape()[1], vX.get_shape()[2], 1),
@@ -93,6 +93,7 @@ int main() {
 			  << "x" << data.X.get_shape()[1] << " (and "
 			  << data.Y.get_shape()[0] << " labels)" << std::endl;
 	std::cout << "loaded data. Starting training." << std::endl;
+	static_assert(GenericLayer<Conv2D>);
 	auto m = SequentialModel{
 		Conv2D(1, 32, 3, std::array<unsigned int, 2>{1, 1}, NO_PADDING),
 		Relu(),
@@ -104,34 +105,16 @@ int main() {
 		Dropout(0.5),
 		Connected(1600, 10),
 		SoftMax()};
-	auto shape = m.shape_per_layer(std::array<size_t, 4>{1, 28, 28, 1});
-	for (int i = 0; i < shape.size(); i++) {
-		std::cout << "Output " << m.layer_names()[i] << ": [";
-		for (int j = 0; j < shape[i].size(); j++) {
-			if (j != 0)
-				std::cout << ", ";
-			std::cout << shape[i][j];
-		}
-		std::cout << "]" << std::endl;
-	}
-	// auto m = SequentialModel{
-	// 	Conv2D(1, 32, 8, std::array<unsigned int, 2>{3, 3}, SAME_PADDING),
-	// 	Relu(),
-	// 	Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}, SAME_PADDING),
-	// 	Dropout(0.1),
-	// 	Flatten(),
-	// 	Connected(800, 80),
-	// 	Relu(),
-	// 	Connected(80, 10),
-	// 	SoftMax()};
-	// auto m = SequentialModel{
-	// 	Conv2D(1, 16, 8, std::array<unsigned int, 2>{3, 3}, SAME_PADDING),
-	// 	Relu(),
-	// 	Pooling<4>::max_pooling({3, 3, 1}, {2, 2, 1}, SAME_PADDING),
-	// 	Dropout(0.1),
-	// 	Flatten(),
-	// 	Connected(400, 10),
-	// 	SoftMax()};
+//	auto shape = m.shape_per_layer(std::array<size_t, 4>{1, 28, 28, 1});
+//	for (int i = 0; i < shape.size(); i++) {
+//		std::cout << "Output " << m.layer_names()[i] << ": [";
+//		for (int j = 0; j < shape[i].size(); j++) {
+//			if (j != 0)
+//				std::cout << ", ";
+//			std::cout << shape[i][j];
+//		}
+//		std::cout << "]" << std::endl;
+//	}
 	NetworkMetricReporter nmr;
 	m.enable_profiling();
 	std::cout << m.summary() << std::endl;

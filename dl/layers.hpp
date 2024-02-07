@@ -18,19 +18,20 @@
 #include <chrono>
 #include <concepts>
 #include <flint/flint.hpp>
+#include <flint/flint_helper.hpp>
 #include <memory>
 namespace LayerHelper {
 /**
  * FOR INTERNAL USE ONLY
  * builds an compile-time linked list of Tensor pointer
  */
-template <unsigned int index, int... w> class WeightRef {};
+template <typename T, unsigned int index, int... w> class WeightRef {};
 
-template <unsigned int index, int n> struct WeightRef<index, n> {
-		Tensor<double, n> weight;
+template <unsigned int index, int n, typename F> struct WeightRef<F, index, n> {
+		Tensor<F, n> weight;
 		std::unique_ptr<Optimizer<n>> optimizer = nullptr;
 		template <unsigned int k, unsigned int f>
-		void set_weight(Tensor<double, f> &w) {
+		void set_weight(Tensor<F, f> &w) {
 			static_assert(k == index, "Invalid weight index!");
 			static_assert(f == n,
 						  "Could not set weight, wrong number of dimensions! "
@@ -40,7 +41,7 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
 			weight.watch();
 		}
 		void set_weights(const std::vector<FGraphNode *> nodes) {
-			weight = Tensor<double, n>(nodes[index]);
+			weight = Tensor<F, n>(nodes[index]);
 			weight.watch();
 		}
 		template <OptimizerFactory Fac> void gen_optimizer(const Fac fac) {
@@ -50,7 +51,7 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
 		template <typename T, unsigned int k>
 		void optimize(const Tensor<T, k> &error) {
 			if (optimizer) {
-				Tensor<double, n> gw = error.gradient(weight);
+				Tensor<F, n> gw = error.gradient(weight);
 				weight = optimizer->update(weight, gw);
 				weight.execute();
 				weight.watch();
@@ -58,7 +59,7 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
 				flogging(F_WARNING, "No Optimizer for weight!");
 			}
 		}
-		template <int i, unsigned int k> Tensor<double, k> &get_weight() {
+		template <int i, unsigned int k> Tensor<F, k> &get_weight() {
 			static_assert(i == index, "Invalid weight index!");
 			return weight;
 		}
@@ -69,7 +70,7 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
 			if (optimizer) {
 				if (!grads[index])
 					return;
-				Tensor<double, n> gw(grads[index], weight.get_shape());
+				Tensor<F, n> gw(grads[index], weight.get_shape());
 				weight = optimizer->update(weight, gw);
 				weight.execute();
 				weight.watch();
@@ -85,13 +86,13 @@ template <unsigned int index, int n> struct WeightRef<index, n> {
 		}
 };
 
-template <unsigned int index, int n, int... wn>
-struct WeightRef<index, n, wn...> {
-		Tensor<double, n> weight;
+template <typename F, unsigned int index, int n, int... wn>
+struct WeightRef<F, index, n, wn...> {
+		Tensor<F, n> weight;
 		std::unique_ptr<Optimizer<n>> optimizer = nullptr;
-		WeightRef<index + 1, wn...> others;
+		WeightRef<F, index + 1, wn...> others;
 		template <unsigned int k, unsigned int f>
-		void set_weight(Tensor<double, f> &w) {
+		void set_weight(Tensor<F, f> &w) {
 			if constexpr (k == index) {
 				static_assert(
 					f == n, "Could not set weight, wrong number of dimensions! "
@@ -103,7 +104,7 @@ struct WeightRef<index, n, wn...> {
 				others.template set_weight<k>(w);
 		}
 		void set_weights(const std::vector<FGraphNode *> nodes) {
-			weight = Tensor<double, n>(nodes[index]);
+			weight = Tensor<F, n>(nodes[index]);
 			weight.watch();
 			others.template set_weights(nodes);
 		}
@@ -115,7 +116,7 @@ struct WeightRef<index, n, wn...> {
 		template <typename T, unsigned int k>
 		void optimize(const Tensor<T, k> &error) {
 			if (optimizer) {
-				Tensor<double, n> gw = error.gradient(weight);
+				Tensor<F, n> gw = error.gradient(weight);
 				weight = optimizer->update(weight, gw);
 				weight.execute();
 				weight.watch();
@@ -124,7 +125,7 @@ struct WeightRef<index, n, wn...> {
 			}
 			others.optimize(error);
 		}
-		template <int i, unsigned int k> Tensor<double, k> &get_weight() {
+		template <int i, unsigned int k> Tensor<F, k> &get_weight() {
 			if constexpr (i == index)
 				return weight;
 			else
@@ -137,7 +138,7 @@ struct WeightRef<index, n, wn...> {
 		void update_weights(std::vector<FGraphNode *> &grads) {
 			if (optimizer) {
 				if (grads[index]) {
-					Tensor<double, n> gw(grads[index], weight.get_shape());
+					Tensor<F, n> gw(grads[index], weight.get_shape());
 					weight = optimizer->update(weight, gw);
 					weight.execute();
 					weight.watch();
@@ -246,7 +247,7 @@ struct UntrainableLayer {
 /**
  * Virtual super class of all Layer implementations with type safe weight
  * management capabilities. The variadic template describes the dimensionality
- * of the individual weights i.e. a `Layer<3,4,5>` has three weights:
+ * of the individual weights i.e. a `Layer<double, 3,4,5>` has three weights:
  * `Tensor<double, 3>`, `Tensor<double, 4>`, `Tensor<double, 5>`.
  * You have to initialize them by providing their initial state in the
  * constructor, after that you may access references to them with the function
@@ -257,15 +258,15 @@ struct UntrainableLayer {
  * dimensionality then its parameter has - overload `transform_type` and
  * `transform_dimensionality`.
  */
-template <int... wn> class Layer {
+template <typename F, int... wn> class Layer {
 	protected:
-		LayerHelper::WeightRef<0, wn...> weight_refs;
+		LayerHelper::WeightRef<F, 0, wn...> weight_refs;
 		template <unsigned int index, unsigned int n>
-		void init_weights(Tensor<double, n> &t) {
+		void init_weights(Tensor<F, n> &t) {
 			weight_refs.template set_weight<index, n>(t);
 		}
 		template <unsigned int index, unsigned int n, typename... args>
-		void init_weights(Tensor<double, n> &t, args &...weights) {
+		void init_weights(Tensor<F, n> &t, args &...weights) {
 			weight_refs.template set_weight<index, n>(t);
 			init_weights<index + 1>(weights...);
 		}
@@ -278,7 +279,9 @@ template <int... wn> class Layer {
 
 	public:
 		bool training = false;
-		static constexpr FType transform_type(FType t) { return F_FLOAT64; }
+		static constexpr FType transform_type(FType t) { 
+			return higher_type_constexpr(t, to_flint_type<F>());
+		}
 		static constexpr unsigned int transform_dimensionality(unsigned int n) {
 			return n;
 		}
@@ -289,7 +292,7 @@ template <int... wn> class Layer {
 			init_weights<0>(weights...);
 		}
 		/** Sets a specific weight described by its index */
-		template <int index, int dim> void set_weight(Tensor<double, dim> t) {
+		template <int index, int dim> void set_weight(Tensor<F, dim> t) {
 			weight_refs.template set_weight<index>(std::move(t));
 		}
 		/** Sets all weights from an array */
@@ -298,7 +301,7 @@ template <int... wn> class Layer {
 		}
 		/** Returns a reference to a specific weight described by its index */
 		template <int index>
-		Tensor<double, get_dim<index, wn...>()> &get_weight() {
+		Tensor<F, get_dim<index, wn...>()> &get_weight() {
 			return weight_refs
 				.template get_weight<index, get_dim<index, wn...>()>();
 		}

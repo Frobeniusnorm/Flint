@@ -22,19 +22,19 @@
 #include <type_traits>
 #include <unordered_set>
 /**
- * Optimizer interface that defines a update method.
+ * Optimizer interface that defines an update method.
  * An optimizer is intended to be instantiated once per weight
- * and optimizes only double weights (since the gradient is also always given as
- * a double Tensor). The type-parameter `n` denotes the dimensionality of the
+ * and optimizes double or flaot weights. 
+ * The type-parameter `n` denotes the dimensionality of the
  * weight this optimizer was generated for.*/
-template <int n> struct Optimizer {
+template <int n, typename F = float> struct Optimizer {
 		virtual ~Optimizer() = default;
 		/**
 		 * Takes the old weight and its gradient to the error tensor and updates
 		 * it, i.e. returns the updated version of the weight.
 		 */
-		virtual Tensor<double, n> update(Tensor<double, n> &weights,
-										 Tensor<double, n> &gradient) = 0;
+		virtual Tensor<F, n> update(Tensor<F, n> &weights,
+										 Tensor<F, n> &gradient) = 0;
 };
 /**
  * An OptimizerFactory is used to generate optimizers on the heap with
@@ -55,9 +55,9 @@ concept OptimizerFactory = requires(T fac) {
  * for stochastic objective functions based on adaptive estimates of lower-order
  * moments).
  */
-template <int n> struct Adam : public Optimizer<n> {
-		double epsilon = std::numeric_limits<double>::epsilon();
-		double learning_rate, b1, b2;
+template <int n, typename F = float> struct Adam : public Optimizer<n, F> {
+		F epsilon = std::numeric_limits<F>::epsilon();
+		F learning_rate, b1, b2;
 		/**
 		 * Initializes the Adam algorithm with some parameters that influence
 		 * the optimization speed and accuracy.
@@ -72,29 +72,29 @@ template <int n> struct Adam : public Optimizer<n> {
 		 *
 		 * You can tune the individual members later on too.
 		 */
-		Adam(double learning_rate = 0.0015, double b1 = 0.9, double b2 = 0.999)
+		Adam(F learning_rate = 0.0015, F b1 = 0.9, F b2 = 0.999)
 			: learning_rate(learning_rate), b1(b1), b2(b2) {}
-		Tensor<double, n> update(Tensor<double, n> &weight,
-								 Tensor<double, n> &grad) {
+		Tensor<F, n> update(Tensor<F, n> &weight,
+								 Tensor<F, n> &grad) {
 			if (!init) {
 				init = true;
-				m = Flint::constant_array(0.0, weight.get_shape());
-				v = Flint::constant_array(0.0, weight.get_shape());
+				m = Flint::constant_array((F)0.0, weight.get_shape());
+				v = Flint::constant_array((F)0.0, weight.get_shape());
 			}
 			grad.execute();
 			m = m * b1 + grad * (1 - b1);
 			v = v * b2 + grad * grad * (1 - b2);
 			m.execute();
 			v.execute();
-			Tensor<double, n> mh = m / (1 - std::pow(b1, t));
-			Tensor<double, n> vh = v / (1 - std::pow(b2, t));
+			Tensor<F, n> mh = m / (1 - (F)std::pow(b1, t));
+			Tensor<F, n> vh = v / (1 - (F)std::pow(b2, t));
 			t += 1;
 			return weight - (mh * learning_rate) / (vh.sqrt() + epsilon);
 		}
 
 	private:
-		Tensor<double, n> m;
-		Tensor<double, n> v;
+		Tensor<F, n> m;
+		Tensor<F, n> v;
 		bool init = false;
 		unsigned long t = 1;
 };

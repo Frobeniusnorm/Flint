@@ -57,7 +57,7 @@ namespace FLINT_HPP_HELPER {
  * Transforms a vector of arbitrary recursive dimensions to a string
  */
 template <typename T>
-static inline std::string vectorString(const std::vector<T> &vec,
+static inline std::string vector_string(const std::vector<T> &vec,
 									   std::string indentation = "") {
 	std::string res = "{";
 	for (size_t i = 0; i < vec.size(); i++) {
@@ -68,11 +68,11 @@ static inline std::string vectorString(const std::vector<T> &vec,
 	return res + "}";
 }
 template <typename T>
-static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
+static inline std::string vector_string(const std::vector<std::vector<T>> &vec,
 									   std::string indentation = "") {
 	std::string res = "{";
 	for (size_t i = 0; i < vec.size(); i++) {
-		res += vectorString(vec[i], indentation + " ");
+		res += vector_string(vec[i], indentation + " ");
 		if (i != vec.size() - 1)
 			res += ",\n" + indentation;
 	}
@@ -82,7 +82,7 @@ static inline std::string vectorString(const std::vector<std::vector<T>> &vec,
  * Transforms an array of arbitrary recursive dimensions to a string
  */
 template <typename T, size_t n>
-static inline std::string arrayString(const std::array<T, n> &vec) {
+static inline std::string array_string(const std::array<T, n> &vec) {
 	std::string res = "{";
 	for (size_t i = 0; i < n; i++) {
 		res += std::to_string(vec[i]);
@@ -93,10 +93,10 @@ static inline std::string arrayString(const std::array<T, n> &vec) {
 }
 template <typename T, size_t n, size_t k>
 static inline std::string
-arrayString(const std::array<std::array<T, k>, n> &vec) {
+array_string(const std::array<std::array<T, k>, n> &vec) {
 	std::string res = "[";
 	for (size_t i = 0; i < n; i++) {
-		res += arrayString(vec[i]);
+		res += array_string(vec[i]);
 		if (i != n - 1)
 			res += ",\n";
 	}
@@ -146,7 +146,7 @@ static std::vector<E> flattened(
 	}
 	return result;
 }
-inline std::string typeString(FType t) {
+inline std::string type_string(FType t) {
 	switch (t) {
 	case F_INT32:
 		return "int";
@@ -161,14 +161,14 @@ inline std::string typeString(FType t) {
 }
 }; // namespace FLINT_HPP_HELPER
 /** statically checks if the given type is one of the allowed tensor types */
-template <typename T> static constexpr void isTensorType() {
+template <typename T> static constexpr void is_tensor_type() {
 	static_assert(std::is_same<T, int>() || std::is_same<T, float>() ||
 					  std::is_same<T, long>() || std::is_same<T, double>(),
 				  "Only integer and floating-point Tensor types are allowed");
 }
 /** checks type precedence (e.g. `isStronger<int, double>() = false,
  * isStronger<float, long>() = true`)*/
-template <typename K, typename V> static constexpr bool isStronger() {
+template <typename K, typename V> static constexpr bool is_stronger() {
 	const int a = std::is_same<K, int>()	 ? 0
 				  : std::is_same<K, long>()	 ? 1
 				  : std::is_same<K, float>() ? 2
@@ -180,7 +180,7 @@ template <typename K, typename V> static constexpr bool isStronger() {
 	return a >= b;
 }
 /** Transforms a C/C++ type to a `FType` */
-template <typename T> static constexpr FType toFlintType() {
+template <typename T> static constexpr FType to_flint_type() {
 	if (std::is_same<T, int>())
 		return F_INT32;
 	if (std::is_same<T, long>())
@@ -191,13 +191,35 @@ template <typename T> static constexpr FType toFlintType() {
 		return F_FLOAT64;
 	return F_INT32;
 }
-template <typename K> static constexpr bool isInt() {
+/** Returns the higher of two flint types */
+inline FType higher_type(const FType a, const FType b) {
+	FType highest = F_INT32;
+	if (a == F_FLOAT64 || (b == F_FLOAT64))
+		highest = F_FLOAT64;
+	else if (a == F_FLOAT32 || (b == F_FLOAT32))
+		highest = F_FLOAT32;
+	else if (a == F_INT64 || (b == F_INT64))
+		highest = F_INT64;
+	return highest;
+}
+/** Returns the higher of two flint types, as a constexpr */
+inline constexpr FType higher_type_constexpr(const FType a, const FType b) {
+	FType highest = F_INT32;
+	if (a == F_FLOAT64 || (b == F_FLOAT64))
+		highest = F_FLOAT64;
+	else if (a == F_FLOAT32 || (b == F_FLOAT32))
+		highest = F_FLOAT32;
+	else if (a == F_INT64 || (b == F_INT64))
+		highest = F_INT64;
+	return highest;
+}
+template <typename K> static constexpr bool is_int() {
 	return std::is_same<K, int>() || std::is_same<K, long>();
 }
 /** Transforms integer types to doubles (for all other types returns identity)
  */
 template <typename T>
-using to_float = typename std::conditional<isInt<T>(), double, T>::type;
+using to_float = typename std::conditional<is_int<T>(), double, T>::type;
 /**
  * Encapsulates the data of a tensor. Is only valid as long as the Tensor is
  * valid. Provides an interface for index operations on multidimensional data.

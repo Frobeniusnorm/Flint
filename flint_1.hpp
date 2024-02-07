@@ -44,8 +44,8 @@ template <typename T> struct Tensor<T, 1> {
 		 * }
 		 */
 		Tensor(storage_type data) : shape{data.size()} {
-			isTensorType<T>();
-			node = fCreateGraph(data.data(), data.size(), toFlintType<T>(),
+			is_tensor_type<T>();
+			node = fCreateGraph(data.data(), data.size(), to_flint_type<T>(),
 								&shape[0], 1);
 			node->reference_counter = 1;
 		}
@@ -75,9 +75,9 @@ template <typename T> struct Tensor<T, 1> {
 		 * }
 		 */
 		Tensor(init_type data) : shape{data.size()} {
-			isTensorType<T>();
+			is_tensor_type<T>();
 
-			node = fCreateGraph(std::begin(data), data.size(), toFlintType<T>(),
+			node = fCreateGraph(std::begin(data), data.size(), to_flint_type<T>(),
 								&shape[0], 1);
 			node->reference_counter = 1;
 		}
@@ -229,13 +229,13 @@ template <typename T> struct Tensor<T, 1> {
 							 std::to_string(node->operation.dimensions) +
 							 " dimensional Tensor into a 1 dimensional"
 							 " Tensor is not possible!");
-			if (toFlintType<T>() != node->operation.data_type)
+			if (to_flint_type<T>() != node->operation.data_type)
 				flogging(F_ERROR,
 						 "Deserializing data of a " +
-							 FLINT_HPP_HELPER::typeString(
+							 FLINT_HPP_HELPER::type_string(
 								 node->operation.data_type) +
 							 " Tensor into a " +
-							 FLINT_HPP_HELPER::typeString(toFlintType<T>()) +
+							 FLINT_HPP_HELPER::type_string(to_flint_type<T>()) +
 							 " Tensor is not possible!");
 			return Tensor<T, 1>(node, node->operation.shape[0]);
 		}
@@ -430,7 +430,7 @@ template <typename T> struct Tensor<T, 1> {
 				if (node->result_data) {
 					fSyncMemory(node);
 					FResultData *store = node->result_data;
-					foo += FLINT_HPP_HELPER::vectorString(
+					foo += FLINT_HPP_HELPER::vector_string(
 						std::vector<T>((T *)store->data,
 									   (T *)store->data + store->num_entries));
 				} else {
@@ -438,7 +438,7 @@ template <typename T> struct Tensor<T, 1> {
 					case FSTORE: {
 						FStore *store =
 							(FStore *)node->operation.additional_data;
-						foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
+						foo += FLINT_HPP_HELPER::vector_string(std::vector<T>(
 							(T *)store->data,
 							(T *)store->data + store->num_entries));
 						break;
@@ -472,7 +472,7 @@ template <typename T> struct Tensor<T, 1> {
 		// to calculate the return type of two tensors at compile time
 		template <typename K>
 		using stronger_return =
-			typename std::conditional<isStronger<K, T>(), K, T>::type;
+			typename std::conditional<is_stronger<K, T>(), K, T>::type;
 		// OPERATIONS
 		/**
 		 * Elementwise addition of this Tensor and `other`.
@@ -688,7 +688,7 @@ template <typename T> struct Tensor<T, 1> {
 		 * The data is converted, not reinterpreted.
 		 */
 		template <typename K> Tensor<K, 1> convert() const {
-			return Tensor<K, 1>(fconvert(node, toFlintType<K>()), shape);
+			return Tensor<K, 1>(fconvert(node, to_flint_type<K>()), shape);
 		}
 		/**
 		 * Takes the elementwise absolute value of this Tensor (negative signs

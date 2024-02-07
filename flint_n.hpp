@@ -50,11 +50,11 @@ template <typename T, unsigned int n> struct Tensor {
 		 * }
 		 */
 		Tensor(init_type data) {
-			isTensorType<T>();
+			is_tensor_type<T>();
 			static_assert(n > 1, "Dimension must be at least 1");
 			initShape(data, 0);
 			std::vector<T> flat = FLINT_HPP_HELPER::flattened<T>(data);
-			node = fCreateGraph(flat.data(), flat.size(), toFlintType<T>(),
+			node = fCreateGraph(flat.data(), flat.size(), to_flint_type<T>(),
 								shape.data(), shape.size());
 			// the node which is currently hold is always referenced
 			node->reference_counter = 1;
@@ -70,11 +70,11 @@ template <typename T, unsigned int n> struct Tensor {
 		 * }
 		 */
 		Tensor(storage_type data) {
-			isTensorType<T>();
+			is_tensor_type<T>();
 			static_assert(n > 1, "Dimension must be at least 1");
 			initShape(data, 0);
 			std::vector<T> flat = FLINT_HPP_HELPER::flattened<T>(data);
-			node = fCreateGraph(flat.data(), flat.size(), toFlintType<T>(),
+			node = fCreateGraph(flat.data(), flat.size(), to_flint_type<T>(),
 								shape.data(), shape.size());
 			// the node which is currently hold is always referenced
 			node->reference_counter = 1;
@@ -261,13 +261,13 @@ template <typename T, unsigned int n> struct Tensor {
 							 std::to_string(node->operation.dimensions) +
 							 " dimensional Tensor into a " + std::to_string(n) +
 							 " dimensional Tensor is not possible!");
-			if (toFlintType<T>() != node->operation.data_type)
+			if (to_flint_type<T>() != node->operation.data_type)
 				flogging(F_ERROR,
 						 "Deserializing data of a " +
-							 FLINT_HPP_HELPER::typeString(
+							 FLINT_HPP_HELPER::type_string(
 								 node->operation.data_type) +
 							 " Tensor into a " +
-							 FLINT_HPP_HELPER::typeString(toFlintType<T>()) +
+							 FLINT_HPP_HELPER::type_string(to_flint_type<T>()) +
 							 " Tensor is not possible!");
 			std::array<size_t, n> shape;
 			for (int i = 0; i < node->operation.dimensions; i++)
@@ -423,12 +423,12 @@ template <typename T, unsigned int n> struct Tensor {
 				 : op.data_type == F_INT64	 ? std::string("long")
 				 : op.data_type == F_FLOAT32 ? std::string("float")
 											 : std::string("double")) +
-				", shape: " + FLINT_HPP_HELPER::arrayString(shape) + ">(";
+				", shape: " + FLINT_HPP_HELPER::array_string(shape) + ">(";
 			if (op.op_type != FSTORE && !node->result_data)
 				foo += "<not yet executed>";
 			else {
 				foo += "\n" +
-					   FLINT_HPP_HELPER::vectorString(this->operator*(), " ");
+					   FLINT_HPP_HELPER::vector_string(this->operator*(), " ");
 			}
 			foo += ")";
 			return foo;
@@ -487,7 +487,7 @@ template <typename T, unsigned int n> struct Tensor {
 		// to calculate the return type of two tensors at compile time
 		template <typename K>
 		using stronger_return =
-			typename std::conditional<isStronger<K, T>(), K, T>::type;
+			typename std::conditional<is_stronger<K, T>(), K, T>::type;
 		/**
 		 * Elementwise addition of this Tensor and `other`. If the dimensions
 		 * differ the smaller Tensor is broadcasted along the first dimensions
@@ -816,7 +816,7 @@ template <typename T, unsigned int n> struct Tensor {
 		 * The data is converted, not reinterpreted.
 		 */
 		template <typename K> Tensor<K, n> convert() const {
-			return Tensor<K, n>(fconvert(node, toFlintType<K>()), shape);
+			return Tensor<K, n>(fconvert(node, to_flint_type<K>()), shape);
 		}
 		/**
 		 * Reshapes this Tensor to a new shape with arbitrary dimensions.
