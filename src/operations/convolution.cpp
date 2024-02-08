@@ -1,6 +1,8 @@
 #include "convolution.hpp"
 #include "../backend_ocl/utils.hpp"
 #include "../utils.hpp"
+#include "flint.h"
+#include "flint_helper.hpp"
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
@@ -27,7 +29,8 @@ FGraphNode *ConvolveImpl::gradient_convolve2(FGraphNode *a, FGraphNode *kernel,
 	gradient->reference_counter = 0;
 	FOperation op;
 	op.broadcasting_mode = 0;
-	op.data_type = F_FLOAT64;
+	op.data_type =
+		higher_type(kernel->operation.data_type, prev_adj->operation.data_type);
 	op.dimensions = kernel->operation.dimensions;
 	op.shape = safe_mal<size_t>(op.dimensions);
 	if (!op.shape)
@@ -64,7 +67,8 @@ FGraphNode *ConvolveImpl::gradient_convolve1(FGraphNode *a, FGraphNode *kernel,
 	gradient->reference_counter = 0;
 	FOperation op;
 	op.broadcasting_mode = 0;
-	op.data_type = F_FLOAT64;
+	op.data_type =
+		higher_type(kernel->operation.data_type, prev_adj->operation.data_type);
 	op.dimensions = a->operation.dimensions;
 	op.shape = safe_mal<size_t>(op.dimensions);
 	if (!op.shape)
@@ -392,7 +396,8 @@ FGraphNode *GradientConvolve1Impl::local_gradient(FGraphNode *y, int dx_i,
 		gradient->result_data = nullptr;
 		gradient->reference_counter = 0;
 		FOperation op;
-		op.data_type = higher_type(kernel->operation.data_type, prev_adj->operation.data_type);
+		op.data_type = higher_type(kernel->operation.data_type,
+								   prev_adj->operation.data_type);
 		op.dimensions = a->operation.dimensions;
 		op.shape = safe_mal<size_t>(op.dimensions);
 		if (!op.shape)
@@ -1020,8 +1025,9 @@ std::string GradientConvolve2Impl::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
 	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P1"
-		   ", const long num_entries1, const int dimensions1, const __global "
-		   "double* P2, const long num_entries2, const int dimensions2, "
+		   ", const long num_entries1, const int dimensions1, const __global " +
+		   type_string(parameter_types[1]) +
+		   "* P2, const long num_entries2, const int dimensions2, "
 		   "const int dimensions0, "
 		   "__constant long* acc_sizes_pred, __constant long* "
 		   "acc_sizes_kernel, "

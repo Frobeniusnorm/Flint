@@ -120,7 +120,7 @@ double convolve_grad_fun() {
 		Tensor<float, 2> err = (foo - 0.7f).abs();
 		err.execute();
 		fStopGradientContext();
-		Tensor<double, 3> grad = err.gradient(ker_t);
+		Tensor<float, 3> grad = err.gradient(ker_t);
 		grad.execute();
 	}
 	return timer.get_elapsed_ms();

@@ -1790,15 +1790,18 @@ template <typename T, unsigned int n> struct Tensor {
 		void set_graph_node(FGraphNode *node) { this->node = node; }
 		/**
 		 * Calculates the gradient of this Tensor to `dx`. A gradient is always
-		 * a Tensor of type `double`. `dx` needs to have been marked with
-		 * `watch` before construction of this Tensor and this Tensor must be
-		 * constructed inside a gradient context, either started by
-		 * `fStartGradientContext` or a `GradientContext` object.
+		 * a floating point Tensor, if both this tensor and `dx` are of type
+		 * float, the gradient is also of type `float`, else of `double`. `dx`
+		 * needs to have been marked with `watch` before construction of this
+		 * Tensor and this Tensor must be constructed inside a gradient context,
+		 * either started by `fStartGradientContext` or a `GradientContext`
+		 * object.
 		 */
 		template <typename K, unsigned int k>
-		Tensor<double, k> gradient(const Tensor<K, k> &dx) const {
-			return Tensor<double, k>(fCalculateGradient(this->node, dx.node),
-									 dx.shape);
+		Tensor<to_float<stronger_return<K>>, k>
+		gradient(const Tensor<K, k> &dx) const {
+			return Tensor<to_float<stronger_return<K>>, k>(
+				fCalculateGradient(this->node, dx.node), dx.shape);
 		}
 		/** Watches this node, i.e. collects information needed to calculate the
 		 * gradient with this node as a derivative */

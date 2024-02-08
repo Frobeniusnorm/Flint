@@ -127,8 +127,9 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 	bool is_data_node = node->operation.op_type == FSTORE;
 	std::vector<CPUResultData> pred_data(node->num_predecessor);
 	size_t total = 1;
-	for (int i = 0; i < node->operation.dimensions; i++)
-		total *= node->operation.shape[i];
+	if (node->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < node->operation.dimensions; i++)
+			total *= node->operation.shape[i];
 	void *data = nullptr;
 
 	if (!is_data_node) {
@@ -162,9 +163,8 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 				pred->operation.shape + pred->operation.dimensions);
 			if (!data && pred->reference_counter == 1 && !reusage.empty() &&
 				reusage[i] &&
-				(pred->operation.op_type !=
-				 FSTORE) && //  || !node->gradient_data
-				pred != node) {
+				(pred->operation.op_type != FSTORE || !node->gradient_data) &&
+				pred->operation.op_type != FGEN_CONSTANT && pred != node) {
 				// recycle data
 				if (pred->result_data) {
 					FResultData *data = pred->result_data;

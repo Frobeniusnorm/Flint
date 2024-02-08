@@ -600,7 +600,7 @@ void SetIndexImpl::execute_cpu_typed(
 	for (size_t i = from; i < from + size; i++) {
 		const size_t base = i / (acc_sizes_ax * op.shape[axis]);
 		const size_t rest = i % acc_sizes_ax;
-		const size_t axi = (i / acc_sizes_ax) % op.shape[axis];
+		const long axi = (i / acc_sizes_ax) % op.shape[axis];
 		const size_t base_ind = base * c.shape[axis];
 		bool found_something = false;
 		result[i] = 0;

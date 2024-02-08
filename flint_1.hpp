@@ -77,8 +77,8 @@ template <typename T> struct Tensor<T, 1> {
 		Tensor(init_type data) : shape{data.size()} {
 			is_tensor_type<T>();
 
-			node = fCreateGraph(std::begin(data), data.size(), to_flint_type<T>(),
-								&shape[0], 1);
+			node = fCreateGraph(std::begin(data), data.size(),
+								to_flint_type<T>(), &shape[0], 1);
 			node->reference_counter = 1;
 		}
 		/**
@@ -189,7 +189,10 @@ template <typename T> struct Tensor<T, 1> {
 				execute();
 			if (!node->result_data->data)
 				fSyncMemory(node);
-			return ((T *)node->result_data->data)[node->operation.op_type == FGEN_CONSTANT ? 0 : index];
+			return (
+				(T *)node->result_data
+					->data)[node->operation.op_type == FGEN_CONSTANT ? 0
+																	 : index];
 		}
 		/**
 		 * Generates a Tensor containing the single given value in every entry.
@@ -221,7 +224,7 @@ template <typename T> struct Tensor<T, 1> {
 		 * Deserializes the binary representation of Tensor data back to a
 		 * Tensor object. The number of bytes read is stored in `bytes_read`.
 		 */
-		static Tensor<T, 1> deserialize(char *data, size_t* bytes_read) {
+		static Tensor<T, 1> deserialize(char *data, size_t *bytes_read) {
 			FGraphNode *node = fdeserialize(data, bytes_read);
 			if (1 != node->operation.dimensions)
 				flogging(F_ERROR,
@@ -943,9 +946,10 @@ template <typename T> struct Tensor<T, 1> {
 		 * `fStartGradientContext` or a `GradientContext` object.
 		 */
 		template <typename K, unsigned int k>
-		Tensor<double, k> gradient(const Tensor<K, k> &dx) const {
-			return Tensor<double, k>(fCalculateGradient(this->node, dx.node),
-									 dx.shape);
+		Tensor<to_float<stronger_return<K>>, k>
+		gradient(const Tensor<K, k> &dx) const {
+			return Tensor<to_float<stronger_return<K>>, k>(
+				fCalculateGradient(this->node, dx.node), dx.shape);
 		}
 		/**
 		 * Creates "views" in an additional dimension of a fixed size windows.

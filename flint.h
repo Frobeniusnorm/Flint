@@ -547,7 +547,8 @@ FGraphNode *fCalculateGradient(FGraphNode *outputfct, FGraphNode *dx);
  * `fMarkGradientVariable` and the output node `outputfct` must be constructed
  * in an gradient context (to remember which variables are directly or
  * indirectly present in which operation), which can be started with
- * `fStartGradientContext`.
+ * `fStartGradientContext`. The gradients are of type `float` if `outputfct`
+ * and `dx` is of type `float`, else of type `double`.
  *
  * - `outputfct`: the Node which represents the chain of functions of which
  *    the gradients are to be computed.

@@ -313,10 +313,12 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
 	}
 	if (!kernel) {
 		setErrorType(OCL_ERROR);
+		for (int i = 0; i < node->num_predecessor; i++)
+			std::cout << type_string(node->predecessors[i]->operation.data_type) << std::endl;
 		flogging(F_ERROR,
 				 "something went horrible wrong for operation: " +
 					 string(fop_to_string[node->operation.op_type]) +
-					 " result type: " + to_string(node->operation.data_type));
+					 " result type: " + type_string(node->operation.data_type));
 		return nullptr;
 	}
 	OCLCompilerThread::eager_programs.push_back(prog);

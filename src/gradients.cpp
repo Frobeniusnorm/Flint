@@ -15,6 +15,7 @@
 #ifndef GRADIENTS_CPP
 #define GRADIENTS_CPP
 #include "../flint.h"
+#include "../flint_helper.hpp"
 #include "backend_ocl/comp.hpp"
 #include "src/errors.hpp"
 #include "src/operations/implementation.hpp"
@@ -159,8 +160,8 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 	// used to determine when a node may be freed
 	unordered_map<const FGraphNode *, unsigned int> needed_by(adjoints.size());
 	// initialize
-	adjoints[y] = constant_tensor(1., y->operation.data_type, y->operation.shape,
-								  y->operation.dimensions);
+	adjoints[y] = constant_tensor(1., y->operation.data_type,
+								  y->operation.shape, y->operation.dimensions);
 	for (FGraphNode *curr : todo) {
 		FGraphNode *adj = adjoints[curr];
 		bool allowed_to_free = true;
@@ -183,10 +184,10 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 				if (local_grad == adj)
 					allowed_to_free = false;
 			}
-		//	std::chrono::duration<double, std::milli> elapsed =
-		//	    std::chrono::high_resolution_clock::now() - start;
-		//	std::cout << fop_to_string[curr->operation.op_type] << " took "
-		//	          << elapsed.count() << " for " << i << std::endl;
+			//	std::chrono::duration<double, std::milli> elapsed =
+			//	    std::chrono::high_resolution_clock::now() - start;
+			//	std::cout << fop_to_string[curr->operation.op_type] << " took "
+			//	          << elapsed.count() << " for " << i << std::endl;
 			fOptimizeMemory(adjoints[parent]);
 		}
 		if (!vars.contains(curr)) {
@@ -203,6 +204,11 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 	for (int i = 0; i < num_gradients; i++) {
 		if (adjoints.contains(dx[i])) {
 			gradients[i] = adjoints[dx[i]];
+			FType higher = higher_type(y->operation.data_type, dx[i]->operation.data_type);
+			if (higher == F_INT32 || higher == F_INT64)
+				higher = F_FLOAT64;
+			if (gradients[i]->operation.data_type != higher)
+				gradients[i] = fconvert(gradients[i], higher);
 		} else {
 			flogging(F_WARNING,
 					 "Operation graph did not contain the derivative!");
