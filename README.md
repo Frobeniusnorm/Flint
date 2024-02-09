@@ -32,7 +32,7 @@ additionally supports eager execution, for e.g. efficient cpu calculation or deb
 
 The main library contains the implementation of the backends, the C++ frontend with the Tensor class and the
 operations with automatic gradient calculations. There is an example implementation of often used deep learning
-algorithms and concepts in the `dl/` folder in work, the documentation can be found in the [https://frobeniusnorm.github.io/Flint/dl.html](project documentation). It will be installed by the `install` target as well.
+algorithms and concepts in the `dl/` folder in work, the documentation can be found in the [documentation](https://frobeniusnorm.github.io/Flint/dl.html). It will be installed by the `install` target as well.
 
 ## Usage ##
 
@@ -40,7 +40,7 @@ For prebuilt versions for Linux see the releases page. However if you want to bu
 C++ compiler, CMake and an installed OpenCL library (headers and the library itself which is usually dependent on the
 manufacturer of the accelerator e.g. NVIDIAs Cuda drivers usually also provide an OpenCL implementation, AMDs rocm stack
 provides their implementation and so on. There are also portable implementations
-like [https://github.com/pocl/pocl](pocl)).
+like [pocl](https://github.com/pocl/pocl)).
 To build the library execute this inside of the project folder:
 
 ```
@@ -96,7 +96,7 @@ pacman -S gcc opencl-headers rocm-opencl-runtime make cmake
 ## Examples ##
 
 There is an example model for the MNIST dataset showcasing the Deep Learning front end and a simple implementation of a Gauss filter with convolutions.
-Both help seeing Flint in action [examples/README.md](https://github.com/Frobeniusnorm/Flint/tree/main/examples#readme)
+Both help seeing Flint in action [https://github.com/Frobeniusnorm/Flint/tree/main/examples#readme](examples/README.md)
 
 ## Contribution ##
 
@@ -105,7 +105,7 @@ Both help seeing Flint in action [examples/README.md](https://github.com/Frobeni
     - You can fix them yourself in a fork and open a merge request with an explanation of the bug and fix
     - You can open an issue with information on how to recreate the bug and how it manifests itself
 - New operations are fairly simple to implement once you get the hang of the operation framework.
-  See [src/operations/README.md](https://github.com/Frobeniusnorm/Flint/tree/main/src/operations#readme)
+  See [https://github.com/Frobeniusnorm/Flint/tree/main/src/operations#readme](src/operations/README.md)
   for a short guide.
 - Performance improvements, refactoring and new features of the rest of the framework are very welcome too, but more
   complex. Start by working through the code in `flint.h` and take a look at the control and data flow
