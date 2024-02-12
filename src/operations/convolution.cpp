@@ -1038,6 +1038,20 @@ std::string GradientConvolve2Impl::generate_ocl_parameters_eager(
 std::string
 GradientConvolve2Impl::generate_ocl_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
+	// TODO optimize for small kernels and large images
+	//  by parallelizing in the image or adjoint and accumulation for the
+	//  kernels (synchronize!)
+	//
+	// BRAINSTORM: every adjoint element corresponds to one kernel-image
+	// multiplication and can be applied to all kernel elements of that
+	// filter. Per Adjoint:
+	// - determine filter-number (last dimensions)
+	// - accumulate area in image with the adjoint as coefficient
+	// - add scaled accumulation to filter
+	//
+	// - Small kernel size <=> double the kernel size and split the number
+	//   of slides against the array to two with asynchronous writes
+	//   in the end the every even index adds the two together..
 	return "if(index >= num_entriesR) return;\n"
 		   "const bool multifilter = dimensions0 > dimensions1;\n"
 		   "const long windows = acc_sizes_windows[0] * prev_adj_shape[0];\n"
