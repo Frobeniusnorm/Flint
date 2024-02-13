@@ -155,8 +155,19 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
 		for (int i = 0; i < node->operation.dimensions; i++)
 			no_elems *= node->operation.shape[i];
 		const unsigned int gpu_score = compute_score(node, true);
-		return no_elems * gpu_score >= 2048 && no_elems > 12 * cores ? fExecuteGraph_gpu(node)
-								 : fExecuteGraph_cpu(node);
+		int cpu_boost = 2, gpu_boost = 2;
+		for (int i = 0; i < node->num_predecessor; i++) {
+			if (node->result_data) {
+				if (!node->result_data->data)
+					cpu_boost = 1;
+				if (!node->result_data->mem_id)
+					gpu_boost = 1;
+			}
+		}
+		return no_elems * gpu_score * gpu_boost >= 2048 * cpu_boost &&
+					   no_elems * gpu_boost > 20 * cores * cpu_boost
+				   ? fExecuteGraph_gpu(node)
+				   : fExecuteGraph_cpu(node);
 	}
 	if (use_gpu)
 		return fExecuteGraph_gpu(node);
@@ -431,8 +442,8 @@ void fUnmarkGradientVariable(FGraphNode *node) {
 	}
 }
 FGraphNode *fOptimizeMemory(FGraphNode *node) {
-	if (!node->gradient_data && node->operation.op_type != FSTORE && node->operation.op_type != FGEN_CONSTANT &&
-		node->result_data) {
+	if (!node->gradient_data && node->operation.op_type != FSTORE &&
+		node->operation.op_type != FGEN_CONSTANT && node->result_data) {
 		FResultData *rd = node->result_data;
 		// we can modify this node to a STORE operation
 		OperationImplementation::implementations[node->operation.op_type]

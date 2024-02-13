@@ -314,7 +314,8 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
 	if (!kernel) {
 		setErrorType(OCL_ERROR);
 		for (int i = 0; i < node->num_predecessor; i++)
-			std::cout << type_string(node->predecessors[i]->operation.data_type) << std::endl;
+			std::cout << type_string(node->predecessors[i]->operation.data_type)
+					  << std::endl;
 		flogging(F_ERROR,
 				 "something went horrible wrong for operation: " +
 					 string(fop_to_string[node->operation.op_type]) +
@@ -363,7 +364,10 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		rd->num_entries = num_elems;
 		rd->mem_id = nullptr;
 		int type_s = type_size(node->operation.data_type);
-		if (data) {
+		if (gpu_data) {
+			rd->mem_id = OCLCompilerThread::copy_memory(
+				gpu_data, type_s * num_elems, CL_MEM_READ_WRITE);
+		} else if (data) {
 			rd->data = malloc(type_s * num_elems);
 			if (!rd->data) {
 				setErrorType(OUT_OF_MEMORY);
@@ -372,9 +376,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 				return nullptr;
 			}
 			memcpy(rd->data, data, type_s * num_elems);
-		} else if (gpu_data) {
-			rd->mem_id = OCLCompilerThread::copy_memory(
-				gpu_data, type_s * num_elems, CL_MEM_READ_WRITE);
 		}
 		node->result_data = rd;
 		return node;
