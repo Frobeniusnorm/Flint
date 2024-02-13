@@ -225,6 +225,10 @@ template <GenericLayer... T> struct SequentialModel {
 			auto start = std::chrono::steady_clock::now();
 			fCalculateGradients(error.get_graph_node(), flat_vars.data(),
 								flat_vars.size(), grads.data());
+			if (profiling) {
+				last_profiling.time_gradient_calculation =
+					(std::chrono::steady_clock::now() - start).count();
+			}
 			// reconstruct for layers
 			std::vector<std::vector<FGraphNode *>> plgrads(vars.size());
 			int index = 0;
@@ -236,10 +240,6 @@ template <GenericLayer... T> struct SequentialModel {
 						curr_grad ? fOptimizeMemory(fExecuteGraph(curr_grad))
 								  : nullptr;
 				}
-			}
-			if (profiling) {
-				last_profiling.time_gradient_calculation =
-					(std::chrono::steady_clock::now() - start).count();
 			}
 			backward<0>(plgrads);
 		}
