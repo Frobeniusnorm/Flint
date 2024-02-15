@@ -79,7 +79,7 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // http://yann.lecun.com/exdb/mnist/
 int main() {
 	FlintContext _(FLINT_BACKEND_ONLY_GPU, F_VERBOSE);
-  fEnableEagerExecution();
+	fEnableEagerExecution();
 	Tensor<float, 3> X = load_mnist_images("train-images-idx3-ubyte");
 	Tensor<float, 2> Y =
 		load_mnist_labels("train-labels-idx1-ubyte").convert<float>();
@@ -106,16 +106,16 @@ int main() {
 		Dropout(0.5),
 		Connected(1600, 10),
 		SoftMax()};
-//	auto shape = m.shape_per_layer(std::array<size_t, 4>{1, 28, 28, 1});
-//	for (int i = 0; i < shape.size(); i++) {
-//		std::cout << "Output " << m.layer_names()[i] << ": [";
-//		for (int j = 0; j < shape[i].size(); j++) {
-//			if (j != 0)
-//				std::cout << ", ";
-//			std::cout << shape[i][j];
-//		}
-//		std::cout << "]" << std::endl;
-//	}
+	//	auto shape = m.shape_per_layer(std::array<size_t, 4>{1, 28, 28, 1});
+	//	for (int i = 0; i < shape.size(); i++) {
+	//		std::cout << "Output " << m.layer_names()[i] << ": [";
+	//		for (int j = 0; j < shape[i].size(); j++) {
+	//			if (j != 0)
+	//				std::cout << ", ";
+	//			std::cout << shape[i][j];
+	//		}
+	//		std::cout << "]" << std::endl;
+	//	}
 	NetworkMetricReporter nmr;
 	m.enable_profiling();
 	std::cout << m.summary() << std::endl;

@@ -330,7 +330,6 @@ cl_kernel OCLCompilerThread::eager_compile(FGraphNode *node, int hash) {
 }
 // pushes additional per-parameter parameters to a opencl function
 FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
-	// TODO include correct constants
 	if (node->result_data)
 		return node;
 	if (node->operation.op_type == FSTORE) {
@@ -557,8 +556,12 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 		}
 	}
 	// execute it
+	size_t execution_size =
+		OperationImplementation::implementations[node->operation.op_type]
+			->deploy_as_many_elements(node);
+	// usually divisable by two for this
 	err_code = clEnqueueNDRangeKernel(
-		clqueue, kernel, 1, nullptr, &total_size_node, nullptr,
+		clqueue, kernel, 1, nullptr, &execution_size, nullptr,
 		write_events.size(), write_events.data(), nullptr);
 	for (cl_event ev : write_events)
 		clReleaseEvent(ev);

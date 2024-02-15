@@ -92,13 +92,16 @@ static void chooseExecutionMethod(FGraphNode *node,
 	const size_t score =
 		size * OperationImplementation::implementations[node->operation.op_type]
 				   ->operation_score(node);
-	if (score >= PARALLEL_EXECUTION_SIZE && size >= threads.size()) {
-		const size_t exeUnits = std::min(size, threads.size());
-		const size_t workSize = size / exeUnits;
+	const size_t dis_num =
+		OperationImplementation::implementations[node->operation.op_type]
+			->deploy_as_many_elements(node);
+	if (score >= PARALLEL_EXECUTION_SIZE && dis_num >= threads.size()) {
+		const size_t exeUnits = std::min(dis_num, threads.size());
+		const size_t workSize = dis_num / exeUnits;
 		std::counting_semaphore<MAX_PARALLELITY> *sem =
 			new std::counting_semaphore<MAX_PARALLELITY>(0);
 		for (size_t i = 0; i < exeUnits; i++) {
-			const size_t to = i == exeUnits - 1 ? size : (i + 1) * workSize;
+			const size_t to = i == exeUnits - 1 ? dis_num : (i + 1) * workSize;
 			thread_queue.push_front({node, pred_data, result, i * workSize,
 									 to - i * workSize, sem});
 		}
@@ -107,7 +110,7 @@ static void chooseExecutionMethod(FGraphNode *node,
 		delete sem;
 	} else {
 		OperationImplementation::implementations[node->operation.op_type]
-			->execute_cpu(node, pred_data, result, 0, size);
+			->execute_cpu(node, pred_data, result, 0, dis_num);
 	}
 	std::chrono::duration<double, std::milli> elapsed =
 		std::chrono::high_resolution_clock::now() - start;
