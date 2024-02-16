@@ -567,6 +567,7 @@ FGraphNode *fmax_g(FGraphNode *a, FGraphNode *b) {
 }
 template <typename T>
 static FGraphNode *addNodeWithConst(FOperation op, FGraphNode *a, const T b) {
+	// TODO USE GEN_CONSTANT FOR GODS SAKE THATS WHY I HAVE WRITTEN IT
 	FStore *store = new FStore();
 	T *cons_val = (T *)malloc(sizeof(T));
 	cons_val[0] = b;
