@@ -29,7 +29,7 @@
 #include <vector>
 
 template <typename T> inline T *safe_mal(unsigned int count) {
-	T *data = (T *)malloc(sizeof(T) * count);
+	T *data = (T *)calloc(count, sizeof(T));
 	if (!data) {
 		setErrorType(OUT_OF_MEMORY);
 		flogging(F_ERROR, "Could not malloc '" +

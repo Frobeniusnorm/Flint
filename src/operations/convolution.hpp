@@ -164,5 +164,6 @@ struct GradientConvolve2Impl : OperationImplementation {
 		void free_additional_data(FGraphNode *gn) override {
 			free(gn->operation.additional_data);
 		}
+		size_t deploy_as_many_elements(const FGraphNode *node) override;
 };
 #endif

@@ -572,6 +572,10 @@ TEST_SUITE("Autodiff") {
 				}
 			}
 		}
+		// just for testing if it runs
+		Tensor<float, 4> a = Flint::random(100, 60, 60, 3).convert<float>();
+		Tensor<float, 5> b = Flint::random(1, 6, 5, 5, 3).convert<float>();
+		a.convolve(b, 3, 3)();
 	}
 	TEST_CASE("Concat, Exponential") {
 		GradientContext _;

@@ -131,7 +131,7 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 							   const unsigned int num_gradients,
 							   FGraphNode **gradients) {
 	using namespace std;
-  cout << " = Calculate Gradients = " << endl;
+	// cout << " = Calculate Gradients = " << endl;
 	unordered_set<const FGraphNode *> *gd =
 		(unordered_set<const FGraphNode *> *)y->gradient_data;
 	if (!gd) {
@@ -187,9 +187,11 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 			}
 			fOptimizeMemory(adjoints[parent]);
 			std::chrono::duration<double, std::milli> elapsed =
-			    std::chrono::high_resolution_clock::now() - start;
-			std::cout << fop_to_string[curr->operation.op_type] << " took "
-			          << elapsed.count() << " for " << i << " type: " << type_string(local_grad->operation.data_type) << std::endl;
+				std::chrono::high_resolution_clock::now() - start;
+			// std::cout << fop_to_string[curr->operation.op_type] << " took "
+			//           << elapsed.count() << " for " << i << " type: " <<
+			//           type_string(local_grad->operation.data_type) <<
+			//           std::endl;
 		}
 		if (!vars.contains(curr)) {
 			if (--adj->reference_counter <= 0) {
@@ -205,7 +207,8 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 	for (int i = 0; i < num_gradients; i++) {
 		if (adjoints.contains(dx[i])) {
 			gradients[i] = adjoints[dx[i]];
-			FType higher = higher_type(y->operation.data_type, dx[i]->operation.data_type);
+			FType higher =
+				higher_type(y->operation.data_type, dx[i]->operation.data_type);
 			if (higher == F_INT32 || higher == F_INT64)
 				higher = F_FLOAT64;
 			if (gradients[i]->operation.data_type != higher)

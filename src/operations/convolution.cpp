@@ -885,6 +885,41 @@ FGraphNode *GradientConvolve2Impl::local_gradient(FGraphNode *y, int dx_i,
 		return nullptr;
 	}
 }
+/**
+ * Calculates total number of elemens (can be retreived by providing a pointer
+ * to `total_elems`) and deceides if an by how many threads a element should be
+ * split.
+ */
+static int
+size_multiplier_convolve_kernel_gradient(const FGraphNode *node,
+										 size_t *total_elems = nullptr) {
+	const FOperation op = node->operation;
+	const FGraphNode *gnp1 = node->predecessors[0],
+					 *gnp2 = node->predecessors[1];
+	const FOperation pred = gnp1->operation, prev_adj = gnp2->operation;
+	const bool multifilter = op.dimensions > pred.dimensions;
+	std::vector<size_t> acc_sizes_windows(multifilter ? prev_adj.dimensions - 1
+													  : prev_adj.dimensions);
+	acc_sizes_windows[acc_sizes_windows.size() - 1] = 1;
+	for (int i = acc_sizes_windows.size() - 2; i >= 0; i--)
+		acc_sizes_windows[i] = acc_sizes_windows[i + 1] * prev_adj.shape[i + 1];
+	// total number of windows
+	const size_t windows = acc_sizes_windows[0] * prev_adj.shape[0];
+	// total number of elements
+	size_t num_elems = 1;
+	for (int d = 0; d < node->operation.dimensions; d++)
+		num_elems *= node->operation.shape[d];
+	if (total_elems)
+		*total_elems = num_elems;
+	return 1;
+	// calculate multiplicator
+	if (num_elems <= 500 && windows >= 16)
+		return 4;
+	else if (num_elems < 2000 && windows >= 8)
+		return 2;
+	else
+		return 1;
+}
 template <typename T, typename A, typename B>
 void GradientConvolve2Impl::binary_expression(
 	T *__restrict__ result, const A *__restrict__ data1,
@@ -899,6 +934,9 @@ void GradientConvolve2Impl::binary_expression(
 	//   shape(op) = [filter, k1, k2, ..., kn, c]
 	//   shape(pred) = [p1, p2, ..., pn, c]
 	//   shape(prev_adj) = [w1, w2, ..., wn, filter]
+
+	// multiplication coefficient
+	const int c = size_multiplier_convolve_kernel_gradient(curr, nullptr);
 	const FOperation op = curr->operation;
 	const FGraphNode *gnp1 = curr->predecessors[0],
 					 *gnp2 = curr->predecessors[1];
@@ -921,7 +959,13 @@ void GradientConvolve2Impl::binary_expression(
 		multifilter ? acc_sizes_kernel[0] : acc_sizes_kernel[0] * op.shape[0];
 	const unsigned int *steps = (unsigned int *)op.additional_data;
 	const unsigned int num_filter = multifilter ? op.shape[0] : 1;
-	for (size_t i = from; i < from + size; i++) {
+	const int window_work_load = windows / c;
+	for (size_t i_m = from; i_m < from + size; i_m++) {
+		const int i = i_m / c;
+		const int window_thread = i_m % c;
+		const int to = window_thread == (c - 1)
+						   ? windows
+						   : (window_thread + 1) * window_work_load;
 		// filter entry of current iteration for multifilter
 		size_t f = 0;
 		if (multifilter) {
@@ -933,23 +977,31 @@ void GradientConvolve2Impl::binary_expression(
 			size_t ki = (i / acc_sizes_kernel[j]) % op.shape[j];
 			a_offset += ki * acc_sizes_pred[multifilter ? j - 1 : j];
 		}
-		result[i] = 0;
+		auto target = atomic_ref<T>(result[i]);
 		// iterate over windows = adjoint elements in first dimensions
-		for (size_t w = 0; w < windows; w++) {
+		// we split windows for the thread iterations
+		for (size_t w = window_thread * window_work_load; w < to; w++) {
 			// calculate start value of window for pred
 			size_t a = 0;
 			for (int j = 0; j < acc_sizes_windows.size(); j++) {
 				size_t wj = (w / acc_sizes_windows[j]) % prev_adj.shape[j];
 				a += wj * acc_sizes_pred[j] * steps[j];
 			}
-			result[i] +=
+			const T res =
 				data1[gnp1->operation.op_type == FGEN_CONSTANT ? 0
 															   : a + a_offset] *
 				data2[gnp2->operation.op_type == FGEN_CONSTANT
 						  ? 0
 						  : w * num_filter + f];
+			target += res;
 		}
 	}
+}
+size_t GradientConvolve2Impl::deploy_as_many_elements(const FGraphNode *node) {
+	size_t num_elems;
+	// calculate multiplicator
+	const int c = size_multiplier_convolve_kernel_gradient(node, &num_elems);
+	return c * num_elems;
 }
 int GradientConvolve2Impl::generate_ocl_lazy(
 	const FGraphNode *node, std::string name,
@@ -1038,20 +1090,6 @@ std::string GradientConvolve2Impl::generate_ocl_parameters_eager(
 std::string
 GradientConvolve2Impl::generate_ocl_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
-	// TODO optimize for small kernels and large images
-	//  by parallelizing in the image or adjoint and accumulation for the
-	//  kernels (synchronize!)
-	//
-	// BRAINSTORM: every adjoint element corresponds to one kernel-image
-	// multiplication and can be applied to all kernel elements of that
-	// filter. Per Adjoint:
-	// - determine filter-number (last dimensions)
-	// - accumulate area in image with the adjoint as coefficient
-	// - add scaled accumulation to filter
-	//
-	// - Small kernel size <=> double the kernel size and split the number
-	//   of slides against the array to two with asynchronous writes
-	//   in the end the every even index adds the two together..
 	return "if(index >= num_entriesR) return;\n"
 		   "const bool multifilter = dimensions0 > dimensions1;\n"
 		   "const long windows = acc_sizes_windows[0] * prev_adj_shape[0];\n"
