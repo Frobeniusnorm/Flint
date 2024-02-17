@@ -115,7 +115,7 @@ static void chooseExecutionMethod(FGraphNode *node,
 	std::chrono::duration<double, std::milli> elapsed =
 		std::chrono::high_resolution_clock::now() - start;
 	flogging(F_DEBUG,
-			 (score >= PARALLEL_EXECUTION_SIZE && size >= threads.size()
+			 (score >= PARALLEL_EXECUTION_SIZE && dis_num >= threads.size()
 				  ? std::string("Parallel Execution on CPU (score: " +
 								std::to_string(score) + ")")
 				  : std::string("Sequential Execution on CPU (score: " +

@@ -565,54 +565,6 @@ FGraphNode *fmax_g(FGraphNode *a, FGraphNode *b) {
 	op.data_type = higher_type(a->operation.data_type, b->operation.data_type);
 	return addNode(op, {a, b});
 }
-template <typename T>
-static FGraphNode *addNodeWithConst(FOperation op, FGraphNode *a, const T b) {
-	// TODO USE GEN_CONSTANT FOR GODS SAKE THATS WHY I HAVE WRITTEN IT
-	FStore *store = new FStore();
-	T *cons_val = (T *)malloc(sizeof(T));
-	cons_val[0] = b;
-	store->data = cons_val;
-	store->num_entries = 1;
-	store->mem_id = nullptr;
-	FOperation cop;
-	cop.broadcasting_mode = 0;
-	cop.op_type = FSTORE;
-	cop.dimensions = 1;
-	cop.shape = safe_mal<size_t>(1);
-	if (!cop.shape)
-		return nullptr;
-	cop.shape[0] = 1;
-	cop.additional_data = (void *)store;
-	cop.data_type = to_flint_type<T>();
-	return addNode(op, {a, addNode(cop, {})});
-}
-template <typename T>
-static FGraphNode *addConstWithNode(FOperation op, const T b, FGraphNode *a) {
-	FStore *store = new FStore();
-	T *cons_val = (T *)malloc(sizeof(T));
-	*cons_val = b;
-	store->data = (void *)cons_val;
-	store->num_entries = 1;
-	store->mem_id = nullptr;
-	FOperation cop;
-	cop.broadcasting_mode = 0;
-	cop.op_type = FSTORE;
-	cop.dimensions = 1;
-	cop.shape = safe_mal<size_t>(1);
-	if (!cop.shape)
-		return nullptr;
-	cop.shape[0] = 1;
-	cop.additional_data = (void *)store;
-	if (typeid(T) == typeid(int))
-		cop.data_type = F_INT32;
-	else if (typeid(T) == typeid(long))
-		cop.data_type = F_INT64;
-	else if (typeid(T) == typeid(float))
-		cop.data_type = F_FLOAT32;
-	else if (typeid(T) == typeid(double))
-		cop.data_type = F_FLOAT64;
-	return addNode(op, {addNode(cop, {}), a});
-}
 // creates tensor consisting of a single value
 template <typename T>
 static inline FGraphNode *constant(const T value, const size_t *shape,
@@ -632,7 +584,16 @@ static inline FGraphNode *constant(const T value, const size_t *shape,
 	((T *)op.additional_data)[0] = value;
 	return addNode(op, {});
 }
-
+template <typename T>
+static FGraphNode *addNodeWithConst(FOperation op, FGraphNode *a, const T b) {
+	return addNode(
+		op, {a, constant(b, a->operation.shape, a->operation.dimensions)});
+}
+template <typename T>
+static FGraphNode *addConstWithNode(FOperation op, const T b, FGraphNode *a) {
+	return addNode(
+		op, {constant(b, a->operation.shape, a->operation.dimensions), a});
+}
 FGraphNode *fconstant_i(const int value, const size_t *shape,
 						const int dimensions) {
 	return constant(value, shape, dimensions);

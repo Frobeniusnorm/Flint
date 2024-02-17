@@ -69,7 +69,7 @@ TEST_SUITE("Graph implementation") {
 			CHECK_EQ(store2->num_entries, 100);
 			FGraphNode *left1 = gn2->predecessors[0];
 			FGraphNode *const1 = left1->predecessors[1];
-			CHECK_EQ(const1->operation.op_type, FSTORE);
+			CHECK_EQ(const1->operation.op_type, FGEN_CONSTANT);
 			fFreeGraph(gn2);
 		}
 	}
