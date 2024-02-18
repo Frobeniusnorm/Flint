@@ -360,7 +360,7 @@ void ConvolveImpl::push_additional_kernel_parameters(
 		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
 							  std::to_string(err_code));
 	to_free.push_back(steps_mem);
-	// total size of image (because of constants that have size of 1 in result
+	// total size of image (because of constants that have size of 1 in result)
 	size_t total_elements_image = 1, total_elements_kernel = 1;
 	for (int i = 0; i < gnp1->operation.dimensions; i++)
 		total_elements_image *= gnp1->operation.shape[i];
@@ -725,8 +725,7 @@ std::string GradientConvolve1Impl::generate_ocl_parameters_eager(
 		   "__constant long* acc_sizes_kernel"
 		   ", __constant long* acc_sizes, __constant long* acc_overlapping"
 		   ", __constant int* steps, __constant long* op_shape, __constant "
-		   "long* kernel_shape, const long total_elements_kernel, const long "
-		   "total_elements_image";
+		   "long* kernel_shape";
 }
 std::string
 GradientConvolve1Impl::generate_ocl_eager(FType res_type,
@@ -793,8 +792,8 @@ GradientConvolve1Impl::generate_ocl_eager(FType res_type,
 		   "   if(!skip_kernel){\n"
 		   "    started_counting = true;\n"
 		   "    "
-		   "res+=P0[(filter*acc_sizes_kernel[0]+kero+keri)%total_elements_"
-		   "kernel]*P1[(adjo+adji)%total_elements_image];\n"
+		   "res+=P0[(filter*acc_sizes_kernel[0]+kero+keri)%num_entries0"
+		   "]*P1[(adjo+adji)%num_entries1];\n"
 		   "   }\n"
 		   "   actual_overlapping++;\n"
 		   "  }\n"
@@ -843,26 +842,6 @@ void GradientConvolve1Impl::push_additional_kernel_parameters(
 		push_array(op.dimensions, op.shape, kernel, context, par_index));
 	to_free.push_back(push_array(kernel_op.dimensions, kernel_op.shape, kernel,
 								 context, par_index));
-	// total sizes
-	size_t num_entries1 = 1, num_entries2 = 1;
-	if (gnp1->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < gnp1->operation.dimensions; i++)
-			num_entries1 *= gnp1->operation.shape[i];
-	if (gnp2->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < gnp2->operation.dimensions; i++)
-			num_entries2 *= gnp2->operation.shape[i];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&num_entries1) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&num_entries2) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
 }
 FGraphNode *GradientConvolve2Impl::local_gradient(FGraphNode *y, int dx_i,
 												  FGraphNode *prev_adj) {
@@ -1084,7 +1063,6 @@ std::string GradientConvolve2Impl::generate_ocl_parameters_eager(
 		   "acc_sizes_kernel, "
 		   "__constant long* acc_sizes_windows, __constant int* steps, "
 		   "__constant long* op_shape, __constant long* prev_adj_shape, const "
-		   "long total_elements_image, const long total_elements_kernel, const "
 		   "int c";
 }
 std::string
@@ -1119,8 +1097,8 @@ GradientConvolve2Impl::generate_ocl_eager(FType res_type,
 		   "prev_adj_shape[j];\n"
 		   "  a += wj * acc_sizes_pred[j] * steps[j];\n"
 		   " }\n"
-		   " res += P1[(a + a_offset) % total_elements_image] * P2[(w * "
-		   "num_filter + f) % total_elements_kernel];\n"
+		   " res += P1[(a + a_offset) % num_entries1] * P2[(w * "
+		   "num_filter + f) % num_entries2];\n"
 		   "}\n"
 		   "for(int t = 0; t < c; t++){\n"
 		   " barrier(CLK_GLOBAL_MEM_FENCE);\n"
@@ -1180,25 +1158,6 @@ void GradientConvolve2Impl::push_additional_kernel_parameters(
 			flogging(F_ERROR,
 					 "Could not load Argument to kernel! Error Code: " +
 						 std::to_string(err_code));
-	}
-	size_t num_entries1 = 1, num_entries2 = 1;
-	if (gnp1->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < gnp1->operation.dimensions; i++)
-			num_entries1 *= gnp1->operation.shape[i];
-	if (gnp2->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < gnp2->operation.dimensions; i++)
-			num_entries2 *= gnp2->operation.shape[i];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&num_entries1) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&num_entries2) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
 	}
 	const int c = size_multiplier_convolve_kernel_gradient(node, nullptr);
 	if (clSetKernelArg(kernel, par_index++, sizeof(int), &c) != CL_SUCCESS) {
