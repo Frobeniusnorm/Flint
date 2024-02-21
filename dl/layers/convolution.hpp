@@ -117,7 +117,7 @@ static Tensor<T, n> applyPadding(Tensor<T, n> &input,
  *   ceil((input_shape - kernel_size + 1) / steps), filters) =
  *   (100, 49, 49, 10)`.
  */
-template <int n> class Convolution : public Layer<n, 1> {
+template <int n, typename F = float> class Convolution : public Layer<F, n, 1> {
 		constexpr std::array<size_t, n> weight_shape(unsigned int filters,
 													 unsigned int kernel_size,
 													 size_t units_in) {
@@ -164,10 +164,10 @@ template <int n> class Convolution : public Layer<n, 1> {
 					unsigned int kernel_size, InitWeights weight_init,
 					InitBias bias_init, std::array<unsigned int, n - 2> stride,
 					PaddingMode padding_mode = NO_PADDING)
-			: Layer<n, 1>(weight_init.template initialize<double>(
-							  weight_shape(filters, kernel_size, units_in)),
-						  bias_init.template initialize<double>(
-							  std::array<size_t, 1>{(size_t)filters})),
+			: Layer<F, n, 1>(weight_init.template initialize<F>(
+								 weight_shape(filters, kernel_size, units_in)),
+							 bias_init.template initialize<F>(
+								 std::array<size_t, 1>{(size_t)filters})),
 			  padding_mode(padding_mode), kernel_size(kernel_size) {
 			initialize_precalc(stride);
 		}
@@ -191,10 +191,10 @@ template <int n> class Convolution : public Layer<n, 1> {
 					unsigned int kernel_size,
 					std::array<unsigned int, n - 2> stride,
 					PaddingMode padding_mode = NO_PADDING)
-			: Layer<n, 1>(GlorotUniform().template initialize<double>(
-							  weight_shape(filters, kernel_size, units_in)),
-						  ConstantInitializer().template initialize<double>(
-							  std::array<size_t, 1>{(size_t)filters})),
+			: Layer<F, n, 1>(GlorotUniform().template initialize<F>(
+								 weight_shape(filters, kernel_size, units_in)),
+							 ConstantInitializer().template initialize<F>(
+								 std::array<size_t, 1>{(size_t)filters})),
 			  padding_mode(padding_mode), kernel_size(kernel_size) {
 
 			initialize_precalc(stride);
@@ -202,36 +202,38 @@ template <int n> class Convolution : public Layer<n, 1> {
 		std::string name() override { return "Convolution"; }
 		std::string description() override {
 			const unsigned int filters =
-				Layer<n, 1>::template get_weight<0>().get_shape()[0];
+				Layer<F, n, 1>::template get_weight<0>().get_shape()[0];
 			const unsigned int units_in =
-				Layer<n, 1>::template get_weight<0>().get_shape()[n - 1];
+				Layer<F, n, 1>::template get_weight<0>().get_shape()[n - 1];
 			const unsigned int kernel_size =
-				Layer<n, 1>::template get_weight<0>().get_shape()[1];
+				Layer<F, n, 1>::template get_weight<0>().get_shape()[1];
 			return "input channels: " + std::to_string(units_in) +
 				   " filters: " + std::to_string(filters) +
 				   ", kernel size: " + std::to_string(kernel_size);
 		}
 		template <typename T, unsigned int k>
-		Tensor<double, k> forward(Tensor<T, k> &in) {
+		Tensor<LayerHelper::FlintTypeToCpp<Layer<F, n, 1>::transform_type(to_flint_type<T>())>,
+			   k>
+		forward(Tensor<T, k> &in) {
 			// allow optimizations of in
 			in.get_graph_node()->reference_counter--;
 			in.execute();
 			const unsigned int filters =
-				Layer<n, 1>::template get_weight<0>().get_shape()[0];
+				Layer<F, n, 1>::template get_weight<0>().get_shape()[0];
 			// actual convolve
 			// This works but the gradient still needs improvement -> backward
 			// broadcast
-			Tensor<double, n + 1> filter =
-				Layer<n, 1>::template get_weight<0>().expand(1, 1);
+			Tensor<F, n + 1> filter =
+				Layer<F, n, 1>::template get_weight<0>().expand(1, 1);
 			std::array<unsigned int, n> padding_stride;
 			memcpy(padding_stride.data(), act_stride.data(),
 				   sizeof(unsigned int) * (n - 1));
 			padding_stride[n - 1] = in.get_shape()[k - 1];
-			Tensor<double, n> res =
+			Tensor<F, n> res =
 				(padding_mode != NO_PADDING
 					 ? applyPadding(
 						   in,
-						   Layer<n, 1>::template get_weight<0>().get_shape(),
+						   Layer<F, n, 1>::template get_weight<0>().get_shape(),
 						   padding_stride, padding_mode)
 					 : in)
 					.convolve_array(filter, act_stride);
@@ -242,8 +244,9 @@ template <int n> class Convolution : public Layer<n, 1> {
 			bias_shape[n - 2] = filters;
 			for (int i = 0; i < n - 2; i++)
 				bias_shape[i] = 1;
-			Tensor<double, n - 1> bias =
-				Layer<n, 1>::template get_weight<1>().reshape_array(bias_shape);
+			Tensor<F, n - 1> bias =
+				Layer<F, n, 1>::template get_weight<1>().reshape_array(
+					bias_shape);
 			std::array<int, n - 1> bias_repeat;
 			bias_repeat[n - 2] = 0;
 			for (int i = 0; i < n - 2; i++)

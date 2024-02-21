@@ -140,8 +140,7 @@ pooling_gpu_eager_params(FType res_type, std::vector<FType> parameter_types) {
 		   ", const long num_entries0, const int dimensions0"
 		   ", __constant long* acc_sizes_pred, __constant long* "
 		   "acc_sizes_kernel, __constant long* acc_sizes, __constant int* "
-		   "steps, const long pred_last_shape, const long kernel_num_elems, "
-		   "const long total_op_size";
+		   "steps, const long pred_last_shape, const long kernel_num_elems";
 }
 template <FOperationType operation>
 static std::string pooling_gpu_eager(FType res_type,
@@ -170,9 +169,9 @@ static std::string pooling_gpu_eager(FType res_type,
 			" }"
 			" for(long ld = 0; ld < pred_last_shape; ld++){";
 	if constexpr (operation == FPOOLING_SUM) {
-		code += "  res += P0[(j + o + ld) % total_op_size];\n";
+		code += "  res += P0[(j + o + ld) % num_entries0];\n";
 	} else {
-		code += "  res = max(res, P0[(j + o + ld) % total_op_size]);\n";
+		code += "  res = max(res, P0[(j + o + ld) % num_entries0]);\n";
 	}
 	code += " }\n"
 			"}\n"
@@ -213,13 +212,6 @@ static void push_pooling_parameters(FGraphNode *node, cl_kernel kernel,
 	if (clSetKernelArg(kernel, par_index++, sizeof(long), &kernel_num_elems) !=
 		CL_SUCCESS)
 		flogging(F_ERROR, "Could not load Arguments to kernel!");
-	size_t total_op_size = 1;
-	if (pred.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < pred.dimensions; i++)
-			total_op_size *= pred.shape[i];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long), &total_op_size) !=
-		CL_SUCCESS)
-		flogging(F_ERROR, "Could not load Arguments to kernel!");
 }
 
 FGraphNode *PoolingSumImpl::local_gradient(FGraphNode *y, int dx_i,
@@ -234,7 +226,8 @@ FGraphNode *PoolingSumImpl::local_gradient(FGraphNode *y, int dx_i,
 										window.step + y->operation.dimensions);
 		window_size.push_back(a->operation.shape[a->operation.dimensions - 1]);
 		FGraphNode *constant_1 =
-			fconstant_d(1, window_size.data(), a->operation.dimensions);
+			constant_tensor(1, a->operation.data_type, window_size.data(),
+							a->operation.dimensions);
 		return ConvolveImpl::gradient_convolve1(a, constant_1, prev_adj,
 												window.step);
 	} else
@@ -617,7 +610,7 @@ int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node,
 			 "  if(!skip_kernel && equal){\n"
 			 "   started_counting = true;\n"
 			 "   " +
-			 name + " += " + par2 + (cd1 ? "[0]" : "[adji + adjo]") +
+			 name + " += " + par2 + (cd2 ? "[0]" : "[adji + adjo]") +
 			 ";\n"
 			 " }\n"
 			 " actual_overlapping++;\n}\n}\n}\n";
@@ -639,8 +632,7 @@ std::string GradientPoolingMax::generate_ocl_parameters_eager(
 		   "__constant long* acc_sizes_kernel"
 		   ", __constant long* acc_sizes, __constant long* acc_overlapping"
 		   ", __constant int* steps, __constant long* op_shape, __constant "
-		   "long* kernel_shape, const long total_elements0, const long "
-		   "total_elements1, const long total_elements2";
+		   "long* kernel_shape";
 }
 std::string
 GradientPoolingMax::generate_ocl_eager(FType res_type,
@@ -693,10 +685,18 @@ GradientPoolingMax::generate_ocl_eager(FType res_type,
 		   "   }\n"
 		   "   adjo += ao * acc_sizes[d];\n"
 		   "  }\n"
-		   "  if(!skip_kernel && P0[(adjo + adji) % total_elements0] == "
-		   "P2[index % total_elements2]){\n"
+		   "  const " +
+		   type_string(parameter_types[0]) +
+		   " el_max = P0[(adjo + adji) % num_entries0];\n"
+		   "  const " +
+		   type_string(parameter_types[2]) +
+		   " el_orig = P2[index % num_entries2];\n"
+		   "  if(!skip_kernel && (el_max + " +
+		   epsilon_for_type(parameter_types[0]) + " >= el_orig && el_max - " +
+		   epsilon_for_type(parameter_types[0]) +
+		   " <= el_orig)){\n"
 		   "   started_counting = true;\n"
-		   "   res+=P1[(adjo+adji) % total_elements1];\n"
+		   "   res+=P1[(adjo+adji) % num_entries1];\n"
 		   "  }\n"
 		   "  actual_overlapping++;\n"
 		   " }\n"
@@ -714,7 +714,7 @@ void GradientPoolingMax::push_additional_kernel_parameters(
 	const FSlidingWindow *window =
 		(FSlidingWindow *)gnp1->operation.additional_data;
 	std::vector<size_t> kernel_shape(window->size,
-									 window->size + op.dimensions);
+									 window->size + gnp1->operation.dimensions);
 	kernel_shape.push_back(op.shape[op.dimensions - 1]);
 	unsigned int *steps = window->step;
 	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
@@ -731,10 +731,6 @@ void GradientPoolingMax::push_additional_kernel_parameters(
 										 (double)steps[i + 1])) *
 			acc_overlapping[i + 1];
 	}
-	const size_t overlapping =
-		std::max(1l,
-				 (long)std::ceil((double)kernel_shape[0] / (double)steps[0])) *
-		acc_overlapping[0];
 	to_free.push_back(push_array(acc_overlapping.size(), acc_overlapping.data(),
 								 kernel, context, par_index));
 	to_free.push_back(
@@ -743,25 +739,6 @@ void GradientPoolingMax::push_additional_kernel_parameters(
 		push_array(op.dimensions, op.shape, kernel, context, par_index));
 	to_free.push_back(push_array(kernel_shape.size(), kernel_shape.data(),
 								 kernel, context, par_index));
-	size_t total_elements0 = 1, total_elements1 = 1, total_elements2 = 1;
-	if (gnp1->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < gnp1->operation.dimensions; i++)
-			total_elements0 *= gnp1->operation.shape[i];
-	if (gnp2->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < gnp2->operation.dimensions; i++)
-			total_elements1 *= gnp2->operation.shape[i];
-	if (gnp3->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < gnp3->operation.dimensions; i++)
-			total_elements2 *= gnp3->operation.shape[i];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long), &total_elements0) !=
-		CL_SUCCESS)
-		flogging(F_ERROR, "Could not load Arguments to kernel!");
-	if (clSetKernelArg(kernel, par_index++, sizeof(long), &total_elements1) !=
-		CL_SUCCESS)
-		flogging(F_ERROR, "Could not load Arguments to kernel!");
-	if (clSetKernelArg(kernel, par_index++, sizeof(long), &total_elements2) !=
-		CL_SUCCESS)
-		flogging(F_ERROR, "Could not load Arguments to kernel!");
 }
 void GradientPoolingMax::execute_cpu(
 	const FGraphNode *node, std::vector<CPUResultData> predecessor_data,

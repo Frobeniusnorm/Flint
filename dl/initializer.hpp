@@ -60,7 +60,7 @@ struct UniformRandom {
 			: minval(minval), maxval(maxval) {}
 		template <typename T, long unsigned int n>
 		Tensor<T, n> initialize(std::array<size_t, n> shape) {
-			return Flint::random_array(shape) * (maxval - minval) - minval;
+			return (Flint::random_array(shape) * (maxval - minval) - minval).template convert<T>();
 		}
 };
 
@@ -74,7 +74,7 @@ struct GlorotUniform {
 			unsigned int fan_in, fan_out;
 			compute_fans(shape, fan_in, fan_out);
 			double limit = std::sqrt(6. / (fan_in + fan_out));
-			return Flint::random_normal(shape, limit);
+			return Flint::random_normal(shape, limit).template convert<T>();
 		}
 };
 

@@ -69,7 +69,7 @@ TEST_SUITE("Graph implementation") {
 			CHECK_EQ(store2->num_entries, 100);
 			FGraphNode *left1 = gn2->predecessors[0];
 			FGraphNode *const1 = left1->predecessors[1];
-			CHECK_EQ(const1->operation.op_type, FSTORE);
+			CHECK_EQ(const1->operation.op_type, FGEN_CONSTANT);
 			fFreeGraph(gn2);
 		}
 	}
@@ -113,6 +113,7 @@ TEST_SUITE("Execution") {
 		CHECK_EQ(rd->num_entries, 10);
 		for (size_t i = 0; i < rd->num_entries; i++)
 			CHECK_EQ(((double *)rd->data)[i], 44);
+		result->reference_counter++;
 		// construct graph 2 (first not-tree)
 		vector<float> v3(10);
 		for (int i = 0; i < 10; i++)
@@ -122,6 +123,7 @@ TEST_SUITE("Execution") {
 		gn2->reference_counter++;
 		FGraphNode *gn3 = fadd(gn2, result);
 		gn3 = fadd(gn3, result);
+		result->reference_counter--;
 		gn3 = fsub(gn3, 80);
 		gn3 = fadd(gn3, gn2);
 		gn2->reference_counter--; // free handle
@@ -260,8 +262,10 @@ TEST_SUITE("Execution") {
 		vector<int> f5 = flattened(d5);
 		vector<size_t> s5{6, 2};
 		g = fCreateGraph(f3.data(), f3.size(), F_INT32, s3.data(), 3);
+		g->reference_counter++;
 		FGraphNode *g1 = fflatten(g, 2);
 		FGraphNode *g2 = fflatten(g, 1);
+		g->reference_counter--;
 		FGraphNode *g11 =
 			fCreateGraph(f4.data(), f4.size(), F_INT32, s4.data(), 2);
 		FGraphNode *g21 =
@@ -1304,7 +1308,6 @@ TEST_SUITE("Known Bugs") {
 		}
 	}
 	TEST_CASE("Constants") {
-		fSetLoggingLevel(F_DEBUG);
 		Tensor<float, 1> c1 = Flint::constant(1.5f, 9);
 		Tensor<float, 2> c2 = Flint::constant(1.5f, 9, 2);
 		auto r1 = c1 + c2;
@@ -1323,7 +1326,6 @@ TEST_SUITE("Known Bugs") {
 			}
 			CHECK_EQ(doctest::Approx(r5[i]), 3.f);
 		}
-		fSetLoggingLevel(F_VERBOSE);
 	}
 }
 TEST_SUITE("Advanced Broadcasting") {

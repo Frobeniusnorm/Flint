@@ -75,6 +75,9 @@ struct GenConstantImpl : OperationImplementation {
 		kernel_type_combinations(const FGraphNode *node) override {
 			return {{F_INT32}, {F_INT64}, {F_FLOAT32}, {F_FLOAT64}};
 		}
+		size_t deploy_as_many_elements(const FGraphNode *node) override {
+			return 1;
+		}
 };
 
 struct GenArangeImpl : OperationImplementation {

@@ -20,7 +20,7 @@
  * this happens in one matrix multiplication, the input tensor is padded with a
  * 1 in its last dimension and the bias is the last row of the matrix).
  */
-struct Connected : public Layer<2> {
+template <typename F = float> struct Connected : public Layer<F, 2> {
 		/**
 		 * Creates the layer and initializes the weights.
 		 * - `units_in` size of the last dimension of the input tensors (will be
@@ -37,10 +37,10 @@ struct Connected : public Layer<2> {
 		template <Initializer InitWeights, Initializer InitBias>
 		Connected(size_t units_in, size_t units_out, InitWeights init_weights,
 				  InitBias init_bias)
-			: Layer<2>(
-				  Flint::concat(init_weights.template initialize<double>(
+			: Layer<F, 2>(
+				  Flint::concat(init_weights.template initialize<F>(
 									std::array<size_t, 2>{units_in, units_out}),
-								init_bias.template initialize<double>(
+								init_bias.template initialize<F>(
 									std::array<size_t, 2>{1, units_out}),
 								0)) {}
 		/**
@@ -55,28 +55,31 @@ struct Connected : public Layer<2> {
 		 * the bias with 0s.
 		 */
 		Connected(size_t units_in, size_t units_out)
-			: Layer<2>(Flint::concat(
-				  GlorotUniform().template initialize<double>(
+			: Layer<F, 2>(Flint::concat(
+				  GlorotUniform().template initialize<F>(
 					  std::array<size_t, 2>{units_in, units_out}),
-				  ConstantInitializer().template initialize<double>(
+				  ConstantInitializer().template initialize<F>(
 					  std::array<size_t, 2>{1, units_out}),
 				  0)) {}
 		template <typename T, unsigned int n>
-		Tensor<double, n> forward(Tensor<T, n> &in) {
+		Tensor<
+			LayerHelper::FlintTypeToCpp<Layer<F, n, 1>::transform_type(to_flint_type<T>())>,
+			n>
+		forward(Tensor<T, n> &in) {
 			std::array<size_t, n> one_shape = in.get_shape();
 			one_shape[n - 1] = 1;
-      // allow optimization of in
-      in.get_graph_node()->reference_counter--;
-      // create one column for bias
+			// allow optimization of in
+			in.get_graph_node()->reference_counter--;
+			// create one column for bias
 			Tensor<T, n> ones = Flint::constant_array<T, n>(1, one_shape);
-      auto a = Flint::concat(in, ones, n - 1);
-      // prevent destructor to remove memory
-      in.set_graph_node(nullptr);
-			return a.matmul(get_weight<0>());
+			auto a = Flint::concat(in, ones, n - 1);
+			// prevent destructor to remove memory
+			in.set_graph_node(nullptr);
+			return a.matmul(Layer<F, 2>::template get_weight<0>());
 		}
 		std::string name() override { return "Connected"; }
 		std::string description() override {
-			return std::to_string(get_weight<0>().get_shape()[0]) + " * " +
-				   std::to_string(get_weight<0>().get_shape()[1]);
+			return std::to_string(Layer<F, 2>::template get_weight<0>().get_shape()[0]) + " * " +
+				   std::to_string(Layer<F, 2>::template get_weight<0>().get_shape()[1]);
 		}
 };

@@ -127,13 +127,6 @@ struct GradientConvolve1Impl : OperationImplementation {
 		void free_additional_data(FGraphNode *gn) override {
 			free(gn->operation.additional_data);
 		}
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT64, F_INT32, F_FLOAT64},
-					{F_FLOAT64, F_INT64, F_FLOAT64},
-					{F_FLOAT64, F_FLOAT32, F_FLOAT64},
-					{F_FLOAT64, F_FLOAT64, F_FLOAT64}};
-		}
 };
 struct GradientConvolve2Impl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -171,12 +164,6 @@ struct GradientConvolve2Impl : OperationImplementation {
 		void free_additional_data(FGraphNode *gn) override {
 			free(gn->operation.additional_data);
 		}
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT64, F_INT32, F_FLOAT64},
-					{F_FLOAT64, F_INT64, F_FLOAT64},
-					{F_FLOAT64, F_FLOAT32, F_FLOAT64},
-					{F_FLOAT64, F_FLOAT64, F_FLOAT64}};
-		}
+		size_t deploy_as_many_elements(const FGraphNode *node) override;
 };
 #endif

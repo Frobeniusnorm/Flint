@@ -120,14 +120,14 @@ template <GenericLayer... T> struct SequentialModel {
 		 */
 		template <typename K, unsigned int n>
 		Tensor<LayerHelper::FlintTypeToCpp<
-				   get_output_type<toFlintType<K>(), T...>()>,
+				   get_output_type<to_flint_type<K>(), T...>()>,
 			   get_output_dim<n, T...>()>
 		forward_batch(Tensor<K, n> &in) {
 			in.get_graph_node()->reference_counter++;
 			auto out =
 				forward_helper<0,
 							   LayerHelper::FlintTypeToCpp<
-								   get_output_type<toFlintType<K>(), T...>()>,
+								   get_output_type<to_flint_type<K>(), T...>()>,
 							   get_output_dim<n, T...>(), K, n>(
 					in.get_graph_node());
 			return out;
@@ -138,7 +138,7 @@ template <GenericLayer... T> struct SequentialModel {
 		 */
 		template <typename K, unsigned int n>
 		Tensor<LayerHelper::FlintTypeToCpp<
-				   get_output_type<toFlintType<K>(), T...>()>,
+				   get_output_type<to_flint_type<K>(), T...>()>,
 			   get_output_dim<n, T...>()>
 		forward(Tensor<K, n> &in) {
 			// because layers expect batches
@@ -147,7 +147,7 @@ template <GenericLayer... T> struct SequentialModel {
 			auto out =
 				forward_helper<0,
 							   LayerHelper::FlintTypeToCpp<
-								   get_output_type<toFlintType<K>(), T...>()>,
+								   get_output_type<to_flint_type<K>(), T...>()>,
 							   get_output_dim<n + 1, T...>(), K, n + 1>(
 					expanded.get_graph_node());
 			return out;
@@ -225,6 +225,10 @@ template <GenericLayer... T> struct SequentialModel {
 			auto start = std::chrono::steady_clock::now();
 			fCalculateGradients(error.get_graph_node(), flat_vars.data(),
 								flat_vars.size(), grads.data());
+			if (profiling) {
+				last_profiling.time_gradient_calculation =
+					(std::chrono::steady_clock::now() - start).count();
+			}
 			// reconstruct for layers
 			std::vector<std::vector<FGraphNode *>> plgrads(vars.size());
 			int index = 0;
@@ -236,10 +240,6 @@ template <GenericLayer... T> struct SequentialModel {
 						curr_grad ? fOptimizeMemory(fExecuteGraph(curr_grad))
 								  : nullptr;
 				}
-			}
-			if (profiling) {
-				last_profiling.time_gradient_calculation =
-					(std::chrono::steady_clock::now() - start).count();
 			}
 			backward<0>(plgrads);
 		}
@@ -439,7 +439,7 @@ template <GenericLayer... T> struct SequentialModel {
 				return forward_helper<
 					layer + 1, T2, n2,
 					LayerHelper::FlintTypeToCpp<
-						get_layer_type<layer, toFlintType<T1>(), 0, T...>()>,
+						get_layer_type<layer, to_flint_type<T1>(), 0, T...>()>,
 					get_layer_dim<layer, n1, 0, T...>()>(out);
 			}
 		}

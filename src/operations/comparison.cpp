@@ -15,6 +15,7 @@
 #include "../utils.hpp"
 #include "flint.h"
 #include <cstring>
+#include <limits>
 #include <random>
 
 #define MIN_VAL(x, y) (x < y ? x : y)
@@ -114,7 +115,7 @@ void MaxImpl::execute_cpu(const FGraphNode *node,
 
 FGraphNode *LessImpl::local_gradient(FGraphNode *y, int dx_i,
 									 FGraphNode *prev_adj) {
-	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
+	return constant_tensor(0.0, y->operation.data_type, y->operation.shape,
 						   y->operation.dimensions);
 }
 template <typename A, typename B>
@@ -155,7 +156,7 @@ void LessImpl::execute_cpu(const FGraphNode *node,
 
 FGraphNode *GreaterImpl::local_gradient(FGraphNode *y, int dx_i,
 										FGraphNode *prev_adj) {
-	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
+	return constant_tensor(0.0, y->operation.data_type, y->operation.shape,
 						   y->operation.dimensions);
 }
 template <typename A, typename B>
@@ -197,7 +198,7 @@ void GreaterImpl::execute_cpu(const FGraphNode *node,
 
 FGraphNode *EqualImpl::local_gradient(FGraphNode *y, int dx_i,
 									  FGraphNode *prev_adj) {
-	return constant_tensor(0.0, F_FLOAT64, y->operation.shape,
+	return constant_tensor(0.0, y->operation.data_type, y->operation.shape,
 						   y->operation.dimensions);
 }
 template <typename A, typename B>
@@ -207,11 +208,13 @@ void EqualImpl::binary_expression(int *__restrict__ result,
 								  size_t size, size_t index_man_1,
 								  size_t inv_man_1, size_t index_man_2,
 								  size_t inv_man_2, const FGraphNode *curr) {
-	for (size_t i = from; i < from + size; i++)
-		result[i] = data1[(i / inv_man_1) % index_man_1] ==
-							data2[(i / inv_man_2) % index_man_2]
-						? 1
-						: 0;
+	const A e1 = numeric_limits<A>::epsilon();
+	const B e2 = numeric_limits<B>::epsilon();
+	for (size_t i = from; i < from + size; i++) {
+		const A d1 = data1[(i / inv_man_1) % index_man_1];
+		const B d2 = data2[(i / inv_man_2) % index_man_2];
+		result[i] = d1 + e1 >= d2 && d2 + e2 >= d1 ? 1 : 0;
+	}
 }
 int EqualImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								 OCLLazyCodegenState &compiler_state) {

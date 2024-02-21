@@ -150,7 +150,7 @@ TEST_SUITE("Autodiff") {
 		r.watch();
 		Tensor<float, 4> e = t.pow(r + 1);
 
-		Tensor<double, 4> dt = e.gradient(t);
+		Tensor<float, 4> dt = e.gradient(t);
 		CHECK_EQ(Approx(0.75).epsilon(0.001), dt[0][0][0][0]);
 		CHECK_EQ(Approx(108).epsilon(0.001), dt[0][0][0][1]);
 		CHECK_EQ(Approx(-6).epsilon(0.001), dt[0][0][1][1]);
@@ -158,7 +158,7 @@ TEST_SUITE("Autodiff") {
 		CHECK_EQ(Approx(585.93744).epsilon(0.01), dt[0][1][1][1]);
 		CHECK_EQ(Approx(-1707830.5).epsilon(1), dt[0][2][0][1]);
 		CHECK_EQ(Approx(1280.).epsilon(0.01), dt[0][2][1][0]);
-		Tensor<double, 2> dr = e.gradient(r);
+		Tensor<float, 2> dr = e.gradient(r);
 		CHECK_EQ(0, dr[0][0]);
 		CHECK_EQ(Approx(88.987595).epsilon(0.001), dr[0][1]);
 		CHECK_EQ(Approx(1425.7234).epsilon(0.01), dr[1][0]);
@@ -226,7 +226,7 @@ TEST_SUITE("Autodiff") {
 		Tensor<float, 2> a{{0, 3, -1}, {0.5, 2.5, 1}};
 		a.watch();
 		Tensor<float, 1> b = a.reduce_sum(1) * 2;
-		Tensor<double, 2> da = b.gradient(a);
+		Tensor<float, 2> da = b.gradient(a);
 		for (int i = 0; i < 2; i++)
 			for (int j = 0; j < 3; j++)
 				CHECK_EQ(2, da[i][j]);
@@ -234,14 +234,14 @@ TEST_SUITE("Autodiff") {
 							   {{7, 9}, {3.5, 77}, {10, 10}}};
 		x.watch();
 		Tensor<double, 1> w = (x.reduce_sum(2) * a).reduce_sum(0);
-		da = w.gradient(a);
+		Tensor<double, 2> da2 = w.gradient(a);
 		Tensor<double, 3> dx = w.gradient(x);
-		CHECK_EQ(117.3, da[0][0]);
-		CHECK_EQ(8, da[0][1]);
-		CHECK_EQ(53, da[0][2]);
-		CHECK_EQ(16, da[1][0]);
-		CHECK_EQ(80.5, da[1][1]);
-		CHECK_EQ(20, da[1][2]);
+		CHECK_EQ(117.3, da2[0][0]);
+		CHECK_EQ(8, da2[0][1]);
+		CHECK_EQ(53, da2[0][2]);
+		CHECK_EQ(16, da2[1][0]);
+		CHECK_EQ(80.5, da2[1][1]);
+		CHECK_EQ(20, da2[1][2]);
 		CHECK_EQ(0.0, dx[0][0][0]);
 		CHECK_EQ(0.0, dx[0][0][1]);
 		CHECK_EQ(3.0, dx[0][1][0]);
@@ -255,12 +255,12 @@ TEST_SUITE("Autodiff") {
 		CHECK_EQ(1, dx[1][2][0]);
 		CHECK_EQ(1, dx[1][2][1]);
 		Tensor<double, 2> t = (x.reduce_mul(2) * a + 3) * a.reduce_mul(0);
-		da = t.gradient(a);
-		CHECK_EQ(18.75, da[0][0]);
-		CHECK_EQ(-194, da[0][2]);
-		CHECK_EQ(0, da[1][0]);
-		CHECK_EQ(4204.5, da[1][1]);
-		CHECK_EQ(-56, da[1][2]);
+		da2 = t.gradient(a);
+		CHECK_EQ(18.75, da2[0][0]);
+		CHECK_EQ(-194, da2[0][2]);
+		CHECK_EQ(0, da2[1][0]);
+		CHECK_EQ(4204.5, da2[1][1]);
+		CHECK_EQ(-56, da2[1][2]);
 		dx = t.gradient(x);
 		CHECK_EQ(0, dx[0][0][0]);
 		CHECK_EQ(0, dx[0][0][1]);
@@ -318,7 +318,7 @@ TEST_SUITE("Autodiff") {
 		Tensor<long, 1> y = {9, 7, 13};
 		y.watch();
 		Tensor<float, 1> z = (y * 0.5f).sqrt();
-		Tensor<double, 1> dy = z.gradient(y);
+		Tensor<float, 1> dy = z.gradient(y);
 		using doctest::Approx;
 		CHECK_EQ(Approx(0.11785114).epsilon(0.000001), dy[0]);
 		CHECK_EQ(Approx(0.13363062).epsilon(0.000001), dy[1]);
@@ -539,8 +539,8 @@ TEST_SUITE("Autodiff") {
 		Tensor<float, 3> y2 =
 			x.convolve(k2, 2, 1) * Tensor<float, 3>{{{1, 2}, {-1, 1}, {2, -1}},
 													{{3, 2}, {-1, 3}, {1, 1}}};
-		Tensor<double, 4> dk2 = y2.gradient(k2);
-		Tensor<double, 4> exp = {
+		Tensor<float, 4> dk2 = y2.gradient(k2);
+		Tensor<float, 4> exp = {
 			{{{0 * 1 + 1 * -1 + 2 * 2 - 2 * 3 - 5 * -1 - 8 * 1,
 			   1 * 1 + 2 * -1 + 3 * 2 - 3 * 3 - 6 * -1 - 9 * 1,
 			   2 * 1 + 3 * -1 + 4 * 2 - 4 * 3 - 7 * -1 + 0},
@@ -572,6 +572,10 @@ TEST_SUITE("Autodiff") {
 				}
 			}
 		}
+		// just for testing if it runs
+		Tensor<float, 4> a = Flint::random(100, 60, 60, 3).convert<float>();
+		Tensor<float, 5> b = Flint::random(1, 6, 5, 5, 3).convert<float>();
+		a.convolve(b, 3, 3)();
 	}
 	TEST_CASE("Concat, Exponential") {
 		GradientContext _;
@@ -644,13 +648,13 @@ TEST_SUITE("Autodiff") {
 		Tensor<int, 3> a{{{0, 9, 4}, {-1, 7, 4}, {7, 7, 2}}};
 		a.watch();
 		Tensor<float, 2> a1 = a.reduce_max(0) * 42.0f;
-		Tensor<double, 3> da1 = a1.gradient(a);
+		Tensor<float, 3> da1 = a1.gradient(a);
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 3; j++) {
 				CHECK_EQ(doctest::Approx(42.0), da1[0][i][j]);
 			}
 		Tensor<float, 2> a2 = a.reduce_max(1) * 42.0f;
-		Tensor<double, 3> da2 = a2.gradient(a);
+		Tensor<float, 3> da2 = a2.gradient(a);
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 3; j++) {
 				if ((i == 0 && j == 1) || ((i == 0 || i == 1) && j == 2) ||
@@ -660,7 +664,7 @@ TEST_SUITE("Autodiff") {
 					CHECK_EQ(doctest::Approx(0.0), da2[0][i][j]);
 			}
 		Tensor<float, 2> a3 = a.reduce_max(2) * 42.0f;
-		Tensor<double, 3> da3 = a3.gradient(a);
+		Tensor<float, 3> da3 = a3.gradient(a);
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 3; j++) {
 				if ((i == 0 && j == 1) || (i == 1 && j == 1) ||
@@ -674,7 +678,7 @@ TEST_SUITE("Autodiff") {
 							{7.42313574159321333, 7.42313574159321333, 2}}};
 		b.watch();
 		Tensor<float, 2> b4 = b.reduce_max(2) * 42.0f;
-		Tensor<double, 3> db4 = b4.gradient(b);
+		Tensor<float, 3> db4 = b4.gradient(b);
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 3; j++) {
 				if ((i == 0 && j == 1) || (i == 1 && j == 1) ||
@@ -719,7 +723,7 @@ TEST_SUITE("Autodiff") {
 									 {{0, 1, 0, 0}, {0, 1, 0, 0}}};
 		Tensor<float, 3> pred =
 			(in / in.reduce_sum(2).expand(2, in.get_shape()[2]));
-		Tensor<double, 3> grad = pred.gradient(in);
+		Tensor<float, 3> grad = pred.gradient(in);
 		for (int j = 0; j < 4; j++) {
 			for (int i = 0; i < 2; i++) {
 				CHECK_EQ(doctest::Approx(0), grad[0][i][j]);
@@ -733,11 +737,11 @@ TEST_SUITE("Autodiff") {
 		Tensor<float, 3> in = {{{77, -3, 76, 79}, {123, 54, 1024, 1023}},
 							   {{0.5, 0.9, -312, 2}, {-5, -6, -7, -8}}};
 		in.watch();
-		auto v = in * 7;
-		auto t1 = v / v;
-		auto t2 = v / (in * 7);
-		auto g1 = t1.gradient(in);
-		auto g2 = t2.gradient(in);
+		Tensor<float, 3> v = in * 7;
+		Tensor<float, 3> t1 = v / v;
+		Tensor<float, 3> t2 = v / (in * 7);
+		Tensor<float, 3> g1 = t1.gradient(in);
+		Tensor<float, 3> g2 = t2.gradient(in);
 		CHECK_EQ((t1.equal(t2) - 1).reduce_sum()[0], 0);
 		CHECK_EQ((g1.equal(g2) - 1).reduce_sum()[0], 0);
 		auto t3 = in * 7;

@@ -1,6 +1,8 @@
 #include "convolution.hpp"
 #include "../backend_ocl/utils.hpp"
 #include "../utils.hpp"
+#include "flint.h"
+#include "flint_helper.hpp"
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
@@ -27,7 +29,8 @@ FGraphNode *ConvolveImpl::gradient_convolve2(FGraphNode *a, FGraphNode *kernel,
 	gradient->reference_counter = 0;
 	FOperation op;
 	op.broadcasting_mode = 0;
-	op.data_type = F_FLOAT64;
+	op.data_type =
+		higher_type(kernel->operation.data_type, prev_adj->operation.data_type);
 	op.dimensions = kernel->operation.dimensions;
 	op.shape = safe_mal<size_t>(op.dimensions);
 	if (!op.shape)
@@ -64,7 +67,8 @@ FGraphNode *ConvolveImpl::gradient_convolve1(FGraphNode *a, FGraphNode *kernel,
 	gradient->reference_counter = 0;
 	FOperation op;
 	op.broadcasting_mode = 0;
-	op.data_type = F_FLOAT64;
+	op.data_type =
+		higher_type(kernel->operation.data_type, prev_adj->operation.data_type);
 	op.dimensions = a->operation.dimensions;
 	op.shape = safe_mal<size_t>(op.dimensions);
 	if (!op.shape)
@@ -356,7 +360,7 @@ void ConvolveImpl::push_additional_kernel_parameters(
 		flogging(F_ERROR, "Could not load Argument to kernel! Error Code: " +
 							  std::to_string(err_code));
 	to_free.push_back(steps_mem);
-	// total size of image (because of constants that have size of 1 in result
+	// total size of image (because of constants that have size of 1 in result)
 	size_t total_elements_image = 1, total_elements_kernel = 1;
 	for (int i = 0; i < gnp1->operation.dimensions; i++)
 		total_elements_image *= gnp1->operation.shape[i];
@@ -392,7 +396,8 @@ FGraphNode *GradientConvolve1Impl::local_gradient(FGraphNode *y, int dx_i,
 		gradient->result_data = nullptr;
 		gradient->reference_counter = 0;
 		FOperation op;
-		op.data_type = F_FLOAT64;
+		op.data_type = higher_type(kernel->operation.data_type,
+								   prev_adj->operation.data_type);
 		op.dimensions = a->operation.dimensions;
 		op.shape = safe_mal<size_t>(op.dimensions);
 		if (!op.shape)
@@ -720,8 +725,7 @@ std::string GradientConvolve1Impl::generate_ocl_parameters_eager(
 		   "__constant long* acc_sizes_kernel"
 		   ", __constant long* acc_sizes, __constant long* acc_overlapping"
 		   ", __constant int* steps, __constant long* op_shape, __constant "
-		   "long* kernel_shape, const long total_elements_kernel, const long "
-		   "total_elements_image";
+		   "long* kernel_shape";
 }
 std::string
 GradientConvolve1Impl::generate_ocl_eager(FType res_type,
@@ -788,8 +792,8 @@ GradientConvolve1Impl::generate_ocl_eager(FType res_type,
 		   "   if(!skip_kernel){\n"
 		   "    started_counting = true;\n"
 		   "    "
-		   "res+=P0[(filter*acc_sizes_kernel[0]+kero+keri)%total_elements_"
-		   "kernel]*P1[(adjo+adji)%total_elements_image];\n"
+		   "res+=P0[(filter*acc_sizes_kernel[0]+kero+keri)%num_entries0"
+		   "]*P1[(adjo+adji)%num_entries1];\n"
 		   "   }\n"
 		   "   actual_overlapping++;\n"
 		   "  }\n"
@@ -838,26 +842,6 @@ void GradientConvolve1Impl::push_additional_kernel_parameters(
 		push_array(op.dimensions, op.shape, kernel, context, par_index));
 	to_free.push_back(push_array(kernel_op.dimensions, kernel_op.shape, kernel,
 								 context, par_index));
-	// total sizes
-	size_t num_entries1 = 1, num_entries2 = 1;
-	if (gnp1->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < gnp1->operation.dimensions; i++)
-			num_entries1 *= gnp1->operation.shape[i];
-	if (gnp2->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < gnp2->operation.dimensions; i++)
-			num_entries2 *= gnp2->operation.shape[i];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&num_entries1) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&num_entries2) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
 }
 FGraphNode *GradientConvolve2Impl::local_gradient(FGraphNode *y, int dx_i,
 												  FGraphNode *prev_adj) {
@@ -880,6 +864,40 @@ FGraphNode *GradientConvolve2Impl::local_gradient(FGraphNode *y, int dx_i,
 		return nullptr;
 	}
 }
+/**
+ * Calculates total number of elemens (can be retreived by providing a pointer
+ * to `total_elems`) and deceides if an by how many threads a element should be
+ * split.
+ */
+static int
+size_multiplier_convolve_kernel_gradient(const FGraphNode *node,
+										 size_t *total_elems = nullptr) {
+	const FOperation op = node->operation;
+	const FGraphNode *gnp1 = node->predecessors[0],
+					 *gnp2 = node->predecessors[1];
+	const FOperation pred = gnp1->operation, prev_adj = gnp2->operation;
+	const bool multifilter = op.dimensions > pred.dimensions;
+	std::vector<size_t> acc_sizes_windows(multifilter ? prev_adj.dimensions - 1
+													  : prev_adj.dimensions);
+	acc_sizes_windows[acc_sizes_windows.size() - 1] = 1;
+	for (int i = acc_sizes_windows.size() - 2; i >= 0; i--)
+		acc_sizes_windows[i] = acc_sizes_windows[i + 1] * prev_adj.shape[i + 1];
+	// total number of windows
+	const size_t windows = acc_sizes_windows[0] * prev_adj.shape[0];
+	// total number of elements
+	size_t num_elems = 1;
+	for (int d = 0; d < node->operation.dimensions; d++)
+		num_elems *= node->operation.shape[d];
+	if (total_elems)
+		*total_elems = num_elems;
+	// calculate multiplicator
+	if (num_elems <= 500 && windows >= 16)
+		return 4;
+	else if (num_elems < 2000 && windows >= 8)
+		return 2;
+	else
+		return 1;
+}
 template <typename T, typename A, typename B>
 void GradientConvolve2Impl::binary_expression(
 	T *__restrict__ result, const A *__restrict__ data1,
@@ -894,6 +912,9 @@ void GradientConvolve2Impl::binary_expression(
 	//   shape(op) = [filter, k1, k2, ..., kn, c]
 	//   shape(pred) = [p1, p2, ..., pn, c]
 	//   shape(prev_adj) = [w1, w2, ..., wn, filter]
+
+	// multiplication coefficient
+	const int c = size_multiplier_convolve_kernel_gradient(curr, nullptr);
 	const FOperation op = curr->operation;
 	const FGraphNode *gnp1 = curr->predecessors[0],
 					 *gnp2 = curr->predecessors[1];
@@ -916,7 +937,13 @@ void GradientConvolve2Impl::binary_expression(
 		multifilter ? acc_sizes_kernel[0] : acc_sizes_kernel[0] * op.shape[0];
 	const unsigned int *steps = (unsigned int *)op.additional_data;
 	const unsigned int num_filter = multifilter ? op.shape[0] : 1;
-	for (size_t i = from; i < from + size; i++) {
+	const size_t window_work_load = windows / c;
+	for (size_t i_m = from; i_m < from + size; i_m++) {
+		const int i = i_m / c;
+		const int window_thread = i_m % c;
+		const size_t to = window_thread == (c - 1)
+							  ? windows
+							  : (window_thread + 1) * window_work_load;
 		// filter entry of current iteration for multifilter
 		size_t f = 0;
 		if (multifilter) {
@@ -928,23 +955,31 @@ void GradientConvolve2Impl::binary_expression(
 			size_t ki = (i / acc_sizes_kernel[j]) % op.shape[j];
 			a_offset += ki * acc_sizes_pred[multifilter ? j - 1 : j];
 		}
-		result[i] = 0;
+		auto target = atomic_ref<T>(result[i]);
 		// iterate over windows = adjoint elements in first dimensions
-		for (size_t w = 0; w < windows; w++) {
+		// we split windows for the thread iterations
+		for (size_t w = window_thread * window_work_load; w < to; w++) {
 			// calculate start value of window for pred
 			size_t a = 0;
 			for (int j = 0; j < acc_sizes_windows.size(); j++) {
 				size_t wj = (w / acc_sizes_windows[j]) % prev_adj.shape[j];
 				a += wj * acc_sizes_pred[j] * steps[j];
 			}
-			result[i] +=
+			const T res =
 				data1[gnp1->operation.op_type == FGEN_CONSTANT ? 0
 															   : a + a_offset] *
 				data2[gnp2->operation.op_type == FGEN_CONSTANT
 						  ? 0
 						  : w * num_filter + f];
+			target += res;
 		}
 	}
+}
+size_t GradientConvolve2Impl::deploy_as_many_elements(const FGraphNode *node) {
+	size_t num_elems;
+	// calculate multiplicator
+	const int c = size_multiplier_convolve_kernel_gradient(node, &num_elems);
+	return c * num_elems;
 }
 int GradientConvolve2Impl::generate_ocl_lazy(
 	const FGraphNode *node, std::string name,
@@ -1020,21 +1055,27 @@ std::string GradientConvolve2Impl::generate_ocl_parameters_eager(
 	FType res_type, std::vector<FType> parameter_types) {
 	return ", const __global " + type_string(parameter_types[0]) +
 		   "* P1"
-		   ", const long num_entries1, const int dimensions1, const __global "
-		   "double* P2, const long num_entries2, const int dimensions2, "
+		   ", const long num_entries1, const int dimensions1, const __global " +
+		   type_string(parameter_types[1]) +
+		   "* P2, const long num_entries2, const int dimensions2, "
 		   "const int dimensions0, "
 		   "__constant long* acc_sizes_pred, __constant long* "
 		   "acc_sizes_kernel, "
 		   "__constant long* acc_sizes_windows, __constant int* steps, "
 		   "__constant long* op_shape, __constant long* prev_adj_shape, const "
-		   "long total_elements_image, const long total_elements_kernel";
+		   "int c";
 }
 std::string
 GradientConvolve2Impl::generate_ocl_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
+	return "const long i_m = index;\nindex /= c;\n"
+		   "if(index >= num_entriesR) return;\n"
+		   "const int window_thread = i_m % c;\n"
 		   "const bool multifilter = dimensions0 > dimensions1;\n"
 		   "const long windows = acc_sizes_windows[0] * prev_adj_shape[0];\n"
+		   "const long window_work_load = windows / c;\n"
+		   "const long to = window_thread == (c-1) ? windows : (window_thread "
+		   "+ 1) * window_work_load;\n"
 		   "const long num_elems_kernel = multifilter ? acc_sizes_kernel[0] : "
 		   "acc_sizes_kernel[0] * op_shape[0];\n"
 		   "const int num_filter = multifilter ? op_shape[0] : 1;\n"
@@ -1044,8 +1085,10 @@ GradientConvolve2Impl::generate_ocl_eager(FType res_type,
 		   " const long ki = (index / acc_sizes_kernel[j]) % op_shape[j];\n"
 		   " a_offset += ki * acc_sizes_pred[multifilter ? j - 1 : j];\n"
 		   "}\n"
-		   "R[index] = 0;\n"
-		   "for(long w = 0; w < windows; w++){\n"
+		   //"R[index] = 0;\n"
+		   + type_string(res_type) +
+		   " res = 0;\n"
+		   "for(long w = window_thread * window_work_load; w < to; w++){\n"
 		   " long a = 0;"
 		   " for(int j = 0; j < (multifilter ? dimensions2 - 1 : "
 		   "dimensions2); "
@@ -1054,8 +1097,13 @@ GradientConvolve2Impl::generate_ocl_eager(FType res_type,
 		   "prev_adj_shape[j];\n"
 		   "  a += wj * acc_sizes_pred[j] * steps[j];\n"
 		   " }\n"
-		   " R[index] += P1[(a + a_offset) % total_elements_image] * P2[(w * "
-		   "num_filter + f) % total_elements_kernel];\n"
+		   " res += P1[(a + a_offset) % num_entries1] * P2[(w * "
+		   "num_filter + f) % num_entries2];\n"
+		   "}\n"
+		   "for(int t = 0; t < c; t++){\n"
+		   " barrier(CLK_GLOBAL_MEM_FENCE);\n"
+		   " if(window_thread == t)\n"
+		   "  R[index] += res;\n"
 		   "}\n";
 }
 void GradientConvolve2Impl::push_additional_kernel_parameters(
@@ -1111,21 +1159,8 @@ void GradientConvolve2Impl::push_additional_kernel_parameters(
 					 "Could not load Argument to kernel! Error Code: " +
 						 std::to_string(err_code));
 	}
-	size_t num_entries1 = 1, num_entries2 = 1;
-	if (gnp1->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < gnp1->operation.dimensions; i++)
-			num_entries1 *= gnp1->operation.shape[i];
-	if (gnp2->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < gnp2->operation.dimensions; i++)
-			num_entries2 *= gnp2->operation.shape[i];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&num_entries1) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&num_entries2) != CL_SUCCESS) {
+	const int c = size_multiplier_convolve_kernel_gradient(node, nullptr);
+	if (clSetKernelArg(kernel, par_index++, sizeof(int), &c) != CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Could not load Argument to kernel!");
 		return;

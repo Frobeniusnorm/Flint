@@ -44,8 +44,8 @@ template <typename T> struct Tensor<T, 1> {
 		 * }
 		 */
 		Tensor(storage_type data) : shape{data.size()} {
-			isTensorType<T>();
-			node = fCreateGraph(data.data(), data.size(), toFlintType<T>(),
+			is_tensor_type<T>();
+			node = fCreateGraph(data.data(), data.size(), to_flint_type<T>(),
 								&shape[0], 1);
 			node->reference_counter = 1;
 		}
@@ -75,10 +75,10 @@ template <typename T> struct Tensor<T, 1> {
 		 * }
 		 */
 		Tensor(init_type data) : shape{data.size()} {
-			isTensorType<T>();
+			is_tensor_type<T>();
 
-			node = fCreateGraph(std::begin(data), data.size(), toFlintType<T>(),
-								&shape[0], 1);
+			node = fCreateGraph(std::begin(data), data.size(),
+								to_flint_type<T>(), &shape[0], 1);
 			node->reference_counter = 1;
 		}
 		/**
@@ -189,7 +189,10 @@ template <typename T> struct Tensor<T, 1> {
 				execute();
 			if (!node->result_data->data)
 				fSyncMemory(node);
-			return ((T *)node->result_data->data)[node->operation.op_type == FGEN_CONSTANT ? 0 : index];
+			return (
+				(T *)node->result_data
+					->data)[node->operation.op_type == FGEN_CONSTANT ? 0
+																	 : index];
 		}
 		/**
 		 * Generates a Tensor containing the single given value in every entry.
@@ -221,7 +224,7 @@ template <typename T> struct Tensor<T, 1> {
 		 * Deserializes the binary representation of Tensor data back to a
 		 * Tensor object. The number of bytes read is stored in `bytes_read`.
 		 */
-		static Tensor<T, 1> deserialize(char *data, size_t* bytes_read) {
+		static Tensor<T, 1> deserialize(char *data, size_t *bytes_read) {
 			FGraphNode *node = fdeserialize(data, bytes_read);
 			if (1 != node->operation.dimensions)
 				flogging(F_ERROR,
@@ -229,13 +232,13 @@ template <typename T> struct Tensor<T, 1> {
 							 std::to_string(node->operation.dimensions) +
 							 " dimensional Tensor into a 1 dimensional"
 							 " Tensor is not possible!");
-			if (toFlintType<T>() != node->operation.data_type)
+			if (to_flint_type<T>() != node->operation.data_type)
 				flogging(F_ERROR,
 						 "Deserializing data of a " +
-							 FLINT_HPP_HELPER::typeString(
+							 FLINT_HPP_HELPER::type_string(
 								 node->operation.data_type) +
 							 " Tensor into a " +
-							 FLINT_HPP_HELPER::typeString(toFlintType<T>()) +
+							 FLINT_HPP_HELPER::type_string(to_flint_type<T>()) +
 							 " Tensor is not possible!");
 			return Tensor<T, 1>(node, node->operation.shape[0]);
 		}
@@ -430,7 +433,7 @@ template <typename T> struct Tensor<T, 1> {
 				if (node->result_data) {
 					fSyncMemory(node);
 					FResultData *store = node->result_data;
-					foo += FLINT_HPP_HELPER::vectorString(
+					foo += FLINT_HPP_HELPER::vector_string(
 						std::vector<T>((T *)store->data,
 									   (T *)store->data + store->num_entries));
 				} else {
@@ -438,7 +441,7 @@ template <typename T> struct Tensor<T, 1> {
 					case FSTORE: {
 						FStore *store =
 							(FStore *)node->operation.additional_data;
-						foo += FLINT_HPP_HELPER::vectorString(std::vector<T>(
+						foo += FLINT_HPP_HELPER::vector_string(std::vector<T>(
 							(T *)store->data,
 							(T *)store->data + store->num_entries));
 						break;
@@ -472,7 +475,7 @@ template <typename T> struct Tensor<T, 1> {
 		// to calculate the return type of two tensors at compile time
 		template <typename K>
 		using stronger_return =
-			typename std::conditional<isStronger<K, T>(), K, T>::type;
+			typename std::conditional<is_stronger<K, T>(), K, T>::type;
 		// OPERATIONS
 		/**
 		 * Elementwise addition of this Tensor and `other`.
@@ -688,7 +691,7 @@ template <typename T> struct Tensor<T, 1> {
 		 * The data is converted, not reinterpreted.
 		 */
 		template <typename K> Tensor<K, 1> convert() const {
-			return Tensor<K, 1>(fconvert(node, toFlintType<K>()), shape);
+			return Tensor<K, 1>(fconvert(node, to_flint_type<K>()), shape);
 		}
 		/**
 		 * Takes the elementwise absolute value of this Tensor (negative signs
@@ -943,9 +946,10 @@ template <typename T> struct Tensor<T, 1> {
 		 * `fStartGradientContext` or a `GradientContext` object.
 		 */
 		template <typename K, unsigned int k>
-		Tensor<double, k> gradient(const Tensor<K, k> &dx) const {
-			return Tensor<double, k>(fCalculateGradient(this->node, dx.node),
-									 dx.shape);
+		Tensor<to_float<stronger_return<K>>, k>
+		gradient(const Tensor<K, k> &dx) const {
+			return Tensor<to_float<stronger_return<K>>, k>(
+				fCalculateGradient(this->node, dx.node), dx.shape);
 		}
 		/**
 		 * Creates "views" in an additional dimension of a fixed size windows.

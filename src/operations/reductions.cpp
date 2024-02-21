@@ -283,7 +283,7 @@ FGraphNode *ReduceMulImpl::local_gradient(FGraphNode *y, int dx_i,
 			rep[i] = i == dim ? a->operation.shape[i] - 1 : 0;
 			ns[i] = i != dim ? a->operation.shape[i] : 1;
 		}
-		FGraphNode *zero_node = fequal(a, 0.0);
+		FGraphNode *zero_node = fequal(a, 0);
 		// the normal gradient would be y/a, this does not work for a_i = 0,
 		// but at first we calculate the gradient for every a_i != 0
 		// broadcast y

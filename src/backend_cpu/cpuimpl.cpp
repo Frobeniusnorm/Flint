@@ -92,13 +92,16 @@ static void chooseExecutionMethod(FGraphNode *node,
 	const size_t score =
 		size * OperationImplementation::implementations[node->operation.op_type]
 				   ->operation_score(node);
-	if (score >= PARALLEL_EXECUTION_SIZE && size >= threads.size()) {
-		const size_t exeUnits = std::min(size, threads.size());
-		const size_t workSize = size / exeUnits;
+	const size_t dis_num =
+		OperationImplementation::implementations[node->operation.op_type]
+			->deploy_as_many_elements(node);
+	if (score >= PARALLEL_EXECUTION_SIZE && dis_num >= threads.size()) {
+		const size_t exeUnits = std::min(dis_num, threads.size());
+		const size_t workSize = dis_num / exeUnits;
 		std::counting_semaphore<MAX_PARALLELITY> *sem =
 			new std::counting_semaphore<MAX_PARALLELITY>(0);
 		for (size_t i = 0; i < exeUnits; i++) {
-			const size_t to = i == exeUnits - 1 ? size : (i + 1) * workSize;
+			const size_t to = i == exeUnits - 1 ? dis_num : (i + 1) * workSize;
 			thread_queue.push_front({node, pred_data, result, i * workSize,
 									 to - i * workSize, sem});
 		}
@@ -107,12 +110,12 @@ static void chooseExecutionMethod(FGraphNode *node,
 		delete sem;
 	} else {
 		OperationImplementation::implementations[node->operation.op_type]
-			->execute_cpu(node, pred_data, result, 0, size);
+			->execute_cpu(node, pred_data, result, 0, dis_num);
 	}
 	std::chrono::duration<double, std::milli> elapsed =
 		std::chrono::high_resolution_clock::now() - start;
 	flogging(F_DEBUG,
-			 (score >= PARALLEL_EXECUTION_SIZE && size >= threads.size()
+			 (score >= PARALLEL_EXECUTION_SIZE && dis_num >= threads.size()
 				  ? std::string("Parallel Execution on CPU (score: " +
 								std::to_string(score) + ")")
 				  : std::string("Sequential Execution on CPU (score: " +
@@ -127,8 +130,9 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 	bool is_data_node = node->operation.op_type == FSTORE;
 	std::vector<CPUResultData> pred_data(node->num_predecessor);
 	size_t total = 1;
-	for (int i = 0; i < node->operation.dimensions; i++)
-		total *= node->operation.shape[i];
+	if (node->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < node->operation.dimensions; i++)
+			total *= node->operation.shape[i];
 	void *data = nullptr;
 
 	if (!is_data_node) {
@@ -162,9 +166,8 @@ FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
 				pred->operation.shape + pred->operation.dimensions);
 			if (!data && pred->reference_counter == 1 && !reusage.empty() &&
 				reusage[i] &&
-				(pred->operation.op_type !=
-				 FSTORE) && //  || !node->gradient_data
-				pred != node) {
+				(pred->operation.op_type != FSTORE || !node->gradient_data) &&
+				pred->operation.op_type != FGEN_CONSTANT && pred != node) {
 				// recycle data
 				if (pred->result_data) {
 					FResultData *data = pred->result_data;

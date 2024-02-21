@@ -258,8 +258,8 @@
 	const CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];    \
 	size_t im1 = p1.num_entries, im2 = p2.num_entries;                         \
 	size_t iv1 = 1, iv2 = 1;                                                   \
-	calculate_divisor_for_inverse_broadcasting(node->predecessors[0], iv1,         \
-										   node->predecessors[1], iv2);        \
+	calculate_divisor_for_inverse_broadcasting(node->predecessors[0], iv1,     \
+											   node->predecessors[1], iv2);    \
 	switch (node->operation.data_type) {                                       \
 	case F_INT32: {                                                            \
 		binary_expression((int *)result, (int *)p1.data, (int *)p2.data, from, \
@@ -430,6 +430,18 @@ struct OperationImplementation {
 		virtual std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) {
 			return {};
+		}
+		/** Controls the number of elements that are depatched for the cpu
+		 * backend and the eager gpu backend (NOT the lazy gpu backend!). In
+		 * general you want this to be the size of the result node (s.d. for
+		 * each element in the result, one calculation takes place), but
+		 * sometimes for optimization or special operations another value makes
+		 * more sense. */
+		virtual size_t deploy_as_many_elements(const FGraphNode *node) {
+			size_t total = 1;
+			for (int d = 0; d < node->operation.dimensions; d++)
+				total *= node->operation.shape[d];
+			return total;
 		}
 };
 #endif

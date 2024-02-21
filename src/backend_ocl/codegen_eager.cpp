@@ -39,7 +39,7 @@ std::string generateEagerCode(FOperationType operation, FType res_type,
 	if (parameter_types.size() == 2)
 		for (int i = 0; i < parameter_types.size(); i++)
 			code += ", long inv_broad" + to_string(i);
-	code += "){\nconst long index = get_global_id(0);\n";
+	code += "){\nlong index = get_global_id(0);\n";
 	// generate code
 	code +=
 		OperationImplementation::implementations[operation]->generate_ocl_eager(
