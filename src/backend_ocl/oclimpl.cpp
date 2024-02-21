@@ -411,6 +411,7 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 	// collect memory objects from predecessors
 	vector<cl_mem> mem_objs(node->num_predecessor);
 	vector<size_t> mem_sizes(node->num_predecessor);
+	vector<cl_event> write_events;
 	for (int i = 0; i < node->num_predecessor; i++) {
 		FGraphNode *pred = node->predecessors[i];
 		const FOperation op = pred->operation;
@@ -426,7 +427,6 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 			 pred->operation.op_type == FSTORE) &&
 			op.op_type != FGEN_CONSTANT;
 		if (pred->result_data) {
-			// TODO is this test necessary?
 			total_size = pred->operation.op_type == FGEN_CONSTANT
 							 ? 1
 							 : pred->result_data->num_entries;
@@ -481,9 +481,10 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 							 to_string((long)pred->result_data->mem_id) + ", " +
 							 fop_to_string[op.op_type]);
 			}
-			err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_TRUE, 0,
+			cl_event write_event;
+			err_code = clEnqueueWriteBuffer(clqueue, mem_obj, CL_FALSE, 0,
 											total_size * type_s, data, 0,
-											nullptr, nullptr);
+											nullptr, &write_event);
 			if (err_code != CL_SUCCESS) {
 				string msg = "Unknown Error while loading data to GPU! Error: ";
 				setErrorType(OCL_ERROR);
@@ -494,16 +495,25 @@ FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node) {
 				flogging(F_ERROR, msg + to_string(err_code));
 				return nullptr;
 			}
+			write_events.push_back(write_event);
 		}
 	}
 	// result buffer
-	if (!res_mem)
+	if (!res_mem) {
 		res_mem = create_gpu_memory(node, CL_MEM_READ_WRITE, &total_size_node);
+		// zero result
+		cl_event zero_event;
+		const long zero_pattern = 0;
+		const long type_size_node = type_size(node->operation.data_type);
+		clEnqueueFillBuffer(clqueue, res_mem, &zero_pattern, type_size_node, 0,
+							total_size_node * type_size_node, 0, nullptr,
+							&zero_event);
+		write_events.push_back(zero_event);
+	}
 	node->result_data = new FResultData();
 	node->result_data->mem_id = res_mem;
 	node->result_data->num_entries = total_size_node;
 	node->result_data->data = nullptr;
-	vector<cl_event> write_events;
 	int par_index = 0;
 	if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&res_mem) !=
 		CL_SUCCESS) {
