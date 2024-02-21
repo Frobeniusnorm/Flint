@@ -1085,12 +1085,13 @@ std::string GradientConvolve2Impl::generate_ocl_parameters_eager(
 		   "acc_sizes_kernel, "
 		   "__constant long* acc_sizes_windows, __constant int* steps, "
 		   "__constant long* op_shape, __constant long* prev_adj_shape, const "
-		   "long total_elements_image, const long total_elements_kernel";
+		   "long total_elements_image, const long total_elements_kernel, const int c";
 }
 std::string
 GradientConvolve2Impl::generate_ocl_eager(FType res_type,
 										  std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
+	return "index /= c;\n"
+       "if(index >= num_entriesR) return;\n"
 		   "const bool multifilter = dimensions0 > dimensions1;\n"
 		   "const long windows = acc_sizes_windows[0] * prev_adj_shape[0];\n"
 		   "const long num_elems_kernel = multifilter ? acc_sizes_kernel[0] : "
