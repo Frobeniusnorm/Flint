@@ -858,6 +858,22 @@ TEST_SUITE("Autodiff") {
 												 .epsilon(0.000000001f),
 											 dx2[i][j][k][l]);
 								}
+					// pooling max
+					Tensor<float, 4> a3 = Flint::random(4, 4, 6, 1).convert<float>();
+					a3.watch();
+					std::array<size_t, 4> w3 = {2, 1, 3, 1};
+					std::array<unsigned int, 4> s3 = {p, q, r, 1};
+					Tensor<float, 5> a4 = a3.sliding_window(w3, s3);
+					Tensor<float, 1> a5 = a4.reduce_max(1).reduce_max(1).reduce_max(1).reduce_max(1);
+					Tensor<float, 1> a6 = a3.pooling_max(w2, s2).flattened();
+					CHECK_EQ(a5.equal(a6).reduce_mul()[0], 1);
+					Tensor<float, 4> dx3_1 = a5.gradient(a3);
+					Tensor<float, 4> dx3_2 = a6.gradient(a3);
+					int eq = dx3_1.equal(dx3_2).reduce_mul()[0];
+					if (eq != 1) {
+						std::cout << dx3_1 << "\n" << dx3_2 << std::endl;
+					}
+					CHECK_EQ(eq, 1);
 				}
 	}
 	TEST_CASE("Dropout") {

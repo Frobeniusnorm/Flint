@@ -460,6 +460,7 @@ void GradientPoolingMax::execute_cpu_typed(
 							((const long *__restrict__)
 								 data1)[cd1 ? 0 : adjo + adji];
 					break;
+					// TODO correct floating point equal
 				case F_FLOAT32:
 					equal = ((const float *__restrict__)data3)[cd3 ? 0 : i] ==
 							((const float *__restrict__)
@@ -604,6 +605,7 @@ int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node,
 				 "   adjo += ao * " +
 				 to_string(acc_sizes[d]) + ";\n  }\n";
 	}
+					// TODO correct floating point equal
 	convc += "  const int equal = " + par3 + (cd3 ? "[0]" : "[index]") +
 			 " == " + par1 + (cd1 ? "[0]" : "[adjo + adji]") +
 			 " ;\n"
