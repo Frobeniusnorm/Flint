@@ -794,6 +794,58 @@ TEST_SUITE("Autodiff") {
 		}
 	}
 	TEST_CASE("Max Pooling") {
+		GradientContext _;
+		Tensor<int, 4> a({{{{80}, {33}, {27}, {91}, {17}, {28}},
+						   {{93}, {70}, {86}, {82}, {54}, {46}},
+						   {{26}, {89}, {79}, {57}, {69}, {55}},
+						   {{78}, {6}, {42}, {9}, {63}, {39}}},
+						  {{{92}, {90}, {45}, {66}, {82}, {82}},
+						   {{42}, {10}, {89}, {16}, {27}, {88}},
+						   {{10}, {29}, {57}, {44}, {26}, {63}},
+						   {{37}, {40}, {94}, {3}, {62}, {35}}},
+						  {{{38}, {43}, {67}, {13}, {55}, {60}},
+						   {{67}, {61}, {58}, {11}, {10}, {59}},
+						   {{99}, {61}, {14}, {72}, {41}, {7}},
+						   {{35}, {46}, {52}, {4}, {40}, {1}}},
+						  {{{88}, {9}, {35}, {10}, {48}, {6}},
+						   {{23}, {64}, {39}, {78}, {18}, {24}},
+						   {{23}, {18}, {61}, {70}, {72}, {36}},
+						   {{89}, {76}, {18}, {28}, {65}, {31}}}});
+		a.watch();
+		Tensor<double, 4> ex({{{{0}, {0}, {0}, {1}, {0}, {0}},
+							   {{0}, {0}, {0}, {0}, {0}, {0}},
+							   {{0}, {0}, {0}, {0}, {0}, {0}},
+							   {{0}, {0}, {0}, {0}, {0}, {0}}},
+							  {{{2}, {0}, {0}, {0}, {1}, {0}},
+							   {{0}, {0}, {0}, {0}, {0}, {0}},
+							   {{0}, {0}, {0}, {0}, {0}, {0}},
+							   {{0}, {0}, {4}, {0}, {0}, {0}}},
+							  {{{0}, {0}, {1}, {0}, {0}, {0}},
+							   {{0}, {0}, {0}, {0}, {0}, {0}},
+							   {{0}, {0}, {0}, {0}, {0}, {0}},
+							   {{0}, {0}, {0}, {0}, {0}, {0}}},
+							  {{{1}, {0}, {0}, {0}, {0}, {0}},
+							   {{0}, {0}, {0}, {0}, {0}, {0}},
+							   {{0}, {0}, {0}, {0}, {0}, {0}},
+							   {{1}, {0}, {0}, {0}, {1}, {0}}}});
+		// element 1, 0, 4, 0 should be 1, compared with 91 and 82, but is
+		// compared with 3x91 and 1x94
+		std::array<size_t, 3> w = {2, 1, 3};
+		std::array<unsigned int, 3> s = {1, 3, 2};
+		Tensor<int, 3> p = a.pooling_max(w, s);
+		// Tensor<int, shape: {3, 2, 2}>(
+		// {{{92, 91},
+		//   {94, 94}},
+		//  {{92, 82},
+		//   {94, 94}},
+		//  {{88, 67},
+		//   {89, 65}}})
+		Tensor<double, 4> da = p.gradient(a);
+		std::cout << p() << std::endl;
+		int eq = da.equal(ex).reduce_mul()[0];
+		CHECK_EQ(eq, 1);
+	}
+	TEST_CASE("Pooling") {
 		auto pooling_sum_ref_impl = [](FGraphNode *a, size_t *window_size,
 									   unsigned int *step_size) {
 			std::vector<size_t> windows(
@@ -859,19 +911,23 @@ TEST_SUITE("Autodiff") {
 											 dx2[i][j][k][l]);
 								}
 					// pooling max
-					Tensor<float, 4> a3 = Flint::random(4, 4, 6, 1).convert<float>();
+					Tensor<int, 4> a3 =
+						(Flint::random(4, 4, 6, 1) * 100).convert<int>();
 					a3.watch();
 					std::array<size_t, 4> w3 = {2, 1, 3, 1};
 					std::array<unsigned int, 4> s3 = {p, q, r, 1};
-					Tensor<float, 5> a4 = a3.sliding_window(w3, s3);
-					Tensor<float, 1> a5 = a4.reduce_max(1).reduce_max(1).reduce_max(1).reduce_max(1);
-					Tensor<float, 1> a6 = a3.pooling_max(w2, s2).flattened();
+					Tensor<int, 5> a4 = a3.sliding_window(w3, s3);
+					Tensor<int, 1> a5 =
+						a4.reduce_max(1).reduce_max(1).reduce_max(1).reduce_max(
+							1);
+					Tensor<int, 1> a6 = a3.pooling_max(w2, s2).flattened();
 					CHECK_EQ(a5.equal(a6).reduce_mul()[0], 1);
-					Tensor<float, 4> dx3_1 = a5.gradient(a3);
-					Tensor<float, 4> dx3_2 = a6.gradient(a3);
+					Tensor<double, 4> dx3_1 = a5.gradient(a3);
+					Tensor<double, 4> dx3_2 = a6.gradient(a3);
 					int eq = dx3_1.equal(dx3_2).reduce_mul()[0];
 					if (eq != 1) {
-						std::cout << dx3_1 << "\n" << dx3_2 << std::endl;
+						std::cout << a3 << "\n"
+								  << p << " " << q << " " << r << std::endl;
 					}
 					CHECK_EQ(eq, 1);
 				}

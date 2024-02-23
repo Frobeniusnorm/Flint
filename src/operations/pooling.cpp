@@ -3,6 +3,7 @@
 #include "../backend_ocl/utils.hpp"
 #include "../utils.hpp"
 #include "convolution.hpp"
+#include <limits>
 
 #define MIN_VAL(x, y) (x < y ? x : y)
 #define MAX_VAL(x, y) (x < y ? y : x)
@@ -409,6 +410,7 @@ void GradientPoolingMax::execute_cpu_typed(
 			keri += i % op.shape[op.dimensions - 1];
 			size_t actual_overlapping = 0;
 			// iterate over overlapping windows = elements in a
+			std::cout << "overlapping windows for " << i << std::endl;
 			for (size_t o = 0; o < overlapping; o++) {
 				// offsets
 				size_t adjo = 0;
@@ -451,6 +453,11 @@ void GradientPoolingMax::execute_cpu_typed(
 				bool equal;
 				switch (predecessor_data[2].type) {
 				case F_INT32:
+					std::cout << ((const int *__restrict__)data3)[cd3 ? 0 : i]
+							  << " vs."
+							  << ((const int *__restrict__)
+									  data1)[cd1 ? 0 : adjo + adji]
+							  << std::endl;
 					equal =
 						((const int *__restrict__)data3)[cd3 ? 0 : i] ==
 						((const int *__restrict__)data1)[cd1 ? 0 : adjo + adji];
@@ -460,17 +467,22 @@ void GradientPoolingMax::execute_cpu_typed(
 							((const long *__restrict__)
 								 data1)[cd1 ? 0 : adjo + adji];
 					break;
-					// TODO correct floating point equal
-				case F_FLOAT32:
-					equal = ((const float *__restrict__)data3)[cd3 ? 0 : i] ==
-							((const float *__restrict__)
-								 data1)[cd1 ? 0 : adjo + adji];
-					break;
-				case F_FLOAT64:
-					equal = ((const double *__restrict__)data3)[cd3 ? 0 : i] ==
-							((const double *__restrict__)
-								 data1)[cd1 ? 0 : adjo + adji];
-					break;
+				case F_FLOAT32: {
+					const float a =
+						((const float *__restrict__)data3)[cd3 ? 0 : i];
+					const float b = ((
+						const float *__restrict__)data1)[cd1 ? 0 : adjo + adji];
+					equal = a + std::numeric_limits<float>::epsilon() >= b &&
+							a - std::numeric_limits<float>::epsilon() <= b;
+				} break;
+				case F_FLOAT64: {
+					const double a =
+						((const double *__restrict__)data3)[cd3 ? 0 : i];
+					const double b = ((const double *__restrict__)
+										  data1)[cd1 ? 0 : adjo + adji];
+					equal = a + std::numeric_limits<double>::epsilon() >= b &&
+							a - std::numeric_limits<double>::epsilon() <= b;
+				} break;
 				}
 				if (!skip_kernel && equal) {
 					started_counting = true;
@@ -605,10 +617,17 @@ int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node,
 				 "   adjo += ao * " +
 				 to_string(acc_sizes[d]) + ";\n  }\n";
 	}
-					// TODO correct floating point equal
-	convc += "  const int equal = " + par3 + (cd3 ? "[0]" : "[index]") +
-			 " == " + par1 + (cd1 ? "[0]" : "[adjo + adji]") +
-			 " ;\n"
+	convc += "  const " + type_string(gnp3->operation.data_type) +
+			 " el3 = " + par3 + (cd3 ? "[0]" : "[index]") +
+			 ";\n"
+			 "  const " +
+			 type_string(gnp1->operation.data_type) + " el1 = " + par1 +
+			 (cd1 ? "[0]" : "[adjo + adji]") +
+			 ";\n"
+			 "  const int equal = el3 + " +
+			 epsilon_for_type(gnp3->operation.data_type) + " >= el1 && el3 - " +
+			 epsilon_for_type(gnp3->operation.data_type) +
+			 " <= el1;\n"
 			 "  if(!skip_kernel && equal){\n"
 			 "   started_counting = true;\n"
 			 "   " +
