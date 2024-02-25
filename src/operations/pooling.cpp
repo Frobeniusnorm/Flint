@@ -617,23 +617,25 @@ int GradientPoolingMax::generate_ocl_lazy(const FGraphNode *node,
 				 "   adjo += ao * " +
 				 to_string(acc_sizes[d]) + ";\n  }\n";
 	}
-	convc += "  const " + type_string(gnp3->operation.data_type) +
-			 " el3 = " + par3 + (cd3 ? "[0]" : "[index]") +
+	convc += "  if(!skip_kernel) {"
+			 "   started_counting = true;\n"
+			 "   const " +
+			 type_string(gnp3->operation.data_type) + " el3 = " + par3 +
+			 (cd3 ? "[0]" : "[index]") +
 			 ";\n"
-			 "  const " +
+			 "   const " +
 			 type_string(gnp1->operation.data_type) + " el1 = " + par1 +
 			 (cd1 ? "[0]" : "[adjo + adji]") +
 			 ";\n"
-			 "  const int equal = el3 + " +
+			 "   const int equal = el3 + " +
 			 epsilon_for_type(gnp3->operation.data_type) + " >= el1 && el3 - " +
 			 epsilon_for_type(gnp3->operation.data_type) +
 			 " <= el1;\n"
-			 "  if(!skip_kernel && equal){\n"
-			 "   started_counting = true;\n"
-			 "   " +
+			 "   if(equal)\n"
+			 "    " +
 			 name + " += " + par2 + (cd2 ? "[0]" : "[adji + adjo]") +
 			 ";\n"
-			 " }\n"
+			 "  }\n"
 			 " actual_overlapping++;\n}\n}\n}\n";
 	compiler_state.code.prepend(convc);
 	return OCL_LAZY_DONT_PUSH_PREDS;
@@ -706,19 +708,21 @@ GradientPoolingMax::generate_ocl_eager(FType res_type,
 		   "   }\n"
 		   "   adjo += ao * acc_sizes[d];\n"
 		   "  }\n"
-		   "  const " +
+       "  if(!skip_kernel){\n"
+		   "   started_counting = true;\n"
+		   "   const " +
 		   type_string(parameter_types[0]) +
 		   " el_max = P0[(adjo + adji) % num_entries0];\n"
-		   "  const " +
+		   "   const " +
 		   type_string(parameter_types[2]) +
 		   " el_orig = P2[index % num_entries2];\n"
-		   "  if(!skip_kernel && (el_max + " +
+		   "   if(el_max + " +
 		   epsilon_for_type(parameter_types[0]) + " >= el_orig && el_max - " +
 		   epsilon_for_type(parameter_types[0]) +
-		   " <= el_orig)){\n"
-		   "   started_counting = true;\n"
+		   " <= el_orig){\n"
 		   "   res+=P1[(adjo+adji) % num_entries1];\n"
-		   "  }\n"
+		   "   }\n"
+       "  }\n"
 		   "  actual_overlapping++;\n"
 		   " }\n"
 		   "}\n"

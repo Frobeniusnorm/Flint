@@ -903,7 +903,8 @@ TEST_SUITE("Autodiff") {
 								}
 					// pooling max
 					Tensor<int, 4> a3 =
-						(Flint::random(15 + p, 15 + q, 15 + r, 1) * 100).convert<int>();
+						(Flint::random(15 + p, 15 + q, 15 + r, 1) * 100)
+							.convert<int>();
 					a3.watch();
 					std::array<size_t, 4> w3 = {2, 1, 3, 1};
 					std::array<unsigned int, 4> s3 = {p, q, r, 1};

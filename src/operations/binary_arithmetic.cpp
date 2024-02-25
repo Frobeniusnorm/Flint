@@ -367,10 +367,12 @@ int MatMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	}
 	// total size of each parameter
 	size_t num_entries0 = 1, num_entries1 = 1;
-	for (int i = 0; i < gnp1->operation.dimensions; i++)
-		num_entries0 *= gnp1->operation.shape[i];
-	for (int i = 0; i < gnp2->operation.dimensions; i++)
-		num_entries1 *= gnp2->operation.shape[i];
+	if (gnp1->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < gnp1->operation.dimensions; i++)
+			num_entries0 *= gnp1->operation.shape[i];
+	if (gnp2->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < gnp2->operation.dimensions; i++)
+			num_entries1 *= gnp2->operation.shape[i];
 	size_t l = gnp1->operation.shape[gnp1->operation.dimensions - 2];
 	size_t m = gnp1->operation.shape[gnp1->operation.dimensions - 1];
 	size_t n = gnp2->operation.shape[gnp2->operation.dimensions - 1];
