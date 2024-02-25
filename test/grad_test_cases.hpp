@@ -828,20 +828,10 @@ TEST_SUITE("Autodiff") {
 							   {{0}, {0}, {0}, {0}, {0}, {0}},
 							   {{0}, {0}, {0}, {0}, {0}, {0}},
 							   {{1}, {0}, {0}, {0}, {1}, {0}}}});
-		// element 1, 0, 4, 0 should be 1, compared with 91 and 82, but is
-		// compared with 3x91 and 1x94
 		std::array<size_t, 3> w = {2, 1, 3};
 		std::array<unsigned int, 3> s = {1, 3, 2};
 		Tensor<int, 3> p = a.pooling_max(w, s);
-		// Tensor<int, shape: {3, 2, 2}>(
-		// {{{92, 91},
-		//   {94, 94}},
-		//  {{92, 82},
-		//   {94, 94}},
-		//  {{88, 67},
-		//   {89, 65}}})
 		Tensor<double, 4> da = p.gradient(a);
-		std::cout << p() << std::endl;
 		int eq = da.equal(ex).reduce_mul()[0];
 		CHECK_EQ(eq, 1);
 	}
@@ -895,7 +885,8 @@ TEST_SUITE("Autodiff") {
 				for (unsigned int r = 2; r < 3; r++) {
 					std::array<size_t, 3> w2 = {2, 1, 3};
 					std::array<unsigned int, 3> s2 = {p, q, r};
-					Tensor<double, 4> a2 = Flint::random(15, 15, 15, 1);
+					Tensor<double, 4> a2 =
+						Flint::random(15 + p, 15 + q, 15 + r, 1);
 					a2.watch();
 					Tensor<double, 3> rm2 = a2.pooling_sum(w2, s2);
 					Tensor<double, 3> em2(pooling_sum_ref_impl(
@@ -912,7 +903,7 @@ TEST_SUITE("Autodiff") {
 								}
 					// pooling max
 					Tensor<int, 4> a3 =
-						(Flint::random(4, 4, 6, 1) * 100).convert<int>();
+						(Flint::random(15 + p, 15 + q, 15 + r, 1) * 100).convert<int>();
 					a3.watch();
 					std::array<size_t, 4> w3 = {2, 1, 3, 1};
 					std::array<unsigned int, 4> s3 = {p, q, r, 1};

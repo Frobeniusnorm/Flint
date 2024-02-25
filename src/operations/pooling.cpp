@@ -410,7 +410,6 @@ void GradientPoolingMax::execute_cpu_typed(
 			keri += i % op.shape[op.dimensions - 1];
 			size_t actual_overlapping = 0;
 			// iterate over overlapping windows = elements in a
-			std::cout << "overlapping windows for " << i << std::endl;
 			for (size_t o = 0; o < overlapping; o++) {
 				// offsets
 				size_t adjo = 0;
@@ -449,45 +448,46 @@ void GradientPoolingMax::execute_cpu_typed(
 					}
 					adjo += ao * acc_sizes[d];
 				}
-				// if value in image and corresponding pooling are equal
-				bool equal;
-				switch (predecessor_data[2].type) {
-				case F_INT32:
-					std::cout << ((const int *__restrict__)data3)[cd3 ? 0 : i]
-							  << " vs."
-							  << ((const int *__restrict__)
-									  data1)[cd1 ? 0 : adjo + adji]
-							  << std::endl;
-					equal =
-						((const int *__restrict__)data3)[cd3 ? 0 : i] ==
-						((const int *__restrict__)data1)[cd1 ? 0 : adjo + adji];
-					break;
-				case F_INT64:
-					equal = ((const long *__restrict__)data3)[cd3 ? 0 : i] ==
+				if (!skip_kernel) {
+
+					started_counting = true;
+					// if value in image and corresponding pooling are equal
+					bool equal;
+					switch (predecessor_data[2].type) {
+					case F_INT32:
+						equal = ((const int *__restrict__)data3)[cd3 ? 0 : i] ==
+								((const int *__restrict__)
+									 data1)[cd1 ? 0 : adjo + adji];
+						break;
+					case F_INT64:
+						equal =
+							((const long *__restrict__)data3)[cd3 ? 0 : i] ==
 							((const long *__restrict__)
 								 data1)[cd1 ? 0 : adjo + adji];
-					break;
-				case F_FLOAT32: {
-					const float a =
-						((const float *__restrict__)data3)[cd3 ? 0 : i];
-					const float b = ((
-						const float *__restrict__)data1)[cd1 ? 0 : adjo + adji];
-					equal = a + std::numeric_limits<float>::epsilon() >= b &&
+						break;
+					case F_FLOAT32: {
+						const float a =
+							((const float *__restrict__)data3)[cd3 ? 0 : i];
+						const float b = ((const float *__restrict__)
+											 data1)[cd1 ? 0 : adjo + adji];
+						equal =
+							a + std::numeric_limits<float>::epsilon() >= b &&
 							a - std::numeric_limits<float>::epsilon() <= b;
-				} break;
-				case F_FLOAT64: {
-					const double a =
-						((const double *__restrict__)data3)[cd3 ? 0 : i];
-					const double b = ((const double *__restrict__)
-										  data1)[cd1 ? 0 : adjo + adji];
-					equal = a + std::numeric_limits<double>::epsilon() >= b &&
+					} break;
+					case F_FLOAT64: {
+						const double a =
+							((const double *__restrict__)data3)[cd3 ? 0 : i];
+						const double b = ((const double *__restrict__)
+											  data1)[cd1 ? 0 : adjo + adji];
+						equal =
+							a + std::numeric_limits<double>::epsilon() >= b &&
 							a - std::numeric_limits<double>::epsilon() <= b;
-				} break;
-				}
-				if (!skip_kernel && equal) {
-					started_counting = true;
-					res +=
-						((const T *__restrict__)data2)[cd2 ? 0 : adjo + adji];
+					} break;
+					}
+					if (equal) {
+						res += ((
+							const T *__restrict__)data2)[cd2 ? 0 : adjo + adji];
+					}
 				}
 				actual_overlapping++;
 			}
