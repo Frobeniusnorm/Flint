@@ -119,19 +119,6 @@ struct GradientPoolingMax : OperationImplementation {
 		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {
-				{F_FLOAT64, F_INT32, F_FLOAT64, F_INT32},
-				{F_FLOAT64, F_INT64, F_FLOAT64, F_INT64},
-				{F_FLOAT64, F_FLOAT32, F_FLOAT64, F_FLOAT32},
-				{F_FLOAT64, F_FLOAT64, F_FLOAT64, F_FLOAT64},
-				{F_FLOAT32, F_INT32, F_FLOAT32, F_INT32},
-				{F_FLOAT32, F_INT64, F_FLOAT32, F_INT64},
-				{F_FLOAT32, F_FLOAT32, F_FLOAT32, F_FLOAT32},
-				{F_FLOAT64, F_FLOAT64, F_FLOAT32, F_FLOAT64}
-			};
-		}
 };
 
 #endif
