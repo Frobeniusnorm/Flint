@@ -188,11 +188,11 @@
 
         <div style="display: block; height: 2em;"></div>
         <h1 id="flint_helper"><u>flint_helper.hpp</u></h1>
-        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_n__struct_Tensor">template &lt;typename T, unsigned int n&gt; struct <b>Tensor</b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FLINT_HPP_HELPER_">namespace FLINT_HPP_HELPER </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T_static_inline_std::string_vectorString_const_std::vector_T__&vec_									___std::string_indentation_=_""__">template &lt;typename T&gt;
-static inline std::string <b>vectorString</b>(const std::vector<T> &vec,
-									   std::string indentation = "") </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__size_t_n_static_inline_std::string_arrayString_const_std::array_T__n__&vec__">template &lt;typename T, size_t n&gt;
-static inline std::string <b>arrayString</b>(const std::array<T, n> &vec) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__static_constexpr_void_isTensorType___">template &lt;typename T&gt; static constexpr void <b>isTensorType</b>() </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__typename_V__static_constexpr_bool_isStronger___">template &lt;typename K, typename V&gt; static constexpr bool <b>isStronger</b>() </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__static_constexpr_FType_toFlintType___">template &lt;typename T&gt; static constexpr FType <b>toFlintType</b>() </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T_using_to_float_=_typename_std::conditional_isInt_T_____double__T_::type">template &lt;typename T&gt;
-using to_float = typename std::conditional&lt;isInt&lt;T&gt;(), double, T&gt;::type</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_dimensions__class_TensorView">template &lt;typename T, unsigned int dimensions&gt; class <b>TensorView</b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__class_TensorView_T__1__">template &lt;typename T&gt; class <b>TensorView</b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&operator[]_size_t_index__">T <b>&operator[]</b>(size_t index) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_n__class_TensorView_">template &lt;typename T, unsigned int n&gt; class <b>TensorView </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__operator[]_size_t_index__">TensorView&lt;T, n - 1&gt; <b>operator[]</b>(size_t index) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-TensorRange_">struct <b>TensorRange </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-GradientContext_">struct <b>GradientContext </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FlintContext_">struct <b>FlintContext </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-"><b>FlintContext</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-backends__FLogType_logging_=_F_INFO__"><b>FlintContext</b>(int backends, FLogType logging = F_INFO) </a><br/><br/></div>
+        <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_n__struct_Tensor">template &lt;typename T, unsigned int n&gt; struct <b>Tensor</b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FLINT_HPP_HELPER_">namespace FLINT_HPP_HELPER </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T_static_inline_std::string_vector_string_const_std::vector_T__&vec_									___std::string_indentation_=_""__">template &lt;typename T&gt;
+static inline std::string <b>vector_string</b>(const std::vector<T> &vec,
+									   std::string indentation = "") </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__size_t_n_static_inline_std::string_array_string_const_std::array_T__n__&vec__">template &lt;typename T, size_t n&gt;
+static inline std::string <b>array_string</b>(const std::array<T, n> &vec) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__static_constexpr_void_is_tensor_type___">template &lt;typename T&gt; static constexpr void <b>is_tensor_type</b>() </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__typename_V__static_constexpr_bool_is_stronger___">template &lt;typename K, typename V&gt; static constexpr bool <b>is_stronger</b>() </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__static_constexpr_FType_to_flint_type___">template &lt;typename T&gt; static constexpr FType <b>to_flint_type</b>() </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FType_higher_type_const_FType_a__const_FType_b__">inline FType <b>higher_type</b>(const FType a, const FType b) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-constexpr_FType_higher_type_constexpr_const_FType_a__const_FType_b__">inline constexpr FType <b>higher_type_constexpr</b>(const FType a, const FType b) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T_using_to_float_=_typename_std::conditional_is_int_T_____double__T_::type">template &lt;typename T&gt;
+using to_float = typename std::conditional&lt;is_int&lt;T&gt;(), double, T&gt;::type</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_dimensions__class_TensorView">template &lt;typename T, unsigned int dimensions&gt; class <b>TensorView</b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__class_TensorView_T__1__">template &lt;typename T&gt; class <b>TensorView</b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&operator[]_size_t_index__">T <b>&operator[]</b>(size_t index) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_n__class_TensorView_">template &lt;typename T, unsigned int n&gt; class <b>TensorView </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1__operator[]_size_t_index__">TensorView&lt;T, n - 1&gt; <b>operator[]</b>(size_t index) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-TensorRange_">struct <b>TensorRange </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-GradientContext_">struct <b>GradientContext </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FlintContext_">struct <b>FlintContext </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-"><b>FlintContext</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-backends__FLogType_logging_=_F_INFO__"><b>FlintContext</b>(int backends, FLogType logging = F_INFO) </a><br/><br/></div>
         <div style="display: block; height: 2em;"></div>
         <div id="s-_typename_T__unsigned_int_n__struct_Tensor"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T, unsigned int n&gt; struct <b>Tensor</b></pre></div>
 <br />
@@ -227,31 +227,37 @@ using to_float = typename std::conditional&lt;isInt&lt;T&gt;(), double, T&gt;::t
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Useful helper functions used by the library itself.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_T_static_inline_std::string_vectorString_const_std::vector_T__&vec_									___std::string_indentation_=_""__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename T&gt;
-static inline std::string <b>vectorString</b>(const std::vector<T> &vec,
+<div id="s-_typename_T_static_inline_std::string_vector_string_const_std::vector_T__&vec_									___std::string_indentation_=_""__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename T&gt;
+static inline std::string <b>vector_string</b>(const std::vector<T> &vec,
 									   std::string indentation = "") </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
  Transforms a vector of arbitrary recursive dimensions to a string
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_T__size_t_n_static_inline_std::string_arrayString_const_std::array_T__n__&vec__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename T, size_t n&gt;
-static inline std::string <b>arrayString</b>(const std::array<T, n> &vec) </pre></div>
+<div id="s-_typename_T__size_t_n_static_inline_std::string_array_string_const_std::array_T__n__&vec__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename T, size_t n&gt;
+static inline std::string <b>array_string</b>(const std::array<T, n> &vec) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
  Transforms an array of arbitrary recursive dimensions to a string
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_T__static_constexpr_void_isTensorType___"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt; static constexpr void <b>isTensorType</b>() </pre></div>
+<div id="s-_typename_T__static_constexpr_void_is_tensor_type___"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt; static constexpr void <b>is_tensor_type</b>() </pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> statically checks if the given type is one of the allowed tensor types </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_K__typename_V__static_constexpr_bool_isStronger___"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename K, typename V&gt; static constexpr bool <b>isStronger</b>() </pre></div>
+<div id="s-_typename_K__typename_V__static_constexpr_bool_is_stronger___"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename K, typename V&gt; static constexpr bool <b>is_stronger</b>() </pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> checks type precedence (e.g. <pre class="inline_code">isStronger&lt;int, double&gt;() = false,
  isStronger&lt;float, long&gt;() = true</pre>)</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_T__static_constexpr_FType_toFlintType___"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt; static constexpr FType <b>toFlintType</b>() </pre></div>
+<div id="s-_typename_T__static_constexpr_FType_to_flint_type___"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt; static constexpr FType <b>to_flint_type</b>() </pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Transforms a C/C++ type to a <pre class="inline_code">FType</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_T_using_to_float_=_typename_std::conditional_isInt_T_____double__T_::type"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt;
-using to_float = typename std::conditional&lt;isInt&lt;T&gt;(), double, T&gt;::type</pre></div>
+<div id="s-FType_higher_type_const_FType_a__const_FType_b__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">inline FType <b>higher_type</b>(const FType a, const FType b) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Returns the higher of two flint types </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-constexpr_FType_higher_type_constexpr_const_FType_a__const_FType_b__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">inline constexpr FType <b>higher_type_constexpr</b>(const FType a, const FType b) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Returns the higher of two flint types, as a constexpr </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_typename_T_using_to_float_=_typename_std::conditional_is_int_T_____double__T_::type"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt;
+using to_float = typename std::conditional&lt;is_int&lt;T&gt;(), double, T&gt;::type</pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Transforms integer types to doubles (for all other types returns identity)
 </div></div><div style="display: block; height: 2em;"></div>

@@ -72,7 +72,11 @@ function handle_message(data) {
 	}
 	if (msg.batches.length > 0) {
 		const last_batch = msg.batches[msg.batches.length - 1];
-		document.getElementById("batch_counter").innerHTML = last_batch.batch + "/" + msg.total_batches;
+		document.getElementById("batch_counter").innerHTML = last_batch.batch + "/" + msg.total_batches
+		const prog = Math.trunc((last_batch.batch / msg.total_batches) * 100)
+		const lower = prog >= 5 ? prog - 5 : 0;
+		const upper = prog <= 95 ? prog + 5 : 100;
+		document.getElementById("control_panel").style.background = "linear-gradient(to right, #D0BBFF 0%, #D0BBFF " + lower + "%, #BBDFFF " + upper + "%, #BBDFFF 100%)"
 	}
 	if (msg.epochs.length > 0) {
 		const last_epoch = msg.epochs[msg.epochs.length - 1];
@@ -145,6 +149,8 @@ function visualize_data() {
 			performance_pie.data.datasets[0].data = times;
 			performance_pie.update();
 		}
+		let sum = times.reduce((pv, cv) => pv + cv, 0)
+		document.getElementById("performance_total_time").innerHTML = "<b>Time/Batch:</b> " + Math.round(sum) + "ms"
 	}
 }
 

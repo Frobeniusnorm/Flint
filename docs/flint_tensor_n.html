@@ -82,8 +82,9 @@
 		pooling_max</b>(std::array<size_t, n - 1> window_size,
 					std::array<unsigned int, n - 1> step_size = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n_-_1_		pooling_sum_std::array_size_t__n_-_1__window_size_					std::array_unsigned_int__n_-_1__step_size_=_">Tensor&lt;T, n - <b>1&gt;
 		pooling_sum</b>(std::array<size_t, n - 1> window_size,
-					std::array<unsigned int, n - 1> step_size = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__permutate_unsigned_int_ax__const_">Tensor&lt;T, n&gt; <b>permutate</b>(unsigned int ax) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__dropout_double_p__const_">Tensor&lt;T, n&gt; <b>dropout</b>(double p) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-set_graph_node_FGraphNode_*node__">void <b>set_graph_node</b>(FGraphNode *node) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k_		Tensor_double__k__gradient_const_Tensor_K__k__&dx__const_">template &lt;typename K, unsigned int k&gt;
-		Tensor&lt;double, k&gt; <b>gradient</b>(const Tensor<K, k> &dx) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-watch___">void <b>watch</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-unwatch___">void <b>unwatch</b>() </a><br/><br/></div>
+					std::array<unsigned int, n - 1> step_size = </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__permutate_unsigned_int_ax__const_">Tensor&lt;T, n&gt; <b>permutate</b>(unsigned int ax) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-n__dropout_double_p__const_">Tensor&lt;T, n&gt; <b>dropout</b>(double p) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-get_graph_node___const_">FGraphNode <b>*get_graph_node</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-set_graph_node_FGraphNode_*node__">void <b>set_graph_node</b>(FGraphNode *node) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_k_		Tensor_to_float_stronger_return_K____k_		gradient_const_Tensor_K__k__&dx__const_">template &lt;typename K, unsigned int k&gt;
+		Tensor&lt;to_float&lt;stronger_return&lt;K&gt;&gt;, <b>k&gt;
+		gradient</b>(const Tensor<K, k> &dx) const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-watch___">void <b>watch</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-unwatch___">void <b>unwatch</b>() </a><br/><br/></div>
         <div style="display: block; height: 2em;"></div>
         <div class="card attention_box" style="padding: 20px 15px; background-color: #f4bfbf;">
           The use of Tensors alone isn't enough to correctly use Flint. 
@@ -1298,15 +1299,18 @@ summed up in the result. <pre class="inline_code">result_size</pre> and <pre cla
  counter should have been incremented before this method, be carefull
  about variable lifetimes!
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_K__unsigned_int_k_		Tensor_double__k__gradient_const_Tensor_K__k__&dx__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
-		Tensor&lt;double, k&gt; <b>gradient</b>(const Tensor<K, k> &dx) const </pre></div>
+<div id="s-_typename_K__unsigned_int_k_		Tensor_to_float_stronger_return_K____k_		gradient_const_Tensor_K__k__&dx__const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int k&gt;
+		Tensor&lt;to_float&lt;stronger_return&lt;K&gt;&gt;, <b>k&gt;
+		gradient</b>(const Tensor<K, k> &dx) const </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
  Calculates the gradient of this Tensor to <pre class="inline_code">dx</pre>. A gradient is always
- a Tensor of type <pre class="inline_code">double</pre>. <pre class="inline_code">dx</pre> needs to have been marked with
- <pre class="inline_code">watch</pre> before construction of this Tensor and this Tensor must be
- constructed inside a gradient context, either started by
- <pre class="inline_code">fStartGradientContext</pre> or a <pre class="inline_code">GradientContext</pre> object.
+ a floating point Tensor, if both this tensor and <pre class="inline_code">dx</pre> are of type
+ float, the gradient is also of type <pre class="inline_code">float</pre>, else of <pre class="inline_code">double</pre>. <pre class="inline_code">dx</pre>
+ needs to have been marked with <pre class="inline_code">watch</pre> before construction of this
+ Tensor and this Tensor must be constructed inside a gradient context,
+ either started by <pre class="inline_code">fStartGradientContext</pre> or a <pre class="inline_code">GradientContext</pre>
+ object.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-watch___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>watch</b>() </pre></div>
 <br />
