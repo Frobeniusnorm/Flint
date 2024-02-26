@@ -78,7 +78,7 @@ static Tensor<int, 2> load_mnist_labels(const std::string path) {
 // download and extract to the desired folder from
 // http://yann.lecun.com/exdb/mnist/
 int main() {
-	FlintContext _(FLINT_BACKEND_BOTH, F_VERBOSE);
+	FlintContext _(FLINT_BACKEND_ONLY_GPU, F_VERBOSE);
 	fEnableEagerExecution();
 	Tensor<float, 3> X = load_mnist_images("train-images-idx3-ubyte");
 	Tensor<float, 2> Y =
@@ -86,10 +86,6 @@ int main() {
 	Tensor<float, 3> vX = load_mnist_images("t10k-images-idx3-ubyte");
 	Tensor<float, 2> vY =
 		load_mnist_labels("t10k-labels-idx1-ubyte").convert<float>();
-	X.execute_gpu();
-	Y.execute_gpu();
-	vX.execute_gpu();
-	vY.execute_gpu();
 	auto data = TrainingData(
 		X.reshape(X.get_shape()[0], X.get_shape()[1], X.get_shape()[2], 1), Y,
 		vX.reshape(vX.get_shape()[0], vX.get_shape()[1], vX.get_shape()[2], 1),

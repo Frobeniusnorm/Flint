@@ -463,9 +463,10 @@ FGraphNode *fOptimizeMemory(FGraphNode *node) {
 		OperationImplementation::implementations[node->operation.op_type]
 			->free_additional_data(node);
 		node->operation.op_type = FSTORE;
-		if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU)
+		if (flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU) {
 			// we can do this only when all operations have been finished
 			OCLCompilerThread::memory_barrier();
+		}
 		for (int i = 0; i < node->num_predecessor; i++) {
 			if (--node->predecessors[i]->reference_counter == 0) {
 				fFreeGraph(node->predecessors[i]);

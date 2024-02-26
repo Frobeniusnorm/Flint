@@ -891,7 +891,9 @@ size_multiplier_convolve_kernel_gradient(const FGraphNode *node,
 	if (total_elems)
 		*total_elems = num_elems;
 	// calculate multiplicator
-	if (num_elems <= 500 && windows >= 16)
+	if (num_elems <= 400)
+		return 8;
+	else if (num_elems <= 700 && windows >= 16)
 		return 4;
 	else if (num_elems < 2000 && windows >= 8)
 		return 2;
