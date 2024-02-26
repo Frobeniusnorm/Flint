@@ -103,17 +103,32 @@ static inline FGraphNode *execute_eagerly(FGraphNode *f) {
 			break;
 		}
 	}
+	bool prefer_gpu = false;
+	if (use_cpu && use_gpu) {
+		size_t no_elems = 1;
+		for (int i = 0; i < f->operation.dimensions; i++)
+			no_elems *= f->operation.shape[i];
+		int cpu_boost = 2, gpu_boost = 2;
+		for (int i = 0; i < f->num_predecessor; i++) {
+			if (f->result_data) {
+				if (!f->result_data->data)
+					cpu_boost = 1;
+				if (!f->result_data->mem_id)
+					gpu_boost = 1;
+			}
+		}
+		unsigned int gpu_score = compute_score(f, false);
+		prefer_gpu = no_elems * gpu_score * gpu_boost / cpu_boost >= 512;
+	}
 	if (all_calculated && (use_cpu || use_gpu)) {
 		// since we only have one node the heuristics become constant
-		unsigned int gpu_score = compute_score(f, false);
-		return use_gpu && (gpu_score >= 1024 || !use_cpu)
+		return use_gpu && (prefer_gpu || !use_cpu)
 				   ? fExecuteGraph_gpu_eagerly(f)
 				   : fExecuteGraph_cpu_eagerly(f);
 	} else {
 		if (use_gpu && use_cpu) {
-			unsigned int gpu_score = compute_score(f, true);
-			return gpu_score >= 1024 || !use_cpu ? fExecuteGraph_gpu(f)
-												 : fExecuteGraph_cpu(f);
+			return prefer_gpu || !use_cpu ? fExecuteGraph_gpu(f)
+										  : fExecuteGraph_cpu(f);
 		}
 		if (use_gpu)
 			return fExecuteGraph_gpu(f);
@@ -164,8 +179,7 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
 					gpu_boost = 1;
 			}
 		}
-		return no_elems * gpu_score * gpu_boost >= 2048 * cpu_boost &&
-					   no_elems * gpu_boost > 20 * cores * cpu_boost
+		return no_elems * gpu_score * gpu_boost / cpu_boost >= 1024
 				   ? fExecuteGraph_gpu(node)
 				   : fExecuteGraph_cpu(node);
 	}

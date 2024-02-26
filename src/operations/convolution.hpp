@@ -158,7 +158,14 @@ struct GradientConvolve2Impl : OperationImplementation {
 										 std::list<cl_mem> &to_free) override {
 			push_per_parameter_dimension(pred->operation, kernel, par_index);
 		}
-		int operation_score(FGraphNode *node) override { return 10; }
+		int operation_score(FGraphNode *node) override {
+			size_t no_elems = 1;
+			const FGraphNode *a = node->predecessors[0];
+			for (int i = 0; i < a->operation.dimensions; i++) {
+				no_elems *= a->operation.shape[i];
+			}
+			return 5 + (int)(sqrt(no_elems));
+		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
 		void free_additional_data(FGraphNode *gn) override {

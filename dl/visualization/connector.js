@@ -145,6 +145,8 @@ function visualize_data() {
 			performance_pie.data.datasets[0].data = times;
 			performance_pie.update();
 		}
+		let sum = times.reduce((pv, cv) => pv + cv, 0)
+		document.getElementById("performance_total_time").innerHTML = "<b>Time/Batch:</b> " + Math.round(sum) + "ms"
 	}
 }
 
