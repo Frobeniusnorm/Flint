@@ -37,19 +37,24 @@
       <div class="standalone-button button2"><a href="#trainer">trainer</a></div>
       <div style="display: block; height: 2em;"></div>
       <h1 id="models"><u>dl/models.hpp</u></h1>
-      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_GenericLayer____T__struct_SequentialModel_">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_toFlintType_K_____T________			___get_output_dim_n__T_______		forward_batch_Tensor_K__n__&in__">template &lt;typename K, unsigned int n&gt;
+      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-ProfilingData_">struct <b>ProfilingData </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_GenericLayer____T__struct_SequentialModel_">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_to_flint_type_K_____T________			___get_output_dim_n__T_______		forward_batch_Tensor_K__n__&in__">template &lt;typename K, unsigned int n&gt;
 		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
-				   get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
+				   get_output_type&lt;to_flint_type&lt;K&gt;(), T...&gt;()&gt;,
 			   get_output_dim&lt;n, <b>T...&gt;()&gt;
-		forward_batch</b>(Tensor<K, n> &in) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_toFlintType_K_____T________			___get_output_dim_n__T_______		forward_Tensor_K__n__&in__">template &lt;typename K, unsigned int n&gt;
+		forward_batch</b>(Tensor<K, n> &in) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_to_flint_type_K_____T________			___get_output_dim_n__T_______		forward_Tensor_K__n__&in__">template &lt;typename K, unsigned int n&gt;
 		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
-				   get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
+				   get_output_type&lt;to_flint_type&lt;K&gt;(), T...&gt;()&gt;,
 			   get_output_dim&lt;n, <b>T...&gt;()&gt;
 		forward</b>(Tensor<K, n> &in) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		void_optimize_const_Tensor_K__n__&error__">template &lt;typename K, unsigned int n&gt;
 		void <b>optimize</b>(const Tensor<K, n> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-load_const_std::string_path__">void <b>load</b>(const std::string path) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-save_const_std::string_path__">void <b>save</b>(const std::string path) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T1__unsigned_int_n1_		void_backward_Tensor_T1__n1__&error__">template &lt;typename T1, unsigned int n1&gt;
-		void <b>backward</b>(Tensor<T1, n1> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-enable_training___">void <b>enable_training</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-disable_training___">void <b>disable_training</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-summary___">std::string <b>summary</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-sizeof____T___layer_names___">std::array&lt;std::string, sizeof...(T)&gt; <b>layer_names</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-sizeof____T___layer_descriptions___">std::array&lt;std::string, sizeof...(T)&gt; <b>layer_descriptions</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-optimizer___">std::string <b>optimizer</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-optimizer_description___">std::string <b>optimizer_description</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-sizeof____T___num_layer_parameters___">std::array&lt;size_t, sizeof...(T)&gt; <b>num_layer_parameters</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-___collect_weights___">std::vector&lt;std::vector&lt;FGraphNode *&gt;&gt; <b>collect_weights</b>() </a><br/><br/></div>
+		void <b>backward</b>(Tensor<T1, n1> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-enable_training___">void <b>enable_training</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-disable_training___">void <b>disable_training</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-enable_profiling___">void <b>enable_profiling</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-disable_profiling___">void <b>disable_profiling</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-last_profiling_data___const_">ProfilingData <b>last_profiling_data</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-summary___">std::string <b>summary</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-sizeof____T___layer_names___">std::array&lt;std::string, sizeof...(T)&gt; <b>layer_names</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-sizeof____T___layer_descriptions___">std::array&lt;std::string, sizeof...(T)&gt; <b>layer_descriptions</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-optimizer___">std::string <b>optimizer</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-optimizer_description___">std::string <b>optimizer_description</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-sizeof____T___num_layer_parameters___">std::array&lt;size_t, sizeof...(T)&gt; <b>num_layer_parameters</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-___collect_weights___">std::vector&lt;std::vector&lt;FGraphNode *&gt;&gt; <b>collect_weights</b>() </a><br/><br/></div>
       <div style="display: block; height: 2em;"></div>
-      <div id="s-_GenericLayer____T__struct_SequentialModel_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></pre></div>
+      <div id="s-ProfilingData_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>ProfilingData </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Informations about time consumption per layer and memory consumption
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-_GenericLayer____T__struct_SequentialModel_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Model where each layer outputs the input of the next layer.
@@ -63,9 +68,9 @@
   SoftMax()
  ); <span style="color: #D0D0D0">// has type SequentialModel&lt;Connected, Relu, Dropout, Connected, SoftMax&gt;</span></pre>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_toFlintType_K_____T________			___get_output_dim_n__T_______		forward_batch_Tensor_K__n__&in__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
+<div id="s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_to_flint_type_K_____T________			___get_output_dim_n__T_______		forward_batch_Tensor_K__n__&in__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
 		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
-				   get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
+				   get_output_type&lt;to_flint_type&lt;K&gt;(), T...&gt;()&gt;,
 			   get_output_dim&lt;n, <b>T...&gt;()&gt;
 		forward_batch</b>(Tensor<K, n> &in) </pre></div>
 <br />
@@ -73,9 +78,9 @@
  Passes a batch of input tensors through all layers and returns the
  output of the last layer.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_toFlintType_K_____T________			___get_output_dim_n__T_______		forward_Tensor_K__n__&in__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
+<div id="s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_to_flint_type_K_____T________			___get_output_dim_n__T_______		forward_Tensor_K__n__&in__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
 		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
-				   get_output_type&lt;toFlintType&lt;K&gt;(), T...&gt;()&gt;,
+				   get_output_type&lt;to_flint_type&lt;K&gt;(), T...&gt;()&gt;,
 			   get_output_dim&lt;n, <b>T...&gt;()&gt;
 		forward</b>(Tensor<K, n> &in) </pre></div>
 <br />
@@ -120,6 +125,22 @@
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
  Disables the training mode, i.e. layers like dropout will be disabled
  (internally used by the trainer)
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-enable_profiling___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>enable_profiling</b>() </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Starts collection profiling data.
+ This hurts performance in uneager execution.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-disable_profiling___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>disable_profiling</b>() </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Stops collection profiling data
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-last_profiling_data___const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">ProfilingData <b>last_profiling_data</b>() const </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Returns collected profiling data of the last call to <pre class="inline_code">forward</pre>
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-summary___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::string <b>summary</b>() </pre></div>
 <br />

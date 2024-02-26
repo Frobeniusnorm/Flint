@@ -420,7 +420,8 @@ or the error type </div></div><div style="display: block; height: 2em;"></div>
   <a href="#s-fMarkGradientVariable_FGraphNode_*node_"><pre class="inline_code">fMarkGradientVariable</pre></a> and the output node <pre class="inline_code">outputfct</pre> must be constructed
  in an gradient context (to remember which variables are directly or
  indirectly present in which operation), which can be started with
-  <a href="#s-fStartGradientContext__"><pre class="inline_code">fStartGradientContext</pre></a>.<div style="display:block; height: 0.5em"></div><ul><li><pre class="inline_code">outputfct</pre>: the Node which represents the chain of functions of which
+  <a href="#s-fStartGradientContext__"><pre class="inline_code">fStartGradientContext</pre></a>. The gradients are of type <pre class="inline_code">float</pre> if <pre class="inline_code">outputfct</pre>
+ and <pre class="inline_code">dx</pre> is of type <pre class="inline_code">float</pre>, else of type <pre class="inline_code">double</pre>.<div style="display:block; height: 0.5em"></div><ul><li><pre class="inline_code">outputfct</pre>: the Node which represents the chain of functions of which
     the gradients are to be computed.
 </li><li><pre class="inline_code">dx</pre>: array of variables for which outputfct is derived for.
 </li><li><pre class="inline_code">num_gradients</pre>: the number of variables in <pre class="inline_code">dx</pre>.
@@ -1070,7 +1071,7 @@ entries of the tensor).</div></div><div style="display: block; height: 2em;"></d
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
  Sets random selected elements in <pre class="inline_code">g</pre> to 0 by the chance <pre class="inline_code">p</pre> (i.e. if <pre class="inline_code">p</pre> is
- 0.4. each element has a 40% probability of beeing set to 0).
+ 0.4. each element has a 40% probability of being set to 0).
 </div></div><div style="display: block; height: 2em;"></div>
 
     </div>
