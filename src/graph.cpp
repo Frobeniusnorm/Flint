@@ -83,7 +83,6 @@ static bool use_cpu, use_gpu, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
 // TODO do execution of parents where necessary in parallel
-// EAGER EXECUTION WITH HELPER
 void fStartGradientContext() { gradient_context = true; }
 void fStopGradientContext() { gradient_context = false; }
 bool fIsGradientContext() { return gradient_context; }
