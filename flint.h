@@ -200,21 +200,6 @@ FErrorType fErrorType();
  */
 const char *fErrorMessage();
 
-/** All graph nodes that represent actual operations are after this call
- * executed eagerly, i.e. they are executed during graph construction.
- *
- * This may improve performance when only using the CPU backend, in any other
- * case disabling eager execution should be preferred. */
-void fEnableEagerExecution();
-
-/** Disable eager execution, i.e. the graph is constructed without execution of
- * the nodes until an operation makes the execution of a parent graph necessary
- * or the user calls `fExecuteGraph`. */
-void fDisableEagerExecution();
-
-/** Returns 1 if eager execution has been enabled, else 0 */
-int fIsEagerExecution();
-
 /** The 4 allowed data types:
  * - `F_INT32`(integer, 32bit)
  * - `F_INT64`(integer, 64bit)
@@ -493,21 +478,6 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node);
  * necessary the same nodes, but the same combination of nodes), since then the
  * backend can reuse already compiled kernels. */
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node);
-
-/** Executes the graph node directly and assumes that predecessor data has
- * already been computed. Uses the CPU backend. Mainly used by helper functions
- * of the framework, only use it if you now what you are doing.
- *
- * Also see `fEnableEagerExecution`, `fExecuteGraph_cpu` and `fExecuteGraph`*/
-FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node);
-
-/** Executes the graph node directly and assumes that predecessor data has
- * already been computed. Uses the GPU backend where for each operation and
- * parameter type combination one eager kernel will be computed. Mainly used by
- * helper functions of the framework, only use it if you now what you are doing.
- *
- *  Also see `fEnableEagerExecution`, `fExecuteGraph_gpu` and `fExecuteGraph`*/
-FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
 
 /** `fExecuteGraoh` does not guarantee that memory is present on the cpu (it may
  * be kept on the GPU for performance reasons). This method enforces all GPU
