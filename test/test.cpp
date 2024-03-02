@@ -1360,21 +1360,17 @@ TEST_SUITE("Advanced Broadcasting") {
 }
 int main(int argc, char **argv) {
 	fSetLoggingLevel(F_VERBOSE);
-	bool doCPU = false, doGPU = false, eager = false;
+	bool doCPU = false, doGPU = false;
 	for (int i = 0; i < argc; i++) {
 		std::string arg(argv[i]);
 		if (arg == "cpu")
 			doCPU = true;
 		if (arg == "gpu")
 			doGPU = true;
-		if (arg == "eager")
-			eager = true;
 	}
 	if (!doCPU && !doGPU) {
 		doCPU = doGPU = true;
 	}
-	if (eager)
-		fEnableEagerExecution();
 	doctest::Context context;
 	context.applyCommandLine(argc, argv);
 	int res;

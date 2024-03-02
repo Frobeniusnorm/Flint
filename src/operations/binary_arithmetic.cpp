@@ -41,13 +41,6 @@ int AddImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 2) + ";\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
-std::string AddImpl::generate_ocl_eager(FType res_type,
-										std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) "
-		   " return;\n"
-		   "R[index] = P0[(index/inv_broad0)%num_entries0] + "
-		   "P1[(index/inv_broad1)%num_entries1];";
-}
 std::vector<bool> AddImpl::reuse_parameter_binary_impl(const FGraphNode *node) {
 	const FOperation op = node->operation;
 	std::vector<bool> result(node->num_predecessor, false);
@@ -96,13 +89,6 @@ int SubImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 2) + ";\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
-std::string SubImpl::generate_ocl_eager(FType res_type,
-										std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) "
-		   "return;\nR[index] = "
-		   "P0[(index/inv_broad0)%num_entries0] - "
-		   "P1[(index/inv_broad1)%num_entries1];";
-}
 FGraphNode *MulImpl::local_gradient(FGraphNode *y, int dx_i,
 									FGraphNode *prev_adj) {
 	if (0 == dx_i) {
@@ -132,13 +118,6 @@ int MulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 1) + " * v" +
 		to_string(compiler_state.variable_index + 2) + ";\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
-}
-std::string MulImpl::generate_ocl_eager(FType res_type,
-										std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) "
-		   "return;\nR[index] = "
-		   "P0[(index/inv_broad0)%num_entries0] * "
-		   "P1[(index/inv_broad1)%num_entries1];";
 }
 FGraphNode *DivImpl::local_gradient(FGraphNode *y, int dx_i,
 									FGraphNode *prev_adj) {
@@ -173,13 +152,6 @@ int DivImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 1) + " / v" +
 		to_string(compiler_state.variable_index + 2) + ";\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
-}
-std::string DivImpl::generate_ocl_eager(FType res_type,
-										std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) "
-		   "return;\nR[index] = "
-		   "P0[(index/inv_broad0)%num_entries0] / "
-		   "P1[(index/inv_broad1)%num_entries1];";
 }
 FGraphNode *PowImpl::local_gradient(FGraphNode *y, int dx_i,
 									FGraphNode *prev_adj) {
@@ -235,31 +207,6 @@ int PowImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 					 to_string(variable_index + 1) + ", (double)v" +
 					 to_string(variable_index + 2) + ");\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
-}
-std::string PowImpl::generate_ocl_eager(FType res_type,
-										std::vector<FType> parameter_types) {
-	std::string code = "if(index >= num_entriesR) return;\n";
-	string type = type_string(res_type);
-	if ((parameter_types[0] == F_FLOAT32 || parameter_types[0] == F_FLOAT64) &&
-		(parameter_types[1] == F_FLOAT32 || parameter_types[1] == F_FLOAT64))
-		code += "R[index] = pow((" + type +
-				")P0[(index/inv_broad0)%num_entries0], (" + type +
-				")P1[(index/inv_broad1)%num_entries1]);";
-	else if (parameter_types[0] == F_INT64 &&
-			 (parameter_types[1] == F_INT32 || parameter_types[1] == F_INT64))
-		code += "R[index] "
-				"= (long)pown((double)P0[(index/inv_broad0)%num_entries0], "
-				"(int)P1[(index/inv_broad1)%num_entries1]);";
-	else if (parameter_types[0] == F_INT32 &&
-			 (parameter_types[1] == F_INT32 || parameter_types[1] == F_INT64))
-		code += "R[index] = "
-				"(int)pown((float)P0[(index/inv_broad0)%num_entries0], "
-				"(int)P1[(index/inv_broad1)%num_entries1]);";
-	else
-		code += "R[index] = "
-				"pow((double)P0[(index/inv_broad0)%num_entries0], "
-				"(double)P1[(index/inv_broad1)%num_entries1]);";
-	return code;
 }
 FGraphNode *MatMulImpl::local_gradient(FGraphNode *y, int dx_i,
 									   FGraphNode *prev_adj) {
@@ -367,10 +314,12 @@ int MatMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	}
 	// total size of each parameter
 	size_t num_entries0 = 1, num_entries1 = 1;
-	for (int i = 0; i < gnp1->operation.dimensions; i++)
-		num_entries0 *= gnp1->operation.shape[i];
-	for (int i = 0; i < gnp2->operation.dimensions; i++)
-		num_entries1 *= gnp2->operation.shape[i];
+	if (gnp1->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < gnp1->operation.dimensions; i++)
+			num_entries0 *= gnp1->operation.shape[i];
+	if (gnp2->operation.op_type != FGEN_CONSTANT)
+		for (int i = 0; i < gnp2->operation.dimensions; i++)
+			num_entries1 *= gnp2->operation.shape[i];
 	size_t l = gnp1->operation.shape[gnp1->operation.dimensions - 2];
 	size_t m = gnp1->operation.shape[gnp1->operation.dimensions - 1];
 	size_t n = gnp2->operation.shape[gnp2->operation.dimensions - 1];
@@ -400,52 +349,6 @@ int MatMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 				 ") % " + to_string(num_entries1) + "];\n}\n");
 	code.prepend(type + " " + name + " = 0;\n");
 	return OCL_LAZY_DONT_PUSH_PREDS;
-}
-std::string
-MatMulImpl::generate_ocl_parameters_eager(FType res_type,
-										  std::vector<FType> parameter_types) {
-	Twine code;
-	for (int i = 0; i < 2; i++) {
-		code += ", const __global " + type_string(parameter_types[i]) + "* P" +
-				to_string(i) + ", long num_entries" + to_string(i) +
-				", int dimensions" + to_string(i);
-	}
-	code += ", long l, long m, long n";
-	return code;
-}
-std::string MatMulImpl::generate_ocl_eager(FType res_type,
-										   std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n" + type_string(res_type) +
-		   " res = 0;\n"
-		   "long j = (index % (l * n)) / n;\n"
-		   "long k = (index % (l * n)) % n;\n"
-		   "long base_p0 = dimensions0 > 2 ? (index / (l * n)) * (l * m) : "
-		   "0;\n"
-		   "long base_p1 = dimensions1 > 2 ? (index / (l * n)) * (m * n) : "
-		   "0;\n"
-		   "for(int i = 0; i < m; i++){\n res += P0[(base_p0 + j * m + i) % "
-		   "num_entries0] * "
-		   "P1[(base_p1 + i * n + k) % num_entries1];\n}"
-		   "R[index] = res;\n";
-}
-void MatMulImpl::push_additional_kernel_parameters(FGraphNode *node,
-												   cl_kernel kernel,
-												   cl_context context,
-												   int &par_index,
-												   std::list<cl_mem> &to_free) {
-	const FGraphNode *gnp1 = node->predecessors[0],
-					 *gnp2 = node->predecessors[1];
-	const long l = gnp1->operation.shape[gnp1->operation.dimensions - 2];
-	const long m = gnp1->operation.shape[gnp1->operation.dimensions - 1];
-	const long n = gnp2->operation.shape[gnp2->operation.dimensions - 1];
-	for (const long *mmd : {&l, &m, &n}) {
-		if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)mmd) !=
-			CL_SUCCESS) {
-			setErrorType(OCL_ERROR);
-			flogging(F_ERROR, "Could not load Argument to kernel!");
-			return;
-		}
-	}
 }
 void SubImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,

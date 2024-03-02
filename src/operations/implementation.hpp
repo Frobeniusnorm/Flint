@@ -357,52 +357,6 @@ struct OperationImplementation {
 		virtual int generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) = 0;
 		/**
-		 * Generates the content of a eager kernel.
-		 * `res_type` is the result type of the kernel and `parameter_types`
-		 * contains the parameter types in order.
-		 */
-		virtual std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) = 0;
-		/**
-		 * Generates additional parameters to the kernel additional to the
-		 * result array
-		 */
-		virtual std::string
-		generate_ocl_parameters_eager(FType res_type,
-									  std::vector<FType> parameter_types);
-		/**
-		 * Pushes additional values to the eager opencl program that don't
-		 * depend on the parameters. The `par_index` has to be incremented for
-		 * every pushed parameter. Every memory object in `to_free` will be
-		 * freed after program execution.
-		 */
-		virtual void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) {}
-		/**
-		 * Pushes per parameter values (the function is called once per
-		 * parameter). See `push_additional_kernel_parameters`.
-		 */
-		virtual void push_parameter_kernel_parameters(
-			FGraphNode *node, FGraphNode *pred, cl_kernel kernel,
-			cl_context context, int &par_index, std::list<cl_mem> &to_free) {}
-		/**
-		 * Calculates all possible combinations of return types and parameter
-		 * values. Each possible combination is denoted by a vector in which the
-		 * first type represents the return type, the second the first parameter
-		 * type, the third the second parameter type and so on.
-		 * It is used to determine which kernels have to be generated for a
-		 * operation (i.e. which actually could occur). The default
-		 * implementation takes all possible parameter combinations and the
-		 * highest of them as return type (semantic of most binary operations).
-		 * The given node should be treated as an example and except for the
-		 * number of parameters no concrete values should be taken.
-		 */
-		virtual std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node);
-		/**
 		 * Calculates the operation score for a node, i.e. assigns a score
 		 * to each node depending on its parallelizability, very high scores are
 		 * calculated on gpu, middle high scores parallel on cpus, lower scores
@@ -430,18 +384,6 @@ struct OperationImplementation {
 		virtual std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) {
 			return {};
-		}
-		/** Controls the number of elements that are depatched for the cpu
-		 * backend and the eager gpu backend (NOT the lazy gpu backend!). In
-		 * general you want this to be the size of the result node (s.d. for
-		 * each element in the result, one calculation takes place), but
-		 * sometimes for optimization or special operations another value makes
-		 * more sense. */
-		virtual size_t deploy_as_many_elements(const FGraphNode *node) {
-			size_t total = 1;
-			for (int d = 0; d < node->operation.dimensions; d++)
-				total *= node->operation.shape[d];
-			return total;
 		}
 };
 #endif

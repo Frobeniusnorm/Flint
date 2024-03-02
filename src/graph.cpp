@@ -80,47 +80,15 @@ const char *fop_to_string[] = {"FSTORE",
 							   "FPOOLING_SUM",
 							   "FGRADIENT_POOLING_MAX",
 							   "FDROPOUT"};
-static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
+static bool use_cpu, use_gpu, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
 // TODO do execution of parents where necessary in parallel
 // EAGER EXECUTION WITH HELPER
-void fEnableEagerExecution() { eager_execution = true; }
-void fDisableEagerExecution() { eager_execution = false; }
-int fIsEagerExecution() { return eager_execution; }
 void fStartGradientContext() { gradient_context = true; }
 void fStopGradientContext() { gradient_context = false; }
 bool fIsGradientContext() { return gradient_context; }
 FErrorType fErrorType() { return last_error; }
-static inline FGraphNode *execute_eagerly(FGraphNode *f) {
-	if (!use_cpu && !use_gpu)
-		flintInit(FLINT_BACKEND_BOTH);
-	bool all_calculated = true;
-	for (int i = 0; i < f->num_predecessor; i++) {
-		if (f->predecessors[i]->operation.op_type != FSTORE &&
-			!f->predecessors[i]->result_data) {
-			all_calculated = false;
-			break;
-		}
-	}
-	if (all_calculated && (use_cpu || use_gpu)) {
-		// since we only have one node the heuristics become constant
-		unsigned int gpu_score = compute_score(f, false);
-		return use_gpu && (gpu_score >= 1024 || !use_cpu)
-				   ? fExecuteGraph_gpu_eagerly(f)
-				   : fExecuteGraph_cpu_eagerly(f);
-	} else {
-		if (use_gpu && use_cpu) {
-			unsigned int gpu_score = compute_score(f, true);
-			return gpu_score >= 1024 || !use_cpu ? fExecuteGraph_gpu(f)
-												 : fExecuteGraph_cpu(f);
-		}
-		if (use_gpu)
-			return fExecuteGraph_gpu(f);
-		else
-			return fExecuteGraph_cpu(f);
-	}
-}
 static inline void
 configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
 	if (!gradient_context)
@@ -148,8 +116,6 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
 	if (!use_cpu && !use_gpu)
 		if (flintInit(FLINT_BACKEND_BOTH) != NO_ERROR)
 			return nullptr;
-	if (eager_execution)
-		return execute_eagerly(node);
 	if (use_gpu && use_cpu) {
 		size_t no_elems = 1;
 		for (int i = 0; i < node->operation.dimensions; i++)
@@ -354,10 +320,10 @@ static FGraphNode *addNode(FOperation op, std::vector<FGraphNode *> pre) {
 		return nullptr;
 	for (size_t i = 0; i < pre.size(); i++) {
 		foo->predecessors[i] = pre[i];
-		if (pre[i]->reference_counter++ > 2 && !eager_execution)
+		if (pre[i]->reference_counter++ > 2)
 			fExecuteGraph(pre[i]);
 	}
-	return eager_execution ? execute_eagerly(foo) : foo;
+	return foo;
 }
 static inline void initShape_keep(FOperation &op, const FOperation *a,
 								  const FOperation *b) {
@@ -943,7 +909,7 @@ FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
 	x->reference_counter++;
 	y->reference_counter++;
 	node->reference_counter = 0;
-	return eager_execution ? execute_eagerly(node) : node;
+	return node;
 }
 FGraphNode *freshape(FGraphNode *a, const size_t *newshape,
 					 const int dimensions) {
@@ -975,9 +941,9 @@ FGraphNode *freshape(FGraphNode *a, const size_t *newshape,
 		return nullptr;
 	node->predecessors[0] = a;
 	node->reference_counter = 0;
-	if (a->reference_counter++ > 2 && !eager_execution)
+	if (a->reference_counter++ > 2)
 		fExecuteGraph(a);
-	return eager_execution ? execute_eagerly(node) : node;
+	return node;
 }
 FGraphNode *fconvert(FGraphNode *a, FType newtype) {
 	FGraphNode *foo = new FGraphNode();
@@ -989,7 +955,7 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
 	if (!foo->predecessors)
 		return nullptr;
 	foo->predecessors[0] = a;
-	if (a->reference_counter++ > 2 && !eager_execution)
+	if (a->reference_counter++ > 2)
 		fExecuteGraph(a);
 	foo->operation.data_type = newtype;
 	foo->operation.dimensions = a->operation.dimensions;
@@ -1000,8 +966,7 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
 		   sizeof(size_t) * a->operation.dimensions);
 	foo->operation.op_type = FCONVERSION;
 	foo->operation.additional_data = nullptr;
-	return eager_execution ? execute_eagerly(foo) : foo;
-	;
+	return foo;
 }
 
 static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
@@ -1077,7 +1042,7 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 		return nullptr;
 	((int *)op.additional_data)[0] = dimension;
 	foo->operation = op;
-	return eager_execution && total >= 128 ? execute_eagerly(foo) : foo;
+	return foo;
 }
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
 // freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
@@ -1106,7 +1071,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
 		return nullptr;
 	foo->predecessors[0] = a;
 	foo->reference_counter = 0;
-	if (a->reference_counter++ > 2 && !eager_execution)
+	if (a->reference_counter++ > 2)
 		fExecuteGraph(a);
 	FOperation op;
 	op.broadcasting_mode = 0;
@@ -1168,7 +1133,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
 		}
 	}
 	foo->operation = op;
-	return eager_execution ? execute_eagerly(foo) : foo;
+	return foo;
 }
 FGraphNode *fslice(FGraphNode *a, const long *start, const long *end) {
 	std::vector<long> step(a->operation.dimensions, 1);
@@ -1309,7 +1274,7 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
 		return nullptr;
 	foo->predecessors[0] = a;
 	foo->reference_counter = 0;
-	if (a->reference_counter++ > 2 && !eager_execution)
+	if (a->reference_counter++ > 2)
 		fExecuteGraph(a);
 	// construct operation
 	const int dimensions = a->operation.dimensions;
@@ -1334,7 +1299,7 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
 		return nullptr;
 	memcpy(extend.start, insert_at, dimensions * sizeof(size_t));
 	memcpy(extend.step, step_size, dimensions * sizeof(long));
-	return eager_execution ? execute_eagerly(foo) : foo;
+	return foo;
 }
 FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
 					const size_t *insert_at) {
@@ -1470,7 +1435,7 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
 	node->num_predecessor = 0;
 	node->gradient_data = nullptr;
 	node->reference_counter = 0;
-	return eager_execution ? execute_eagerly(node) : node;
+	return node;
 }
 FGraphNode *fdropout(FGraphNode *g, const double p) {
 	FOperation op;
