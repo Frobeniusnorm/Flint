@@ -53,22 +53,6 @@ struct ConvolveImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override;
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override;
-		void
-		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-										 cl_kernel kernel, cl_context context,
-										 int &par_index,
-										 std::list<cl_mem> &to_free) override {
-			push_per_parameter_dimension(pred->operation, kernel, par_index);
-		}
 		int operation_score(FGraphNode *node) override {
 			size_t no_elems = 1;
 			const FGraphNode *a = node->predecessors[1];
@@ -98,22 +82,6 @@ struct GradientConvolve1Impl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override;
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override;
-		void
-		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-										 cl_kernel kernel, cl_context context,
-										 int &par_index,
-										 std::list<cl_mem> &to_free) override {
-			push_per_parameter_dimension(pred->operation, kernel, par_index);
-		}
 		int operation_score(FGraphNode *node) override {
 			size_t no_elems = 1;
 			const FGraphNode *a = node->predecessors[1];
@@ -142,35 +110,11 @@ struct GradientConvolve2Impl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override;
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override;
-		void
-		push_parameter_kernel_parameters(FGraphNode *node, FGraphNode *pred,
-										 cl_kernel kernel, cl_context context,
-										 int &par_index,
-										 std::list<cl_mem> &to_free) override {
-			push_per_parameter_dimension(pred->operation, kernel, par_index);
-		}
-		int operation_score(FGraphNode *node) override {
-			size_t no_elems = 1;
-			const FGraphNode *a = node->predecessors[0];
-			for (int i = 0; i < a->operation.dimensions; i++) {
-				no_elems *= a->operation.shape[i];
-			}
-			return 5 + (int)(sqrt(no_elems));
-		}
+		int operation_score(FGraphNode *node) override { return 10; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
 		void free_additional_data(FGraphNode *gn) override {
 			free(gn->operation.additional_data);
 		}
-		size_t deploy_as_many_elements(const FGraphNode *node) override;
 };
 #endif

@@ -92,9 +92,7 @@ static void chooseExecutionMethod(FGraphNode *node,
 	const size_t score =
 		size * OperationImplementation::implementations[node->operation.op_type]
 				   ->operation_score(node);
-	const size_t dis_num =
-		OperationImplementation::implementations[node->operation.op_type]
-			->deploy_as_many_elements(node);
+	const size_t dis_num = size;
 	if (score >= PARALLEL_EXECUTION_SIZE && dis_num >= threads.size()) {
 		const size_t exeUnits = std::min(dis_num, threads.size());
 		const size_t workSize = dis_num / exeUnits;
@@ -121,102 +119,6 @@ static void chooseExecutionMethod(FGraphNode *node,
 				  : std::string("Sequential Execution on CPU (score: " +
 								std::to_string(score) + ")")) +
 				 " took " + std::to_string(elapsed.count()) + "ms");
-}
-FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node) {
-	if (!initialized)
-		flintInit_cpu();
-	if (node->result_data)
-		return node;
-	bool is_data_node = node->operation.op_type == FSTORE;
-	std::vector<CPUResultData> pred_data(node->num_predecessor);
-	size_t total = 1;
-	if (node->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < node->operation.dimensions; i++)
-			total *= node->operation.shape[i];
-	void *data = nullptr;
-
-	if (!is_data_node) {
-		const std::vector<bool> reusage =
-			OperationImplementation::implementations[node->operation.op_type]
-				->reuse_parameter_result(node);
-		// build predecessor data
-		for (int i = 0; i < node->num_predecessor; i++) {
-			FGraphNode *pred = node->predecessors[i];
-			if (pred->result_data) {
-				if (!pred->result_data->data)
-					fSyncMemory(pred);
-				pred_data[i].data = pred->result_data->data;
-				if (!pred_data[i].data)
-					flogging(F_ERROR, "no result data!");
-				pred_data[i].num_entries = pred->result_data->num_entries;
-			} else if (pred->operation.op_type == FSTORE) {
-				FStore *store = (FStore *)pred->operation.additional_data;
-				pred_data[i].data = store->data;
-				if (!pred_data[i].data)
-					flogging(F_ERROR, "no store data!");
-				pred_data[i].num_entries = store->num_entries;
-			} else {
-				setErrorType(INTERNAL_ERROR);
-				flogging(F_ERROR, "unexecuted node!");
-				return nullptr;
-			}
-			pred_data[i].type = pred->operation.data_type;
-			pred_data[i].shape = std::vector<size_t>(
-				pred->operation.shape,
-				pred->operation.shape + pred->operation.dimensions);
-			if (!data && pred->reference_counter == 1 && !reusage.empty() &&
-				reusage[i] &&
-				(pred->operation.op_type != FSTORE || !node->gradient_data) &&
-				pred->operation.op_type != FGEN_CONSTANT && pred != node) {
-				// recycle data
-				if (pred->result_data) {
-					FResultData *data = pred->result_data;
-					if (data->mem_id)
-						clReleaseMemObject(data->mem_id);
-					delete data;
-					pred->result_data = nullptr;
-				}
-				if (pred->operation.op_type == FSTORE) {
-					((FStore *)pred->operation.additional_data)->data = nullptr;
-				}
-				pred_data[i].multi_use = true;
-				data = pred_data[i].data;
-			}
-		}
-		if (!data) {
-			switch (node->operation.data_type) {
-			case F_INT32:
-				data = safe_mal<int>(total);
-				if (!data)
-					return nullptr;
-				break;
-			case F_INT64:
-				data = safe_mal<long>(total);
-				if (!data)
-					return nullptr;
-				break;
-			case F_FLOAT32:
-				data = safe_mal<float>(total);
-				if (!data)
-					return nullptr;
-				break;
-			case F_FLOAT64:
-				data = safe_mal<double>(total);
-				if (!data)
-					return nullptr;
-				break;
-			}
-		}
-		chooseExecutionMethod(node, pred_data, (double *)data, total);
-	} else {
-		data = ((FStore *)node->operation.additional_data)->data;
-	}
-	FResultData *rd = new FResultData();
-	rd->data = data;
-	rd->num_entries = total;
-	rd->mem_id = nullptr;
-	node->result_data = rd;
-	return node;
 }
 
 FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
@@ -375,25 +277,11 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node) {
 		}
 	}
 	CPUResultData final = results[node];
-	if (!fIsEagerExecution()) {
-		// free all other data
-		for (auto &[gn, rd] : results) {
-			if (gn != node && gn->operation.op_type != FSTORE &&
-				!gn->result_data && !rd.multi_use)
-				free(rd.data);
-		}
-	} else {
-		// construct a result for each node
-		for (auto &[gn, rd] : results) {
-			if (gn != node && gn->operation.op_type != FSTORE &&
-				!gn->result_data && !rd.multi_use) {
-				FResultData *result = new FResultData();
-				result->data = rd.data;
-				result->num_entries = rd.num_entries;
-				result->mem_id = nullptr;
-				gn->result_data = result;
-			}
-		}
+	// free all other data (TODO or safe it?)
+	for (auto &[gn, rd] : results) {
+		if (gn != node && gn->operation.op_type != FSTORE && !gn->result_data &&
+			!rd.multi_use)
+			free(rd.data);
 	}
 	// return data
 	FResultData *rd = new FResultData();

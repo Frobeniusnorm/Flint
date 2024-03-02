@@ -248,25 +248,6 @@ int ReduceSumImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	return reducing<FREDUCE_SUM>(node, name, compiler_state);
 }
-std::string ReduceSumImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return reducing_parameters_eager(res_type, parameter_types);
-}
-std::string
-ReduceSumImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {
-	return reducing_eager<FREDUCE_SUM>(res_type, parameter_types);
-}
-void ReduceSumImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	reducing_push_parameters(node, kernel, context, par_index, to_free);
-}
-void ReduceSumImpl::push_parameter_kernel_parameters(
-	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
-	int &par_index, std::list<cl_mem> &to_free) {
-	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
-}
 std::vector<bool>
 ReduceSumImpl::reuse_parameter_result(const FGraphNode *node) {
 	return reducing_reuse_params(node);
@@ -332,28 +313,9 @@ void ReduceMulImpl::unary_expression(T *__restrict__ result,
 		}
 	}
 }
-std::string ReduceMulImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return reducing_parameters_eager(res_type, parameter_types);
-}
 int ReduceMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	return reducing<FREDUCE_MUL>(node, name, compiler_state);
-}
-std::string
-ReduceMulImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {
-	return reducing_eager<FREDUCE_MUL>(res_type, parameter_types);
-}
-void ReduceMulImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	reducing_push_parameters(node, kernel, context, par_index, to_free);
-}
-void ReduceMulImpl::push_parameter_kernel_parameters(
-	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
-	int &par_index, std::list<cl_mem> &to_free) {
-	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
 }
 std::vector<bool>
 ReduceMulImpl::reuse_parameter_result(const FGraphNode *node) {
@@ -396,25 +358,6 @@ int ReduceMinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	return reducing<FREDUCE_MIN>(node, name, compiler_state);
 }
-std::string ReduceMinImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return reducing_parameters_eager(res_type, parameter_types);
-}
-std::string
-ReduceMinImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {
-	return reducing_eager<FREDUCE_MIN>(res_type, parameter_types);
-}
-void ReduceMinImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	reducing_push_parameters(node, kernel, context, par_index, to_free);
-}
-void ReduceMinImpl::push_parameter_kernel_parameters(
-	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
-	int &par_index, std::list<cl_mem> &to_free) {
-	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
-}
 std::vector<bool>
 ReduceMinImpl::reuse_parameter_result(const FGraphNode *node) {
 	return reducing_reuse_params(node);
@@ -452,25 +395,6 @@ void ReduceMaxImpl::unary_expression(T *__restrict__ result,
 int ReduceMaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	return reducing<FREDUCE_MAX>(node, name, compiler_state);
-}
-std::string ReduceMaxImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return reducing_parameters_eager(res_type, parameter_types);
-}
-std::string
-ReduceMaxImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {
-	return reducing_eager<FREDUCE_MAX>(res_type, parameter_types);
-}
-void ReduceMaxImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	reducing_push_parameters(node, kernel, context, par_index, to_free);
-}
-void ReduceMaxImpl::push_parameter_kernel_parameters(
-	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
-	int &par_index, std::list<cl_mem> &to_free) {
-	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
 }
 std::vector<bool>
 ReduceMaxImpl::reuse_parameter_result(const FGraphNode *node) {

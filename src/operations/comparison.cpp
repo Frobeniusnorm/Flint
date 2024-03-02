@@ -59,15 +59,6 @@ int MinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 2) + ");\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
-std::string MinImpl::generate_ocl_eager(FType res_type,
-										std::vector<FType> parameter_types) {
-	return "if(index >= num_entries0 && index >= num_entries1) return;\n" +
-		   type_string(parameter_types[0]) +
-		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
-		   type_string(parameter_types[1]) +
-		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
-		   "R[index] = a < b ? a : b;";
-}
 FGraphNode *MaxImpl::local_gradient(FGraphNode *y, int dx_i,
 									FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
@@ -98,15 +89,6 @@ int MaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 1) + ", (" + type + ")v" +
 		to_string(compiler_state.variable_index + 2) + ");\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
-}
-std::string MaxImpl::generate_ocl_eager(FType res_type,
-										std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n" +
-		   type_string(parameter_types[0]) +
-		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
-		   type_string(parameter_types[1]) +
-		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
-		   "R[index] = a >= b ? a : b;";
 }
 void MaxImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
@@ -140,15 +122,6 @@ int LessImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 2) + " ? 1 : 0;\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
 }
-std::string LessImpl::generate_ocl_eager(FType res_type,
-										 std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n" +
-		   type_string(parameter_types[0]) +
-		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
-		   type_string(parameter_types[1]) +
-		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
-		   "R[index] = a < b ? 1 : 0;";
-}
 void LessImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
 						   void *__restrict__ result, size_t from,
@@ -180,16 +153,6 @@ int GreaterImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 1) + " > v" +
 		to_string(compiler_state.variable_index + 2) + " ? 1 : 0;\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
-}
-std::string
-GreaterImpl::generate_ocl_eager(FType res_type,
-								std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n" +
-		   type_string(parameter_types[0]) +
-		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
-		   type_string(parameter_types[1]) +
-		   " b = P1[(index/inv_broad1)%num_entries1];\n" +
-		   "R[index] = a > b ? 1 : 0;";
 }
 void GreaterImpl::execute_cpu(const FGraphNode *node,
 							  std::vector<CPUResultData> predecessor_data,
@@ -232,16 +195,6 @@ int EqualImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 2) + " + " +
 		epsilon_for_type(y.data_type) + "? 1 : 0;\n");
 	return OCL_LAZY_INVERSE_BROADCASTING;
-}
-std::string EqualImpl::generate_ocl_eager(FType res_type,
-										  std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n" +
-		   type_string(parameter_types[0]) +
-		   " a = P0[(index/inv_broad0)%num_entries0];\n" +
-		   type_string(parameter_types[1]) +
-		   " b = P1[(index/inv_broad1)%num_entries1];\n" + "R[index] = a + " +
-		   epsilon_for_type(parameter_types[0]) + " >= b && a <= b + " +
-		   epsilon_for_type(parameter_types[1]) + " ? 1 : 0;";
 }
 void EqualImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
@@ -292,54 +245,11 @@ int DropoutImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		"}\n");
 	return 0;
 }
-std::string
-DropoutImpl::generate_ocl_eager(FType res_type,
-								std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
-		   "const double v = sin(index + time) * 43758.5453123;\n"
-		   "const double r = min(v - floor(v), 0.99999);\n"
-		   "R[index] = r > prob ? P0[index % num_entries0] : 0;\n";
-}
 FGraphNode *DropoutImpl::local_gradient(FGraphNode *y, int dx_i,
 										FGraphNode *prev_adj) {
 	const double *orig_data = (double *)y->operation.additional_data;
-	const bool was_eager = fIsEagerExecution();
-	if (was_eager)
-		fDisableEagerExecution();
 	FGraphNode *grad = fdropout(prev_adj, orig_data[1]);
 	((double *)grad->operation.additional_data)[0] = orig_data[0];
-	if (was_eager) {
-		fEnableEagerExecution();
-		fExecuteGraph(grad);
-	}
+	fExecuteGraph(grad);
 	return grad;
-}
-std::string
-DropoutImpl::generate_ocl_parameters_eager(FType res_type,
-										   std::vector<FType> parameter_types) {
-	return ", const __global " + type_string(parameter_types[0]) +
-		   "* P0, const long num_entries0, const double "
-		   "time, const double prob";
-}
-void DropoutImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	const double seed = ((double *)node->operation.additional_data)[0];
-	const double prob = ((double *)node->operation.additional_data)[1];
-	size_t num_entries0 = 1;
-	if (node->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < node->operation.dimensions; i++)
-			num_entries0 *= node->operation.shape[i];
-	if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&seed) !=
-		CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&prob) !=
-		CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
 }

@@ -138,7 +138,6 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
 	if (benchmarks & FLINT_BACKEND_ONLY_CPU) {
 		// cpu tests
 		flintInit(FLINT_BACKEND_ONLY_CPU);
-		fEnableEagerExecution();
 		for (const auto &bench : benches) {
 			flogging(F_INFO, bench.first + "...");
 			times.insert({bench.first, {bench.second(), 0, 0}});
@@ -150,7 +149,6 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
 	if (benchmarks & FLINT_BACKEND_ONLY_GPU) {
 		// gpu tests
 		flintInit(FLINT_BACKEND_ONLY_GPU);
-		fDisableEagerExecution();
 		for (const auto &bench : benches) {
 			flogging(F_INFO, bench.first + "...");
 			std::get<1>(times[bench.first]) = bench.second();
@@ -215,7 +213,6 @@ void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
 int main(int argc, char **argv) {
 	int backends = 0;
 	bool lazy = false;
-	bool eager = false;
 	if (argc > 1) {
 		if (argc > 3)
 			flogging(F_ERROR,
@@ -229,8 +226,6 @@ int main(int argc, char **argv) {
 				backends |= FLINT_BACKEND_ONLY_GPU;
 			} else if (strcmp(argv[i], "jit") == 0) {
 				lazy = true;
-			} else if (strcmp(argv[i], "eager") == 0) {
-				eager = true;
 			} else
 				flogging(
 					F_ERROR,
@@ -238,8 +233,6 @@ int main(int argc, char **argv) {
 						"! Call this program like this: benchmark [cpu] [gpu]");
 		}
 	}
-	if (eager)
-		fEnableEagerExecution();
 	if (lazy)
 		backends = 4;
 	if (backends == 0)

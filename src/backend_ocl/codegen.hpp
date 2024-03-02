@@ -25,7 +25,4 @@
 std::string
 generateCode(FGraphNode *node,
 			 std::list<std::pair<FGraphNode *, std::string>> &parameters);
-std::string generateEagerCode(FOperationType operation, FType res_type,
-							  std::vector<FType> parameter_types,
-							  std::string &kernel_name);
 #endif
