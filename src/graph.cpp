@@ -851,26 +851,20 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
 }
 
 FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
-	// TODO: lazy matmul
-	if (!x->result_data && x->operation.op_type != FSTORE) {
-		x = fExecuteGraph(x);
-	}
-	if (!y->result_data && y->operation.op_type != FSTORE) {
-		y = fExecuteGraph(y);
-	}
 	const FOperation ao = x->operation;
 	const FOperation bo = y->operation;
-
 	if (ao.dimensions < 2 || bo.dimensions < 2) {
 		last_error = ILLEGAL_DIMENSIONALITY;
 		flogging(F_ERROR, "Dimensions of operands of matrix multiplications "
 						  "must be at least 2!");
 		return nullptr;
 	}
-	size_t l = ao.shape[ao.dimensions - 2];
-	size_t m = ao.shape[ao.dimensions - 1];
-	size_t mb = bo.shape[bo.dimensions - 2];
-	size_t n = bo.shape[bo.dimensions - 1];
+	const size_t l = ao.shape[ao.dimensions - 2];
+	const size_t m = ao.shape[ao.dimensions - 1];
+	// matmul(l x m, m x n)
+	// = reduce_sum(mul(a, transpose(repeat(b, l)), {_, -1, -2, -3}), -2)
+	const size_t mb = bo.shape[bo.dimensions - 2];
+	const size_t n = bo.shape[bo.dimensions - 1];
 	if (m != mb) {
 		last_error = INCOMPATIBLE_SHAPES;
 		flogging(F_ERROR, "Incompatible Shapes for matrix multiplications: " +
@@ -881,35 +875,8 @@ FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
 								  bo.shape, bo.shape + bo.dimensions)));
 		return nullptr; // for c compatibility
 	}
-	FOperation res;
-	res.broadcasting_mode = 0;
-	res.dimensions = std::max(ao.dimensions, bo.dimensions);
-	res.shape = safe_mal<size_t>(res.dimensions);
-	if (!res.shape)
-		return nullptr;
-	if (res.dimensions > 2)
-		memcpy(res.shape, (ao.dimensions >= bo.dimensions ? ao : bo).shape,
-			   sizeof(size_t) * (res.dimensions - 2));
-	res.shape[res.dimensions - 2] = l;
-	res.shape[res.dimensions - 1] = n;
-	res.data_type = ao.data_type > bo.data_type ? ao.data_type : bo.data_type;
-	res.op_type = FMATMUL;
-	res.additional_data = nullptr;
-
-	FGraphNode *node = new FGraphNode();
-	configureGradientInformation(node, {x, y});
-	node->operation = res;
-	node->result_data = nullptr;
-	node->num_predecessor = 2;
-	node->predecessors = safe_mal<FGraphNode *>(2);
-	if (!node->predecessors)
-		return nullptr;
-	node->predecessors[0] = x;
-	node->predecessors[1] = y;
-	x->reference_counter++;
-	y->reference_counter++;
-	node->reference_counter = 0;
-	return node;
+	FGraphNode* total = fmul(fexpand(x, ao.dimensions, n), fexpand(y, bo.dimensions - 2, l));
+	return freduce_sum(total, total->operation.dimensions - 2);	
 }
 FGraphNode *freshape(FGraphNode *a, const size_t *newshape,
 					 const int dimensions) {
