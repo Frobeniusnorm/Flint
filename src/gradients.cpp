@@ -164,7 +164,7 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 	adjoints[y] = constant_tensor(1., y->operation.data_type,
 								  y->operation.shape, y->operation.dimensions);
 	for (FGraphNode *curr : todo) {
-		FGraphNode *adj = adjoints[curr];
+		FGraphNode *adj = fExecuteGraph(adjoints[curr]);
 		bool allowed_to_free = true;
 		adj->reference_counter++;
 		for (int i = 0; i < curr->num_predecessor; i++) {
@@ -178,10 +178,9 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 					->local_gradient(curr, i, adj),
 				parent);
 			if (adjoints.contains(parent)) {
-				adjoints[parent] =
-					fExecuteGraph(fadd(adjoints[parent], local_grad));
+				adjoints[parent] = (fadd(adjoints[parent], local_grad));
 			} else {
-				adjoints.insert({parent, fExecuteGraph(local_grad)});
+				adjoints.insert({parent, (local_grad)});
 				if (local_grad == adj)
 					allowed_to_free = false;
 			}
