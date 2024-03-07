@@ -875,8 +875,9 @@ FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
 								  bo.shape, bo.shape + bo.dimensions)));
 		return nullptr; // for c compatibility
 	}
-	FGraphNode* total = fmul(fexpand(x, ao.dimensions, n), fexpand(y, bo.dimensions - 2, l));
-	return freduce_sum(total, total->operation.dimensions - 2);	
+	FGraphNode *total =
+		fmul(fexpand(x, ao.dimensions, n), fexpand(y, bo.dimensions - 2, l));
+	return freduce_sum(total, total->operation.dimensions - 2);
 }
 FGraphNode *freshape(FGraphNode *a, const size_t *newshape,
 					 const int dimensions) {
@@ -942,10 +943,7 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 	for (int i = 0; i < a->operation.dimensions; i++)
 		if (i != dimension)
 			total *= a->operation.shape[i];
-	if (total <= 128 ||
-		a->reference_counter > 1) { // small reduction size will be slow on gpu
-		a = fExecuteGraph(a);
-	} else if (!a->result_data) {
+	if (!a->result_data) {
 		// we dont want interleaved reduction since that is slow
 		std::list<FGraphNode *> todo;
 		todo.push_back(a);
@@ -1336,46 +1334,59 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
 					  const unsigned int *steps) {
 	const FOperation ao = a->operation;
 	const FOperation bo = kernel->operation;
-	if (!a->result_data && ao.op_type != FSTORE) {
-		fExecuteGraph(a);
-	}
-	if (!kernel->result_data && bo.op_type != FSTORE) {
-		fExecuteGraph(kernel);
-	}
-	if (ao.dimensions != bo.dimensions && ao.dimensions + 1 != bo.dimensions) {
-		last_error = ILLEGAL_DIMENSIONALITY;
+	if (ao.dimensions != bo.dimensions && ao.dimensions != bo.dimensions - 1) {
+		setErrorType(INCOMPATIBLE_SHAPES);
 		flogging(F_ERROR,
-				 "For a convolution the original Tensor and the filter "
-				 "kernel(s) have to have to same number of dimensions!");
-		return nullptr; // for c compatibility
+				 "Incompatible shapes in convolution! Image and Kernel have "
+				 "illegal combination of dimensionalities!");
+		return nullptr;
 	}
-	bool multiple_filters = ao.dimensions + 1 == bo.dimensions;
 	if (ao.shape[ao.dimensions - 1] != bo.shape[bo.dimensions - 1]) {
-		last_error = INCOMPATIBLE_SHAPES;
+		setErrorType(INCOMPATIBLE_SHAPES);
 		flogging(F_ERROR,
-				 "For a convolution the size of the last dimension of the "
-				 "Tensor must match that of the kernel! " +
-					 std::to_string(ao.shape[ao.dimensions - 1]) + " vs. " +
-					 std::to_string(bo.shape[bo.dimensions - 1]));
-		return nullptr; // for c compatibility
+				 "Incompatible shapes in convolution! Image and Kernel should "
+				 "have same shape in their last dimension!");
+		return nullptr;
 	}
-	FOperation op;
-	op.broadcasting_mode = 0;
-	op.dimensions = multiple_filters ? ao.dimensions : ao.dimensions - 1;
-	op.shape = safe_mal<size_t>(op.dimensions);
-	if (!op.shape)
-		return nullptr;
-	calculateShapeAggregatingWindows(
-		op, ao, multiple_filters ? bo.shape + 1 : bo.shape, steps);
-	if (multiple_filters)
-		op.shape[ao.dimensions - 1] = bo.shape[0];
-	op.data_type = higher_type(ao.data_type, bo.data_type);
-	op.op_type = FCONVOLVE;
-	op.additional_data = safe_mal<unsigned int>(op.dimensions);
-	if (!op.additional_data)
-		return nullptr;
-	memcpy(op.additional_data, steps, op.dimensions * sizeof(unsigned int));
-	return addNode(op, {a, kernel});
+	const bool multifilter = ao.dimensions < bo.dimensions;
+	// create sliding windows of a
+	size_t window_sizes[ao.dimensions];
+	unsigned int actual_steps[ao.dimensions];
+	size_t final_shape[multifilter ? ao.dimensions : ao.dimensions - 1];
+	for (int i = 0; i < ao.dimensions; i++) {
+		if (i != ao.dimensions - 1) {
+			window_sizes[i] = bo.shape[i + (bo.dimensions - ao.dimensions)];
+			actual_steps[i] = steps[i];
+		} else {
+			window_sizes[i] = ao.shape[i];
+			actual_steps[i] = ao.shape[i];
+		}
+		if (i < ao.dimensions - 1) {
+			size_t window_size = a->operation.shape[i] - window_sizes[i] + 1;
+			window_size = window_size % actual_steps[i] == 0
+							  ? window_size / actual_steps[i]
+							  : window_size / actual_steps[i] + 1;
+			final_shape[i] = window_size;
+		}
+	}
+	FGraphNode *sw = fsliding_window(a, window_sizes, actual_steps);
+	if (multifilter) {
+		// channels of multifilter is in first dimension, repeat each window of
+		// the image to match
+		sw = fexpand(sw, 1, bo.shape[0]);
+		// add the channels so the reshape below does its job correctly
+		final_shape[ao.dimensions - 1] = bo.shape[0];
+	}
+	// multiply the windows with the kernel
+	FGraphNode *conv = fmul(sw, kernel);
+	// flatten to [no_windows, elements_in_window] or [no_windows, channels,
+	// elements_in_window]
+	while (conv->operation.dimensions > (multifilter ? 3 : 2)) {
+		conv = fflatten_dimension(conv, conv->operation.dimensions - 1);
+	}
+	// reduce elements_in_window
+	conv = freduce_sum(conv, multifilter ? 2 : 1); // reproject to correct shape
+	return freshape(conv, final_shape, multifilter ? ao.dimensions : ao.dimensions - 1);
 }
 FGraphNode *frandom(const size_t *shape, const int dimensions) {
 	FGraphNode *node = new FGraphNode();

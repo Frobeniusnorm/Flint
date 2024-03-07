@@ -118,7 +118,6 @@ double convolve_grad_fun() {
 		fStartGradientContext();
 		Tensor<float, 2> foo = img_t.convolve(ker_t, 8, 8);
 		Tensor<float, 2> err = (foo - 0.7f).abs();
-		err.execute();
 		fStopGradientContext();
 		Tensor<float, 3> grad = err.gradient(ker_t);
 		grad.execute();
@@ -127,8 +126,8 @@ double convolve_grad_fun() {
 }
 void call_benchmarks(int benchmarks = FLINT_BACKEND_BOTH) {
 	unordered_map<string, double (*)()> benches;
-	benches.insert({"convolve_fun", convolve_fun});
 	benches.insert({"convolve_grad_fun", convolve_grad_fun});
+	benches.insert({"convolve_fun", convolve_fun});
 	benches.insert({"gradient_fun", gradient_fun});
 	benches.insert({"matrix_multiplication", matrix_multiplication});
 	benches.insert({"reduce_fun", reduce_fun});
