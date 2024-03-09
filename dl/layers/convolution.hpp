@@ -11,6 +11,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License. */
+#ifndef FLINT_CONVOLUTION
+#define FLINT_CONVOLUTION
 #include "../layers.hpp"
 #include <array>
 #include <flint/flint.h>
@@ -212,7 +214,8 @@ template <int n, typename F = float> class Convolution : public Layer<F, n, 1> {
 				   ", kernel size: " + std::to_string(kernel_size);
 		}
 		template <typename T, unsigned int k>
-		Tensor<LayerHelper::FlintTypeToCpp<Layer<F, n, 1>::transform_type(to_flint_type<T>())>,
+		Tensor<LayerHelper::FlintTypeToCpp<
+				   Layer<F, n, 1>::transform_type(to_flint_type<T>())>,
 			   k>
 		forward(Tensor<T, k> &in) {
 			// allow optimizations of in
@@ -389,3 +392,4 @@ template <int n> class Pooling : public UntrainableLayer {
 			return pooling_helper(AVG_POOLING, window_size, step_size, mode);
 		}
 };
+#endif

@@ -15,6 +15,7 @@
 #define FLINT_LAYERS
 #include "initializer.hpp"
 #include "optimizers.hpp"
+#include <bits/utility.h>
 #include <chrono>
 #include <concepts>
 #include <flint/flint.hpp>
@@ -245,6 +246,71 @@ struct UntrainableLayer {
 		virtual std::string description() { return name() + " layer"; }
 };
 /**
+ * Virtual super class for Layers that are composed of other Layers.
+ * The managed Layers are given in the constructor and their types in
+ * the variadic template. Most methods of the GenericLayer are already
+ * implemented, the forward method still has to be defined.
+ */
+template <GenericLayer... LayerTypes> struct ComposerLayer {
+		std::tuple<LayerTypes...> layers;
+		ComposerLayer(LayerTypes... layers) : layers(layers...) {}
+		bool training = false;
+		// to fulfill generic layer
+		template <OptimizerFactory Fac, int l = 0>
+		void generate_optimizer(Fac factory) {
+			std::get<l>(layers).generate_optimizer(factory);
+			if constexpr (l < std::tuple_size<decltype(layers)>::value - 1)
+				generate_optimizer<l + 1>(factory);
+		}
+		// to fulfill generic layer
+		template <typename T, unsigned int dim, int l = 0>
+		void optimize_weights(const Tensor<T, dim> &error) {
+			std::get<l>(layers).optimize_weights(error);
+			if constexpr (l < std::tuple_size<decltype(layers)>::value - 1)
+				optimize_weights<T, dim, l + 1>(error);
+		}
+		template <int l = 0>
+		void optimize_weights(std::vector<FGraphNode *> grads) {
+			std::get<l>(layers).optimize_weights(grads);
+			if constexpr (l < std::tuple_size<decltype(layers)>::value - 1)
+				optimize_weights<l + 1>(grads);
+		}
+		template <int l = 0> std::vector<FGraphNode *> collect_weights() {
+			auto weights = std::get<l>(layers).collect_weights();
+			if constexpr (l < std::tuple_size<decltype(layers)>::value - 1) {
+				auto other_weights = collect_weights<l + 1>();
+				weights.insert(weights.end(), other_weights.begin(),
+							   other_weights.end());
+			}
+			return weights;
+		}
+		template <int l = 0>
+		void set_weights(const std::vector<FGraphNode *> weights) {
+			size_t num_weights = std::get<l>(layers).collect_weights().size();
+			std::vector<FGraphNode *> curr(num_weights);
+			std::vector<FGraphNode *> next(weights.size() - num_weights);
+			for (int i = 0; i < num_weights; i++)
+				curr[i] = weights[i];
+			for (int i = 0; i < next.size(); i++)
+				next[i] = weights[i + num_weights];
+			std::get<l>(layers).set_weights(curr);
+			set_weights<l + 1>(next);
+		}
+		static constexpr FType transform_type(FType t) { return t; }
+		static constexpr unsigned int transform_dimensionality(unsigned int n) {
+			return n;
+		}
+		template <int l = 0> size_t num_parameters() {
+			if constexpr (l == std::tuple_size<decltype(layers)>::value - 1)
+				return std::get<l>(layers).num_parameters();
+			else
+				return std::get<l>(layers).num_parameters() +
+					   num_parameters<l + 1>();
+		}
+		virtual std::string name() { return "unnamed"; }
+		virtual std::string description() { return name() + " layer"; }
+};
+/**
  * Virtual super class of all Layer implementations with type safe weight
  * management capabilities. The variadic template describes the dimensionality
  * of the individual weights i.e. a `Layer<double, 3,4,5>` has three weights:
@@ -279,7 +345,7 @@ template <typename F, int... wn> class Layer {
 
 	public:
 		bool training = false;
-		static constexpr FType transform_type(FType t) { 
+		static constexpr FType transform_type(FType t) {
 			return higher_type_constexpr(t, to_flint_type<F>());
 		}
 		static constexpr unsigned int transform_dimensionality(unsigned int n) {
@@ -300,8 +366,7 @@ template <typename F, int... wn> class Layer {
 			weight_refs.set_weights(weights);
 		}
 		/** Returns a reference to a specific weight described by its index */
-		template <int index>
-		Tensor<F, get_dim<index, wn...>()> &get_weight() {
+		template <int index> Tensor<F, get_dim<index, wn...>()> &get_weight() {
 			return weight_refs
 				.template get_weight<index, get_dim<index, wn...>()>();
 		}

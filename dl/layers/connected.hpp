@@ -11,6 +11,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License. */
+#ifndef FLINT_CONNECTED
+#define FLINT_CONNECTED
 #include "../layers.hpp"
 /**
  * Layer for fully connected neuronal network layer.
@@ -83,3 +85,4 @@ template <typename F = float> struct Connected : public Layer<F, 2> {
 				   std::to_string(Layer<F, 2>::template get_weight<0>().get_shape()[1]);
 		}
 };
+#endif
