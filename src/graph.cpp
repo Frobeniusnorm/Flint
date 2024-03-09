@@ -1386,7 +1386,8 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
 	}
 	// reduce elements_in_window
 	conv = freduce_sum(conv, multifilter ? 2 : 1); // reproject to correct shape
-	return freshape(conv, final_shape, multifilter ? ao.dimensions : ao.dimensions - 1);
+	return freshape(conv, final_shape,
+					multifilter ? ao.dimensions : ao.dimensions - 1);
 }
 FGraphNode *frandom(const size_t *shape, const int dimensions) {
 	FGraphNode *node = new FGraphNode();
@@ -1618,20 +1619,23 @@ FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
 }
 FGraphNode *fpooling_max(FGraphNode *a, const size_t *window_size,
 						 const unsigned int *step_size) {
-	FOperation op;
-	op.dimensions = a->operation.dimensions - 1;
-	op.shape = safe_mal<size_t>(op.dimensions);
-	if (!op.shape)
-		return nullptr;
-	calculateShapeAggregatingWindows(op, a->operation, window_size, step_size);
-	op.op_type = FPOOLING_MAX;
-	op.data_type = a->operation.data_type;
-	FSlidingWindow *window = new FSlidingWindow();
-	window->size = safe_mal<size_t>(op.dimensions);
-	window->step = safe_mal<unsigned int>(op.dimensions);
-	memcpy(window->size, window_size, sizeof(size_t) * op.dimensions);
-	memcpy(window->step, step_size, sizeof(unsigned int) * op.dimensions);
-	op.additional_data = window;
-	op.broadcasting_mode = 0;
-	return addNode(op, {a});
+	size_t actual_window_size[a->operation.dimensions];
+	unsigned int actual_step_size[a->operation.dimensions];
+	// TODO fill shape
+	FGraphNode *wins = fsliding_window(a, window_size, step_size);
+	// flatten two [wins, window_elems]
+	while (wins->operation.dimensions > 2)
+		wins = fflatten_dimension(wins, 2);
+	// do the pooling
+	wins = freduce_max(wins, 1);
+	size_t final_shape[a->operation.dimensions - 1];
+	for (int i = 0; i < a->operation.dimensions - 1; i++) {
+		size_t windows = a->operation.shape[i] - window_size[i] + 1;
+		windows = windows % step_size[i] == 0
+						  ? windows / step_size[i]
+						  : windows / step_size[i] + 1;
+		final_shape[i] = windows;
+	}
+	// TODO reshape
+	return wins;
 }
