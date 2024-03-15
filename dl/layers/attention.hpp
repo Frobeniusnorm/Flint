@@ -16,6 +16,8 @@
 #include "dl/activations.hpp"
 #include "dl/layers.hpp"
 #include "dl/layers/connected.hpp"
+#include "dl/layers/normalization.hpp"
+//// positional encoding
 struct PositionalEncoding : public UntrainableLayer {
 
 		PositionalEncoding(size_t d_model, size_t seq_space) {
@@ -42,11 +44,40 @@ struct PositionalEncoding : public UntrainableLayer {
 	private:
 		Tensor<float, 2> encoding;
 };
+//// helper layer
+template <typename F = float>
+using PWFFComposer = ComposerLayer<Connected<F>, Connected<F>>;
+
+template <typename F = float>
+struct PositionWiseFeedForward : public PWFFComposer<F> {
+		Relu relu;
+		template <Initializer InitWeights, Initializer InitBias>
+		PositionWiseFeedForward(size_t d_model, size_t d_ff,
+								InitWeights init_weights, InitBias init_bias)
+			: PWFFComposer<F>(
+				  Connected<F>(d_model, d_ff, init_weights, init_bias),
+				  Connected<F>(d_ff, d_model, init_weights, init_bias)) {}
+		PositionWiseFeedForward(size_t d_model, size_t d_ff)
+			: PWFFComposer<F>(Connected<F>(d_model, d_ff),
+							  Connected<F>(d_ff, d_model)) {}
+		std::string name() { return "Position-wise Feed Forward"; }
+		std::string description() { return ""; }
+		template <typename T, unsigned int n>
+		Tensor<LayerHelper::FlintTypeToCpp<transform_type(to_flint_type<T>())>,
+			   n>
+		forward(Tensor<T, n> &in) {
+			auto &x = std::get<0>(PWFFComposer<F>::layers).forward(in);
+			x = std::get<1>(PWFFComposer<F>::layers).forward(x);
+			return relu.forward(x);
+		}
+};
+//// Attention
 template <typename F = float>
 using MultiheadAttentionComposer =
 	ComposerLayer<Connected<F>, Connected<F>, Connected<F>, Connected<F>>;
+
 template <typename F = float>
-struct MultiheadAttention : MultiheadAttentionComposer<F> {
+struct MultiheadAttention : public MultiheadAttentionComposer<F> {
 		template <Initializer InitWeights, Initializer InitBias>
 		MultiheadAttention(size_t num_heads, size_t d_model,
 						   InitWeights init_weights, InitBias init_bias)
@@ -55,6 +86,16 @@ struct MultiheadAttention : MultiheadAttentionComposer<F> {
 				  Connected<F>(d_model, d_model, init_weights, init_bias),
 				  Connected<F>(d_model, d_model, init_weights, init_bias),
 				  Connected<F>(d_model, d_model, init_weights, init_bias)),
+			  num_heads(num_heads), d_model(d_model) {
+			if (d_model % num_heads != 0)
+				flogging(F_ERROR, "Error in Multihead Attention: d_model must "
+								  "be a multiple of num_heads");
+		}
+		MultiheadAttention(size_t num_heads, size_t d_model)
+			: MultiheadAttentionComposer<F>(Connected<F>(d_model, d_model),
+											Connected<F>(d_model, d_model),
+											Connected<F>(d_model, d_model),
+											Connected<F>(d_model, d_model)),
 			  num_heads(num_heads), d_model(d_model) {
 			if (d_model % num_heads != 0)
 				flogging(F_ERROR, "Error in Multihead Attention: d_model must "
@@ -79,9 +120,9 @@ struct MultiheadAttention : MultiheadAttentionComposer<F> {
 						 "Multihead Attention expects the first dimension to "
 						 "be of size 3, holding query, key and value");
 			// destruct input
-			Tensor<F, n - 1> query = in.slice(TensorRange(0, 1));
-			Tensor<F, n - 1> key = in.slice(TensorRange(1, 2));
-			Tensor<F, n - 1> value = in.slice(TensorRange(2, 3));
+			Tensor<T, n - 1> query = in.slice(TensorRange(0, 1));
+			Tensor<T, n - 1> key = in.slice(TensorRange(1, 2));
+			Tensor<T, n - 1> value = in.slice(TensorRange(2, 3));
 			// pass through linear layers
 			Tensor<F, 4> Q =
 				split_heads(std::get<0>(MultiheadAttentionComposer<F>::layers)
@@ -118,5 +159,39 @@ struct MultiheadAttention : MultiheadAttentionComposer<F> {
 		}
 		size_t num_heads, d_model;
 		SoftMax softmax; // so i dont have to reimplement it
+};
+//// Encoder
+template <typename F = float>
+using EncoderComposer =
+	ComposerLayer<MultiheadAttention<F>, PositionWiseFeedForward<F>,
+				  LayerNorm<1, F>, LayerNorm<1, F>>;
+
+template <typename F = float> struct Encoder : public EncoderComposer<F> {
+		template <Initializer InitWeights, Initializer InitBias>
+		Encoder(size_t d_model, size_t num_heads, size_t d_ff, double dropout_p,
+				InitWeights init_weights, InitBias init_bias)
+			: EncoderComposer<F>(MultiheadAttention<F>(d_model, num_heads),
+								 PositionWiseFeedForward<F>(d_model, d_ff),
+								 LayerNorm<1, F>({d_model}),
+								 LayerNorm<1, F>({d_model})),
+			  dropout(dropout_p) {}
+		template <typename T, unsigned int n>
+		Tensor<LayerHelper::FlintTypeToCpp<transform_type(to_flint_type<T>())>,
+			   n>
+		forward(Tensor<T, n> &in) {
+			auto &attn_in = in.expand(0, 3);
+			auto &attn =
+				std::get<0>(EncoderComposer<F>::layers).forward(attn_in);
+			auto &attn_norm = std::get<2>(EncoderComposer<F>::layers)
+								  .forward(in + dropout.forward(attn));
+			auto &ff =
+				std::get<1>(EncoderComposer<F>::layers).forward(attn_norm);
+			auto &attn_norm2 = std::get<3>(EncoderComposer<F>::layers)
+								   .forward(attn_norm + dropout.forward(ff));
+			return attn_norm2;
+		}
+
+	private:
+		Dropout dropout;
 };
 #endif
