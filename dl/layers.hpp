@@ -166,6 +166,34 @@ using FlintTypeToCpp = typename std::conditional<
 } // namespace LayerHelper
 /**
  * Concept of methods a Layer for neural networks has to implement.
+ * Allows a modular forward method and therefore no type safety for it.
+ * Used internally in other layers to allow higher flexibility than the
+ * `GenericLayer` concept.
+ */
+template <typename T>
+concept GenericModule =
+	requires(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
+			 Tensor<double, 2> &t3, Tensor<long, 2> &t4, AdamFactory fac,
+			 std::vector<FGraphNode *> grads) {
+		a.optimize_weights(t1);
+		a.optimize_weights(t2);
+		a.optimize_weights(t3);
+		a.optimize_weights(t4);
+		{
+			a.collect_weights()
+		} -> std::convertible_to<std::vector<FGraphNode *>>;
+		a.optimize_weights(grads);
+		a.set_weights(grads);
+		a.generate_optimizer(fac);
+		a.training = true;
+		{ T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
+		{ T::transform_type(F_INT32) } -> std::convertible_to<FType>;
+		{ a.name() } -> std::convertible_to<std::string>;
+		{ a.description() } -> std::convertible_to<std::string>;
+		{ a.num_parameters() } -> std::convertible_to<size_t>;
+	};
+/**
+ * Concept of methods a Layer for neural networks has to implement.
  * Mind the static constexpr methods that determine the modifications of
  * dimensionality and types of the input tensors `int
  * transform_dimensionality(int)` and `FType transform_type(FType)`, they
@@ -202,22 +230,7 @@ concept GenericLayer =
 		} -> std::convertible_to<
 			Tensor<LayerHelper::FlintTypeToCpp<T::transform_type(F_INT64)>,
 				   T::transform_dimensionality(2)>>;
-		a.optimize_weights(t1);
-		a.optimize_weights(t2);
-		a.optimize_weights(t3);
-		a.optimize_weights(t4);
-		{
-			a.collect_weights()
-		} -> std::convertible_to<std::vector<FGraphNode *>>;
-		a.optimize_weights(grads);
-		a.set_weights(grads);
-		a.generate_optimizer(fac);
-		a.training = true;
-		{ T::transform_dimensionality(5) } -> std::convertible_to<unsigned int>;
-		{ T::transform_type(F_INT32) } -> std::convertible_to<FType>;
-		{ a.name() } -> std::convertible_to<std::string>;
-		{ a.description() } -> std::convertible_to<std::string>;
-		{ a.num_parameters() } -> std::convertible_to<size_t>;
+		GenericModule<T>;
 	};
 /**
  * Implements blank methods for every method of GenericLayer that is not needed
@@ -251,7 +264,7 @@ struct UntrainableLayer {
  * the variadic template. Most methods of the GenericLayer are already
  * implemented, the forward method still has to be defined.
  */
-template <GenericLayer... LayerTypes> struct ComposerLayer {
+template <GenericModule... LayerTypes> struct ComposerLayer {
 		std::tuple<LayerTypes...> layers;
 		ComposerLayer(LayerTypes... layers) : layers(layers...) {}
 		bool training = false;

@@ -17,6 +17,7 @@
 #include "dl/layers.hpp"
 #include "dl/layers/connected.hpp"
 #include "dl/layers/normalization.hpp"
+#include <utility>
 //// positional encoding
 struct PositionalEncoding : public UntrainableLayer {
 
@@ -240,14 +241,119 @@ template <typename F = float> struct Decoder : public DecoderComposer<F> {
 			auto cross_attn_norm =
 				std::get<4>(EncoderComposer<F>::layers)
 					.forward(attn_norm + dropout.forward(cross_attn));
-			auto ff =
-				std::get<1>(EncoderComposer<F>::layers).forward(cross_attn_norm);
-			auto cross_attn_norm2 = std::get<5>(EncoderComposer<F>::layers)
-								  .forward(cross_attn_norm + dropout.forward(ff));
+			auto ff = std::get<1>(EncoderComposer<F>::layers)
+						  .forward(cross_attn_norm);
+			auto cross_attn_norm2 =
+				std::get<5>(EncoderComposer<F>::layers)
+					.forward(cross_attn_norm + dropout.forward(ff));
 			return cross_attn_norm2;
 		}
 
 	private:
+		Dropout dropout;
+};
+//// Transformer
+template <typename F = float> struct Transformer {
+		Transformer(size_t src_vocab_size, size_t tgt_vocab_size,
+					size_t d_model, size_t num_heads, size_t num_layers,
+					size_t d_ff, size_t max_seq_length, double dropout)
+			: positional_encoding(d_model, max_seq_length),
+			  encoder(num_layers,
+					  Encoder<F>(d_model, num_heads, d_ff, dropout)),
+			  decoder(num_layers,
+					  Decoder<F>(d_model, num_heads, d_ff, dropout)),
+			  fc(d_model, tgt_vocab_size), dropout(dropout) {
+			// TODO: embeddings
+		}
+		template <typename T, unsigned int n>
+		Tensor<LayerHelper::FlintTypeToCpp<transform_type(to_flint_type<T>())>,
+			   n>
+		forward(Tensor<T, n> &x, Tensor<T, n> &enc_out) {
+			// TODO
+		}
+		bool training = false;
+		// to fulfill generic layer
+		template <OptimizerFactory Fac> void generate_optimizer(Fac factory) {
+			for (auto &enc : encoder)
+				enc.generate_optimizer(factory);
+			for (auto &dec : decoder)
+				dec.generate_optimizer(factory);
+			fc.generate_optimizer(factory);
+		}
+		// to fulfill generic layer
+		template <typename T, unsigned int dim>
+		void optimize_weights(const Tensor<T, dim> &error) {
+			for (auto &enc : encoder)
+				enc.optimize_weights(error);
+			for (auto &dec : decoder)
+				dec.optimize_weights(error);
+			fc.optimize_weights(error);
+		}
+		void optimize_weights(std::vector<FGraphNode *> grads) {
+			for (auto &enc : encoder)
+				enc.optimize_weights(grads);
+			for (auto &dec : decoder)
+				dec.optimize_weights(grads);
+			fc.optimize_weights(grads);
+		}
+		std::vector<FGraphNode *> collect_weights() {
+			using namespace std;
+			vector<FGraphNode *> res = fc.collect_weights();
+			for (auto &enc : encoder) {
+				auto weights = enc.collect_weights();
+				res.insert(res.end(), weights.begin(), weights.end());
+			}
+			for (auto &dec : decoder) {
+				auto weights = dec.collect_weights();
+				res.insert(res.end(), weights);
+			}
+			return res;
+		}
+		void set_weights(const std::vector<FGraphNode *> weights) {
+			using namespace std;
+			const size_t fc_size = fc.collect_weights().size();
+			fc.set_weights(weights);
+			vector<FGraphNode *> encdecw;
+			size_t index = fc_size;
+			for (auto &enc : encoder) {
+				const size_t enc_size = enc.collect_weights().size();
+				for (int i = 0; i < enc_size; i++)
+					encdecw.push_back(weights[index++]);
+				enc.set_weights(encdecw);
+				encdecw.clear();
+			}
+			for (auto &dec : decoder) {
+				const size_t dec_size = dec.collect_weights().size();
+				for (int i = 0; i < dec_size; i++)
+					encdecw.push_back(weights[index++]);
+				dec.set_weights(encdecw);
+				encdecw.clear();
+			}
+		}
+		static constexpr FType transform_type(FType t) {
+			return higher_type_constexpr(t, to_flint_type<F>());
+		}
+		static constexpr unsigned int transform_dimensionality(unsigned int n) {
+			return n;
+		}
+		size_t num_parameters() {
+			size_t num = fc.num_parameters();
+			for (auto &enc : encoder)
+				num += enc.num_parameters();
+			for (auto &dec : decoder)
+				num += dec.num_parameters();
+		}
+		std::string name() { return "Transformer"; }
+		std::string description() {
+			return name() + " with " + to_string(encoder.size()) +
+				   " encoder/decoder layers";
+		}
+
+	private:
+		PositionalEncoding positional_encoding;
+		std::vector<Encoder<F>> encoder;
+		std::vector<Decoder<F>> decoder;
+		Connected<F> fc;
 		Dropout dropout;
 };
 #endif
