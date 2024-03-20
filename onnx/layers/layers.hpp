@@ -13,9 +13,6 @@ struct LayerGraph {
 			for (size_t i = 0; i < reserved_output_slots; i++)
 				output[i] = nullptr;
 		}
-
-		virtual std::vector<FGraphNode *> collect_weights() { return {}; }
-		virtual void set_weights(std::vector<FGraphNode *> weights) {}
 		/**
 		 * Computes the layer output in `output` by the output of the previous
 		 * layers. The framework makes sure that the ouput of the incoming
@@ -25,6 +22,23 @@ struct LayerGraph {
 };
 struct Relu : public LayerGraph {
 		Relu() : LayerGraph(1) {}
+		void forward() override;
+};
+struct Flatten : public LayerGraph {
+		Flatten() : LayerGraph(1) {}
+		void forward() override;
+};
+struct Add : public LayerGraph {
+		Add() : LayerGraph(1) {}
+		void forward() override;
+};
+struct Convolve : public LayerGraph {
+		std::vector<unsigned int> stride, padding;
+		Convolve() : LayerGraph(1) {}
+		Convolve(
+				 std::vector<unsigned int> stride,
+				 std::vector<unsigned int> padding)
+			: stride(stride), padding(padding) {}
 		void forward() override;
 };
 

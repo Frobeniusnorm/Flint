@@ -3,7 +3,6 @@
 #include <fstream>
 #include <iostream>
 
-
 int main() {
 	using namespace std;
 	ifstream input("test/resnet50-v1-12.onnx",
@@ -30,14 +29,29 @@ int main() {
 			if (input != node.input().end() - 1)
 				std::cout << ",";
 		}
-    std::cout << "} -> {";
+		std::cout << "} -> {";
 		for (auto output = node.output().begin(); output != node.output().end();
 			 output++) {
 			std::cout << *output;
 			if (output != node.output().end() - 1)
 				std::cout << ",";
 		}
-    std::cout << "}\n";
+		std::cout << "} [";
+		for (int i = 0; i < node.attribute_size(); i++) {
+			std::cout << node.attribute(i).name() << "(";
+			if (node.attribute(i).type() ==
+				onnx::AttributeProto_AttributeType_INTS) {
+				for (int j = 0; j < node.attribute(i).ints().size(); j++) {
+					std::cout << node.attribute(i).ints(j);
+					if (j != node.attribute(i).ints().size() - 1)
+						std::cout << ", ";
+				}
+			}
+			std::cout << ")";
+			if (i != node.attribute_size() - 1)
+				std::cout << ", ";
+		}
+		std::cout << "]" << std::endl;
 	}
 	return 0;
 }
