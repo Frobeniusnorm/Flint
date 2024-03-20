@@ -3,39 +3,10 @@
 #include <fstream>
 #include <iostream>
 
-void print_dim(const ::onnx::TensorShapeProto_Dimension &dim) {
-	switch (dim.value_case()) {
-	case onnx::TensorShapeProto_Dimension::ValueCase::kDimParam:
-		std::cout << dim.dim_param();
-		break;
-	case onnx::TensorShapeProto_Dimension::ValueCase::kDimValue:
-		std::cout << dim.dim_value();
-		break;
-	default:
-		assert(false && "should never happen");
-	}
-}
 
-void print_io_info(
-	const ::google::protobuf::RepeatedPtrField<::onnx::ValueInfoProto> &info) {
-	for (auto input_data : info) {
-		auto shape = input_data.type().tensor_type().shape();
-		std::cout << "  " << input_data.name() << ":";
-		std::cout << "[";
-		if (shape.dim_size() != 0) {
-			int size = shape.dim_size();
-			for (int i = 0; i < size - 1; ++i) {
-				print_dim(shape.dim(i));
-				std::cout << ", ";
-			}
-			print_dim(shape.dim(size - 1));
-		}
-		std::cout << "]\n";
-	}
-}
 int main() {
 	using namespace std;
-	ifstream input("test/resnet50.onnx",
+	ifstream input("test/resnet50-v1-12.onnx",
 				   std::ios::ate |
 					   std::ios::binary); // open file and move current position
 										  // in file to the end
@@ -49,7 +20,25 @@ int main() {
 	onnx::ModelProto model;
 	model.ParseFromArray(buffer.data(), size); // parse protobuf
 	auto graph = model.graph();
-
+	auto nodes = graph.node(); // topological order, first should be output
+	std::cout << "nodes:\n";
+	for (auto node : nodes) {
+		std::cout << node.name() << ": " << node.op_type() << " {";
+		for (auto input = node.input().begin(); input != node.input().end();
+			 input++) {
+			std::cout << *input;
+			if (input != node.input().end() - 1)
+				std::cout << ",";
+		}
+    std::cout << "} -> {";
+		for (auto output = node.output().begin(); output != node.output().end();
+			 output++) {
+			std::cout << *output;
+			if (output != node.output().end() - 1)
+				std::cout << ",";
+		}
+    std::cout << "}\n";
+	}
 	std::cout << "graph inputs:\n";
 	print_io_info(graph.input());
 
