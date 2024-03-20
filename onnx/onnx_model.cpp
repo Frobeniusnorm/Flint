@@ -39,10 +39,5 @@ int main() {
 		}
     std::cout << "}\n";
 	}
-	std::cout << "graph inputs:\n";
-	print_io_info(graph.input());
-
-	std::cout << "graph outputs:\n";
-	print_io_info(graph.output());
 	return 0;
 }
