@@ -1,6 +1,5 @@
 #include "../../flint.h"
 #include "layers.hpp"
-#include <string>
 
 void Convolve::forward() {
 #ifdef FLINT_DEBUG
@@ -25,7 +24,7 @@ void Convolve::forward() {
 	vector<size_t> inclusion_index(image->operation.dimensions, 0);
 	for (int i = 0; i < padded_shape.size(); i++) {
 		padded_shape[i] = image->operation.shape[i];
-		if (i > 0 && i < padded_shape.size() - 1) {
+		if (padding.size() != 0 && i > 0 && i < padded_shape.size() - 1) {
 			inclusion_index[i] = padding[i - 1];
 			padded_shape[i] = padding[i - 1] +
 							  padding[i - 1 + image->operation.dimensions - 2];

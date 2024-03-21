@@ -1,6 +1,5 @@
 #include "../../flint.h"
 #include "layers.hpp"
-#include <string>
 
 void Relu::forward() {
 #ifdef FLINT_DEBUG

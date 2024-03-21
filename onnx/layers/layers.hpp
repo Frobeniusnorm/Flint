@@ -6,6 +6,8 @@
 struct LayerGraph {
 		std::vector<LayerGraph *> incoming; // incoming edges in graph
 		std::vector<FGraphNode *> output;	// result of forward
+		bool training =
+			false; // wheather or not the model is in training or in testing
 
 		LayerGraph() = default;
 		LayerGraph(size_t reserved_output_slots)
@@ -19,6 +21,12 @@ struct LayerGraph {
 		 * layers exists.
 		 */
 		virtual void forward() = 0;
+};
+struct Variable : public LayerGraph {
+		FGraphNode *node = nullptr;
+		Variable() : LayerGraph(1) {}
+		Variable(FGraphNode *node) : LayerGraph(1), node(node) {}
+		void forward() override { output[0] = node; }
 };
 struct Relu : public LayerGraph {
 		Relu() : LayerGraph(1) {}
@@ -35,11 +43,19 @@ struct Add : public LayerGraph {
 struct Convolve : public LayerGraph {
 		std::vector<unsigned int> stride, padding;
 		Convolve() : LayerGraph(1) {}
-		Convolve(
-				 std::vector<unsigned int> stride,
+		Convolve(std::vector<unsigned int> stride,
 				 std::vector<unsigned int> padding)
 			: stride(stride), padding(padding) {}
 		void forward() override;
+};
+struct BatchNorm : public LayerGraph {
+		BatchNorm(float alpha = 0.8) : LayerGraph(1), alpha(alpha) {}
+		void forward() override;
+		float alpha;
+
+	private:
+		FGraphNode *mean_running = nullptr;
+		FGraphNode *var_running = nullptr;
 };
 
 #endif
