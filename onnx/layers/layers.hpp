@@ -48,6 +48,15 @@ struct Convolve : public LayerGraph {
 			: stride(stride), padding(padding) {}
 		void forward() override;
 };
+struct MaxPool : public LayerGraph {
+    std::vector<size_t> kernel_shape;
+		std::vector<unsigned int> stride, padding;
+		MaxPool() : LayerGraph(1) {}
+		MaxPool(std::vector<size_t> kernel_shape, std::vector<unsigned int> stride,
+				 std::vector<unsigned int> padding)
+			: kernel_shape(kernel_shape), stride(stride), padding(padding) {}
+		void forward() override;
+};
 struct BatchNorm : public LayerGraph {
 		BatchNorm(float alpha = 0.8) : LayerGraph(1), alpha(alpha) {}
 		void forward() override;
