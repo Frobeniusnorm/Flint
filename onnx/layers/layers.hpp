@@ -28,6 +28,12 @@ struct Variable : public LayerGraph {
 		Variable(FGraphNode *node) : LayerGraph(1), node(node) {}
 		void forward() override { output[0] = node; }
 };
+struct InputNode : public LayerGraph {
+		FGraphNode *node = nullptr;
+		InputNode() : LayerGraph(1) {}
+		InputNode(FGraphNode *node) : LayerGraph(1), node(node) {}
+		void forward() override { output[0] = node; }
+};
 struct Relu : public LayerGraph {
 		Relu() : LayerGraph(1) {}
 		void forward() override;
