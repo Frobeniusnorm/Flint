@@ -49,11 +49,12 @@ struct Convolve : public LayerGraph {
 		void forward() override;
 };
 struct MaxPool : public LayerGraph {
-    std::vector<size_t> kernel_shape;
+		std::vector<size_t> kernel_shape;
 		std::vector<unsigned int> stride, padding;
 		MaxPool() : LayerGraph(1) {}
-		MaxPool(std::vector<size_t> kernel_shape, std::vector<unsigned int> stride,
-				 std::vector<unsigned int> padding)
+		MaxPool(std::vector<size_t> kernel_shape,
+				std::vector<unsigned int> stride,
+				std::vector<unsigned int> padding)
 			: kernel_shape(kernel_shape), stride(stride), padding(padding) {}
 		void forward() override;
 };
@@ -65,6 +66,10 @@ struct BatchNorm : public LayerGraph {
 	private:
 		FGraphNode *mean_running = nullptr;
 		FGraphNode *var_running = nullptr;
+};
+struct Connected : public LayerGraph {
+		Connected() : LayerGraph(1) {}
+		void forward() override;
 };
 
 #endif
