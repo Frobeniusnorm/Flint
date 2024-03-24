@@ -5,6 +5,7 @@
 #include <vector>
 struct LayerGraph {
 		std::vector<LayerGraph *> incoming; // incoming edges in graph
+		std::vector<LayerGraph *> outgoing; // incoming edges in graph
 		std::vector<FGraphNode *> output;	// result of forward
 		bool training =
 			false; // wheather or not the model is in training or in testing
@@ -29,10 +30,16 @@ struct Variable : public LayerGraph {
 		void forward() override { output[0] = node; }
 };
 struct InputNode : public LayerGraph {
-		FGraphNode *node = nullptr;
+		std::vector<FGraphNode *> nodes;
 		InputNode() : LayerGraph(1) {}
-		InputNode(FGraphNode *node) : LayerGraph(1), node(node) {}
-		void forward() override { output[0] = node; }
+		InputNode(FGraphNode *node) : LayerGraph(1), nodes{node} {}
+		InputNode(std::vector<FGraphNode *> nodes)
+			: LayerGraph(1), nodes(nodes) {}
+		void forward() override {
+			output.clear();
+			for (FGraphNode *node : nodes)
+				output.push_back(node);
+		}
 };
 struct Relu : public LayerGraph {
 		Relu() : LayerGraph(1) {}
