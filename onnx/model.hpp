@@ -6,6 +6,7 @@
 struct GraphModel {
 		InputNode *input;
 		LayerGraph *output;
+    GraphModel() = default;
 		FGraphNode *operator()(FGraphNode *in) {
 			input->output.clear();
 			input->output.push_back(in);
@@ -41,6 +42,7 @@ struct GraphModel {
 			}
 			return output->output[0];
 		}
+    static GraphModel load_model(std::string path);
 		// TODO training
 };
 

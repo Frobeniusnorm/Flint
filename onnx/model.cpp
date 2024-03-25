@@ -1,7 +1,44 @@
-#include "onnx_model.hpp"
+#include "model.hpp"
 #include "onnx.proto3.pb.h"
+#include "onnx/layers/layers.hpp"
 #include <fstream>
 #include <iostream>
+
+GraphModel GraphModel::load_model(std::string path) {
+	using namespace std;
+	ifstream input(path, std::ios::ate | std::ios::binary);
+	streamsize size = input.tellg();
+	input.seekg(0, ios::beg);
+
+	vector<char> buffer(size);
+	input.read(buffer.data(), size);
+
+	onnx::ModelProto model;
+	model.ParseFromArray(buffer.data(), size);
+	auto graph = model.graph();
+	auto nodes = graph.node();
+	unordered_map<string, LayerGraph *> layers;
+	InputNode *in;
+	for (auto node : nodes) {
+		LayerGraph *x;
+		if (node.op_type() == "Conv") {
+			x = new Convolve();
+		} else if (node.op_type() == "Relu")
+			x = new Relu();
+		else if (node.op_type() == "BatchNormalization") {
+			x = new BatchNorm();
+		} else if (node.op_type() == "Add")
+			x = new Add();
+		else if (node.op_type() == "GlobalAveragePool") {
+			x = new MaxPool(); // TODO use average pool
+		} else if (node.op_type() == "Flatten")
+			x = new Flatten();
+		else if (node.op_type() == "Gemm")
+			x = new Connected();
+		else
+			flogging(F_ERROR, "Unknown Operation " + node.op_type());
+	}
+}
 
 int main() {
 	using namespace std;

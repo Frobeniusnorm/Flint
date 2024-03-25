@@ -71,6 +71,16 @@ struct MaxPool : public LayerGraph {
 			: kernel_shape(kernel_shape), stride(stride), padding(padding) {}
 		void forward() override;
 };
+struct AvgPool : public LayerGraph {
+		std::vector<size_t> kernel_shape;
+		std::vector<unsigned int> stride, padding;
+		AvgPool() : LayerGraph(1) {}
+		AvgPool(std::vector<size_t> kernel_shape,
+				std::vector<unsigned int> stride,
+				std::vector<unsigned int> padding)
+			: kernel_shape(kernel_shape), stride(stride), padding(padding) {}
+		void forward() override;
+};
 struct BatchNorm : public LayerGraph {
 		BatchNorm(float alpha = 0.8) : LayerGraph(1), alpha(alpha) {}
 		void forward() override;
