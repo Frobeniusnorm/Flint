@@ -1,4 +1,4 @@
-#include "../../flint.h"
+#include "flint.h"
 #include "layers.hpp"
 #include <string>
 #include <array>

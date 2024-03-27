@@ -1,7 +1,7 @@
 #ifndef ONNX_LAYERS
 #define ONNX_LAYERS
 
-#include "../../flint.h"
+#include "flint.h"
 #include <vector>
 struct LayerGraph {
 		std::vector<LayerGraph *> incoming; // incoming edges in graph

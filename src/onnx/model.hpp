@@ -1,6 +1,6 @@
 #ifndef ONNX_MODEL
 #define ONNX_MODEL
-#include "../flint.h"
+#include "flint.h"
 #include "layers/layers.hpp"
 #include <list>
 struct GraphModel {

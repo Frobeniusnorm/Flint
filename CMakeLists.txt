@@ -14,12 +14,14 @@ include(GNUInstallDirs)
 
 FILE(GLOB_RECURSE SRCFILES src/*.cpp)
 find_package(OpenCL REQUIRED)
+find_package(Protobuf REQUIRED)
 add_library(flint STATIC ${SRCFILES})
 
 set_property(TARGET flint PROPERTY CXX_STANDARD 20)
 target_include_directories(flint PRIVATE .)
 target_link_libraries(flint OpenCL::OpenCL)
-set_target_properties(flint PROPERTIES VERSION ${PROJECT_VERSION} PUBLIC_HEADER "flint.h;flint.hpp;flint_helper.hpp;flint_1.hpp;flint_n.hpp")
+target_link_libraries(flint ${Protobuf_LIBRARIES})
+set_target_properties(flint PROPERTIES VERSION ${PROJECT_VERSION} PUBLIC_HEADER "flint.h;flint.hpp;flint_helper.hpp;flint_1.hpp;flint_n.hpp;src/onnx/model.hpp;src/onnx/onnx.proto3.pb.h;src/onnx/layers/layers.hpp;")
 
 if(C_COMPATIBLE)
   add_compile_definitions("C_COMPATIBILITY")
@@ -29,9 +31,11 @@ install(TARGETS flint
     EXPORT flintTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/flint)
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/flint
+    )
 
-    include(CMakePackageConfigHelpers)
+
+include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
     flintConfigVersion.cmake
     VERSION ${PACKAGE_VERSION}
