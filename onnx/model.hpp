@@ -14,7 +14,7 @@ struct GraphModel {
 			list<LayerGraph *> todo;
 			list<FGraphNode *> holding = {in};
 			in->reference_counter++;
-			todo.insert(todo.begin(), input->nodes.begin(), input->nodes.end());
+			todo.insert(todo.begin(), input->outgoing.begin(), input->outgoing.end());
 			todo.push_back(nullptr); // as a marker that the holding reference
 									 // can be removed
 			while (!todo.empty()) {

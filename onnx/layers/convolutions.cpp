@@ -100,3 +100,22 @@ void AvgPool::forward() {
 	// do the pooling
 	output[0] = fdiv_ci(fpooling_sum(image, windows, steps.data()), window_total);
 }
+void GlobalAvgPool::forward() {
+#ifdef FLINT_DEBUG
+	if (incoming.size() != 1 || incoming[0]->output.size() != 1)
+		flogging(F_ERROR, "AvgPool expects an image as inputs");
+#endif
+	using namespace std;
+	FGraphNode *image = incoming[0]->output[0];
+  // only first and last dimension are kept
+  const int dims = image->operation.dimensions;
+  while (image->operation.dimensions > 2) {
+    image = fdiv_ci(freduce_sum(image, 2), image->operation.shape[2]);
+  }
+  // expand to fit original rank
+  vector<size_t> rank_shape(dims, 1);
+  rank_shape[0] = image->operation.shape[0];
+  rank_shape[1] = image->operation.shape[1];
+  output[0] = freshape(image, rank_shape.data(), dims);
+}
+

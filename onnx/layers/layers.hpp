@@ -1,7 +1,7 @@
 #ifndef ONNX_LAYERS
 #define ONNX_LAYERS
 
-#include "flint.h"
+#include "../../flint.h"
 #include <vector>
 struct LayerGraph {
 		std::vector<LayerGraph *> incoming; // incoming edges in graph
@@ -79,6 +79,10 @@ struct AvgPool : public LayerGraph {
 				std::vector<unsigned int> stride,
 				std::vector<unsigned int> padding)
 			: kernel_shape(kernel_shape), stride(stride), padding(padding) {}
+		void forward() override;
+};
+struct GlobalAvgPool : public LayerGraph {
+		GlobalAvgPool() : LayerGraph(1) {}
 		void forward() override;
 };
 struct BatchNorm : public LayerGraph {
