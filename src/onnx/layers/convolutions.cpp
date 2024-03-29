@@ -1,5 +1,5 @@
 #include "flint.h"
-#include "layers.hpp"
+#include "../layers.hpp"
 
 void Convolve::forward() {
 #ifdef FLINT_DEBUG

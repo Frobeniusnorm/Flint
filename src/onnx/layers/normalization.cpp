@@ -1,5 +1,5 @@
 #include "flint.h"
-#include "layers.hpp"
+#include "../layers.hpp"
 #include <limits>
 
 void BatchNorm::forward() {

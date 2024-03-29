@@ -1,5 +1,5 @@
 #include "model.hpp"
-#include "layers/layers.hpp"
+#include "layers.hpp"
 #include "onnx.proto3.pb.h"
 #include <fstream>
 #include <iostream>
@@ -26,35 +26,35 @@ GraphModel GraphModel::load_model(std::string path) {
 			var->node = fCreateGraph(
 				init.float_data().data(), init.float_data_size(), F_FLOAT32,
 				(const unsigned long *)init.dims().data(), init.dims().size());
-      break;
+			break;
 		}
 		case onnx::TensorProto_DataType::TensorProto_DataType_DOUBLE: {
 			var->node = fCreateGraph(
 				init.double_data().data(), init.double_data_size(), F_FLOAT64,
 				(const unsigned long *)init.dims().data(), init.dims().size());
-      break;
+			break;
 		}
 		case onnx::TensorProto_DataType::TensorProto_DataType_INT32: {
 			var->node = fCreateGraph(
 				init.int32_data().data(), init.int32_data_size(), F_INT32,
 				(const unsigned long *)init.dims().data(), init.dims().size());
-      break;
+			break;
 		}
 		case onnx::TensorProto_DataType::TensorProto_DataType_INT64: {
 			var->node = fCreateGraph(
 				init.int64_data().data(), init.int64_data_size(), F_INT64,
 				(const unsigned long *)init.dims().data(), init.dims().size());
-      break;
+			break;
 		}
 		default:
 			flogging(F_ERROR, "Unknown type: " + to_string(init.data_type()));
 		}
-    layers.insert({init.name(), var});
+		layers.insert({init.name(), var});
 	}
 	// now we process the layers
 	InputNode *in = new InputNode();
-  layers.insert({"data", in});
-  LayerGraph* last = in;
+	layers.insert({"data", in});
+	LayerGraph *last = in;
 	for (auto node : nodes) {
 		LayerGraph *x;
 		if (node.op_type() == "Conv") {
@@ -116,13 +116,48 @@ GraphModel GraphModel::load_model(std::string path) {
 			} else
 				flogging(F_WARNING, "Unknown input: " + in);
 		}
-    if (in->outgoing.empty()) {
-      in->outgoing.push_back(x);
-    }
-    last = x;
+		if (in->outgoing.empty()) {
+			in->outgoing.push_back(x);
+		}
+		last = x;
 	}
-  GraphModel res;
-  res.input = in;
-  res.output = last;
-  return res;
+	GraphModel res;
+	res.input = in;
+	res.output = last;
+	return res;
+}
+FGraphNode *GraphModel::operator()(FGraphNode *in) {
+	input->output.clear();
+	input->output.push_back(in);
+	using namespace std;
+	list<LayerGraph *> todo;
+	list<FGraphNode *> holding = {in};
+	in->reference_counter++;
+	todo.insert(todo.begin(), input->outgoing.begin(), input->outgoing.end());
+	todo.push_back(nullptr); // as a marker that the holding reference
+							 // can be removed
+	while (!todo.empty()) {
+		LayerGraph *curr = todo.front();
+		if (curr) {
+			todo.pop_front();
+			curr->forward();
+			// ensure that the output is not consumed
+			for (FGraphNode *out : curr->output) {
+				holding.push_back(out);
+				out->reference_counter++;
+			}
+			// add the children bfs
+			for (LayerGraph *layer : curr->outgoing)
+				todo.push_back(layer);
+		} else {
+			for (FGraphNode *h : holding) {
+				h->reference_counter--;
+				// maybe it is already no longer needed
+				fFreeGraph(h);
+			}
+			holding.clear();
+			todo.push_back(nullptr);
+		}
+	}
+	return output->output[0];
 }
