@@ -18,6 +18,7 @@ GraphModel GraphModel::load_model(std::string path) {
 	auto graph = model.graph();
 	auto nodes = graph.node();
 	unordered_map<string, LayerGraph *> layers;
+	vector<Variable *> weights;
 	// first we parse the weights
 	for (auto &init : graph.initializer()) {
 		Variable *var = new Variable();
@@ -50,6 +51,7 @@ GraphModel GraphModel::load_model(std::string path) {
 			flogging(F_ERROR, "Unknown type: " + to_string(init.data_type()));
 		}
 		layers.insert({init.name(), var});
+		weights.push_back(var);
 	}
 	// now we process the layers
 	InputNode *in = new InputNode();
@@ -124,6 +126,7 @@ GraphModel GraphModel::load_model(std::string path) {
 	GraphModel res;
 	res.input = in;
 	res.output = last;
+  res.weights = weights;
 	return res;
 }
 FGraphNode *GraphModel::operator()(FGraphNode *in) {
@@ -136,6 +139,9 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 	todo.insert(todo.begin(), input->outgoing.begin(), input->outgoing.end());
 	todo.push_back(nullptr); // as a marker that the holding reference
 							 // can be removed
+	for (Variable *v : weights) {
+		v->forward();
+	}
 	while (!todo.empty()) {
 		LayerGraph *curr = todo.front();
 		if (curr) {

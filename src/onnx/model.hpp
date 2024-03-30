@@ -5,6 +5,7 @@
 #include <list>
 struct GraphModel {
 		InputNode *input;
+    std::vector<Variable *> weights;
 		LayerGraph *output;
 		GraphModel() = default;
 		FGraphNode *operator()(FGraphNode *in);

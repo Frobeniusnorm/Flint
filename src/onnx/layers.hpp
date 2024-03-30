@@ -1,6 +1,6 @@
 #ifndef ONNX_LAYERS
 #define ONNX_LAYERS
-
+#define FLINT_DEBUG
 #include "flint.h"
 #include <vector>
 struct LayerGraph {
@@ -26,7 +26,14 @@ struct LayerGraph {
 struct Variable : public LayerGraph {
 		FGraphNode *node = nullptr;
 		Variable() : LayerGraph(1) {}
-		Variable(FGraphNode *node) : LayerGraph(1), node(node) {}
+		Variable(FGraphNode *node) : LayerGraph(1), node(node) {
+      node->reference_counter++;
+    }
+    ~Variable() {
+      if (node) {
+        node->reference_counter--;
+      }
+    }
 		void forward() override { output[0] = node; }
 };
 struct InputNode : public LayerGraph {
