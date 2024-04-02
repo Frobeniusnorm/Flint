@@ -65,7 +65,7 @@ struct Convolve : public LayerGraph {
 		Convolve() : LayerGraph(1) {}
 		Convolve(std::vector<unsigned int> stride,
 				 std::vector<unsigned int> padding)
-			: stride(stride), padding(padding) {}
+			: LayerGraph(1), stride(stride), padding(padding) {}
 		void forward() override;
 };
 struct MaxPool : public LayerGraph {

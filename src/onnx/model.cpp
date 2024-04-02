@@ -70,7 +70,7 @@ GraphModel GraphModel::load_model(std::string path) {
 				} else if (attr.name() == "strides") {
 					stride = vector<unsigned int>(attr.ints_size());
 					for (int j = 0; j < attr.ints_size(); j++)
-						padding[j] = attr.ints()[j];
+						stride[j] = attr.ints()[j];
 				}
 			}
 			x = new Convolve(stride, padding);
@@ -93,7 +93,7 @@ GraphModel GraphModel::load_model(std::string path) {
 						padding[j] = attr.ints()[j];
 				} else if (attr.name() == "strides") {
 					stride = vector<unsigned int>(attr.ints_size());
-					for (int j = 0; j < attr.ints_size(); j++)
+					for (int j = 0; j < attr.ints_size(); j++) 
 						padding[j] = attr.ints()[j];
 				} else if (attr.name() == "kernel_shape") {
 					kernel_shape = vector<size_t>(attr.ints_size());

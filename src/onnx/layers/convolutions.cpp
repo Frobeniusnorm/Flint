@@ -1,5 +1,6 @@
 #include "flint.h"
 #include "../layers.hpp"
+#include <iostream>
 
 void Convolve::forward() {
 #ifdef FLINT_DEBUG
@@ -10,6 +11,14 @@ void Convolve::forward() {
 						  "parameters and optionally a bias");
 #endif
 	FGraphNode *weight = incoming[1]->output[0];
+	FGraphNode *image = incoming[0]->output[0];
+  int transpositions [image->operation.dimensions];
+  for (int i = 0; i < image->operation.dimensions; i++)
+    transpositions[i] = i;
+  transpositions[1] = image->operation.dimensions - 1;
+  transpositions[image->operation.dimensions - 1] = 1;
+  image = ftranspose(image, transpositions);
+  weight = ftranspose(weight, transpositions);
 	FGraphNode *bias = incoming.size() == 3 ? incoming[2]->output[0] : nullptr;
 	// expand kernel s.t. it matches the batch size
 	FGraphNode *eweight = fexpand(weight, 0, 1);
@@ -17,9 +26,9 @@ void Convolve::forward() {
 	vector<unsigned int> steps(stride.size() + 1);
 	steps[0] = 1;
 	for (int i = 1; i < steps.size(); i++)
-		steps[i] = stride[i];
+		steps[i] = stride[i - 1];
 	// adapt image with padding
-	FGraphNode *image = incoming[0]->output[0];
+
 	vector<size_t> padded_shape(image->operation.dimensions);
 	vector<size_t> inclusion_index(image->operation.dimensions, 0);
 	for (int i = 0; i < padded_shape.size(); i++) {
