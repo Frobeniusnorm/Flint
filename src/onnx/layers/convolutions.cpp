@@ -21,7 +21,7 @@ void Convolve::forward() {
   weight = ftranspose(weight, transpositions);
 	FGraphNode *bias = incoming.size() == 3 ? incoming[2]->output[0] : nullptr;
 	// expand kernel s.t. it matches the batch size
-	FGraphNode *eweight = fexpand(weight, 0, 1);
+	FGraphNode *eweight = fexpand(weight, 1, 1);
 	using namespace std;
 	vector<unsigned int> steps(stride.size() + 1);
 	steps[0] = 1;
@@ -35,7 +35,7 @@ void Convolve::forward() {
 		padded_shape[i] = image->operation.shape[i];
 		if (padding.size() != 0 && i > 0 && i < padded_shape.size() - 1) {
 			inclusion_index[i] = padding[i - 1];
-			padded_shape[i] = padding[i - 1] +
+			padded_shape[i] += padding[i - 1] +
 							  padding[i - 1 + image->operation.dimensions - 2];
 		}
 	}

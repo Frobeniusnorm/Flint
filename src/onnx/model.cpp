@@ -3,6 +3,7 @@
 #include "onnx.proto3.pb.h"
 #include <fstream>
 #include <iostream>
+#include <set>
 
 GraphModel GraphModel::load_model(std::string path) {
 	using namespace std;
@@ -93,7 +94,7 @@ GraphModel GraphModel::load_model(std::string path) {
 						padding[j] = attr.ints()[j];
 				} else if (attr.name() == "strides") {
 					stride = vector<unsigned int>(attr.ints_size());
-					for (int j = 0; j < attr.ints_size(); j++) 
+					for (int j = 0; j < attr.ints_size(); j++)
 						padding[j] = attr.ints()[j];
 				} else if (attr.name() == "kernel_shape") {
 					kernel_shape = vector<size_t>(attr.ints_size());
@@ -126,7 +127,7 @@ GraphModel GraphModel::load_model(std::string path) {
 	GraphModel res;
 	res.input = in;
 	res.output = last;
-  res.weights = weights;
+	res.weights = weights;
 	return res;
 }
 FGraphNode *GraphModel::operator()(FGraphNode *in) {
@@ -135,6 +136,7 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 	using namespace std;
 	list<LayerGraph *> todo;
 	list<FGraphNode *> holding = {in};
+	set<LayerGraph *> visited;
 	in->reference_counter++;
 	todo.insert(todo.begin(), input->outgoing.begin(), input->outgoing.end());
 	todo.push_back(nullptr); // as a marker that the holding reference
@@ -142,8 +144,11 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 	for (Variable *v : weights) {
 		v->forward();
 	}
+	int i = 0;
 	while (!todo.empty()) {
 		LayerGraph *curr = todo.front();
+    todo.pop_front();
+		flogging(F_INFO, "Layer " + to_string(i++));
 		if (curr) {
 			todo.pop_front();
 			curr->forward();
@@ -153,8 +158,10 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 				out->reference_counter++;
 			}
 			// add the children bfs
-			for (LayerGraph *layer : curr->outgoing)
-				todo.push_back(layer);
+			for (LayerGraph *layer : curr->outgoing) {
+				if (!visited.insert(layer).second)
+					todo.push_back(layer);
+			}
 		} else {
 			for (FGraphNode *h : holding) {
 				h->reference_counter--;
@@ -162,7 +169,8 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 				fFreeGraph(h);
 			}
 			holding.clear();
-			todo.push_back(nullptr);
+			if (!todo.empty() && todo.front() != nullptr)
+				todo.push_back(nullptr);
 		}
 	}
 	return output->output[0];
