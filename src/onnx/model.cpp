@@ -147,10 +147,9 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 	int i = 0;
 	while (!todo.empty()) {
 		LayerGraph *curr = todo.front();
-    todo.pop_front();
+		todo.pop_front();
 		flogging(F_INFO, "Layer " + to_string(i++));
 		if (curr) {
-			todo.pop_front();
 			curr->forward();
 			// ensure that the output is not consumed
 			for (FGraphNode *out : curr->output) {
