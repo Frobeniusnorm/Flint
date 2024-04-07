@@ -97,10 +97,6 @@ struct BatchNorm : public LayerGraph {
 		BatchNorm(float alpha = 0.8) : LayerGraph(1), alpha(alpha) {}
 		void forward() override;
 		float alpha;
-
-	private:
-		FGraphNode *mean_running = nullptr;
-		FGraphNode *var_running = nullptr;
 };
 struct Connected : public LayerGraph {
 		Connected() : LayerGraph(1) {}
