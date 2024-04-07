@@ -93,6 +93,7 @@ struct GlobalAvgPool : public LayerGraph {
 		void forward() override;
 };
 struct BatchNorm : public LayerGraph {
+  // TODO running mean and variance as parameters !
 		BatchNorm(float alpha = 0.8) : LayerGraph(1), alpha(alpha) {}
 		void forward() override;
 		float alpha;
