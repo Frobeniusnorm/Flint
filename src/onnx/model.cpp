@@ -57,10 +57,8 @@ GraphModel GraphModel::load_model(std::string path) {
 	// now we process the layers
 	InputNode *in = new InputNode();
 	layers.insert({"data", in});
-	LayerGraph *last = in;
 	for (auto node : nodes) {
 		LayerGraph *x;
-    int expected;
 		if (node.op_type() == "Conv") {
 			vector<unsigned int> stride, padding;
 			for (int i = 0; i < node.attribute_size(); i++) {
@@ -75,22 +73,16 @@ GraphModel GraphModel::load_model(std::string path) {
 						stride[j] = attr.ints()[j];
 				}
 			}
-      expected = 2;
 			x = new Convolve(stride, padding);
 		} else if (node.op_type() == "Relu") {
-      expected = 1;
 			x = new Relu();
-    } else if (node.op_type() == "BatchNormalization") {
-      expected = 3;
+		} else if (node.op_type() == "BatchNormalization") {
 			x = new BatchNorm();
 		} else if (node.op_type() == "Add") {
-      expected = 2;
 			x = new Add();
-    } else if (node.op_type() == "GlobalAveragePool") {
-      expected = 1;
+		} else if (node.op_type() == "GlobalAveragePool") {
 			x = new GlobalAvgPool();
 		} else if (node.op_type() == "MaxPool") {
-      expected = 1;
 			vector<unsigned int> stride, padding;
 			vector<size_t> kernel_shape;
 			for (int i = 0; i < node.attribute_size(); i++) {
@@ -111,20 +103,11 @@ GraphModel GraphModel::load_model(std::string path) {
 			}
 			x = new MaxPool(kernel_shape, stride, padding);
 		} else if (node.op_type() == "Flatten") {
-      expected = 1;
 			x = new Flatten();
-    }
-		else if (node.op_type() == "Gemm") {
-      expected = 2;
+		} else if (node.op_type() == "Gemm") {
 			x = new Connected();
-    } else
+		} else
 			flogging(F_ERROR, "Unknown Operation " + node.op_type());
-    if (node.input_size() != expected) {
-      flogging(F_WARNING, "Expected " + to_string(expected) + " inputs, got " + to_string(node.input_size()) + ":");
-      for (int i = 0; i < node.input_size(); i++) {
-        flogging(F_WARNING, node.input(i).c_str());
-      }
-    }
 		layers.insert({node.name(), x});
 		for (int i = 0; i < node.input_size(); i++) {
 			const auto &in = node.input(i);
@@ -138,11 +121,10 @@ GraphModel GraphModel::load_model(std::string path) {
 		if (in->outgoing.empty()) {
 			in->outgoing.push_back(x);
 		}
-		last = x;
 	}
 	GraphModel res;
 	res.input = in;
-	res.output = last;
+	res.output = layers[graph.output(0).name()];
 	res.weights = weights;
 	return res;
 }
@@ -152,7 +134,7 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 	using namespace std;
 	list<LayerGraph *> todo;
 	list<FGraphNode *> holding = {in};
-	set<LayerGraph *> visited;
+	set<LayerGraph *> visited = {};
 	in->reference_counter++;
 	todo.insert(todo.begin(), input->outgoing.begin(), input->outgoing.end());
 	todo.push_back(nullptr); // as a marker that the holding reference
@@ -169,12 +151,13 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 			curr->forward();
 			// ensure that the output is not consumed
 			for (FGraphNode *out : curr->output) {
-				holding.push_back(out);
+				if (curr != output)
+					holding.push_back(out);
 				out->reference_counter++;
 			}
 			// add the children bfs
 			for (LayerGraph *layer : curr->outgoing) {
-				if (!visited.insert(layer).second)
+				if (visited.insert(layer).second)
 					todo.push_back(layer);
 			}
 		} else {
