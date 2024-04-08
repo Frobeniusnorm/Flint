@@ -4,7 +4,27 @@
 #include <fstream>
 #include <iostream>
 #include <set>
-
+static void print_info(GraphModel &model) {
+	using namespace std;
+	string info = "Model:\n";
+	list<LayerGraph *> todo;
+	set<LayerGraph *> visited = {};
+	todo.insert(todo.begin(), model.input->outgoing.begin(),
+				model.input->outgoing.end());
+	while (!todo.empty()) {
+		LayerGraph *curr = todo.front();
+		todo.pop_front();
+		if (visited.insert(curr).second) {
+			info += curr->name + " -> (";
+			for (LayerGraph *layer : curr->outgoing) {
+				todo.push_back(layer);
+				info += layer->name + ",";
+			}
+			info += ")\n";
+		}
+	}
+	flogging(F_INFO, info);
+}
 GraphModel GraphModel::load_model(std::string path) {
 	using namespace std;
 	ifstream input(path, std::ios::ate | std::ios::binary);
@@ -108,6 +128,7 @@ GraphModel GraphModel::load_model(std::string path) {
 			x = new Connected();
 		} else
 			flogging(F_ERROR, "Unknown Operation " + node.op_type());
+		x->name = node.name();
 		layers.insert({node.name(), x});
 		for (int i = 0; i < node.input_size(); i++) {
 			const auto &in = node.input(i);
@@ -126,6 +147,7 @@ GraphModel GraphModel::load_model(std::string path) {
 	res.input = in;
 	res.output = layers[graph.output(0).name()];
 	res.weights = weights;
+	print_info(res);
 	return res;
 }
 FGraphNode *GraphModel::operator()(FGraphNode *in) {
@@ -133,43 +155,42 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 	input->output.push_back(in);
 	using namespace std;
 	list<LayerGraph *> todo;
-	list<FGraphNode *> holding = {in};
+//	set<FGraphNode *> holding = {in};
 	set<LayerGraph *> visited = {};
 	in->reference_counter++;
 	todo.insert(todo.begin(), input->outgoing.begin(), input->outgoing.end());
-	todo.push_back(nullptr); // as a marker that the holding reference
-							 // can be removed
+	// todo.push_back(nullptr); // as a marker that the holding reference
+  //							 // can be removed
 	for (Variable *v : weights) {
 		v->forward();
 	}
-	int i = 0;
 	while (!todo.empty()) {
 		LayerGraph *curr = todo.front();
 		todo.pop_front();
-		flogging(F_INFO, "Layer " + to_string(i++));
 		if (curr) {
+			flogging(F_INFO, "Layer " + curr->name);
 			curr->forward();
-			// ensure that the output is not consumed
-			for (FGraphNode *out : curr->output) {
-				if (curr != output)
-					holding.push_back(out);
-				out->reference_counter++;
-			}
+      if (curr == output) {
+        for (FGraphNode* out : curr->output)
+          out->reference_counter++;
+      }
 			// add the children bfs
 			for (LayerGraph *layer : curr->outgoing) {
 				if (visited.insert(layer).second)
 					todo.push_back(layer);
 			}
-		} else {
-			for (FGraphNode *h : holding) {
-				h->reference_counter--;
-				// maybe it is already no longer needed
-				fFreeGraph(h);
-			}
-			holding.clear();
-			if (!todo.empty() && todo.front() != nullptr)
-				todo.push_back(nullptr);
 		}
+   //  else {
+	 //		flogging(F_INFO, "Clearing");
+	 //		for (FGraphNode *h : holding) {
+	 //			h->reference_counter--;
+	 //			// maybe it is already no longer needed
+	 //			fFreeGraph(h);
+	 //		}
+	 //		holding.clear();
+	 //		if (!todo.empty() && todo.front() != nullptr)
+	 //			todo.push_back(nullptr);
+	 //	}
 	}
 	return output->output[0];
 }

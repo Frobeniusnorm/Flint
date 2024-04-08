@@ -39,4 +39,5 @@ void BatchNorm::forward() {
 					  fsqrt_g(fadd_cf(fpow(var_running, 2),
 									  std::numeric_limits<float>::epsilon())))),
 		beta);
+  output[0] = y;
 };

@@ -9,7 +9,7 @@ struct LayerGraph {
 		std::vector<FGraphNode *> output;	// result of forward
 		bool training =
 			false; // wheather or not the model is in training or in testing
-
+    std::string name;
 		LayerGraph() = default;
 		LayerGraph(size_t reserved_output_slots)
 			: output(reserved_output_slots) {

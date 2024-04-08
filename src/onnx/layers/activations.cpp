@@ -6,7 +6,7 @@ void Relu::forward() {
 	if (incoming.size() != 1)
 		flogging(F_ERROR, "Relu expects exactly one input layer, not " +
 							  std::to_string(incoming.size()));
-	if (incoming[0]->output.size())
+	if (incoming[0]->output.size() != 1)
 		flogging(F_ERROR,
 				 "Relu expects exactly one input, previous layer gave " +
 					 std::to_string(incoming[0]->output.size()));
