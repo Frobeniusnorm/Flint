@@ -75,7 +75,7 @@ struct MaxPool : public LayerGraph {
 		MaxPool(std::vector<size_t> kernel_shape,
 				std::vector<unsigned int> stride,
 				std::vector<unsigned int> padding)
-			: kernel_shape(kernel_shape), stride(stride), padding(padding) {}
+			: LayerGraph(1), kernel_shape(kernel_shape), stride(stride), padding(padding) {}
 		void forward() override;
 };
 struct AvgPool : public LayerGraph {
@@ -85,7 +85,7 @@ struct AvgPool : public LayerGraph {
 		AvgPool(std::vector<size_t> kernel_shape,
 				std::vector<unsigned int> stride,
 				std::vector<unsigned int> padding)
-			: kernel_shape(kernel_shape), stride(stride), padding(padding) {}
+			: LayerGraph(1), kernel_shape(kernel_shape), stride(stride), padding(padding) {}
 		void forward() override;
 };
 struct GlobalAvgPool : public LayerGraph {
