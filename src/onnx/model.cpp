@@ -3,8 +3,6 @@
 #include "onnx.proto3.pb.h"
 #include <fstream>
 #include <iostream>
-#include <set>
-
 GraphModel GraphModel::load_model(std::string path) {
 	using namespace std;
 	ifstream input(path, std::ios::ate | std::ios::binary);
@@ -135,7 +133,6 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 	using namespace std;
 	list<LayerGraph *> todo;
 	//	set<FGraphNode *> holding = {in};
-	set<LayerGraph *> visited = {};
 	in->reference_counter++;
 	todo.insert(todo.begin(), input->outgoing.begin(), input->outgoing.end());
 	// todo.push_back(nullptr); // as a marker that the holding reference
@@ -165,8 +162,10 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 			}
 			// add the children bfs
 			for (LayerGraph *layer : curr->outgoing) {
-				if (visited.insert(layer).second)
-					todo.push_back(layer);
+				auto ex = std::find(todo.begin(), todo.end(), layer);
+				if (ex != todo.end())
+					todo.erase(ex);
+				todo.push_back(layer);
 			}
 		}
 		//  else {

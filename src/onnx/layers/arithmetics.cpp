@@ -1,10 +1,10 @@
-#include "flint.h"
 #include "../layers.hpp"
+#include "flint.h"
 #include <string>
 
 void Add::forward() {
 #ifdef FLINT_DEBUG
-	if (!((incoming.size() == 1 && incoming[0]->output.size() == 2) &&
+	if (!((incoming.size() == 1 && incoming[0]->output.size() == 2) ||
 		  (incoming.size() == 2 && incoming[0]->output.size() == 1 &&
 		   incoming[1]->output.size() == 1)))
 		flogging(F_ERROR,
