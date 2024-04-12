@@ -33,11 +33,17 @@ void BatchNorm::forward() {
 		node_mean->node = mean_running;
 		node_var->node = var_running;
 	}
-	FGraphNode *y = fadd_g(
+  // because channels and other dimensions have to be swapped
+	int transpositions1[x->operation.dimensions];
+	for (int i = 0; i < x->operation.dimensions; i++)
+		transpositions1[i] = i;
+	transpositions1[1] = x->operation.dimensions - 1;
+	transpositions1[x->operation.dimensions - 1] = 1;
+	FGraphNode *y = ftranspose(fadd_g(
 		fmul_g(gamma,
-			   fdiv_g(fsub_g(x, mean_running),
+			   fdiv_g(fsub_g(ftranspose(x, transpositions1), mean_running),
 					  fsqrt_g(fadd_cf(fpow(var_running, 2),
 									  std::numeric_limits<float>::epsilon())))),
-		beta);
+		beta), transpositions1);
   output[0] = y;
 };
