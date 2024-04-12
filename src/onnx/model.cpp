@@ -3,6 +3,7 @@
 #include "onnx.proto3.pb.h"
 #include <fstream>
 #include <iostream>
+#include <set>
 GraphModel GraphModel::load_model(std::string path) {
 	using namespace std;
 	ifstream input(path, std::ios::ate | std::ios::binary);
@@ -132,20 +133,36 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 	input->output.push_back(in);
 	using namespace std;
 	list<LayerGraph *> todo;
+	set<LayerGraph *> visited;
 	//	set<FGraphNode *> holding = {in};
 	in->reference_counter++;
 	todo.insert(todo.begin(), input->outgoing.begin(), input->outgoing.end());
+	visited.insert(input);
 	// todo.push_back(nullptr); // as a marker that the holding reference
 	//							 // can be removed
 	for (Variable *v : weights) {
 		v->forward();
+		visited.insert(v);
 	}
 	while (!todo.empty()) {
 		LayerGraph *curr = todo.front();
 		todo.pop_front();
+		// check if previous layers have been visited
+		bool all_run = true;
+		for (LayerGraph* in : curr->incoming) {
+			if (!visited.contains(in)) {
+				all_run = false;
+				break;
+			}
+		}
+		if (!all_run) {
+			todo.push_back(curr);
+			continue;
+		}
 		if (curr) {
 			flogging(F_INFO, "Layer " + curr->name);
 			curr->forward();
+			visited.insert(curr);
 			if (curr == output) {
 				for (FGraphNode *out : curr->output) {
 					out->reference_counter++;

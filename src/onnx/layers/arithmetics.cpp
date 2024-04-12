@@ -19,11 +19,13 @@ void Add::forward() {
 
 void Connected::forward() {
 #ifdef FLINT_DEBUG
-	if (incoming.size() != 2 && incoming[0]->output.size() == 1 &&
-		incoming[1]->output.size() == 1)
+	if ((incoming.size() != 2 && incoming.size() != 3) || incoming[0]->output.size() != 1 ||
+		incoming[1]->output.size() != 1 || (incoming.size() == 3 && incoming[2]->output.size() != 1))
 		flogging(
 			F_ERROR,
 			"Connected expects exactly two inputs, the input and the kernel");
 #endif
 	output[0] = fmatmul(incoming[0]->output[0], incoming[1]->output[0]);
+	// TODO bias
+	// TODO transpose attributes
 }
