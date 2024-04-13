@@ -8,7 +8,7 @@ struct LayerGraph {
 		std::vector<LayerGraph *> outgoing; // incoming edges in graph
 		std::vector<FGraphNode *> output;	// result of forward
 		bool training =
-			false; // wheather or not the model is in training or in testing
+			false; // weather or not the model is in training or in testing
     std::string name;
 		LayerGraph() = default;
 		LayerGraph(size_t reserved_output_slots)
@@ -18,7 +18,7 @@ struct LayerGraph {
 		}
 		/**
 		 * Computes the layer output in `output` by the output of the previous
-		 * layers. The framework makes sure that the ouput of the incoming
+		 * layers. The framework makes sure that the output of the incoming
 		 * layers exists.
 		 */
 		virtual void forward() = 0;
@@ -93,7 +93,6 @@ struct GlobalAvgPool : public LayerGraph {
 		void forward() override;
 };
 struct BatchNorm : public LayerGraph {
-  // TODO running mean and variance as parameters !
 		BatchNorm(float alpha = 0.8) : LayerGraph(1), alpha(alpha) {}
 		void forward() override;
 		float alpha;
@@ -101,6 +100,8 @@ struct BatchNorm : public LayerGraph {
 struct Connected : public LayerGraph {
 		Connected() : LayerGraph(1) {}
 		void forward() override;
+    bool transposeA = false;
+    bool transposeB = false;
 };
 
 #endif

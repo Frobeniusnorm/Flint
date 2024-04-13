@@ -104,7 +104,20 @@ GraphModel GraphModel::load_model(std::string path) {
 		} else if (node.op_type() == "Flatten") {
 			x = new Flatten();
 		} else if (node.op_type() == "Gemm") {
-			x = new Connected();
+			Connected* conn = new Connected();
+			for (int i = 0; i < node.attribute_size(); i++) {
+				auto &attr = node.attribute(i);
+        if (attr.name() == "transA") {
+          if (attr.i() == 1) {
+            conn->transposeA = true;
+          }
+        } else if (attr.name() == "transB") {
+          if (attr.i() == 1) {
+            conn->transposeB = true;
+          }
+        }
+      }
+      x = conn;
 		} else
 			flogging(F_ERROR, "Unknown Operation " + node.op_type());
 		x->name = node.name();

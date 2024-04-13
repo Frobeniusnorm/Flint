@@ -19,13 +19,38 @@ void Add::forward() {
 
 void Connected::forward() {
 #ifdef FLINT_DEBUG
-	if ((incoming.size() != 2 && incoming.size() != 3) || incoming[0]->output.size() != 1 ||
-		incoming[1]->output.size() != 1 || (incoming.size() == 3 && incoming[2]->output.size() != 1))
+	if ((incoming.size() != 2 && incoming.size() != 3) ||
+		incoming[0]->output.size() != 1 || incoming[1]->output.size() != 1 ||
+		(incoming.size() == 3 && incoming[2]->output.size() != 1))
 		flogging(
 			F_ERROR,
 			"Connected expects exactly two inputs, the input and the kernel");
 #endif
-	output[0] = fmatmul(incoming[0]->output[0], incoming[1]->output[0]);
-	// TODO bias
-	// TODO transpose attributes
+	FGraphNode *img = incoming[0]->output[0];
+	FGraphNode *kernel = incoming[1]->output[0];
+	if (transposeA) {
+		int transposition[img->operation.dimensions];
+		for (int i = 0; i < img->operation.dimensions; i++)
+			transposition[i] = i;
+		transposition[img->operation.dimensions - 1] =
+			img->operation.dimensions - 2;
+		transposition[img->operation.dimensions - 2] =
+			img->operation.dimensions - 1;
+		img = ftranspose(img, transposition);
+	}
+	if (transposeB) {
+		int transposition[img->operation.dimensions];
+		for (int i = 0; i < img->operation.dimensions; i++)
+			transposition[i] = i;
+		transposition[img->operation.dimensions - 1] =
+			img->operation.dimensions - 2;
+		transposition[img->operation.dimensions - 2] =
+			img->operation.dimensions - 1;
+		kernel = ftranspose(kernel, transposition);
+	}
+	output[0] = fmatmul(img, kernel);
+  if (incoming.size() == 3) {
+    FGraphNode *bias = incoming[2]->output[0];
+    output[0] = fadd(output[0], bias);
+  }
 }

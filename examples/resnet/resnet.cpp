@@ -3,6 +3,7 @@
 #include <flint/flint_helper.hpp>
 #include <flint/model.hpp>
 #include <iostream>
+#include "imgnet_labels.h"
 int main(int argc, char **argv) {
 	FlintContext _(FLINT_BACKEND_ONLY_GPU);
   fEnableEagerExecution();
@@ -23,12 +24,12 @@ int main(int argc, char **argv) {
 	{
 		float max_val = 0.0;
 		int max_idx = 0;
-		for (int i = 0; i < c.get_shape().size(); i++) {
+		for (int i = 0; i < c.get_shape()[1]; i++) {
 			if (c[0][i] > max_val) {
 				max_val = c[0][i];
 				max_idx = i;
 			}
 		}
-		std::cout << max_idx << std::endl;
+		std::cout << imgnet_labels[max_idx] << std::endl;
 	}
 }
