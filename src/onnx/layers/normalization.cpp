@@ -23,6 +23,7 @@ void BatchNorm::forward() {
 #endif
 	// calculate mean
 	if (training) {
+    // TODO mean and var for all except for the channels
 		FGraphNode *mean =
 			fdiv_ci(freduce_sum(x, 0), (unsigned int)x->operation.shape[0]);
 		FGraphNode *var = fsub_g(x, mean);
@@ -42,7 +43,7 @@ void BatchNorm::forward() {
 	FGraphNode *y = ftranspose(fadd_g(
 		fmul_g(gamma,
 			   fdiv_g(fsub_g(ftranspose(x, transpositions1), mean_running),
-					  fsqrt_g(fadd_cf(fpow(var_running, 2),
+					  fsqrt_g(fadd_cf(var_running,
 									  std::numeric_limits<float>::epsilon())))),
 		beta), transpositions1);
   output[0] = y;
