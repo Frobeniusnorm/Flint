@@ -2,14 +2,15 @@
 #define ONNX_MODEL
 #include "flint.h"
 #include "layers.hpp"
-#include <list>
 struct GraphModel {
+		// TODO multiple inputs
 		InputNode *input;
 		std::vector<Variable *> weights;
 		LayerGraph *output;
 		GraphModel() = default;
 		FGraphNode *operator()(FGraphNode *in);
-		static GraphModel load_model(std::string path);
+		static GraphModel *load_model(std::string path);
+		static GraphModel *sequential(std::initializer_list<LayerGraph *> list);
 		// TODO training
 };
 

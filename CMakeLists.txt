@@ -21,7 +21,7 @@ set_property(TARGET flint PROPERTY CXX_STANDARD 20)
 target_include_directories(flint PRIVATE .)
 target_link_libraries(flint OpenCL::OpenCL)
 target_link_libraries(flint ${Protobuf_LIBRARIES})
-set_target_properties(flint PROPERTIES VERSION ${PROJECT_VERSION} PUBLIC_HEADER "flint.h;flint.hpp;flint_helper.hpp;flint_1.hpp;flint_n.hpp;src/onnx/model.hpp;src/onnx/onnx.proto3.pb.h;src/onnx/layers.hpp;")
+set_target_properties(flint PROPERTIES VERSION ${PROJECT_VERSION} PUBLIC_HEADER "flint.h;flint.hpp;flint_helper.hpp;flint_1.hpp;flint_n.hpp;src/dl/model.hpp;src/dl/onnx.proto3.pb.h;src/dl/layers.hpp;")
 
 if(C_COMPATIBLE)
   add_compile_definitions("C_COMPATIBILITY")

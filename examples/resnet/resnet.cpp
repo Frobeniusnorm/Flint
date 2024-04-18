@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
 	using namespace std;
 	string model = argv[1];
 	string image = argv[2];
-	GraphModel gm = GraphModel::load_model(model);
+	GraphModel& gm = *GraphModel::load_model(model);
 	Tensor<float, 3> img =
 		Flint::load_image(image).transpose({2, 1, 0}).transpose({0, 2, 1});
 	Tensor<float, 4> batch = img.expand(0, 1);

@@ -3,8 +3,9 @@
 #include "onnx.proto3.pb.h"
 #include <fstream>
 #include <iostream>
+#include <list>
 #include <set>
-GraphModel GraphModel::load_model(std::string path) {
+GraphModel* GraphModel::load_model(std::string path) {
 	using namespace std;
 	ifstream input(path, std::ios::ate | std::ios::binary);
 	streamsize size = input.tellg();
@@ -122,10 +123,10 @@ GraphModel GraphModel::load_model(std::string path) {
 			in->outgoing.push_back(x);
 		}
 	}
-	GraphModel res;
-	res.input = in;
-	res.output = layers[graph.output(0).name()];
-	res.weights = weights;
+	GraphModel* res = new GraphModel();
+	res->input = in;
+	res->output = layers[graph.output(0).name()];
+	res->weights = weights;
 	return res;
 }
 FGraphNode *GraphModel::operator()(FGraphNode *in) {
@@ -149,7 +150,7 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 		todo.pop_front();
 		// check if previous layers have been visited
 		bool all_run = true;
-		for (LayerGraph* in : curr->incoming) {
+		for (LayerGraph *in : curr->incoming) {
 			if (!visited.contains(in)) {
 				all_run = false;
 				break;
@@ -198,4 +199,19 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 		//	}
 	}
 	return output->output[0];
+}
+GraphModel *GraphModel::sequential(std::initializer_list<LayerGraph *> list) {
+	GraphModel *model = new GraphModel();
+	model->input = new InputNode();
+	LayerGraph *prev = model->input;
+	for (LayerGraph *node : list) {
+		prev->outgoing.push_back(node);
+		for (LayerGraph *pw : prev->outgoing) {
+			if (Variable *w = dynamic_cast<Variable *>(pw))
+				model->weights.push_back(w);
+		}
+		node->incoming.insert(node->incoming.begin(), prev);
+	}
+	model->output = prev;
+	return model;
 }

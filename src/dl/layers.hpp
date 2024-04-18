@@ -3,13 +3,15 @@
 #define FLINT_DEBUG
 #include "flint.h"
 #include <vector>
+// TODO adapt the data s.t. channels are switched to back to remove the
+// transpositions
 struct LayerGraph {
 		std::vector<LayerGraph *> incoming; // incoming edges in graph
 		std::vector<LayerGraph *> outgoing; // incoming edges in graph
 		std::vector<FGraphNode *> output;	// result of forward
 		bool training =
 			false; // wheather or not the model is in training or in testing
-    std::string name;
+		std::string name;
 		LayerGraph() = default;
 		LayerGraph(size_t reserved_output_slots)
 			: output(reserved_output_slots) {
@@ -27,17 +29,18 @@ struct Variable : public LayerGraph {
 		FGraphNode *node = nullptr;
 		Variable() : LayerGraph(1) {}
 		Variable(FGraphNode *node) : LayerGraph(1), node(node) {
-      node->reference_counter++;
-    }
-    ~Variable() {
-      if (node) {
-        node->reference_counter--;
-      }
-    }
+			node->reference_counter++;
+		}
+		~Variable() {
+			if (node) {
+				node->reference_counter--;
+			}
+		}
 		void forward() override { output[0] = node; }
 };
 struct InputNode : public LayerGraph {
 		std::vector<FGraphNode *> nodes;
+		bool transpose_channel = false;
 		InputNode() : LayerGraph(1) {}
 		InputNode(FGraphNode *node) : LayerGraph(1), nodes{node} {}
 		InputNode(std::vector<FGraphNode *> nodes)
@@ -75,7 +78,8 @@ struct MaxPool : public LayerGraph {
 		MaxPool(std::vector<size_t> kernel_shape,
 				std::vector<unsigned int> stride,
 				std::vector<unsigned int> padding)
-			: LayerGraph(1), kernel_shape(kernel_shape), stride(stride), padding(padding) {}
+			: LayerGraph(1), kernel_shape(kernel_shape), stride(stride),
+			  padding(padding) {}
 		void forward() override;
 };
 struct AvgPool : public LayerGraph {
@@ -85,7 +89,8 @@ struct AvgPool : public LayerGraph {
 		AvgPool(std::vector<size_t> kernel_shape,
 				std::vector<unsigned int> stride,
 				std::vector<unsigned int> padding)
-			: LayerGraph(1), kernel_shape(kernel_shape), stride(stride), padding(padding) {}
+			: LayerGraph(1), kernel_shape(kernel_shape), stride(stride),
+			  padding(padding) {}
 		void forward() override;
 };
 struct GlobalAvgPool : public LayerGraph {
@@ -93,7 +98,6 @@ struct GlobalAvgPool : public LayerGraph {
 		void forward() override;
 };
 struct BatchNorm : public LayerGraph {
-  // TODO running mean and variance as parameters !
 		BatchNorm(float alpha = 0.8) : LayerGraph(1), alpha(alpha) {}
 		void forward() override;
 		float alpha;
