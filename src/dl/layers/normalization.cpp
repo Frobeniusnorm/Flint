@@ -21,11 +21,22 @@ void BatchNorm::forward() {
 	if (!node_mean || !node_var)
 		flogging(F_ERROR, "4th and 5th parameter need to be input nodes for the running mean and variance.");
 #endif
-	// calculate mean
+  // because channels and other dimensions have to be swapped
+	int transpositions1[x->operation.dimensions];
+	for (int i = 0; i < x->operation.dimensions; i++)
+		transpositions1[i] = i;
+	transpositions1[1] = x->operation.dimensions - 1;
+	transpositions1[x->operation.dimensions - 1] = 1;
+  FGraphNode* tx = ftranspose(x, transpositions1);
+	// calculate mean and std var
 	if (training) {
-		FGraphNode *mean =
-			fdiv_ci(freduce_sum(x, 0), (unsigned int)x->operation.shape[0]);
-		FGraphNode *var = fsub_g(x, mean);
+    // mean and var for all except for the channels
+		FGraphNode *mean = tx;
+    while (mean->operation.dimensions > 1)
+			mean = fdiv_ci(freduce_sum(mean, 0), (unsigned int)mean->operation.shape[0]);
+		FGraphNode *var = fsub_g(tx, mean);
+    while (var->operation.dimensions > 1)
+			var = fdiv_ci(freduce_sum(var, 0), (unsigned int)var->operation.shape[0]);
 		mean_running =
 			fadd_g(fmul_cf(mean_running, alpha), fmul_cf(mean, 1 - alpha));
 		var_running =
@@ -33,16 +44,10 @@ void BatchNorm::forward() {
 		node_mean->node = mean_running;
 		node_var->node = var_running;
 	}
-  // because channels and other dimensions have to be swapped
-	int transpositions1[x->operation.dimensions];
-	for (int i = 0; i < x->operation.dimensions; i++)
-		transpositions1[i] = i;
-	transpositions1[1] = x->operation.dimensions - 1;
-	transpositions1[x->operation.dimensions - 1] = 1;
 	FGraphNode *y = ftranspose(fadd_g(
 		fmul_g(gamma,
-			   fdiv_g(fsub_g(ftranspose(x, transpositions1), mean_running),
-					  fsqrt_g(fadd_cf(fpow(var_running, 2),
+			   fdiv_g(fsub_g(tx, mean_running),
+					  fsqrt_g(fadd_cf(var_running,
 									  std::numeric_limits<float>::epsilon())))),
 		beta), transpositions1);
   output[0] = y;

@@ -9,8 +9,7 @@ struct LayerGraph {
 		std::vector<LayerGraph *> incoming; // incoming edges in graph
 		std::vector<LayerGraph *> outgoing; // incoming edges in graph
 		std::vector<FGraphNode *> output;	// result of forward
-		bool training =
-			false; // wheather or not the model is in training or in testing
+		bool training = false;
 		std::string name;
 		LayerGraph() = default;
 		LayerGraph(size_t reserved_output_slots)
@@ -20,7 +19,7 @@ struct LayerGraph {
 		}
 		/**
 		 * Computes the layer output in `output` by the output of the previous
-		 * layers. The framework makes sure that the ouput of the incoming
+		 * layers. The framework makes sure that the output of the incoming
 		 * layers exists.
 		 */
 		virtual void forward() = 0;
@@ -105,6 +104,8 @@ struct BatchNorm : public LayerGraph {
 struct Connected : public LayerGraph {
 		Connected() : LayerGraph(1) {}
 		void forward() override;
+		bool transposeA = false;
+		bool transposeB = false;
 };
 
 #endif
