@@ -5,7 +5,7 @@
 #include <iostream>
 #include <list>
 #include <set>
-GraphModel* GraphModel::load_model(std::string path) {
+GraphModel *GraphModel::load_model(std::string path) {
 	using namespace std;
 	ifstream input(path, std::ios::ate | std::ios::binary);
 	streamsize size = input.tellg();
@@ -105,20 +105,20 @@ GraphModel* GraphModel::load_model(std::string path) {
 		} else if (node.op_type() == "Flatten") {
 			x = new Flatten();
 		} else if (node.op_type() == "Gemm") {
-			Connected* conn = new Connected();
+			Connected *conn = new Connected();
 			for (int i = 0; i < node.attribute_size(); i++) {
 				auto &attr = node.attribute(i);
-        if (attr.name() == "transA") {
-          if (attr.i() == 1) {
-            conn->transposeA = true;
-          }
-        } else if (attr.name() == "transB") {
-          if (attr.i() == 1) {
-            conn->transposeB = true;
-          }
-        }
-      }
-      x = conn;
+				if (attr.name() == "transA") {
+					if (attr.i() == 1) {
+						conn->transposeA = true;
+					}
+				} else if (attr.name() == "transB") {
+					if (attr.i() == 1) {
+						conn->transposeB = true;
+					}
+				}
+			}
+			x = conn;
 		} else
 			flogging(F_ERROR, "Unknown Operation " + node.op_type());
 		x->name = node.name();
@@ -136,20 +136,23 @@ GraphModel* GraphModel::load_model(std::string path) {
 			in->outgoing.push_back(x);
 		}
 	}
-	GraphModel* res = new GraphModel();
+	GraphModel *res = new GraphModel();
 	res->input = in;
 	res->output = layers[graph.output(0).name()];
 	res->weights = weights;
 	return res;
 }
+
 FGraphNode *GraphModel::operator()(FGraphNode *in) {
-	input->output.clear();
-	input->output.push_back(in);
+	return this->operator()({in})[0];
+}
+std::vector<FGraphNode*> GraphModel::operator()(std::initializer_list<FGraphNode *> in) {
+	input->nodes.clear();
+	input->nodes.insert(input->nodes.end(), in.begin(), in.end());
 	using namespace std;
 	list<LayerGraph *> todo;
 	set<LayerGraph *> visited;
 	//	set<FGraphNode *> holding = {in};
-	in->reference_counter++;
 	todo.insert(todo.begin(), input->outgoing.begin(), input->outgoing.end());
 	visited.insert(input);
 	// todo.push_back(nullptr); // as a marker that the holding reference
@@ -210,6 +213,9 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 		//		if (!todo.empty() && todo.front() != nullptr)
 		//			todo.push_back(nullptr);
 		//	}
+		for (FGraphNode *out : output->output) {
+			out->reference_counter--;
+		}
 	}
 	return output->output[0];
 }
