@@ -17,10 +17,23 @@ struct LayerGraph {
 			for (size_t i = 0; i < reserved_output_slots; i++)
 				output[i] = nullptr;
 		}
+		LayerGraph(LayerGraph *in, size_t reserved = 1) : LayerGraph(reserved) {
+			incoming.push_back(in);
+			in->outgoing.push_back(this);
+		}
+		LayerGraph(std::initializer_list<LayerGraph *> in, size_t reserved = 1)
+			: LayerGraph(reserved) {
+			for (LayerGraph *i : in) {
+				if (i) {
+					incoming.push_back(i);
+					i->outgoing.push_back(this);
+				}
+			}
+		}
 		/**
-		 * Computes the layer output in `output` by the output of the previous
-		 * layers. The framework makes sure that the output of the incoming
-		 * layers exists.
+		 * Computes the layer output in `output` by the output of the
+		 * previous layers. The framework makes sure that the output of
+		 * the incoming layers exists.
 		 */
 		virtual void forward() = 0;
 };
@@ -52,6 +65,7 @@ struct InputNode : public LayerGraph {
 };
 struct Relu : public LayerGraph {
 		Relu() : LayerGraph(1) {}
+		Relu(LayerGraph *in) : LayerGraph(in) {}
 		void forward() override;
 };
 struct Flatten : public LayerGraph {
@@ -65,9 +79,13 @@ struct Add : public LayerGraph {
 struct Convolve : public LayerGraph {
 		std::vector<unsigned int> stride, padding;
 		Convolve() : LayerGraph(1) {}
-		Convolve(std::vector<unsigned int> stride,
-				 std::vector<unsigned int> padding)
+		Convolve(std::initializer_list<unsigned int> stride,
+				 std::initializer_list<unsigned int> padding)
 			: LayerGraph(1), stride(stride), padding(padding) {}
+		Convolve(std::initializer_list<unsigned int> stride,
+				 std::initializer_list<unsigned int> padding, LayerGraph *in,
+				 Variable* kernel, Variable *bias)
+			: LayerGraph({in, kernel, bias}), stride(stride), padding(padding) {}
 		void forward() override;
 };
 struct MaxPool : public LayerGraph {
@@ -78,6 +96,11 @@ struct MaxPool : public LayerGraph {
 				std::vector<unsigned int> stride,
 				std::vector<unsigned int> padding)
 			: LayerGraph(1), kernel_shape(kernel_shape), stride(stride),
+			  padding(padding) {}
+		MaxPool(std::vector<size_t> kernel_shape,
+				std::vector<unsigned int> stride,
+				std::vector<unsigned int> padding, LayerGraph *in)
+			: LayerGraph(in), kernel_shape(kernel_shape), stride(stride),
 			  padding(padding) {}
 		void forward() override;
 };
@@ -90,19 +113,32 @@ struct AvgPool : public LayerGraph {
 				std::vector<unsigned int> padding)
 			: LayerGraph(1), kernel_shape(kernel_shape), stride(stride),
 			  padding(padding) {}
+		AvgPool(std::vector<size_t> kernel_shape,
+				std::vector<unsigned int> stride,
+				std::vector<unsigned int> padding, LayerGraph *in)
+			: LayerGraph(in), kernel_shape(kernel_shape), stride(stride),
+			  padding(padding) {}
 		void forward() override;
 };
 struct GlobalAvgPool : public LayerGraph {
 		GlobalAvgPool() : LayerGraph(1) {}
+		GlobalAvgPool(LayerGraph *in) : LayerGraph(in) {}
 		void forward() override;
 };
 struct BatchNorm : public LayerGraph {
 		BatchNorm(float alpha = 0.8) : LayerGraph(1), alpha(alpha) {}
+		BatchNorm(LayerGraph *in, Variable *gamma, Variable *beta,
+				  float alpha = 0.8)
+			: LayerGraph({in, gamma, beta}), alpha(alpha) {}
 		void forward() override;
 		float alpha;
 };
 struct Connected : public LayerGraph {
 		Connected() : LayerGraph(1) {}
+		Connected(LayerGraph *in, Variable *weight, Variable *bias = nullptr,
+				  bool transposeA = false, bool transposeB = false)
+			: LayerGraph({in, weight, bias}), transposeA(transposeA),
+			  transposeB(transposeB) {}
 		void forward() override;
 		bool transposeA = false;
 		bool transposeB = false;
