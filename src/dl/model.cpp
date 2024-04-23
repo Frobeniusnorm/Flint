@@ -144,9 +144,9 @@ GraphModel *GraphModel::load_model(std::string path) {
 }
 
 FGraphNode *GraphModel::operator()(FGraphNode *in) {
-	return this->operator()({in})[0];
+	return this->operator()(std::vector{in})[0];
 }
-std::vector<FGraphNode*> GraphModel::operator()(std::initializer_list<FGraphNode *> in) {
+std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 	input->nodes.clear();
 	input->nodes.insert(input->nodes.end(), in.begin(), in.end());
 	using namespace std;
@@ -217,11 +217,11 @@ std::vector<FGraphNode*> GraphModel::operator()(std::initializer_list<FGraphNode
 			out->reference_counter--;
 		}
 	}
-	return output->output[0];
+	return output->output;
 }
-GraphModel *GraphModel::sequential(std::initializer_list<LayerGraph *> list) {
+GraphModel *GraphModel::sequential(std::vector<LayerGraph *> list) {
 	GraphModel *model = new GraphModel();
-	model->input = new InputNode();
+	model->input = new InputNode(); // TODO
 	LayerGraph *prev = model->input;
 	for (LayerGraph *node : list) {
 		prev->outgoing.push_back(node);
@@ -233,4 +233,28 @@ GraphModel *GraphModel::sequential(std::initializer_list<LayerGraph *> list) {
 	}
 	model->output = prev;
 	return model;
+}
+GraphModel *GraphModel::from_output(LayerGraph *output) {
+	GraphModel *model = new GraphModel();
+	model->output = output;
+	// iterate and find all inputs and weights
+	using namespace std;
+	list<LayerGraph *> todo;
+	set<LayerGraph *> visited;
+	todo.push_back(output);
+	while (!todo.empty()) {
+		LayerGraph *curr = todo.front();
+		todo.pop_front();
+		if (Variable *v = dynamic_cast<Variable *>(curr)) {
+			model->weights.push_back(v);
+		}
+		if (InputNode *i = dynamic_cast<InputNode *>(curr)) {
+			model->input = i; // TODO
+		}
+		for (LayerGraph *n : curr->incoming) {
+			if (visited.insert(n).second) {
+				todo.push_back(n);
+			}
+		}
+	}
 }

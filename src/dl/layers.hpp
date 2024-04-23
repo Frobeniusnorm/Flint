@@ -21,7 +21,7 @@ struct LayerGraph {
 			incoming.push_back(in);
 			in->outgoing.push_back(this);
 		}
-		LayerGraph(std::initializer_list<LayerGraph *> in, size_t reserved = 1)
+		LayerGraph(std::vector<LayerGraph *> in, size_t reserved = 1)
 			: LayerGraph(reserved) {
 			for (LayerGraph *i : in) {
 				if (i) {
@@ -79,13 +79,14 @@ struct Add : public LayerGraph {
 struct Convolve : public LayerGraph {
 		std::vector<unsigned int> stride, padding;
 		Convolve() : LayerGraph(1) {}
-		Convolve(std::initializer_list<unsigned int> stride,
-				 std::initializer_list<unsigned int> padding)
+		Convolve(std::vector<unsigned int> stride,
+				 std::vector<unsigned int> padding)
 			: LayerGraph(1), stride(stride), padding(padding) {}
-		Convolve(std::initializer_list<unsigned int> stride,
-				 std::initializer_list<unsigned int> padding, LayerGraph *in,
-				 Variable* kernel, Variable *bias)
-			: LayerGraph({in, kernel, bias}), stride(stride), padding(padding) {}
+		Convolve(std::vector<unsigned int> stride,
+				 std::vector<unsigned int> padding, LayerGraph *in,
+				 Variable *kernel, Variable *bias)
+			: LayerGraph({in, kernel, bias}), stride(stride), padding(padding) {
+		}
 		void forward() override;
 };
 struct MaxPool : public LayerGraph {

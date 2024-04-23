@@ -116,13 +116,11 @@ int main() {
 	//		}
 	//		std::cout << "]" << std::endl;
 	//	}
-	NetworkMetricReporter nmr;
 	m.enable_profiling();
 	std::cout << m.summary() << std::endl;
 	AdamFactory opt(0.003);
 	m.generate_optimizer(opt);
 	auto trainer = Trainer(m, data, CrossEntropyLoss());
-	trainer.set_metric_reporter(&nmr);
 	trainer.max_epochs(25);
 	trainer.train(600);
 	m.save("mnist_model.flint");

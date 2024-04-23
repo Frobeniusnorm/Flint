@@ -9,9 +9,10 @@ struct GraphModel {
 		LayerGraph *output;
 		GraphModel() = default;
 		FGraphNode *operator()(FGraphNode *in);
-		std::vector<FGraphNode*> operator()(std::initializer_list<FGraphNode *> in);
+		std::vector<FGraphNode*> operator()(std::vector<FGraphNode *> in);
 		static GraphModel *load_model(std::string path);
-		static GraphModel *sequential(std::initializer_list<LayerGraph *> list);
+		static GraphModel *sequential(std::vector<LayerGraph *> list);
+		static GraphModel *from_output(LayerGraph * output);
 		// TODO training
 };
 
