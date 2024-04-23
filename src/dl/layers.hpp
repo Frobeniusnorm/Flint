@@ -12,6 +12,19 @@ struct LayerGraph {
 		bool training = false;
 		std::string name;
 		LayerGraph() = default;
+		virtual ~LayerGraph() {
+			marked_for_deletion = true;
+			for (LayerGraph *lg : incoming)
+				if (lg && !lg->marked_for_deletion) {
+					lg->marked_for_deletion = true;
+					delete lg;
+				}
+			for (LayerGraph *lg : outgoing)
+				if (lg && !lg->marked_for_deletion) {
+					lg->marked_for_deletion = true;
+					delete lg;
+				}
+		}
 		LayerGraph(size_t reserved_output_slots)
 			: output(reserved_output_slots) {
 			for (size_t i = 0; i < reserved_output_slots; i++)
@@ -36,6 +49,9 @@ struct LayerGraph {
 		 * the incoming layers exists.
 		 */
 		virtual void forward() = 0;
+
+	private:
+		bool marked_for_deletion = false; // for destructor
 };
 struct Variable : public LayerGraph {
 		FGraphNode *node = nullptr;
