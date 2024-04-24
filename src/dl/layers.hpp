@@ -86,10 +86,12 @@ struct Relu : public LayerGraph {
 };
 struct Flatten : public LayerGraph {
 		Flatten() : LayerGraph(1) {}
+		Flatten(LayerGraph *in) : LayerGraph(in) {}
 		void forward() override;
 };
 struct Add : public LayerGraph {
 		Add() : LayerGraph(1) {}
+		Add(LayerGraph *a, LayerGraph* b) : LayerGraph({a, b}) {}
 		void forward() override;
 };
 struct Convolve : public LayerGraph {
