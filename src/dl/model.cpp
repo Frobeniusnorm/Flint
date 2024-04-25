@@ -54,9 +54,6 @@ GraphModel *GraphModel::load_model(std::string path) {
 		layers.insert({init.name(), var});
 		weights.push_back(var);
 	}
-	// now we process the layers
-	InputNode *in = new InputNode();
-	layers.insert({"data", in});
 	for (auto node : nodes) {
 		LayerGraph *x;
 		if (node.op_type() == "Conv") {
@@ -129,23 +126,35 @@ GraphModel *GraphModel::load_model(std::string path) {
 				LayerGraph *conn = layers[in];
 				x->incoming.push_back(conn);
 				conn->outgoing.push_back(x);
+			} else if (in == "data") {
+				auto inn = new InputNode();
+				layers.insert({"data", inn});
+				x->incoming.push_back(inn);
+				inn->outgoing.push_back(x);
 			} else
 				flogging(F_WARNING, "Unknown input: " + in);
-		}
-		if (in->outgoing.empty()) {
-			in->outgoing.push_back(x);
 		}
 	}
 	// retreive input and output names
 	GraphModel *res = new GraphModel();
 	res->input = vector<InputNode *>(graph.input_size());
 	for (int i = 0; i < graph.input_size(); i++) {
-		res->input[i] = new InputNode();
-		res->input[i]->outgoing.push_back(layers[graph.input(i).name()]);
+		if (!layers.contains(graph.input(i).name()))
+			flogging(F_ERROR, "Unknown layer: " + graph.input(i).name());
+		if (InputNode *in =
+				dynamic_cast<InputNode *>(layers[graph.input(i).name()])) {
+			res->input[i] = in;
+		} else {
+			res->input[i] = new InputNode();
+			res->input[i]->outgoing.push_back(layers[graph.input(i).name()]);
+		}
 	}
 	res->output = vector<LayerGraph *>(graph.output_size());
-	for (int i = 0; i < graph.output_size(); i++)
-		res->output[i] = layers[graph.input(i).name()];
+	for (int i = 0; i < graph.output_size(); i++) {
+		if (!layers.contains(graph.output(i).name()))
+			flogging(F_WARNING, "Unknown layer: " + graph.output(i).name());
+		res->output[i] = layers[graph.output(i).name()];
+	}
 	res->weights = weights;
 	return res;
 }
@@ -158,11 +167,13 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 	list<LayerGraph *> todo;
 	set<LayerGraph *> visited;
 	//	set<FGraphNode *> holding = {in};
-	for (InputNode *i : input) {
-		i->nodes.clear();
-		i->nodes.insert(i->nodes.end(), in.begin(), in.end());
-		todo.insert(todo.begin(), i->outgoing.begin(), i->outgoing.end());
-		visited.insert(i);
+	for (int i = 0; i < in.size(); i++) {
+		InputNode *inp = input[i];
+		inp->nodes.clear();
+		inp->nodes.push_back(in[i]);
+		inp->forward();
+		todo.insert(todo.begin(), inp->outgoing.begin(), inp->outgoing.end());
+		visited.insert(inp);
 	}
 	// todo.push_back(nullptr); // as a marker that the holding reference
 	//							 // can be removed
@@ -234,7 +245,7 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 }
 GraphModel *GraphModel::sequential(std::vector<LayerGraph *> list) {
 	GraphModel *model = new GraphModel();
-	model->input = { new InputNode() };
+	model->input = {new InputNode()};
 	LayerGraph *prev = model->input[0];
 	for (LayerGraph *node : list) {
 		prev->outgoing.push_back(node);
@@ -249,7 +260,7 @@ GraphModel *GraphModel::sequential(std::vector<LayerGraph *> list) {
 }
 GraphModel *GraphModel::from_output(LayerGraph *output) {
 	GraphModel *model = new GraphModel();
-	model->output = { output };
+	model->output = {output};
 	// iterate and find all inputs and weights
 	using namespace std;
 	list<LayerGraph *> todo;

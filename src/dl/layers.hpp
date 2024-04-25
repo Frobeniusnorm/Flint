@@ -58,6 +58,7 @@ struct Variable : public LayerGraph {
 		Variable() : LayerGraph(1) {}
 		Variable(FGraphNode *node) : LayerGraph(1), node(node) {
 			node->reference_counter++;
+			name = "Variable";
 		}
 		~Variable() {
 			if (node) {
@@ -70,7 +71,9 @@ struct InputNode : public LayerGraph {
 		std::vector<FGraphNode *> nodes;
 		bool transpose_channel = false;
 		InputNode() : LayerGraph(1) {}
-		InputNode(FGraphNode *node) : LayerGraph(1), nodes{node} {}
+		InputNode(FGraphNode *node) : LayerGraph(1), nodes{node} {
+			name = "Input Node";
+		}
 		InputNode(std::vector<FGraphNode *> nodes)
 			: LayerGraph(1), nodes(nodes) {}
 		void forward() override {

@@ -5,9 +5,14 @@ void Convolve::forward() {
 #ifdef FLINT_DEBUG
 	if ((incoming.size() != 2 && incoming.size() != 3) ||
 		incoming[0]->output.size() != 1 || incoming[1]->output.size() != 1 ||
-		(incoming.size() == 3 && incoming[2]->output.size() != 1))
+		(incoming.size() == 3 && incoming[2]->output.size() != 1)) {
+		std::cout << incoming.size() << std::endl;
+		std::cout << incoming[0]->output.size() << std::endl;
+		std::cout << incoming[1]->output.size() << std::endl;
+
 		flogging(F_ERROR, "Convolve expects an image and a kernel as "
 						  "parameters and optionally a bias");
+	}
 #endif
 	FGraphNode *weight = incoming[1]->output[0];
 	FGraphNode *image = incoming[0]->output[0];
