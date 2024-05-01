@@ -1,4 +1,5 @@
 #include "model.hpp"
+#include "flint.h"
 #include "layers.hpp"
 #include "onnx.proto3.pb.h"
 #include <fstream>
@@ -157,6 +158,45 @@ GraphModel *GraphModel::load_model(std::string path) {
 	}
 	res->weights = weights;
 	return res;
+}
+std::string GraphModel::serialize() {
+	using namespace onnx;
+	ModelProto model;
+	GraphProto *graph = model.mutable_graph();
+	int variable = 0;
+	for (Variable *w : weights) {
+		FGraphNode *node = w->node;
+		fExecuteGraph(node);
+		FResultData *data = node->result_data;
+		TensorProto& proto = *graph->add_initializer();
+		proto.set_name("variable" + std::to_string(variable++));
+		for (int i = 0; i < node->operation.dimensions; i++)
+			proto.add_dims(node->operation.shape[i]);
+		switch (node->operation.data_type) {
+		case F_INT32:
+			proto.set_data_type(
+				onnx::TensorProto_DataType::TensorProto_DataType_INT32);
+			proto.set_raw_data(data->data, sizeof(int) * data->num_entries);
+			break;
+		case F_INT64:
+			proto.set_data_type(
+				onnx::TensorProto_DataType::TensorProto_DataType_INT64);
+			proto.set_raw_data(data->data, sizeof(long) * data->num_entries);
+			break;
+		case F_FLOAT32:
+			proto.set_data_type(
+				onnx::TensorProto_DataType::TensorProto_DataType_FLOAT);
+			proto.set_raw_data(data->data, sizeof(float) * data->num_entries);
+			break;
+		case F_FLOAT64:
+			proto.set_data_type(
+				onnx::TensorProto_DataType::TensorProto_DataType_DOUBLE);
+			proto.set_raw_data(data->data, sizeof(double) * data->num_entries);
+			break;
+		}
+	}
+	// TODO build model
+	return model.SerializeAsString();
 }
 
 FGraphNode *GraphModel::operator()(FGraphNode *in) {
