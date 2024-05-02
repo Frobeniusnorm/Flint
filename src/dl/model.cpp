@@ -168,7 +168,7 @@ std::string GraphModel::serialize() {
 		FGraphNode *node = w->node;
 		fExecuteGraph(node);
 		FResultData *data = node->result_data;
-		TensorProto& proto = *graph->add_initializer();
+		TensorProto &proto = *graph->add_initializer();
 		proto.set_name("variable" + std::to_string(variable++));
 		for (int i = 0; i < node->operation.dimensions; i++)
 			proto.add_dims(node->operation.shape[i]);
@@ -195,7 +195,24 @@ std::string GraphModel::serialize() {
 			break;
 		}
 	}
-	// TODO build model
+	{
+		using namespace std;
+		list<LayerGraph *> todo;
+		set<LayerGraph *> visited;
+		todo.insert(todo.end(), input.begin(), input.end());
+		visited.insert(input.begin(), input.end());
+		while (!todo.empty()) {
+			LayerGraph* curr = todo.front();
+			todo.pop_front();
+			// TODO build model
+			for (LayerGraph *layer : curr->outgoing) {
+				auto ex = std::find(todo.begin(), todo.end(), layer);
+				if (ex != todo.end())
+					todo.erase(ex);
+				todo.push_back(layer);
+			}
+		}
+	}
 	return model.SerializeAsString();
 }
 

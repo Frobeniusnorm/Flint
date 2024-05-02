@@ -49,6 +49,12 @@ struct LayerGraph {
 		 * the incoming layers exists.
 		 */
 		virtual void forward() = 0;
+		/**
+		 * Returns the name of the layer type, not the name of the specific layer instance.
+		 * This is used to display meta information in additional tools or to export the 
+		 * model to onnx (then it should correspond to the name of the onnx instance)
+		 */
+		virtual std::string layer_type() { return "Unnamed Layer"; }
 
 	private:
 		bool marked_for_deletion = false; // for destructor
@@ -94,7 +100,7 @@ struct Flatten : public LayerGraph {
 };
 struct Add : public LayerGraph {
 		Add() : LayerGraph(1) {}
-		Add(LayerGraph *a, LayerGraph* b) : LayerGraph({a, b}) {}
+		Add(LayerGraph *a, LayerGraph *b) : LayerGraph({a, b}) {}
 		void forward() override;
 };
 struct Convolve : public LayerGraph {
