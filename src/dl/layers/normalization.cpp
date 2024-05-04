@@ -1,7 +1,9 @@
 #include "../layers.hpp"
 #include "flint.h"
 #include <limits>
-
+//
+int BatchNorm::bnorm_no = 0;
+//
 void BatchNorm::forward() {
 #ifdef FLINT_DEBUG
 	if (incoming.size() != 5 || incoming[0]->output.size() != 1 ||

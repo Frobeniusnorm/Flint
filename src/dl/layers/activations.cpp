@@ -1,6 +1,6 @@
 #include "flint.h"
 #include "../layers.hpp"
-
+int Relu::relu_no = 0;
 void Relu::forward() {
 #ifdef FLINT_DEBUG
 	if (incoming.size() != 1)

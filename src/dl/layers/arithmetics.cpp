@@ -1,7 +1,13 @@
 #include "../layers.hpp"
 #include "flint.h"
-#include <string>
-
+// // //
+// static data
+// // //
+int Add::add_no = 0;
+int Convolve::conv_no = 0;
+// // //
+// implementations
+// // //
 void Add::forward() {
 #ifdef FLINT_DEBUG
 	if (!((incoming.size() == 1 && incoming[0]->output.size() == 2) ||
@@ -49,8 +55,8 @@ void Connected::forward() {
 		kernel = ftranspose(kernel, transposition);
 	}
 	output[0] = fmatmul(img, kernel);
-  if (incoming.size() == 3) {
-    FGraphNode *bias = incoming[2]->output[0];
-    output[0] = fadd(output[0], bias);
-  }
+	if (incoming.size() == 3) {
+		FGraphNode *bias = incoming[2]->output[0];
+		output[0] = fadd(output[0], bias);
+	}
 }

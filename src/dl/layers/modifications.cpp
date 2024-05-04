@@ -2,7 +2,7 @@
 #include "../layers.hpp"
 #include <string>
 #include <array>
-
+int Flatten::flatten_no = 0;
 void Flatten::forward() {
 #ifdef FLINT_DEBUG
 	if (incoming.size() != 1)

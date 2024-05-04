@@ -1,6 +1,16 @@
 #include "../layers.hpp"
 #include "flint.h"
 #include <iostream>
+// // //
+// static values
+// // //
+int Convolve::conv_no = 0;
+int MaxPool::mpool_no = 0;
+int AvgPool::apool_no = 0;
+int GlobalAvgPool::gapool_no = 0;
+// // //
+// implementations
+// // //
 void Convolve::forward() {
 #ifdef FLINT_DEBUG
 	if ((incoming.size() != 2 && incoming.size() != 3) ||

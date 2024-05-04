@@ -6,6 +6,14 @@
 #include <iostream>
 #include <list>
 #include <set>
+// // //
+// static data
+// // //
+int Variable::variable_no = 0;
+int InputNode::data_no = 0;
+// // //
+// implementations
+// // //
 GraphModel *GraphModel::load_model(std::string path) {
 	using namespace std;
 	ifstream input(path, std::ios::ate | std::ios::binary);
@@ -202,9 +210,15 @@ std::string GraphModel::serialize() {
 		todo.insert(todo.end(), input.begin(), input.end());
 		visited.insert(input.begin(), input.end());
 		while (!todo.empty()) {
-			LayerGraph* curr = todo.front();
+			LayerGraph *curr = todo.front();
 			todo.pop_front();
-			// TODO build model
+			onnx::NodeProto *node = graph->add_node();
+			curr->deserialize_to_onnx(node);
+			node->set_name(curr->name);
+      for (LayerGraph* in : curr->incoming)
+        node->add_input(in->name);
+      for (LayerGraph* out : curr->outgoing)
+        node->add_output(out->name);
 			for (LayerGraph *layer : curr->outgoing) {
 				auto ex = std::find(todo.begin(), todo.end(), layer);
 				if (ex != todo.end())

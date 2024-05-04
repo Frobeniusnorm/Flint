@@ -1,5 +1,7 @@
 #ifndef ONNX_LAYERS
 #define ONNX_LAYERS
+#include "src/dl/onnx.proto3.pb.h"
+#include <string>
 #define FLINT_DEBUG
 #include "flint.h"
 #include <vector>
@@ -49,22 +51,21 @@ struct LayerGraph {
 		 * the incoming layers exists.
 		 */
 		virtual void forward() = 0;
-		/**
-		 * Returns the name of the layer type, not the name of the specific layer instance.
-		 * This is used to display meta information in additional tools or to export the 
-		 * model to onnx (then it should correspond to the name of the onnx instance)
-		 */
-		virtual std::string layer_type() { return "Unnamed Layer"; }
+		virtual void deserialize_to_onnx(onnx::NodeProto *) {
+			flogging(F_WARNING,
+					 "Node is deserialized to onnx without an implementation.");
+		};
 
 	private:
 		bool marked_for_deletion = false; // for destructor
 };
 struct Variable : public LayerGraph {
+		static int variable_no;
 		FGraphNode *node = nullptr;
 		Variable() : LayerGraph(1) {}
 		Variable(FGraphNode *node) : LayerGraph(1), node(node) {
 			node->reference_counter++;
-			name = "Variable";
+			name = "Variable" + std::to_string(variable_no++);
 		}
 		~Variable() {
 			if (node) {
@@ -72,13 +73,20 @@ struct Variable : public LayerGraph {
 			}
 		}
 		void forward() override { output[0] = node; }
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			// already included as an initializer
+		}
 };
 struct InputNode : public LayerGraph {
+		static int data_no;
 		std::vector<FGraphNode *> nodes;
 		bool transpose_channel = false;
 		InputNode() : LayerGraph(1) {}
 		InputNode(FGraphNode *node) : LayerGraph(1), nodes{node} {
-			name = "Input Node";
+			int no = data_no++;
+			name = "data";
+			if (no)
+				name += std::to_string(no);
 		}
 		InputNode(std::vector<FGraphNode *> nodes)
 			: LayerGraph(1), nodes(nodes) {}
@@ -87,86 +95,137 @@ struct InputNode : public LayerGraph {
 			for (FGraphNode *node : nodes)
 				output.push_back(node);
 		}
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			// only referenced by its name
+		}
 };
 struct Relu : public LayerGraph {
+		static int relu_no;
 		Relu() : LayerGraph(1) {}
-		Relu(LayerGraph *in) : LayerGraph(in) {}
+		Relu(LayerGraph *in) : LayerGraph(in) {
+			name = "Relu" + std::to_string(relu_no++);
+		}
 		void forward() override;
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			node->set_op_type("Relu");
+		}
 };
 struct Flatten : public LayerGraph {
-		Flatten() : LayerGraph(1) {}
+		static int flatten_no;
+		Flatten() : LayerGraph(1) {
+			name = "Flatten" + std::to_string(flatten_no++);
+		}
 		Flatten(LayerGraph *in) : LayerGraph(in) {}
 		void forward() override;
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			node->set_op_type("Flatten");
+		}
 };
 struct Add : public LayerGraph {
-		Add() : LayerGraph(1) {}
+		static int add_no;
+		Add() : LayerGraph(1) { name = "Add" + std::to_string(add_no++); }
 		Add(LayerGraph *a, LayerGraph *b) : LayerGraph({a, b}) {}
 		void forward() override;
 };
 struct Convolve : public LayerGraph {
+		static int conv_no;
 		std::vector<unsigned int> stride, padding;
-		Convolve() : LayerGraph(1) {}
+		Convolve() : LayerGraph(1) {
+			name = "Conv" + std::to_string(conv_no++);
+		}
 		Convolve(std::vector<unsigned int> stride,
 				 std::vector<unsigned int> padding)
-			: LayerGraph(1), stride(stride), padding(padding) {}
+			: LayerGraph(1), stride(stride), padding(padding) {
+			name = "Conv" + std::to_string(conv_no++);
+		}
 		Convolve(std::vector<unsigned int> stride,
 				 std::vector<unsigned int> padding, LayerGraph *in,
 				 Variable *kernel, Variable *bias)
 			: LayerGraph({in, kernel, bias}), stride(stride), padding(padding) {
+			name = "Conv" + std::to_string(conv_no++);
 		}
 		void forward() override;
 };
 struct MaxPool : public LayerGraph {
+		static int mpool_no;
 		std::vector<size_t> kernel_shape;
 		std::vector<unsigned int> stride, padding;
-		MaxPool() : LayerGraph(1) {}
+		MaxPool() : LayerGraph(1) {
+			name = "MaxPool" + std::to_string(mpool_no++);
+		}
 		MaxPool(std::vector<size_t> kernel_shape,
 				std::vector<unsigned int> stride,
 				std::vector<unsigned int> padding)
 			: LayerGraph(1), kernel_shape(kernel_shape), stride(stride),
-			  padding(padding) {}
+			  padding(padding) {
+			name = "MaxPool" + std::to_string(mpool_no++);
+		}
 		MaxPool(std::vector<size_t> kernel_shape,
 				std::vector<unsigned int> stride,
 				std::vector<unsigned int> padding, LayerGraph *in)
 			: LayerGraph(in), kernel_shape(kernel_shape), stride(stride),
-			  padding(padding) {}
+			  padding(padding) {
+			name = "MaxPool" + std::to_string(mpool_no++);
+		}
 		void forward() override;
 };
 struct AvgPool : public LayerGraph {
+		static int apool_no;
 		std::vector<size_t> kernel_shape;
 		std::vector<unsigned int> stride, padding;
-		AvgPool() : LayerGraph(1) {}
+		AvgPool() : LayerGraph(1) {
+			name = "AvgPool" + std::to_string(apool_no++);
+		}
 		AvgPool(std::vector<size_t> kernel_shape,
 				std::vector<unsigned int> stride,
 				std::vector<unsigned int> padding)
 			: LayerGraph(1), kernel_shape(kernel_shape), stride(stride),
-			  padding(padding) {}
+			  padding(padding) {
+			name = "AvgPool" + std::to_string(apool_no++);
+		}
 		AvgPool(std::vector<size_t> kernel_shape,
 				std::vector<unsigned int> stride,
 				std::vector<unsigned int> padding, LayerGraph *in)
 			: LayerGraph(in), kernel_shape(kernel_shape), stride(stride),
-			  padding(padding) {}
+			  padding(padding) {
+			name = "AvgPool" + std::to_string(apool_no++);
+		}
 		void forward() override;
 };
 struct GlobalAvgPool : public LayerGraph {
-		GlobalAvgPool() : LayerGraph(1) {}
-		GlobalAvgPool(LayerGraph *in) : LayerGraph(in) {}
+		static int gapool_no;
+		GlobalAvgPool() : LayerGraph(1) {
+			name = "GlobalAvgPool" + std::to_string(gapool_no++);
+		}
+		GlobalAvgPool(LayerGraph *in) : LayerGraph(in) {
+			name = "GlobalAvgPool" + std::to_string(gapool_no++);
+		}
 		void forward() override;
 };
 struct BatchNorm : public LayerGraph {
-		BatchNorm(float alpha = 0.8) : LayerGraph(1), alpha(alpha) {}
+		static int bnorm_no;
+		BatchNorm(float alpha = 0.8) : LayerGraph(1), alpha(alpha) {
+			name = "BatchNorm" + std::to_string(bnorm_no++);
+		}
 		BatchNorm(LayerGraph *in, Variable *gamma, Variable *beta,
 				  float alpha = 0.8)
-			: LayerGraph({in, gamma, beta}), alpha(alpha) {}
+			: LayerGraph({in, gamma, beta}), alpha(alpha) {
+			name = "BatchNorm" + std::to_string(bnorm_no++);
+		}
 		void forward() override;
 		float alpha;
 };
 struct Connected : public LayerGraph {
-		Connected() : LayerGraph(1) {}
+		static int connected_no;
+		Connected() : LayerGraph(1) {
+			name = "Connected" + std::to_string(connected_no++);
+		}
 		Connected(LayerGraph *in, Variable *weight, Variable *bias = nullptr,
 				  bool transposeA = false, bool transposeB = false)
 			: LayerGraph({in, weight, bias}), transposeA(transposeA),
-			  transposeB(transposeB) {}
+			  transposeB(transposeB) {
+			name = "Connected" + std::to_string(connected_no++);
+		}
 		void forward() override;
 		bool transposeA = false;
 		bool transposeB = false;
