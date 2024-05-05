@@ -126,7 +126,20 @@ struct Add : public LayerGraph {
 		Add() : LayerGraph(1) { name = "Add" + std::to_string(add_no++); }
 		Add(LayerGraph *a, LayerGraph *b) : LayerGraph({a, b}) {}
 		void forward() override;
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			node->set_op_type("Add");
+		}
 };
+static void deserialize_stride_and_padding(onnx::NodeProto *node, std::vector<unsigned int>& stride, std::vector<unsigned int>& padding) {
+  auto attr = node->add_attribute();
+  attr->set_name("pads");
+  for (unsigned int p : padding)
+    attr->add_ints(p);
+  attr = node->add_attribute();
+  attr->set_name("stride");
+  for (unsigned int s : stride)
+    attr->add_ints(s);
+}
 struct Convolve : public LayerGraph {
 		static int conv_no;
 		std::vector<unsigned int> stride, padding;
@@ -145,7 +158,17 @@ struct Convolve : public LayerGraph {
 			name = "Conv" + std::to_string(conv_no++);
 		}
 		void forward() override;
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			node->set_op_type("Conv");
+      deserialize_stride_and_padding(node, stride, padding);
+		}
 };
+static void deserialize_kernel_shape(onnx::NodeProto *node, std::vector<size_t>& kernel) {
+  auto attr = node->add_attribute();
+  attr->set_name("kernel_shape");
+  for (size_t s : kernel)
+    attr->add_ints(s);
+}
 struct MaxPool : public LayerGraph {
 		static int mpool_no;
 		std::vector<size_t> kernel_shape;
@@ -168,6 +191,11 @@ struct MaxPool : public LayerGraph {
 			name = "MaxPool" + std::to_string(mpool_no++);
 		}
 		void forward() override;
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			node->set_op_type("MaxPool");
+      deserialize_stride_and_padding(node, stride, padding);
+      deserialize_kernel_shape(node, kernel_shape);
+		}
 };
 struct AvgPool : public LayerGraph {
 		static int apool_no;
@@ -191,6 +219,11 @@ struct AvgPool : public LayerGraph {
 			name = "AvgPool" + std::to_string(apool_no++);
 		}
 		void forward() override;
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			node->set_op_type("AvgPool");
+      deserialize_stride_and_padding(node, stride, padding);
+      deserialize_kernel_shape(node, kernel_shape);
+		}
 };
 struct GlobalAvgPool : public LayerGraph {
 		static int gapool_no;
