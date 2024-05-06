@@ -1,6 +1,6 @@
 #ifndef ONNX_LAYERS
 #define ONNX_LAYERS
-#include "src/dl/onnx.proto3.pb.h"
+#include "onnx.proto3.pb.h"
 #include <string>
 #define FLINT_DEBUG
 #include "flint.h"
@@ -130,15 +130,17 @@ struct Add : public LayerGraph {
 			node->set_op_type("Add");
 		}
 };
-static void deserialize_stride_and_padding(onnx::NodeProto *node, std::vector<unsigned int>& stride, std::vector<unsigned int>& padding) {
-  auto attr = node->add_attribute();
-  attr->set_name("pads");
-  for (unsigned int p : padding)
-    attr->add_ints(p);
-  attr = node->add_attribute();
-  attr->set_name("stride");
-  for (unsigned int s : stride)
-    attr->add_ints(s);
+static void deserialize_stride_and_padding(onnx::NodeProto *node,
+										   std::vector<unsigned int> &stride,
+										   std::vector<unsigned int> &padding) {
+	auto attr = node->add_attribute();
+	attr->set_name("pads");
+	for (unsigned int p : padding)
+		attr->add_ints(p);
+	attr = node->add_attribute();
+	attr->set_name("stride");
+	for (unsigned int s : stride)
+		attr->add_ints(s);
 }
 struct Convolve : public LayerGraph {
 		static int conv_no;
@@ -160,14 +162,15 @@ struct Convolve : public LayerGraph {
 		void forward() override;
 		void deserialize_to_onnx(onnx::NodeProto *node) override {
 			node->set_op_type("Conv");
-      deserialize_stride_and_padding(node, stride, padding);
+			deserialize_stride_and_padding(node, stride, padding);
 		}
 };
-static void deserialize_kernel_shape(onnx::NodeProto *node, std::vector<size_t>& kernel) {
-  auto attr = node->add_attribute();
-  attr->set_name("kernel_shape");
-  for (size_t s : kernel)
-    attr->add_ints(s);
+static void deserialize_kernel_shape(onnx::NodeProto *node,
+									 std::vector<size_t> &kernel) {
+	auto attr = node->add_attribute();
+	attr->set_name("kernel_shape");
+	for (size_t s : kernel)
+		attr->add_ints(s);
 }
 struct MaxPool : public LayerGraph {
 		static int mpool_no;
@@ -193,8 +196,8 @@ struct MaxPool : public LayerGraph {
 		void forward() override;
 		void deserialize_to_onnx(onnx::NodeProto *node) override {
 			node->set_op_type("MaxPool");
-      deserialize_stride_and_padding(node, stride, padding);
-      deserialize_kernel_shape(node, kernel_shape);
+			deserialize_stride_and_padding(node, stride, padding);
+			deserialize_kernel_shape(node, kernel_shape);
 		}
 };
 struct AvgPool : public LayerGraph {
@@ -221,8 +224,8 @@ struct AvgPool : public LayerGraph {
 		void forward() override;
 		void deserialize_to_onnx(onnx::NodeProto *node) override {
 			node->set_op_type("AvgPool");
-      deserialize_stride_and_padding(node, stride, padding);
-      deserialize_kernel_shape(node, kernel_shape);
+			deserialize_stride_and_padding(node, stride, padding);
+			deserialize_kernel_shape(node, kernel_shape);
 		}
 };
 struct GlobalAvgPool : public LayerGraph {
@@ -234,8 +237,13 @@ struct GlobalAvgPool : public LayerGraph {
 			name = "GlobalAvgPool" + std::to_string(gapool_no++);
 		}
 		void forward() override;
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			node->set_op_type("GlobalAveragePool");
+		}
 };
 struct BatchNorm : public LayerGraph {
+		// TODO dynamically determine if running mean and variance should be
+		// used as additional outputs
 		static int bnorm_no;
 		BatchNorm(float alpha = 0.8) : LayerGraph(1), alpha(alpha) {
 			name = "BatchNorm" + std::to_string(bnorm_no++);
@@ -247,6 +255,12 @@ struct BatchNorm : public LayerGraph {
 		}
 		void forward() override;
 		float alpha;
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			node->set_op_type("BatchNormalization");
+			auto attr_alpha = node->add_attribute();
+			attr_alpha->set_name("momentum");
+			attr_alpha->set_f(alpha);
+		}
 };
 struct Connected : public LayerGraph {
 		static int connected_no;
@@ -262,6 +276,15 @@ struct Connected : public LayerGraph {
 		void forward() override;
 		bool transposeA = false;
 		bool transposeB = false;
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			node->set_op_type("Gemm");
+			auto attr_a= node->add_attribute();
+			attr_a->set_name("transA");
+			attr_a->set_i(transposeA ? 1 : 0);
+			auto attr_b = node->add_attribute();
+			attr_b->set_name("transB");
+			attr_b->set_i(transposeB ? 1 : 0);
+		}
 };
 
 #endif

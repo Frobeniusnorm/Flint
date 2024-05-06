@@ -4,7 +4,7 @@
 // static data
 // // //
 int Add::add_no = 0;
-int Convolve::conv_no = 0;
+int Connected::connected_no = 0;
 // // //
 // implementations
 // // //
