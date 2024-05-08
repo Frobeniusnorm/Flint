@@ -62,7 +62,9 @@ struct LayerGraph {
 struct Variable : public LayerGraph {
 		static int variable_no;
 		FGraphNode *node = nullptr;
-		Variable() : LayerGraph(1) {}
+		Variable() : LayerGraph(1) {
+			name = "Variable" + std::to_string(variable_no++);
+		}
 		Variable(FGraphNode *node) : LayerGraph(1), node(node) {
 			node->reference_counter++;
 			name = "Variable" + std::to_string(variable_no++);
@@ -81,7 +83,12 @@ struct InputNode : public LayerGraph {
 		static int data_no;
 		std::vector<FGraphNode *> nodes;
 		bool transpose_channel = false;
-		InputNode() : LayerGraph(1) {}
+		InputNode() : LayerGraph(1) {
+			int no = data_no++;
+			name = "data";
+			if (no)
+				name += std::to_string(no);
+		}
 		InputNode(FGraphNode *node) : LayerGraph(1), nodes{node} {
 			int no = data_no++;
 			name = "data";
@@ -89,7 +96,12 @@ struct InputNode : public LayerGraph {
 				name += std::to_string(no);
 		}
 		InputNode(std::vector<FGraphNode *> nodes)
-			: LayerGraph(1), nodes(nodes) {}
+			: LayerGraph(1), nodes(nodes) {
+			int no = data_no++;
+			name = "data";
+			if (no)
+				name += std::to_string(no);
+		}
 		void forward() override {
 			output.clear();
 			for (FGraphNode *node : nodes)
@@ -278,7 +290,7 @@ struct Connected : public LayerGraph {
 		bool transposeB = false;
 		void deserialize_to_onnx(onnx::NodeProto *node) override {
 			node->set_op_type("Gemm");
-			auto attr_a= node->add_attribute();
+			auto attr_a = node->add_attribute();
 			attr_a->set_name("transA");
 			attr_a->set_i(transposeA ? 1 : 0);
 			auto attr_b = node->add_attribute();

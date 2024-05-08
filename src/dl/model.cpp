@@ -31,30 +31,30 @@ GraphModel *GraphModel::load_model(std::string path) {
 	vector<Variable *> weights;
 	// parse the weights
 	for (auto &init : graph.initializer()) {
-		Variable *var = new Variable();
+		Variable *var;
 		switch (init.data_type()) {
 		case onnx::TensorProto_DataType::TensorProto_DataType_FLOAT: {
-			var->node = fCreateGraph(
+			var = new Variable(fCreateGraph(
 				init.float_data().data(), init.float_data_size(), F_FLOAT32,
-				(const unsigned long *)init.dims().data(), init.dims().size());
+				(const unsigned long *)init.dims().data(), init.dims().size()));
 			break;
 		}
 		case onnx::TensorProto_DataType::TensorProto_DataType_DOUBLE: {
-			var->node = fCreateGraph(
+			var = new Variable(fCreateGraph(
 				init.double_data().data(), init.double_data_size(), F_FLOAT64,
-				(const unsigned long *)init.dims().data(), init.dims().size());
+				(const unsigned long *)init.dims().data(), init.dims().size()));
 			break;
 		}
 		case onnx::TensorProto_DataType::TensorProto_DataType_INT32: {
-			var->node = fCreateGraph(
+			var = new Variable(fCreateGraph(
 				init.int32_data().data(), init.int32_data_size(), F_INT32,
-				(const unsigned long *)init.dims().data(), init.dims().size());
+				(const unsigned long *)init.dims().data(), init.dims().size()));
 			break;
 		}
 		case onnx::TensorProto_DataType::TensorProto_DataType_INT64: {
-			var->node = fCreateGraph(
+			var = new Variable(fCreateGraph(
 				init.int64_data().data(), init.int64_data_size(), F_INT64,
-				(const unsigned long *)init.dims().data(), init.dims().size());
+				(const unsigned long *)init.dims().data(), init.dims().size()));
 			break;
 		}
 		default:
@@ -167,17 +167,21 @@ GraphModel *GraphModel::load_model(std::string path) {
 	res->weights = weights;
 	return res;
 }
-std::string GraphModel::serialize() {
+std::string GraphModel::serialize_onnx() {
 	using namespace onnx;
 	ModelProto model;
 	GraphProto *graph = model.mutable_graph();
+	for (InputNode *in : this->input) {
+		auto onnx_in = graph->add_input();
+		onnx_in->set_name(in->name);
+	}
 	int variable = 0;
 	for (Variable *w : weights) {
 		FGraphNode *node = w->node;
 		fExecuteGraph(node);
 		FResultData *data = node->result_data;
 		TensorProto &proto = *graph->add_initializer();
-		proto.set_name("variable" + std::to_string(variable++));
+		proto.set_name(w->name);
 		for (int i = 0; i < node->operation.dimensions; i++)
 			proto.add_dims(node->operation.shape[i]);
 		switch (node->operation.data_type) {
@@ -208,24 +212,33 @@ std::string GraphModel::serialize() {
 		list<LayerGraph *> todo;
 		set<LayerGraph *> visited;
 		todo.insert(todo.end(), input.begin(), input.end());
-		visited.insert(input.begin(), input.end());
 		while (!todo.empty()) {
 			LayerGraph *curr = todo.front();
+			visited.insert(curr);
 			todo.pop_front();
-			onnx::NodeProto *node = graph->add_node();
-			curr->deserialize_to_onnx(node);
-			node->set_name(curr->name);
-      for (LayerGraph* in : curr->incoming)
-        node->add_input(in->name);
-      for (LayerGraph* out : curr->outgoing)
-        node->add_output(out->name);
+			if (!dynamic_cast<InputNode *>(curr) &&
+				!dynamic_cast<Variable *>(curr)) {
+				onnx::NodeProto *node = graph->add_node();
+				curr->deserialize_to_onnx(node);
+				node->set_name(curr->name);
+				for (LayerGraph *in : curr->incoming)
+					node->add_input(in->name);
+				node->add_output(curr->name);
+			}
 			for (LayerGraph *layer : curr->outgoing) {
-				auto ex = std::find(todo.begin(), todo.end(), layer);
-				if (ex != todo.end())
-					todo.erase(ex);
-				todo.push_back(layer);
+				if (!visited.contains(layer)) {
+					auto ex = std::find(todo.begin(), todo.end(), layer);
+					if (ex != todo.end())
+						todo.erase(ex);
+					todo.push_back(layer);
+				}
 			}
 		}
+	}
+	graph->set_name("flint_graph");
+	for (LayerGraph *out : this->output) {
+		auto onnx_out = graph->add_output();
+		onnx_out->set_name(out->name);
 	}
 	return model.SerializeAsString();
 }
@@ -268,7 +281,6 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 			continue;
 		}
 		if (curr) {
-			flogging(F_INFO, "Layer " + curr->name);
 			curr->forward();
 			visited.insert(curr);
 			if (std::find(output.begin(), output.end(), curr) != output.end()) {

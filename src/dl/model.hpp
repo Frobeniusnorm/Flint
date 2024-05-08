@@ -22,7 +22,7 @@ struct GraphModel {
 		 */
 		FGraphNode *operator()(FGraphNode *in);
 		std::vector<FGraphNode *> operator()(std::vector<FGraphNode *> in);
-		std::string serialize();
+		std::string serialize_onnx();
 		static GraphModel *load_model(std::string path);
 		static GraphModel *sequential(std::vector<LayerGraph *> list);
 		static GraphModel *from_output(LayerGraph *output);

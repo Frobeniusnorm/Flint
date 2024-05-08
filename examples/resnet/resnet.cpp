@@ -32,4 +32,10 @@ int main(int argc, char **argv) {
 		}
 		std::cout << imgnet_labels[max_idx] << std::endl;
 	}
+	// test
+	std::string ser = gm.serialize_onnx();
+	std::ofstream file;
+	file.open("exported_model.onnx");
+	file << ser;
+	file.close();
 }
