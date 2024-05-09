@@ -1,4 +1,5 @@
 #include "model.hpp"
+#include "../backend_ocl/comp.hpp"
 #include "flint.h"
 #include "layers.hpp"
 #include "onnx.proto3.pb.h"
@@ -31,35 +32,42 @@ GraphModel *GraphModel::load_model(std::string path) {
 	vector<Variable *> weights;
 	// parse the weights
 	for (auto &init : graph.initializer()) {
-		Variable *var;
+		// parse total size
+		size_t num_entries = 1;
+		for (int d : init.dims()) {
+			num_entries *= d;
+		}
+		FType type;
+		const void *data = nullptr;
 		switch (init.data_type()) {
 		case onnx::TensorProto_DataType::TensorProto_DataType_FLOAT: {
-			var = new Variable(fCreateGraph(
-				init.float_data().data(), init.float_data_size(), F_FLOAT32,
-				(const unsigned long *)init.dims().data(), init.dims().size()));
+			type = F_FLOAT32;
+			data = (void *)init.float_data().data();
 			break;
 		}
 		case onnx::TensorProto_DataType::TensorProto_DataType_DOUBLE: {
-			var = new Variable(fCreateGraph(
-				init.double_data().data(), init.double_data_size(), F_FLOAT64,
-				(const unsigned long *)init.dims().data(), init.dims().size()));
+			type = F_FLOAT64;
+			data = (void *)init.double_data().data();
 			break;
 		}
 		case onnx::TensorProto_DataType::TensorProto_DataType_INT32: {
-			var = new Variable(fCreateGraph(
-				init.int32_data().data(), init.int32_data_size(), F_INT32,
-				(const unsigned long *)init.dims().data(), init.dims().size()));
+			type = F_INT32;
+			data = (void *)init.int32_data().data();
 			break;
 		}
 		case onnx::TensorProto_DataType::TensorProto_DataType_INT64: {
-			var = new Variable(fCreateGraph(
-				init.int64_data().data(), init.int64_data_size(), F_INT64,
-				(const unsigned long *)init.dims().data(), init.dims().size()));
+			type = F_INT64;
+			data = (void *)init.int64_data().data();
 			break;
 		}
 		default:
 			flogging(F_ERROR, "Unknown type: " + to_string(init.data_type()));
 		}
+		if (!data)
+			data = init.raw_data().data();
+		Variable *var = new Variable(fCreateGraph(
+			data, num_entries, type, (const unsigned long *)init.dims().data(),
+			init.dims().size()));
 		layers.insert({init.name(), var});
 		weights.push_back(var);
 	}
@@ -129,6 +137,10 @@ GraphModel *GraphModel::load_model(std::string path) {
 			flogging(F_ERROR, "Unknown Operation " + node.op_type());
 		x->name = node.name();
 		layers.insert({node.name(), x});
+	}
+	// process edges between layers
+	for (auto node : nodes) {
+		LayerGraph *x = layers[node.name()];
 		for (int i = 0; i < node.input_size(); i++) {
 			const auto &in = node.input(i);
 			if (layers.contains(in)) {
@@ -179,6 +191,7 @@ std::string GraphModel::serialize_onnx() {
 	for (Variable *w : weights) {
 		FGraphNode *node = w->node;
 		fExecuteGraph(node);
+		fSyncMemory(node);
 		FResultData *data = node->result_data;
 		TensorProto &proto = *graph->add_initializer();
 		proto.set_name(w->name);
@@ -282,6 +295,7 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 		}
 		if (curr) {
 			curr->forward();
+			OCLCompilerThread::memory_barrier();
 			visited.insert(curr);
 			if (std::find(output.begin(), output.end(), curr) != output.end()) {
 				for (FGraphNode *out : curr->output) {

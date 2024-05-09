@@ -150,7 +150,7 @@ static void deserialize_stride_and_padding(onnx::NodeProto *node,
 	for (unsigned int p : padding)
 		attr->add_ints(p);
 	attr = node->add_attribute();
-	attr->set_name("stride");
+	attr->set_name("strides");
 	for (unsigned int s : stride)
 		attr->add_ints(s);
 }

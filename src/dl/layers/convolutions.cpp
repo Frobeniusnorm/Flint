@@ -16,10 +16,6 @@ void Convolve::forward() {
 	if ((incoming.size() != 2 && incoming.size() != 3) ||
 		incoming[0]->output.size() != 1 || incoming[1]->output.size() != 1 ||
 		(incoming.size() == 3 && incoming[2]->output.size() != 1)) {
-		std::cout << incoming.size() << std::endl;
-		std::cout << incoming[0]->output.size() << std::endl;
-		std::cout << incoming[1]->output.size() << std::endl;
-
 		flogging(F_ERROR, "Convolve expects an image and a kernel as "
 						  "parameters and optionally a bias");
 	}
@@ -144,7 +140,8 @@ void GlobalAvgPool::forward() {
 	// only first and last dimension are kept
 	const int dims = image->operation.dimensions;
 	while (image->operation.dimensions > 2) {
-		image = fdiv_ci(freduce_sum(image, 2), image->operation.shape[2]);
+		const size_t shape_size = image->operation.shape[2];
+		image = fdiv_ci(freduce_sum(image, 2), shape_size);
 	}
 	// expand to fit original rank
 	vector<size_t> rank_shape(dims, 1);
