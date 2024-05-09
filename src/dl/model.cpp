@@ -261,8 +261,13 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 }
 std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 	using namespace std;
+	static vector<FGraphNode*> cache;
 	list<LayerGraph *> todo;
 	set<LayerGraph *> visited;
+	// BEGIN cache
+	bool is_first = cache.empty();
+	int cache_idx = 0;
+	// END cache
 	//	set<FGraphNode *> holding = {in};
 	for (int i = 0; i < in.size(); i++) {
 		InputNode *inp = input[i];
@@ -299,6 +304,26 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 			visited.insert(curr);
 			if (std::find(output.begin(), output.end(), curr) != output.end()) {
 				for (FGraphNode *out : curr->output) {
+					// BEGIN cache
+					if (is_first) {
+						fExecuteGraph(out);
+						fSyncMemory(out);
+						cache.push_back(out);
+					} else {
+						// test if equal
+						FGraphNode* exp = cache[cache_idx++];
+						FGraphNode* diff = fabs_g(fsub(exp, out));
+						while (diff->operation.dimensions > 1)
+							diff = fdiv_ci(freduce_sum(diff, 0), diff->operation.shape[0]);
+						// to one element
+						diff = fdiv_ci(freduce_sum(diff, 0), diff->operation.shape[0]);
+						FResultData* res = fSyncMemory(fExecuteGraph(diff));
+						float d = ((float*)res->data)[0];
+						if (d >= 0.001) {
+							flogging(F_WARNING, "For node " + curr->name + " output has mean difference " + to_string(d));
+						}
+					}
+					// END cache
 					out->reference_counter++;
 				}
 			}
