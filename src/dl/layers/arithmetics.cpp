@@ -35,11 +35,6 @@ static float diff(FGraphNode *a, FGraphNode *b) {
 	return d;
 }
 void Connected::forward() {
-	static FGraphNode *gpu_image = nullptr;
-	static FGraphNode *gpu_kernel = nullptr;
-	static FGraphNode *gpu_bias = nullptr;
-	static FGraphNode *gpu_matmul = nullptr;
-	static FGraphNode *gpu_res = nullptr;
 #ifdef FLINT_DEBUG
 	if ((incoming.size() != 2 && incoming.size() != 3) ||
 		incoming[0]->output.size() != 1 || incoming[1]->output.size() != 1 ||
@@ -70,59 +65,9 @@ void Connected::forward() {
 			img->operation.dimensions - 1;
 		kernel = ftranspose(kernel, transposition);
 	}
-	if (gpu_kernel) {
-		float d = diff(gpu_kernel, kernel);
-		if (d > 0.001)
-			flogging(F_WARNING, "For matmul kernel has mean difference " +
-									std::to_string(d));
-	} else {
-		gpu_kernel = fExecuteGraph(kernel);
-		fSyncMemory(gpu_kernel);
-		gpu_kernel->reference_counter++;
-	}
-	if (gpu_image) {
-		float d = diff(gpu_image, img);
-		if (d > 0.001)
-			flogging(F_WARNING, "For matmul kernel has mean difference " +
-									std::to_string(d));
-	} else {
-		gpu_image = fExecuteGraph(img);
-		fSyncMemory(gpu_image);
-		gpu_image->reference_counter++;
-	}
 	output[0] = fmatmul(img, kernel);
-	if (gpu_matmul) {
-		float d = diff(gpu_matmul, output[0]);
-		if (d > 0.001)
-			flogging(F_WARNING, "For matmul matmul has mean difference " +
-									std::to_string(d));
-	} else {
-		gpu_matmul = fExecuteGraph(output[0]);
-		fSyncMemory(gpu_matmul);
-		gpu_matmul->reference_counter++;
-	}
 	if (incoming.size() == 3) {
 		FGraphNode *bias = incoming[2]->output[0];
-		if (gpu_bias) {
-			float d = diff(gpu_bias, bias);
-			if (d > 0.001)
-				flogging(F_WARNING, "For matmul bias has mean difference " +
-										std::to_string(d));
-		} else {
-			gpu_bias = fExecuteGraph(bias);
-			fSyncMemory(gpu_bias);
-			gpu_bias->reference_counter++;
-		}
 		output[0] = fadd(output[0], bias);
-	}
-	if (gpu_res) {
-		float d = diff(gpu_res, output[0]);
-		if (d > 0.001)
-			flogging(F_WARNING,
-					 "For matmul res has mean difference " + std::to_string(d));
-	} else {
-		gpu_res = fExecuteGraph(output[0]);
-		fSyncMemory(gpu_res);
-		gpu_res->reference_counter++;
 	}
 }

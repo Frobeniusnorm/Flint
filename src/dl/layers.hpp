@@ -55,6 +55,10 @@ struct LayerGraph {
 			flogging(F_WARNING,
 					 "Node is deserialized to onnx without an implementation.");
 		};
+		virtual std::vector<std::vector<size_t>>
+		propagate_shape(const std::vector<std::vector<size_t>> &input) {
+			return input;
+		}
 
 	private:
 		bool marked_for_deletion = false; // for destructor
@@ -77,6 +81,12 @@ struct Variable : public LayerGraph {
 		void forward() override { output[0] = node; }
 		void deserialize_to_onnx(onnx::NodeProto *node) override {
 			// already included as an initializer
+		}
+		std::vector<std::vector<size_t>> propagate_shape(
+			const std::vector<std::vector<size_t>> &input) override {
+			return {std::vector<size_t>(node->operation.shape,
+										node->operation.shape +
+											node->operation.dimensions)};
 		}
 };
 struct InputNode : public LayerGraph {
@@ -154,6 +164,28 @@ static void deserialize_stride_and_padding(onnx::NodeProto *node,
 	for (unsigned int s : stride)
 		attr->add_ints(s);
 }
+static std::vector<size_t>
+convolve_shape_transform(const std::vector<size_t> in,
+						 const std::vector<size_t> filter,
+						 const std::vector<unsigned int> &padding,
+						 const std::vector<unsigned int> &stride) {
+	using namespace std;
+	vector<size_t> out_shape(in.size());
+	out_shape[0] = in[0];						 // step size
+	out_shape[out_shape.size() - 1] = filter[0]; // filters
+	for (int i = 1; i < in.size() - 1; i++) {
+		size_t padded_shape = in[i];
+		if (padding.size() != 0 && i > 0 && i < in.size() - 1) {
+			padded_shape += padding[i - 1] + padding[i - 1 + in.size() - 2];
+		}
+		size_t window_size = padded_shape - filter[i] + 1;
+		window_size = window_size % filter[i] == 0
+						  ? window_size / stride[i]
+						  : window_size / stride[i] + 1;
+		out_shape[i] = window_size;
+	}
+	return out_shape;
+}
 struct Convolve : public LayerGraph {
 		static int conv_no;
 		std::vector<unsigned int> stride, padding;
@@ -175,6 +207,12 @@ struct Convolve : public LayerGraph {
 		void deserialize_to_onnx(onnx::NodeProto *node) override {
 			node->set_op_type("Conv");
 			deserialize_stride_and_padding(node, stride, padding);
+		}
+		std::vector<std::vector<size_t>> propagate_shape(
+			const std::vector<std::vector<size_t>> &input) override {
+			using namespace std;
+			return {
+				convolve_shape_transform(input[0], input[1], padding, stride)};
 		}
 };
 static void deserialize_kernel_shape(onnx::NodeProto *node,
@@ -211,6 +249,12 @@ struct MaxPool : public LayerGraph {
 			deserialize_stride_and_padding(node, stride, padding);
 			deserialize_kernel_shape(node, kernel_shape);
 		}
+		std::vector<std::vector<size_t>> propagate_shape(
+			const std::vector<std::vector<size_t>> &input) override {
+			using namespace std;
+			return {convolve_shape_transform(input[0], kernel_shape, padding,
+											 stride)};
+		}
 };
 struct AvgPool : public LayerGraph {
 		static int apool_no;
@@ -239,6 +283,12 @@ struct AvgPool : public LayerGraph {
 			deserialize_stride_and_padding(node, stride, padding);
 			deserialize_kernel_shape(node, kernel_shape);
 		}
+		std::vector<std::vector<size_t>> propagate_shape(
+			const std::vector<std::vector<size_t>> &input) override {
+			using namespace std;
+			return {convolve_shape_transform(input[0], kernel_shape, padding,
+											 stride)};
+		}
 };
 struct GlobalAvgPool : public LayerGraph {
 		static int gapool_no;
@@ -251,6 +301,15 @@ struct GlobalAvgPool : public LayerGraph {
 		void forward() override;
 		void deserialize_to_onnx(onnx::NodeProto *node) override {
 			node->set_op_type("GlobalAveragePool");
+		}
+		std::vector<std::vector<size_t>> propagate_shape(
+			const std::vector<std::vector<size_t>> &input) override {
+			using namespace std;
+			const int dims = input[0].size();
+			vector<size_t> rank_shape(dims, 1);
+			rank_shape[0] = input[0][0];
+			rank_shape[1] = input[0][1];
+			return {rank_shape};
 		}
 };
 struct BatchNorm : public LayerGraph {
@@ -296,6 +355,20 @@ struct Connected : public LayerGraph {
 			auto attr_b = node->add_attribute();
 			attr_b->set_name("transB");
 			attr_b->set_i(transposeB ? 1 : 0);
+		}
+		std::vector<std::vector<size_t>> propagate_shape(
+			const std::vector<std::vector<size_t>> &input) override {
+			using namespace std;
+			const vector<size_t> &img = input[0];
+			const vector<size_t> &filter = input[1];
+			vector<size_t> output(img);
+			size_t n = transposeA ? output[output.size() - 1]
+								  : output[output.size() - 2];
+			size_t k = transposeB ? filter[filter.size() - 2]
+								  : filter[filter.size() - 1];
+			output[output.size() - 2] = n;
+			output[output.size() - 1] = k;
+			return {output};
 		}
 };
 
