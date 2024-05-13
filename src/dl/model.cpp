@@ -261,11 +261,9 @@ FGraphNode *GraphModel::operator()(FGraphNode *in) {
 }
 std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 	using namespace std;
-	static vector<FGraphNode*> cache;
 	list<LayerGraph *> todo;
 	set<LayerGraph *> visited;
 	// BEGIN cache
-	bool is_first = cache.empty();
 	int cache_idx = 0;
 	// END cache
 	//	set<FGraphNode *> holding = {in};
@@ -304,26 +302,6 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 			visited.insert(curr);
 			if (std::find(output.begin(), output.end(), curr) != output.end()) {
 				for (FGraphNode *out : curr->output) {
-					// BEGIN cache
-					if (is_first) {
-						fExecuteGraph(out);
-						fSyncMemory(out);
-						cache.push_back(out);
-					} else {
-						// test if equal
-						FGraphNode* exp = cache[cache_idx++];
-						FGraphNode* diff = fabs_g(fsub(exp, out));
-						while (diff->operation.dimensions > 1)
-							diff = fdiv_ci(freduce_sum(diff, 0), diff->operation.shape[0]);
-						// to one element
-						diff = fdiv_ci(freduce_sum(diff, 0), diff->operation.shape[0]);
-						FResultData* res = fSyncMemory(fExecuteGraph(diff));
-						float d = ((float*)res->data)[0];
-						if (d >= 0.001) {
-							flogging(F_WARNING, "For node " + curr->name + " output has mean difference " + to_string(d));
-						}
-					}
-					// END cache
 					out->reference_counter++;
 				}
 			}
@@ -404,4 +382,104 @@ GraphModel *GraphModel::from_output(LayerGraph *output) {
 		}
 	}
 	return model;
+}
+std::vector<std::vector<size_t>>
+GraphModel::shape_interference(std::vector<std::vector<size_t>> input_shapes) {
+	using namespace std;
+
+	list<LayerGraph *> todo;
+	set<LayerGraph *> visited;
+	unordered_map<LayerGraph *, vector<vector<size_t>>> inputs;
+	int input_idx = 0;
+	// input nodes propagate input_shapes
+	for (int i = 0; i < input.size(); i++) {
+		InputNode *inp = input[i];
+		inp->nodes.clear();
+		const size_t num_inputs = inp->output.size();
+		for (LayerGraph *out : inp->outgoing) {
+			if (!inputs.contains(out))
+				inputs.insert({out, {}});
+			for (int j = 0; j < num_inputs; j++)
+				inputs[out].push_back(input_shapes[input_idx + j]);
+		}
+		input_idx += num_inputs;
+		todo.insert(todo.begin(), inp->outgoing.begin(), inp->outgoing.end());
+		visited.insert(inp);
+	}
+	// weights propagate their shape
+
+	for (Variable *v : weights) {
+		vector<size_t> v_shape(v->node->operation.shape,
+							   v->node->operation.shape +
+								   v->node->operation.dimensions);
+		for (LayerGraph *out : v->outgoing) {
+			if (!inputs.contains(out))
+				inputs.insert({out, {}});
+			inputs[out].push_back(v_shape);
+		}
+		visited.insert(v);
+	}
+	// iterate through graph bfs
+	vector<vector<size_t>> model_output_shapes;
+	while (!todo.empty()) {
+		LayerGraph *curr = todo.front();
+		todo.pop_front();
+		// check if previous layers have been visited
+		bool all_run = true;
+		for (LayerGraph *in : curr->incoming) {
+			if (!visited.contains(in)) {
+				all_run = false;
+				break;
+			}
+		}
+		if (!all_run) {
+			todo.push_back(curr);
+			continue;
+		}
+		visited.insert(curr);
+		// propagate input
+		vector<vector<size_t>> output_shapes =
+			curr->propagate_shape(inputs[curr]);
+		const size_t num_outputs = output_shapes.size();
+		for (LayerGraph *out : curr->outgoing) {
+			if (!inputs.contains(out))
+				inputs.insert({out, {}});
+			for (int j = 0; j < num_outputs; j++)
+				inputs[out].push_back(output_shapes[j]);
+		}
+		const bool is_output =
+			std::find(output.begin(), output.end(), curr) != output.end();
+		if (is_output)
+			model_output_shapes.insert(model_output_shapes.end(),
+									   output_shapes.begin(),
+									   output_shapes.end());
+		// debug
+		for (const vector<size_t> &in_shape : inputs[curr]) {
+			cout << "[";
+			for (int i = 0; i < in_shape.size(); i++) {
+				if (i)
+					cout << ", ";
+				cout << in_shape[i];
+			}
+			cout << "] ";
+		}
+		cout << "-> " << curr->name << " ->";
+		for (const vector<size_t> &out_shape : output_shapes) {
+			cout << " [";
+			for (int i = 0; i < out_shape.size(); i++) {
+				if (i)
+					cout << ", ";
+				cout << out_shape[i];
+			}
+			cout << "]";
+		}
+		cout << endl;
+		// add the children bfs
+		for (LayerGraph *layer : curr->outgoing) {
+			auto ex = std::find(todo.begin(), todo.end(), layer);
+			if (ex != todo.end())
+				todo.erase(ex);
+			todo.push_back(layer);
+		}
+	}
 }

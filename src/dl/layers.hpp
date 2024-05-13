@@ -99,14 +99,7 @@ struct InputNode : public LayerGraph {
 			if (no)
 				name += std::to_string(no);
 		}
-		InputNode(FGraphNode *node) : LayerGraph(1), nodes{node} {
-			int no = data_no++;
-			name = "data";
-			if (no)
-				name += std::to_string(no);
-		}
-		InputNode(std::vector<FGraphNode *> nodes)
-			: LayerGraph(1), nodes(nodes) {
+		InputNode(int no_nodes) : LayerGraph(no_nodes) {
 			int no = data_no++;
 			name = "data";
 			if (no)
@@ -180,8 +173,8 @@ convolve_shape_transform(const std::vector<size_t> in,
 		}
 		size_t window_size = padded_shape - filter[i] + 1;
 		window_size = window_size % filter[i] == 0
-						  ? window_size / stride[i]
-						  : window_size / stride[i] + 1;
+						  ? window_size / stride[i - 1]
+						  : window_size / stride[i - 1] + 1;
 		out_shape[i] = window_size;
 	}
 	return out_shape;
