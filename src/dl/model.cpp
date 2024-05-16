@@ -389,20 +389,15 @@ GraphModel::shape_interference(std::vector<std::vector<size_t>> input_shapes) {
 
 	list<LayerGraph *> todo;
 	set<LayerGraph *> visited;
-	unordered_map<LayerGraph *, vector<vector<size_t>>> inputs;
+	unordered_map<LayerGraph *, vector<vector<size_t>>> outputs;
 	int input_idx = 0;
 	// input nodes propagate input_shapes
 	for (int i = 0; i < input.size(); i++) {
 		InputNode *inp = input[i];
 		inp->nodes.clear();
 		const size_t num_inputs = inp->output.size();
-		for (LayerGraph *out : inp->outgoing) {
-			if (!inputs.contains(out))
-				inputs.insert({out, {}});
-			for (int j = 0; j < num_inputs; j++)
-				inputs[out].push_back(input_shapes[input_idx + j]);
-		}
-		input_idx += num_inputs;
+		for (int j = 0; j < num_inputs; j++)
+			outputs[inp].push_back(input_shapes[input_idx++]);
 		todo.insert(todo.begin(), inp->outgoing.begin(), inp->outgoing.end());
 		visited.insert(inp);
 	}
@@ -412,11 +407,7 @@ GraphModel::shape_interference(std::vector<std::vector<size_t>> input_shapes) {
 		vector<size_t> v_shape(v->node->operation.shape,
 							   v->node->operation.shape +
 								   v->node->operation.dimensions);
-		for (LayerGraph *out : v->outgoing) {
-			if (!inputs.contains(out))
-				inputs.insert({out, {}});
-			inputs[out].push_back(v_shape);
-		}
+		outputs[v].push_back(v_shape);
 		visited.insert(v);
 	}
 	// iterate through graph bfs
@@ -438,15 +429,15 @@ GraphModel::shape_interference(std::vector<std::vector<size_t>> input_shapes) {
 		}
 		visited.insert(curr);
 		// propagate input
+		vector<vector<size_t>> input_shapes = {};
+		for (LayerGraph *in : curr->incoming)
+			input_shapes.insert(input_shapes.end(), outputs[in].begin(),
+								outputs[in].end());
+
 		vector<vector<size_t>> output_shapes =
-			curr->propagate_shape(inputs[curr]);
+			curr->propagate_shape(input_shapes);
 		const size_t num_outputs = output_shapes.size();
-		for (LayerGraph *out : curr->outgoing) {
-			if (!inputs.contains(out))
-				inputs.insert({out, {}});
-			for (int j = 0; j < num_outputs; j++)
-				inputs[out].push_back(output_shapes[j]);
-		}
+		outputs.insert({curr, output_shapes});
 		const bool is_output =
 			std::find(output.begin(), output.end(), curr) != output.end();
 		if (is_output)
@@ -454,14 +445,18 @@ GraphModel::shape_interference(std::vector<std::vector<size_t>> input_shapes) {
 									   output_shapes.begin(),
 									   output_shapes.end());
 		// debug
-		for (const vector<size_t> &in_shape : inputs[curr]) {
-			cout << "[";
-			for (int i = 0; i < in_shape.size(); i++) {
-				if (i)
-					cout << ", ";
-				cout << in_shape[i];
+		for (LayerGraph *in_node : curr->incoming) {
+			cout << "{";
+			for (const vector<size_t> &in_shape : outputs[in_node]) {
+				cout << "[";
+				for (int i = 0; i < in_shape.size(); i++) {
+					if (i)
+						cout << ", ";
+					cout << in_shape[i];
+				}
+				cout << "]";
 			}
-			cout << "] ";
+			cout << "} ";
 		}
 		cout << "-> " << curr->name << " ->";
 		for (const vector<size_t> &out_shape : output_shapes) {

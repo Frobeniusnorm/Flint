@@ -157,24 +157,24 @@ static void deserialize_stride_and_padding(onnx::NodeProto *node,
 	for (unsigned int s : stride)
 		attr->add_ints(s);
 }
-static std::vector<size_t>
+inline std::vector<size_t>
 convolve_shape_transform(const std::vector<size_t> in,
 						 const std::vector<size_t> filter,
 						 const std::vector<unsigned int> &padding,
 						 const std::vector<unsigned int> &stride) {
 	using namespace std;
 	vector<size_t> out_shape(in.size());
-	out_shape[0] = in[0];						 // step size
-	out_shape[out_shape.size() - 1] = filter[0]; // filters
-	for (int i = 1; i < in.size() - 1; i++) {
+	out_shape[0] = in[0];						 // batch size
+	out_shape[1] = filter[0]; // filters
+	for (int i = 2; i < in.size(); i++) {
 		size_t padded_shape = in[i];
-		if (padding.size() != 0 && i > 0 && i < in.size() - 1) {
-			padded_shape += padding[i - 1] + padding[i - 1 + in.size() - 2];
+		if (padding.size() != 0) {
+			padded_shape += padding[i - 2] + padding[i - 2 + in.size() - 2];
 		}
 		size_t window_size = padded_shape - filter[i] + 1;
 		window_size = window_size % filter[i] == 0
-						  ? window_size / stride[i - 1]
-						  : window_size / stride[i - 1] + 1;
+						  ? window_size / stride[i - 2]
+						  : window_size / stride[i - 2] + 1;
 		out_shape[i] = window_size;
 	}
 	return out_shape;
