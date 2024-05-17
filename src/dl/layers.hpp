@@ -57,7 +57,10 @@ struct LayerGraph {
 		};
 		virtual std::vector<std::vector<size_t>>
 		propagate_shape(const std::vector<std::vector<size_t>> &input) {
-			return input;
+			std::vector<std::vector<size_t>> out(output.size());
+			for (int i = 0; i < out.size(); i++)
+				out[i] = input[i];
+			return out;
 		}
 
 	private:
@@ -135,6 +138,14 @@ struct Flatten : public LayerGraph {
 		void deserialize_to_onnx(onnx::NodeProto *node) override {
 			node->set_op_type("Flatten");
 		}
+		virtual std::vector<std::vector<size_t>> propagate_shape(
+			const std::vector<std::vector<size_t>> &input) override {
+			std::vector<size_t> in = input[0];
+			size_t total = 1;
+			for (int i = 1; i < in.size(); i++)
+				total *= in[i];
+			return {{in[0], total}};
+		}
 };
 struct Add : public LayerGraph {
 		static int add_no;
@@ -164,17 +175,21 @@ convolve_shape_transform(const std::vector<size_t> in,
 						 const std::vector<unsigned int> &stride) {
 	using namespace std;
 	vector<size_t> out_shape(in.size());
-	out_shape[0] = in[0];						 // batch size
+	out_shape[0] = in[0];	  // batch size
 	out_shape[1] = filter[0]; // filters
 	for (int i = 2; i < in.size(); i++) {
 		size_t padded_shape = in[i];
 		if (padding.size() != 0) {
 			padded_shape += padding[i - 2] + padding[i - 2 + in.size() - 2];
 		}
+		std::cout << "padding " << i << ":" << padded_shape << ", ";
 		size_t window_size = padded_shape - filter[i] + 1;
-		window_size = window_size % filter[i] == 0
+		std::cout << "window_size: " << padded_shape << " - " << filter[i]
+				  << ", stride: " << stride[i - 2];
+		window_size = window_size % stride[i - 2] == 0
 						  ? window_size / stride[i - 2]
 						  : window_size / stride[i - 2] + 1;
+		std::cout << ", final: " << window_size << std::endl;
 		out_shape[i] = window_size;
 	}
 	return out_shape;
@@ -215,6 +230,28 @@ static void deserialize_kernel_shape(onnx::NodeProto *node,
 	for (size_t s : kernel)
 		attr->add_ints(s);
 }
+inline std::vector<size_t>
+pooling_shape_transform(const std::vector<size_t> in,
+						const std::vector<size_t> filter,
+						const std::vector<unsigned int> &padding,
+						const std::vector<unsigned int> &stride) {
+	using namespace std;
+	vector<size_t> out_shape(in.size());
+	out_shape[0] = in[0]; // batch size
+	out_shape[1] = in[1];
+	for (int i = 2; i < in.size(); i++) {
+		size_t padded_shape = in[i];
+		if (padding.size() != 0) {
+			padded_shape += padding[i - 2] + padding[i - 2 + in.size() - 2];
+		}
+		size_t window_size = padded_shape - filter[i - 2] + 1;
+		window_size = window_size % stride[i - 2] == 0
+						  ? window_size / stride[i - 2]
+						  : window_size / stride[i - 2] + 1;
+		out_shape[i] = window_size;
+	}
+	return out_shape;
+}
 struct MaxPool : public LayerGraph {
 		static int mpool_no;
 		std::vector<size_t> kernel_shape;
@@ -245,8 +282,8 @@ struct MaxPool : public LayerGraph {
 		std::vector<std::vector<size_t>> propagate_shape(
 			const std::vector<std::vector<size_t>> &input) override {
 			using namespace std;
-			return {convolve_shape_transform(input[0], kernel_shape, padding,
-											 stride)};
+			return {pooling_shape_transform(input[0], kernel_shape, padding,
+											stride)};
 		}
 };
 struct AvgPool : public LayerGraph {
@@ -279,8 +316,8 @@ struct AvgPool : public LayerGraph {
 		std::vector<std::vector<size_t>> propagate_shape(
 			const std::vector<std::vector<size_t>> &input) override {
 			using namespace std;
-			return {convolve_shape_transform(input[0], kernel_shape, padding,
-											 stride)};
+			return {pooling_shape_transform(input[0], kernel_shape, padding,
+											stride)};
 		}
 };
 struct GlobalAvgPool : public LayerGraph {

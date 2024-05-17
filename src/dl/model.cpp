@@ -477,4 +477,5 @@ GraphModel::shape_interference(std::vector<std::vector<size_t>> input_shapes) {
 			todo.push_back(layer);
 		}
 	}
+	return model_output_shapes;
 }
