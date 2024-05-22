@@ -12,9 +12,10 @@ option(INSTALL_DEEP_LEARNING "Enable installing the header-only c++ deep learnin
 
 include(GNUInstallDirs)
 
-FILE(GLOB_RECURSE SRCFILES src/*.cpp)
 find_package(OpenCL REQUIRED)
 find_package(Protobuf REQUIRED)
+
+FILE(GLOB_RECURSE SRCFILES src/*.cpp)
 add_library(flint STATIC ${SRCFILES})
 
 set_property(TARGET flint PROPERTY CXX_STANDARD 20)
