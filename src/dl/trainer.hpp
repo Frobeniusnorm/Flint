@@ -2,7 +2,7 @@
 #define FLINT_DL_TRAINER
 
 #include "../../flint.h"
-#include "src/dl/model.hpp"
+#include "model.hpp"
 #include <optional>
 #include <vector>
 /**
@@ -50,21 +50,27 @@ struct Optimizer {
 		virtual FGraphNode *optimize(FGraphNode *weight,
 									 FGraphNode *gradient) = 0;
 };
+struct Adam : public Optimizer {
+		FGraphNode *optimize(FGraphNode *weight, FGraphNode *gradient) override;
+};
 
 struct Trainer {
 		DataLoader *data = nullptr;
 		GraphModel *model = nullptr;
+		Optimizer *optimizer = nullptr;
 		size_t epochs;
 		size_t batch_size;
 		std::optional<double> early_stopping_error;
 		/**
 		 * Initializes the data of the Trainer.
-		 * The `DataLoader` and `GraphModel` have to be maintained by whoever
-		 * passed them and they have to live at least as long as the `Trainer`.
-		 * The data for the training and validation will be taken from the
-		 * `DataLoader`. The model `model` will be trained.
+		 * The `DataLoader`, `GraphModel` and `Optimizer` have to be maintained
+		 * by whoever passed them and they have to live at least as long as the
+		 * `Trainer`. The data for the training and validation will be taken
+		 * from the `DataLoader`. The model `model` will be trained.
+		 * The `opt` optimizer will be used to optimize the weights after each
+		 * batch is passed through the model.
 		 */
-		Trainer(GraphModel *model, DataLoader *dl) : data(dl) {}
+		Trainer(GraphModel *model, DataLoader *dl, Optimizer* opt) : model(model), data(dl), optimizer(opt) {}
 		/**
 		 * Initializes the model that should be trained by the Trainer.
 		 * The `GraphModel` has to be maintained by whoever passed it and it has
@@ -72,6 +78,7 @@ struct Trainer {
 		 * The model `model` will be trained.
 		 */
 		Trainer(GraphModel *model) : model(model) {}
+		Trainer(){};
 
 		/**
 		 * Enables the early stopping criterion for the following training runs.
@@ -90,6 +97,13 @@ struct Trainer {
 		 * and validation will be taken from the `DataLoader`.
 		 */
 		void set_data_loader(DataLoader *dl) { this->data = dl; }
+		/**
+		 * The `Optimizer` has to be maintained by whoever passed it and it has
+		 * to live at least as long as the trainer.
+		 * It will be used to optimize the weights after each
+		 * batch is passed through the model.
+		 */
+		void set_optimizer(Optimizer *opt) { this->optimizer = opt; }
 
 		/**
 		 * Trains the model for `epochs` number of epochs.
