@@ -38,7 +38,8 @@ struct DataLoader {
 		validation_batch() = 0;
 };
 /**
- * Interface to optimize variables
+ * Interface to optimize variables.
+ * For each Variable an Optimizer is created and managed.
  */
 struct Optimizer {
 		/**
@@ -51,7 +52,32 @@ struct Optimizer {
 									 FGraphNode *gradient) = 0;
 };
 struct Adam : public Optimizer {
+		float epsilon;
+		float learning_rate, b1, b2;
+		Adam() = default;
+		Adam(const Adam &) = delete;
+		Adam(Adam &) = delete;
+		Adam &operator=(const Adam &) = delete;
+		Adam &operator=(Adam &) = delete;
+		Adam(float learning_rate, float b1, float b2,
+			 float epsilon = std::numeric_limits<float>::epsilon())
+			: epsilon(epsilon), learning_rate(learning_rate), b1(b1), b2(b2) {}
+		~Adam() {
+			if (m) {
+				m->reference_counter--;
+				fFreeGraph(m);
+			}
+			if (v) {
+				v->reference_counter--;
+				fFreeGraph(v);
+			}
+		}
 		FGraphNode *optimize(FGraphNode *weight, FGraphNode *gradient) override;
+
+	private:
+		FGraphNode *m = nullptr;
+		FGraphNode *v = nullptr;
+		size_t t = 1;
 };
 
 struct Trainer {
@@ -70,7 +96,8 @@ struct Trainer {
 		 * The `opt` optimizer will be used to optimize the weights after each
 		 * batch is passed through the model.
 		 */
-		Trainer(GraphModel *model, DataLoader *dl, Optimizer* opt) : model(model), data(dl), optimizer(opt) {}
+		Trainer(GraphModel *model, DataLoader *dl, Optimizer *opt)
+			: model(model), data(dl), optimizer(opt) {}
 		/**
 		 * Initializes the model that should be trained by the Trainer.
 		 * The `GraphModel` has to be maintained by whoever passed it and it has

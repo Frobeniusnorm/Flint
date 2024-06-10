@@ -56,8 +56,8 @@ concept OptimizerFactory = requires(T fac) {
  * moments).
  */
 template <int n, typename F = float> struct Adam : public Optimizer<n, F> {
-		F epsilon = std::numeric_limits<F>::epsilon();
-		F learning_rate, b1, b2;
+		const F epsilon = std::numeric_limits<F>::epsilon();
+		const F learning_rate, b1, b2;
 		/**
 		 * Initializes the Adam algorithm with some parameters that influence
 		 * the optimization speed and accuracy.
