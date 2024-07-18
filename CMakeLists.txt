@@ -8,21 +8,36 @@ option(BUILD_TEST "Enable building unit tests" ON)
 option(BUILD_GRADIENT_TEST "Enable building gradient tests" ON)
 option(BUILD_BENCHMARK "Enable building benchmark program" ON)
 option(C_COMPATIBLE "Enable C-compatibility (no exceptions but erno)" OFF)
-option(INSTALL_DEEP_LEARNING "Enable installing the header-only c++ deep learning library" ON)
+option(DEEP_LEARNING "Enable building and installing the header-only c++ deep learning library" ON)
 
 include(GNUInstallDirs)
 
 find_package(OpenCL REQUIRED)
-find_package(Protobuf REQUIRED)
 
-FILE(GLOB_RECURSE SRCFILES src/*.cpp)
-add_library(flint STATIC ${SRCFILES})
+FILE(GLOB SRCFILES src/*.cpp src/backend_cpu/*.cpp src/backend_ocl/*.cpp src/operations/*.cpp)
+SET(HEADERFILES "flint.h;flint.hpp;flint_helper.hpp;flint_1.hpp;flint_n.hpp")
+SET(INCLFILES)
+if(${DEEP_LEARNING})
+	find_package(Protobuf REQUIRED)
+	FILE(GLOB_RECURSE SRCFILESDL src/dl/*.cpp)
+	SET(SRCFILES ${SRCFILES} ${SRCFILESDL})
+	protobuf_generate_cpp(PROTO_SRCFILES INCLFILES onnx.proto3)
+	SET(HEADERFILES "src/dl/model.hpp;build/onnx.proto3.pb.h;src/dl/layers.hpp" ${HEADERFILES})
+	find_package(absl REQUIRED)
+endif()
+add_library(flint STATIC ${SRCFILES} ${INCLFILES})
 
 set_property(TARGET flint PROPERTY CXX_STANDARD 20)
 target_include_directories(flint PRIVATE .)
+target_include_directories(flint PRIVATE build)
 target_link_libraries(flint OpenCL::OpenCL)
-target_link_libraries(flint ${Protobuf_LIBRARIES})
-set_target_properties(flint PROPERTIES VERSION ${PROJECT_VERSION} PUBLIC_HEADER "flint.h;flint.hpp;flint_helper.hpp;flint_1.hpp;flint_n.hpp;src/dl/model.hpp;src/dl/onnx.proto3.pb.h;src/dl/layers.hpp;")
+if(${DEEP_LEARNING})
+	target_link_libraries(flint ${Protobuf_LIBRARIES})
+	target_link_libraries(flint absl::base)
+	target_link_libraries(flint absl::strings)
+	add_link_options("-Wl,--copy-dt-needed-entries")
+endif()
+set_target_properties(flint PROPERTIES VERSION ${PROJECT_VERSION} PUBLIC_HEADER ${HEADERFILES})
 
 if(C_COMPATIBLE)
   add_compile_definitions("C_COMPATIBILITY")
@@ -51,13 +66,6 @@ configure_file(flintConfig.cmake @ONLY)
 install(FILES "flintConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/flintConfigVersion.cmake"
         DESTINATION lib/cmake/flint)
-
-if(${INSTALL_DEEP_LEARNING})
-  install(DIRECTORY dl/
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/flint/dl
-      FILES_MATCHING PATTERN "*.hpp"
-  )
-endif()
 
 if(${BUILD_TEST})
   project(test)
