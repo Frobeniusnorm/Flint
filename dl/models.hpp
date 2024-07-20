@@ -14,15 +14,10 @@
 #ifndef FLINT_MODELS
 #define FLINT_MODELS
 #include "layers.hpp"
-#include "losses.hpp"
 #include "optimizers.hpp"
 #include <chrono>
-#include <flint/flint.h>
-#include <flint/flint_helper.hpp>
-#include <iomanip>
 #include <list>
 #include <math.h>
-#include <memory>
 #include <tuple>
 #include <vector>
 /**

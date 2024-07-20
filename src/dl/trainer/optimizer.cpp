@@ -1,5 +1,6 @@
 #include "../trainer.hpp"
 #include "flint.h"
+#include <cmath>
 FGraphNode *Adam::optimize(FGraphNode *weight, FGraphNode *gradient) {
 	if (m == nullptr) {
 		if (weight->operation.data_type == F_FLOAT32) {

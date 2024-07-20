@@ -13,10 +13,8 @@
    limitations under the License. */
 #ifndef FLINT_LOSSES
 #define FLINT_LOSSES
-#include "layers.hpp"
 #include <concepts>
-#include <flint/flint.hpp>
-#include <limits>
+#include "flint.hpp"
 /**
  * Defines the general concept of a Loss function.
  * It receives two tensors: the actual output and the expected one.

@@ -15,12 +15,8 @@
 #define FLINT_OPTIMIZERS
 #include <cmath>
 #include <concepts>
-#include <flint/flint.h>
-#include <flint/flint.hpp>
+#include "flint.hpp"
 #include <limits>
-#include <optional>
-#include <type_traits>
-#include <unordered_set>
 /**
  * Optimizer interface that defines an update method.
  * An optimizer is intended to be instantiated once per weight
