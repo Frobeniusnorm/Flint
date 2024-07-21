@@ -21,6 +21,13 @@ struct GraphModel {
 		 * counter should be incremented).
 		 */
 		FGraphNode *operator()(FGraphNode *in);
+		/**
+		 * Feeds all input tensors through the model and returns the output
+		 * tensors. The input nodes are only preserved if its reference counter
+		 * is >= 1. The output node has a reference counter of 0 (so if it is
+		 * used in further calculations, its reference counter should be
+		 * incremented).
+		 */
 		std::vector<FGraphNode *> operator()(std::vector<FGraphNode *> in);
 		std::string serialize_onnx();
 		std::vector<std::vector<size_t>>

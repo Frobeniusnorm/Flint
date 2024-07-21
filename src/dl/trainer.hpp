@@ -79,7 +79,30 @@ struct Adam : public Optimizer {
 		FGraphNode *v = nullptr;
 		size_t t = 1;
 };
-
+struct TrainingMetrics {
+		/** if true a epoch has been trained, else it returns the
+		 * metrics for a single batch and only some members are set.*/
+		bool is_epoch;
+		/** The average loss for the training dataset for the epoch (if
+		 * `is_epoch` is false it is the loss of the single batch) */
+		double training_loss;
+		/** The average loss for the validation dataset for the epoch (not set
+		 * if `is_epoch` is false) */
+		double validation_loss;
+		/** The combined time for the training dataset for the epoch (if
+		 * `is_epoch` is false it is not set) */
+		double training_time_ms;
+		/** The time for the validation dataset for the epoch (if
+		 * `is_epoch` is false it is not set) */
+		double validation_time_ms;
+		/** Average time for passing a batch through the model (if `is_epoch` is
+		 * false, it is the time of the single batch)*/
+		double avg_batch_time_ms;
+		/** Average time for passing a batch through the model per layer (if
+		 * `is_epoch` is false, it is the time of the single batch). Each layer
+		 * is given with its name and its execution time.*/
+		std::vector<std::pair<std::string, double>> avg_batch_time_per_layer_ms;
+};
 struct Trainer {
 		DataLoader *data = nullptr;
 		GraphModel *model = nullptr;
@@ -105,7 +128,7 @@ struct Trainer {
 		 * The model `model` will be trained.
 		 */
 		Trainer(GraphModel *model) : model(model) {}
-		Trainer(){};
+		Trainer() {};
 
 		/**
 		 * Enables the early stopping criterion for the following training runs.
@@ -133,6 +156,17 @@ struct Trainer {
 		void set_optimizer(Optimizer *opt) { this->optimizer = opt; }
 
 		/**
+		 * Trains exactly one epoch, i.e., the complete dataset is passed
+		 * through the model by splitting it into `batch_size` batches and
+		 * passing them through the model. The weights of the model are
+		 * optimized for each batch. If a validation dataset is available in the
+		 * dataloader it is evaluated. This method returns informations (average
+		 * loss, validation loss, total time, etc.) about the training.
+		 *
+		 * If a `TrainingReporter` is set, it reports the metrics per batch
+		 */
+		TrainingMetrics train_epoch(size_t batch_size);
+		/**
 		 * Trains the model for `epochs` number of epochs.
 		 * The complete dataset is passed through the model per epoch
 		 * (It is split into `batch_size` sized slices in the first dimension of
@@ -144,7 +178,7 @@ struct Trainer {
 		 * Make sure the `DataLoader` and `Model` are valid for the call of this
 		 * function.
 		 */
-		void train(size_t epochs, size_t batch_size) {}
+		void train(size_t epochs, size_t batch_size);
 };
 
 #endif

@@ -25,3 +25,12 @@ FGraphNode *Adam::optimize(FGraphNode *weight, FGraphNode *gradient) {
 	return fsub_g(weight, fdiv_g(fmul_cf(mh, learning_rate),
 								 fadd_cf(fsqrt_g(vh), epsilon)));
 }
+TrainingMetrics Trainer::train_epoch(size_t batch_size) {
+	TrainingMetrics metrics;
+	while (data->remaining_for_epoch()) {
+		
+	}
+	return metrics;
+}
+void Trainer::train(size_t epochs, size_t batch_size) {
+}
