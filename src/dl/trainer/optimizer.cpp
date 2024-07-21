@@ -28,7 +28,7 @@ FGraphNode *Adam::optimize(FGraphNode *weight, FGraphNode *gradient) {
 TrainingMetrics Trainer::train_epoch(size_t batch_size) {
 	TrainingMetrics metrics;
 	while (data->remaining_for_epoch()) {
-		
+	data->next_batch();	
 	}
 	return metrics;
 }
