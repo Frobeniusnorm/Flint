@@ -79,6 +79,14 @@ struct Adam : public Optimizer {
 		FGraphNode *v = nullptr;
 		size_t t = 1;
 };
+struct LossFunction {
+		/**
+		 * Calculates the loss between the actual output of the model and the
+		 * expected output from the trainings data.
+		 */
+		virtual FGraphNode *calculate_loss(FGraphNode *actual,
+										   FGraphNode *expected) = 0;
+};
 struct TrainingMetrics {
 		/** if true a epoch has been trained, else it returns the
 		 * metrics for a single batch and only some members are set.*/
@@ -107,6 +115,7 @@ struct Trainer {
 		DataLoader *data = nullptr;
 		GraphModel *model = nullptr;
 		Optimizer *optimizer = nullptr;
+		LossFunction *loss = nullptr;
 		size_t epochs;
 		size_t batch_size;
 		std::optional<double> early_stopping_error;
@@ -117,10 +126,13 @@ struct Trainer {
 		 * `Trainer`. The data for the training and validation will be taken
 		 * from the `DataLoader`. The model `model` will be trained.
 		 * The `opt` optimizer will be used to optimize the weights after each
-		 * batch is passed through the model.
+		 * batch is passed through the model. The `loss` Loss function
+		 * calculates the loss between the output of the model and the expected
+		 * output from the labeled dataset.
 		 */
-		Trainer(GraphModel *model, DataLoader *dl, Optimizer *opt)
-			: model(model), data(dl), optimizer(opt) {}
+		Trainer(GraphModel *model, DataLoader *dl, Optimizer *opt,
+				LossFunction *loss)
+			: model(model), data(dl), optimizer(opt), loss(loss) {}
 		/**
 		 * Initializes the model that should be trained by the Trainer.
 		 * The `GraphModel` has to be maintained by whoever passed it and it has
@@ -128,7 +140,7 @@ struct Trainer {
 		 * The model `model` will be trained.
 		 */
 		Trainer(GraphModel *model) : model(model) {}
-		Trainer() {};
+		Trainer(){};
 
 		/**
 		 * Enables the early stopping criterion for the following training runs.
@@ -155,6 +167,12 @@ struct Trainer {
 		 */
 		void set_optimizer(Optimizer *opt) { this->optimizer = opt; }
 
+		/**
+		 * The `LossFunction` has to be maintained by whoever passed it and it
+		 * has to live at least as long as the trainer. It will be used to
+		 * calculate the error of the model per batch for optimization.
+		 */
+		void set_loss(LossFunction *loss) { this->loss = loss; }
 		/**
 		 * Trains exactly one epoch, i.e., the complete dataset is passed
 		 * through the model by splitting it into `batch_size` batches and
