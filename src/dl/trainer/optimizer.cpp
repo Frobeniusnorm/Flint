@@ -31,11 +31,12 @@ TrainingMetrics Trainer::train_epoch(size_t batch_size) {
 	std::vector<FGraphNode *> weights(model->weights.size());
 	for (int i = 0; i < weights.size(); i++)
 		weights[i] = model->weights[i]->node;
+	int total_batches = 0;
+	metrics.training_loss = 0.0;
 	while (data->remaining_for_epoch()) {
 		auto [in_nodes, out_nodes] = data->next_batch();
 		fStartGradientContext();
 		auto output = model->operator()(in_nodes);
-		FGraphNode *error = nullptr;
 		std::vector<FGraphNode *> errors(output.size());
 		for (int i = 0; i < output.size(); i++) {
 			errors[i] = loss->calculate_loss(output[i], out_nodes[i]);
@@ -66,13 +67,38 @@ TrainingMetrics Trainer::train_epoch(size_t batch_size) {
 					freduce_sum(errors[i], errors[i]->operation.dimensions - 1);
 			}
 			errors[i] = fconvert(freduce_sum(errors[i], 0), F_FLOAT32);
-			batch_loss += ((float*)fCalculateResult(errors[i])->result_data->data)[0];
+			batch_loss +=
+				((float *)fCalculateResult(errors[i])->result_data->data)[0];
 		}
 		// optimizing
 		for (int j = 0; j < gradients.size(); j++) {
-		optimizer->optimize(weights[j], gradients[j]);
+			optimizer->optimize(weights[j], gradients[j]);
 		}
+		metrics.training_loss += batch_loss;
+		total_batches++;
 	}
+	metrics.training_loss /= total_batches;
 	return metrics;
 }
-void Trainer::train(size_t epochs, size_t batch_size) {}
+void Trainer::train(size_t epochs, size_t batch_size) {
+	for (size_t i = 0; i < epochs; i++) {
+		TrainingMetrics metrics = train_epoch(batch_size);
+		// run validation
+		auto [in_nodes, out_nodes] = data->validation_batch();
+		auto output = model->operator()(in_nodes);
+		double validation_error = 0.0;
+		for (int i = 0; i < output.size(); i++) {
+			FGraphNode *error = loss->calculate_loss(output[i], out_nodes[i]);
+			while (error->operation.dimensions > 1) {
+				error = freduce_sum(error, error->operation.dimensions - 1);
+			}
+			error = fconvert(freduce_sum(error, 0), F_FLOAT32);
+			validation_error +=
+				((float *)fCalculateResult(error)->result_data->data)[0];
+		}
+		metrics.validation_loss = validation_error;
+		std::cout << "epoch " << i
+				  << ": training loss: " << metrics.training_loss
+				  << "validation loss: " << validation_error << std::endl;
+	}
+}
