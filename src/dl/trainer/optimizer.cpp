@@ -26,7 +26,7 @@ FGraphNode *Adam::optimize(FGraphNode *weight, FGraphNode *gradient) {
 	return fsub_g(weight, fdiv_g(fmul_cf(mh, learning_rate),
 								 fadd_cf(fsqrt_g(vh), epsilon)));
 }
-TrainingMetrics Trainer::train_epoch(size_t batch_size) {
+TrainingMetrics Trainer::train_epoch() {
 	TrainingMetrics metrics;
 	std::vector<FGraphNode *> weights(model->weights.size());
 	for (int i = 0; i < weights.size(); i++)
@@ -80,9 +80,9 @@ TrainingMetrics Trainer::train_epoch(size_t batch_size) {
 	metrics.training_loss /= total_batches;
 	return metrics;
 }
-void Trainer::train(size_t epochs, size_t batch_size) {
+void Trainer::train(size_t epochs) {
 	for (size_t i = 0; i < epochs; i++) {
-		TrainingMetrics metrics = train_epoch(batch_size);
+		TrainingMetrics metrics = train_epoch();
 		// run validation
 		auto [in_nodes, out_nodes] = data->validation_batch();
 		auto output = model->operator()(in_nodes);

@@ -36,6 +36,39 @@ struct DataLoader {
 		 */
 		virtual std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
 		validation_batch() = 0;
+		/** Return the complete training dataset, used for testing after
+		 * training */
+		virtual std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
+		testing_data() = 0;
+};
+/**
+ * Loads IDX formattet ubyte files like the ones used for the MNIST dataset.
+ */
+struct IDXFormatLoader : public DataLoader {
+		std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
+		next_batch() override;
+		std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
+		validation_batch() override;
+		size_t remaining_for_epoch() override;
+		/** Sets the batch size, the paths to the train and test data and the
+		 * validation percentage. The validation percentage is the percentage of
+		 * the trainings data that is split to validate the error after each
+		 * training epoch. */
+		IDXFormatLoader(size_t batch_size, std::string train_images_path,
+						std::string train_labels_path,
+						std::string test_images_path = "",
+						std::string test_labels_path = "",
+						double validation_percentage = 0.15)
+			: DataLoader(batch_size), train_images_path(train_images_path),
+			  train_labels_path(train_images_path),
+			  test_images_path(test_images_path),
+			  test_labels_path(test_labels_path),
+			  validation_percentage(validation_percentage) {}
+
+	private:
+		std::string train_images_path, train_labels_path;
+		std::string test_images_path, test_labels_path;
+		double validation_percentage;
 };
 /**
  * Interface to optimize variables.
@@ -117,7 +150,6 @@ struct Trainer {
 		Optimizer *optimizer = nullptr;
 		LossFunction *loss = nullptr;
 		size_t epochs;
-		size_t batch_size;
 		std::optional<double> early_stopping_error;
 		/**
 		 * Initializes the data of the Trainer.
@@ -140,7 +172,7 @@ struct Trainer {
 		 * The model `model` will be trained.
 		 */
 		Trainer(GraphModel *model) : model(model) {}
-		Trainer(){};
+		Trainer() {};
 
 		/**
 		 * Enables the early stopping criterion for the following training runs.
@@ -183,7 +215,7 @@ struct Trainer {
 		 *
 		 * If a `TrainingReporter` is set, it reports the metrics per batch
 		 */
-		TrainingMetrics train_epoch(size_t batch_size);
+		TrainingMetrics train_epoch();
 		/**
 		 * Trains the model for `epochs` number of epochs.
 		 * The complete dataset is passed through the model per epoch
@@ -196,7 +228,7 @@ struct Trainer {
 		 * Make sure the `DataLoader` and `Model` are valid for the call of this
 		 * function.
 		 */
-		void train(size_t epochs, size_t batch_size);
+		void train(size_t epochs);
 };
 
 #endif
