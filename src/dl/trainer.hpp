@@ -45,14 +45,9 @@ struct DataLoader {
  * Loads IDX formattet ubyte files like the ones used for the MNIST dataset.
  */
 struct IDXFormatLoader : public DataLoader {
-		std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
-		next_batch() override;
-		std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
-		validation_batch() override;
-		size_t remaining_for_epoch() override;
 		/** Sets the batch size, the paths to the train and test data and the
 		 * validation percentage. The validation percentage is the percentage of
-		 * the trainings data that is split to validate the error after each
+		 * the training data that is split to validate the error after each
 		 * training epoch. */
 		IDXFormatLoader(size_t batch_size, std::string train_images_path,
 						std::string train_labels_path,
@@ -63,12 +58,26 @@ struct IDXFormatLoader : public DataLoader {
 			  train_labels_path(train_images_path),
 			  test_images_path(test_images_path),
 			  test_labels_path(test_labels_path),
-			  validation_percentage(validation_percentage) {}
+			  validation_percentage(validation_percentage) {
+			prefetch_data();
+		}
+		std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
+		next_batch() override;
+		std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
+		validation_batch() override;
+		size_t remaining_for_epoch() override;
+		std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
+		testing_data() override;
 
 	private:
 		std::string train_images_path, train_labels_path;
 		std::string test_images_path, test_labels_path;
 		double validation_percentage;
+		// TODO dont prefetch data but load lazy when needed if > 6GB or
+		// something
+		FGraphNode *training_data, *validation_data, *test_data;
+		FGraphNode *training_labels, *validation_labels, *test_labels;
+		void prefetch_data();
 };
 /**
  * Interface to optimize variables.
