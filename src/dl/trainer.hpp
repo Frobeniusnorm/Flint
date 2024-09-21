@@ -43,6 +43,8 @@ struct DataLoader {
 };
 /**
  * Loads IDX formattet ubyte files like the ones used for the MNIST dataset.
+ * TODO dont prefetch data but load lazy when needed if > 6GB something
+ *  -> maybe derive second class for something like that
  */
 struct IDXFormatLoader : public DataLoader {
 		/** Sets the batch size, the paths to the train and test data and the
@@ -61,6 +63,15 @@ struct IDXFormatLoader : public DataLoader {
 			  validation_percentage(validation_percentage) {
 			prefetch_data();
 		}
+		~IDXFormatLoader() {
+		  for (FGraphNode** todel : {&training_data, &training_labels, &validation_data, &validation_labels, &test_data, &test_labels, &batch_indices}) {
+				if (*todel) {
+				    (*todel)->reference_counter--;
+				    fFreeGraph(*todel);
+					*todel = nullptr;
+				}
+		  }
+		}
 		std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
 		next_batch() override;
 		std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
@@ -73,10 +84,10 @@ struct IDXFormatLoader : public DataLoader {
 		std::string train_images_path, train_labels_path;
 		std::string test_images_path, test_labels_path;
 		double validation_percentage;
-		// TODO dont prefetch data but load lazy when needed if > 6GB or
-		// something
-		FGraphNode *training_data, *validation_data, *test_data;
-		FGraphNode *training_labels, *validation_labels, *test_labels;
+		FGraphNode *training_data = nullptr, *validation_data = nullptr, *test_data = nullptr;
+		FGraphNode *training_labels = nullptr, *validation_labels = nullptr, *test_labels = nullptr;
+		FGraphNode *batch_indices = nullptr;
+		size_t batch_index = 0;
 		void prefetch_data();
 };
 /**

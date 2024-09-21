@@ -1,13 +1,6 @@
 #include "../trainer.hpp"
 #include "flint.h"
 #include <fstream>
-std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
-IDXFormatLoader::next_batch() {}
-std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
-IDXFormatLoader::validation_batch() {}
-size_t IDXFormatLoader::remaining_for_epoch() {}
-std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
-IDXFormatLoader::testing_data() {}
 int reverseInt(int i) {
 	unsigned char c1, c2, c3, c4;
 	c1 = i & 255;
@@ -109,16 +102,47 @@ void IDXFormatLoader::prefetch_data() {
 			findex(training_data,
 				   fCreateGraph(index_validate.data(), index_validate.size(),
 								F_FLOAT64, index_validate.data(), 1));
+		validation_data->reference_counter++;
 		validation_labels =
 			findex(training_labels,
 				   fCreateGraph(index_validate.data(), index_validate.size(),
 								F_FLOAT64, index_validate.data(), 1));
+		validation_labels->reference_counter++;
 		training_data = findex(
 			training_data, fCreateGraph(index_train.data(), index_train.size(),
 										F_FLOAT64, index_train.data(), 1));
+		training_data->reference_counter++;
 		training_labels =
 			findex(training_labels,
 				   fCreateGraph(index_train.data(), index_train.size(),
 								F_FLOAT64, index_train.data(), 1));
+		training_labels->reference_counter++;
 	}
+}
+std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>> IDXFormatLoader::next_batch() {
+    if (batch_index * batch_size >= training_labels->operation.shape[0]) {
+        batch_index = 0;
+        batch_indices->reference_counter--;
+        batch_indices = fpermutate(batch_indices, 0);
+    }
+    if (!batch_indices) {
+        batch_indices = fpermutate(farange(training_labels->operation.shape, 1, 0), 0);
+        batch_indices->reference_counter++;
+    }
+    const long cur_batch_index = batch_index;
+    const long new_batch_index = ++batch_index;
+    FGraphNode* actual_indices = fslice(batch_indices, &cur_batch_index, &new_batch_index);
+    actual_indices->reference_counter++;
+    FGraphNode* sel_labels = findex(training_labels, actual_indices);
+    FGraphNode* sel_images = findex(training_data, actual_indices);
+    actual_indices->reference_counter--;
+    return {{sel_labels}, {sel_images}};
+}
+std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
+IDXFormatLoader::validation_batch() {}
+std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
+IDXFormatLoader::testing_data() {}
+size_t IDXFormatLoader::remaining_for_epoch() {
+    const size_t total_batches = (training_labels->operation.shape[0] - 1) / batch_size;
+    return total_batches - batch_index;
 }
