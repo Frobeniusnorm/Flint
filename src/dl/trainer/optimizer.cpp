@@ -102,3 +102,17 @@ void Trainer::train(size_t epochs) {
 				  << "validation loss: " << validation_error << std::endl;
 	}
 }
+FGraphNode *CrossEntropyLoss::calculate_loss(FGraphNode *out, FGraphNode *exp) {
+	const int n = out->operation.dimensions;
+	auto pred = fmin_cd(fmax_cd(fexpand(fdiv_g(out, freduce_sum(out, n - 1)),
+										n - 1, out->operation.shape[n - 1]),
+								1e-7),
+						1 - 1e-7);
+	auto t1 = (fmul(exp, fneg(flog(pred))));
+	while (t1->operation.dimensions > 1)
+		t1 = freduce_sum(t1, 1);
+	size_t total_size = 1;
+	for (unsigned int i = 0; i < n - 1; i++)
+		total_size *= out->operation.shape[i];
+	return fdiv_cd(t1, (double)total_size);
+}

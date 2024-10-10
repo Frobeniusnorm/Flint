@@ -119,30 +119,39 @@ void IDXFormatLoader::prefetch_data() {
 		training_labels->reference_counter++;
 	}
 }
-std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>> IDXFormatLoader::next_batch() {
-    if (batch_index * batch_size >= training_labels->operation.shape[0]) {
-        batch_index = 0;
-        batch_indices->reference_counter--;
-        batch_indices = fpermutate(batch_indices, 0);
-    }
-    if (!batch_indices) {
-        batch_indices = fpermutate(farange(training_labels->operation.shape, 1, 0), 0);
-        batch_indices->reference_counter++;
-    }
-    const long cur_batch_index = batch_index;
-    const long new_batch_index = ++batch_index;
-    FGraphNode* actual_indices = fslice(batch_indices, &cur_batch_index, &new_batch_index);
-    actual_indices->reference_counter++;
-    FGraphNode* sel_labels = findex(training_labels, actual_indices);
-    FGraphNode* sel_images = findex(training_data, actual_indices);
-    actual_indices->reference_counter--;
-    return {{sel_labels}, {sel_images}};
+std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
+IDXFormatLoader::next_batch() {
+	if (batch_index * batch_size >= training_labels->operation.shape[0]) {
+		batch_index = 0;
+		batch_indices->reference_counter--;
+		batch_indices = fpermutate(batch_indices, 0);
+	}
+	if (!batch_indices) {
+		batch_indices =
+			fpermutate(farange(training_labels->operation.shape, 1, 0), 0);
+		batch_indices->reference_counter++;
+	}
+	const long cur_batch_index = batch_index;
+	const long new_batch_index = ++batch_index;
+	FGraphNode *actual_indices =
+		fslice(batch_indices, &cur_batch_index, &new_batch_index);
+	actual_indices->reference_counter++;
+	FGraphNode *sel_labels = findex(training_labels, actual_indices);
+	FGraphNode *sel_images = findex(training_data, actual_indices);
+	actual_indices->reference_counter--;
+	return {{sel_labels}, {sel_images}};
 }
 std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
-IDXFormatLoader::validation_batch() {}
+IDXFormatLoader::validation_batch() {
+	return {{validation_labels}, {validation_data}};
+}
 std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
-IDXFormatLoader::testing_data() {}
+IDXFormatLoader::testing_data() {
+	return {{test_labels}, {test_data}};
+}
+
 size_t IDXFormatLoader::remaining_for_epoch() {
-    const size_t total_batches = (training_labels->operation.shape[0] - 1) / batch_size;
-    return total_batches - batch_index;
+	const size_t total_batches =
+		(training_labels->operation.shape[0] - 1) / batch_size;
+	return total_batches - batch_index;
 }

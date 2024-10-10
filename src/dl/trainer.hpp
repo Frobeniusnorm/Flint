@@ -64,13 +64,16 @@ struct IDXFormatLoader : public DataLoader {
 			prefetch_data();
 		}
 		~IDXFormatLoader() {
-		  for (FGraphNode** todel : {&training_data, &training_labels, &validation_data, &validation_labels, &test_data, &test_labels, &batch_indices}) {
+			for (FGraphNode **todel :
+				 {&training_data, &training_labels, &validation_data,
+				  &validation_labels, &test_data, &test_labels,
+				  &batch_indices}) {
 				if (*todel) {
-				    (*todel)->reference_counter--;
-				    fFreeGraph(*todel);
+					(*todel)->reference_counter--;
+					fFreeGraph(*todel);
 					*todel = nullptr;
 				}
-		  }
+			}
 		}
 		std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
 		next_batch() override;
@@ -84,8 +87,10 @@ struct IDXFormatLoader : public DataLoader {
 		std::string train_images_path, train_labels_path;
 		std::string test_images_path, test_labels_path;
 		double validation_percentage;
-		FGraphNode *training_data = nullptr, *validation_data = nullptr, *test_data = nullptr;
-		FGraphNode *training_labels = nullptr, *validation_labels = nullptr, *test_labels = nullptr;
+		FGraphNode *training_data = nullptr, *validation_data = nullptr,
+				   *test_data = nullptr;
+		FGraphNode *training_labels = nullptr, *validation_labels = nullptr,
+				   *test_labels = nullptr;
 		FGraphNode *batch_indices = nullptr;
 		size_t batch_index = 0;
 		void prefetch_data();
@@ -139,6 +144,16 @@ struct LossFunction {
 		 */
 		virtual FGraphNode *calculate_loss(FGraphNode *actual,
 										   FGraphNode *expected) = 0;
+};
+/** Calculates the Categorical Cross Entropy Loss with full summation. It is
+ * advised to apply a softmax as the last activation layer in the calculation of
+ * `in`.
+ *
+ * Calculates: `sum(-expected * log(in))`
+ * */
+struct CrossEntropyLoss : public LossFunction {
+		FGraphNode *calculate_loss(FGraphNode *actual,
+								   FGraphNode *expected) override;
 };
 struct TrainingMetrics {
 		/** if true a epoch has been trained, else it returns the
