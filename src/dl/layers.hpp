@@ -5,6 +5,23 @@
 #define FLINT_DEBUG
 #include "flint.h"
 #include <vector>
+static void compute_fans(std::vector<size_t> shape, unsigned int &fan_in,
+						 unsigned int &fan_out) {
+	const int n = shape.size();
+	if (n == 1) {
+		fan_in = shape[0];
+		fan_out = shape[0];
+	} else if (n == 2) {
+		fan_in = shape[0];
+		fan_out = shape[1];
+	} else {
+		size_t acc = 1;
+		for (int i = 0; i < n - 2; i++)
+			acc *= shape[i];
+		fan_in = shape[n - 2] * acc;
+		fan_out = shape[n - 1] * acc;
+	}
+}
 // TODO adapt the data s.t. channels are switched to back to remove the
 // transpositions
 struct LayerGraph {
@@ -90,6 +107,37 @@ struct Variable : public LayerGraph {
 			return {std::vector<size_t>(node->operation.shape,
 										node->operation.shape +
 											node->operation.dimensions)};
+		}
+		static Variable *fromConstant(std::vector<size_t> shape,
+									  float constant) {
+			return new Variable(
+				fconstant_f(constant, shape.data(), shape.size()));
+		}
+		static Variable *fromUniformRandom(std::vector<size_t> shape,
+										   float minval = -0.15,
+										   float maxval = 0.15) {
+			FGraphNode *node = frandom(shape.data(), shape.size());
+			FGraphNode *scaled =
+				fsub_cf(fmul_cf(node, (maxval - minval)), minval);
+			return new Variable(scaled);
+		}
+		static Variable *fromGlorotUniform(std::vector<size_t> shape) {
+			unsigned int fan_in, fan_out;
+			compute_fans(shape, fan_in, fan_out);
+			double limit = std::sqrt(6. / (fan_in + fan_out));
+			FGraphNode *node1 =
+				fmax(frandom(shape.data(), (unsigned int)shape.size()),
+					 std::numeric_limits<double>::epsilon());
+			FGraphNode *node2 =
+				fmax(frandom(shape.data(), (unsigned int)shape.size()),
+					 std::numeric_limits<double>::epsilon());
+			float sigma = std::sqrt(6. / (fan_in + fan_out));
+			float mu = 0.0;
+			FGraphNode *res =
+				fadd_cf(fmul(fmul_cf(fsqrt_g(fmul_cf(flog(node1), -2)), sigma),
+							 fcos(fmul_cf(node2, 2 * M_PI))),
+						mu);
+			return new Variable(res);
 		}
 };
 struct InputNode : public LayerGraph {
@@ -209,6 +257,12 @@ struct Convolve : public LayerGraph {
 				 std::vector<unsigned int> padding, LayerGraph *in,
 				 Variable *kernel, Variable *bias)
 			: LayerGraph({in, kernel, bias}), stride(stride), padding(padding) {
+			name = "Conv" + std::to_string(conv_no++);
+		}
+		Convolve(std::vector<unsigned int> stride,
+				 std::vector<unsigned int> padding, Variable *kernel,
+				 Variable *bias)
+			: LayerGraph({kernel, bias}), stride(stride), padding(padding) {
 			name = "Conv" + std::to_string(conv_no++);
 		}
 		void forward() override;
@@ -371,6 +425,12 @@ struct Connected : public LayerGraph {
 		Connected(LayerGraph *in, Variable *weight, Variable *bias = nullptr,
 				  bool transposeA = false, bool transposeB = false)
 			: LayerGraph({in, weight, bias}), transposeA(transposeA),
+			  transposeB(transposeB) {
+			name = "Connected" + std::to_string(connected_no++);
+		}
+		Connected(Variable *weight, Variable *bias = nullptr,
+				  bool transposeA = false, bool transposeB = false)
+			: LayerGraph({weight, bias}), transposeA(transposeA),
 			  transposeB(transposeB) {
 			name = "Connected" + std::to_string(connected_no++);
 		}
