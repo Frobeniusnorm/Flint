@@ -1,5 +1,5 @@
-#include "src/dl/layers.hpp"
-#include "src/dl/model.hpp"
+#include "../../src/dl/layers.hpp"
+#include "../../src/dl/model.hpp"
 #include <cstring>
 #include <flint/flint.h>
 #include <flint/flint.hpp>

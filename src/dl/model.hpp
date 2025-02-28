@@ -1,6 +1,6 @@
 #ifndef ONNX_MODEL
 #define ONNX_MODEL
-#include "flint.h"
+#include "../../flint.h"
 #include "layers.hpp"
 /**
  * A Model for neural networks that represent the connections between the layers

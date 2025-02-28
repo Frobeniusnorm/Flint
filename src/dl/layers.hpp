@@ -1,9 +1,10 @@
 #ifndef ONNX_LAYERS
 #define ONNX_LAYERS
 #include "onnx.proto3.pb.h"
+#include <cmath>
 #include <string>
 #define FLINT_DEBUG
-#include "flint.h"
+#include "../../flint.h"
 #include <vector>
 static void compute_fans(std::vector<size_t> shape, unsigned int &fan_in,
 						 unsigned int &fan_out) {
@@ -174,6 +175,18 @@ struct Relu : public LayerGraph {
 		void forward() override;
 		void deserialize_to_onnx(onnx::NodeProto *node) override {
 			node->set_op_type("Relu");
+		}
+};
+struct Softmax : public LayerGraph {
+		int axis = 0;
+		static int softmax_no;
+		Softmax() : LayerGraph(1) {}
+		Softmax(LayerGraph *in) : LayerGraph(in) {
+			name = "Softmax" + std::to_string(softmax_no++);
+		}
+		void forward() override;
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			node->set_op_type("Softmax");
 		}
 };
 struct Flatten : public LayerGraph {
