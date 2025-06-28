@@ -177,6 +177,17 @@ struct Relu : public LayerGraph {
 			node->set_op_type("Relu");
 		}
 };
+struct Dropout : public LayerGraph {
+		static int drop_no;
+		Dropout() : LayerGraph(1) {}
+		Dropout(LayerGraph *in) : LayerGraph(in) {
+			name = "Dropout" + std::to_string(drop_no++);
+		}
+		void forward() override;
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			node->set_op_type("Dropout");
+		}
+};
 struct Softmax : public LayerGraph {
 		int axis = 0;
 		static int softmax_no;
@@ -193,6 +204,9 @@ struct Softmax : public LayerGraph {
 		void forward() override;
 		void deserialize_to_onnx(onnx::NodeProto *node) override {
 			node->set_op_type("Softmax");
+			auto attr_ax = node->add_attribute();
+			attr_ax->set_name("axis");
+			attr_ax->set_i(axis);
 		}
 };
 struct Flatten : public LayerGraph {

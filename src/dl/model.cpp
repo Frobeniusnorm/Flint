@@ -133,6 +133,15 @@ GraphModel *GraphModel::load_model(std::string path) {
 				}
 			}
 			x = conn;
+		} else if (node.op_type() == "Softmax") {
+			Softmax *soft = new Softmax();
+			for (int i = 0; i < node.attribute_size(); i++) {
+				auto &attr = node.attribute(i);
+				if (attr.name() == "axis") {
+					soft->axis = attr.i();
+				}
+			}
+			x = soft;
 		} else
 			flogging(F_ERROR, "Unknown Operation " + node.op_type());
 		x->name = node.name();

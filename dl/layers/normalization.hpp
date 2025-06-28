@@ -21,7 +21,6 @@
  * false. */
 class Dropout : public UntrainableLayer {
 		double p;
-
 	public:
 		Dropout() : p(0.1) {}
 		Dropout(double p) : p(p) {}

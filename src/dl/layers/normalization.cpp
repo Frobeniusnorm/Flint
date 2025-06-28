@@ -76,3 +76,28 @@ void BatchNorm::forward() {
 		transpositions1);
 	output[0] = y;
 };
+void Dropout::forward() {
+#ifdef FLINT_DEBUG
+	if (incoming.size() != 1 && incoming.size() != 2)
+		flogging(F_ERROR,
+				 "Dropout needs either one input, or two where the first is the"
+				 "input tensor and the second is the probability");
+#endif
+	FGraphNode *in = incoming[0]->output[0];
+	float p;
+	{
+		FGraphNode *pnode = incoming[1]->output[0];
+		switch (pnode->operation.data_type) {
+		case F_FLOAT32:
+			p = *(float *)pnode->result_data->data;
+			break;
+		case F_FLOAT64:
+			p = (float)*(double *)pnode->result_data->data;
+			break;
+		default:
+			flogging(F_ERROR, "Illegal type of p-variable for Dropout");
+			return;
+		}
+	}
+	output[0] = fdropout(in, p);
+}
