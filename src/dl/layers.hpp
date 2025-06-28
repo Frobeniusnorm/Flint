@@ -180,8 +180,14 @@ struct Relu : public LayerGraph {
 struct Softmax : public LayerGraph {
 		int axis = 0;
 		static int softmax_no;
-		Softmax() : LayerGraph(1) {}
-		Softmax(LayerGraph *in) : LayerGraph(in) {
+		/** Initializes the SoftMax function with an optional
+		 * axis parameter that describes the dimension of which
+		 * the sum will be taken (may be negative in which case
+		 * it will index from back, i.e. -1 means the last axis,
+		 * -2 the one befor the last etc.). Calculates `exp(in)
+		 * / sum(in, ax)` */
+		Softmax(int axis = -1) : LayerGraph(1), axis(axis) {}
+		Softmax(LayerGraph *in, int axis = -1) : LayerGraph(in), axis(axis) {
 			name = "Softmax" + std::to_string(softmax_no++);
 		}
 		void forward() override;

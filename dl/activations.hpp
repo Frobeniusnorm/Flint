@@ -18,7 +18,6 @@
 /** SoftMax activation Layer. For multiclass classification. */
 class SoftMax : public UntrainableLayer {
 		int ax = -1;
-
 	public:
 		/** Initializes the SoftMax function with an optional axis parameter
 		 * that describes the dimension of which the sum will be taken (may be

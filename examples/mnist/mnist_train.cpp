@@ -25,9 +25,9 @@ int main() {
 		conv2D(64, 3, 32),
 		new MaxPool({2,2,1}, {2,2,1}, {0,0,0}),
 		new Flatten(),
-		// TODO Dropout
-		connected(1600, 10)
-		// TODO SoftMax
+		// TODO Dropout(0.5)
+		connected(1600, 10),
+		new Softmax()
 
 
 	});
