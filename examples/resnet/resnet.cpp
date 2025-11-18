@@ -33,8 +33,10 @@ int main(int argc, char **argv) {
 			}
 			std::cout << imgnet_labels[max_idx] << std::endl;
 		}
-    auto input_size = vector<vector<size_t>>{{batch.get_shape()[0], batch.get_shape()[1], batch.get_shape()[2], batch.get_shape()[3]}};
-    std::cout << input_size[0].size() << std::endl;
+		auto input_size = vector<vector<size_t>>{
+			{batch.get_shape()[0], batch.get_shape()[1], batch.get_shape()[2],
+			 batch.get_shape()[3]}};
+		std::cout << input_size[0].size() << std::endl;
 		gm.shape_interference(input_size);
 	}
 	flintCleanup();

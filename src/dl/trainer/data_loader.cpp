@@ -97,25 +97,25 @@ void IDXFormatLoader::prefetch_data() {
 		vector<size_t> index_validate(validation_size);
 		for (; i < indices.size(); i++)
 			index_validate[i - index_train.size()] = indices[i];
-		// slice from training data
+		// TODO add shapes // slice from training data
 		validation_data =
 			findex(training_data,
 				   fCreateGraph(index_validate.data(), index_validate.size(),
-								F_FLOAT64, index_validate.data(), 1));
+								F_INT64, index_validate.data(), 1));
 		validation_data->reference_counter++;
 		validation_labels =
 			findex(training_labels,
 				   fCreateGraph(index_validate.data(), index_validate.size(),
-								F_FLOAT64, index_validate.data(), 1));
+								F_INT64, index_validate.data(), 1));
 		validation_labels->reference_counter++;
 		training_data = findex(
 			training_data, fCreateGraph(index_train.data(), index_train.size(),
-										F_FLOAT64, index_train.data(), 1));
+										F_INT64, index_train.data(), 1));
 		training_data->reference_counter++;
 		training_labels =
 			findex(training_labels,
 				   fCreateGraph(index_train.data(), index_train.size(),
-								F_FLOAT64, index_train.data(), 1));
+								F_INT64, index_train.data(), 1));
 		training_labels->reference_counter++;
 	}
 }

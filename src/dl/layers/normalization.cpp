@@ -76,6 +76,9 @@ void BatchNorm::forward() {
 		transpositions1);
 	output[0] = y;
 };
+//
+int Dropout::drop_no = 0;
+//
 void Dropout::forward() {
 #ifdef FLINT_DEBUG
 	if (incoming.size() != 1 && incoming.size() != 2)

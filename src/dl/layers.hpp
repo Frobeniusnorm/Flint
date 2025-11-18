@@ -4,7 +4,7 @@
 #include <cmath>
 #include <string>
 #define FLINT_DEBUG
-#include "../../flint.h"
+#include <flint/flint.h>
 #include <vector>
 static void compute_fans(std::vector<size_t> shape, unsigned int &fan_in,
 						 unsigned int &fan_out) {
@@ -139,6 +139,24 @@ struct Variable : public LayerGraph {
 							 fcos(fmul_cf(node2, 2 * M_PI))),
 						mu);
 			return new Variable(res);
+		}
+};
+struct ConstantNode : public LayerGraph {
+		FGraphNode *node;
+		ConstantNode(float data, std::vector<size_t> shape) : LayerGraph(1) {
+			node = fconstant_f(data, shape.data(), shape.size());
+		}
+		~ConstantNode() {
+			if (node) {
+				fFreeGraph(node);
+			}
+		}
+		void forward() override {
+			output.clear();
+			output.push_back(node);
+		}
+		void deserialize_to_onnx(onnx::NodeProto *node) override {
+			// only referenced by its name
 		}
 };
 struct InputNode : public LayerGraph {
