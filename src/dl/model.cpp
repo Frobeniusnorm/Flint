@@ -297,18 +297,18 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 		bool all_run = true;
 		for (LayerGraph *in : curr->incoming) {
 			if (!visited.contains(in)) {
+				todo.push_back(in);
 				all_run = false;
-				break;
 			}
 		}
 		if (!all_run) {
 			todo.push_back(curr);
 			continue;
 		}
-		if (curr) {
+		if (curr && visited.insert(curr).second) {
+			std::cout << "doing: " << curr->name << std::endl;
 			curr->forward();
 			OCLCompilerThread::memory_barrier();
-			visited.insert(curr);
 			if (std::find(output.begin(), output.end(), curr) != output.end()) {
 				for (FGraphNode *out : curr->output) {
 					out->reference_counter++;
@@ -330,6 +330,7 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 					todo.erase(ex);
 				todo.push_back(layer);
 			}
+			std::cout << "... continue" << std::endl;
 		}
 		//  else {
 		//		flogging(F_INFO, "Clearing");
@@ -343,6 +344,7 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 		//			todo.push_back(nullptr);
 		//	}
 	}
+	std::cout << "finished" << std::endl;
 	vector<FGraphNode *> outputs;
 	for (LayerGraph *outg : output) {
 		outputs.insert(outputs.begin(), outg->output.begin(),

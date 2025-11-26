@@ -98,24 +98,19 @@ void IDXFormatLoader::prefetch_data() {
 		for (; i < indices.size(); i++)
 			index_validate[i - index_train.size()] = indices[i];
 		// TODO add shapes // slice from training data
-		validation_data =
-			findex(training_data,
-				   fCreateGraph(index_validate.data(), index_validate.size(),
-								F_INT64, index_validate.data(), 1));
+		FGraphNode *validation_indices =
+			fCreateGraph(index_validate.data(), index_validate.size(), F_INT64,
+						 &validation_size, 1);
+		size_t train_size = index_train.size();
+		FGraphNode *train_indices = fCreateGraph(
+			index_train.data(), index_train.size(), F_INT64, &train_size, 1);
+		validation_data = findex(training_data, validation_indices);
 		validation_data->reference_counter++;
-		validation_labels =
-			findex(training_labels,
-				   fCreateGraph(index_validate.data(), index_validate.size(),
-								F_INT64, index_validate.data(), 1));
+		validation_labels = findex(training_labels, validation_indices);
 		validation_labels->reference_counter++;
-		training_data = findex(
-			training_data, fCreateGraph(index_train.data(), index_train.size(),
-										F_INT64, index_train.data(), 1));
+		training_data = findex(training_data, train_indices);
 		training_data->reference_counter++;
-		training_labels =
-			findex(training_labels,
-				   fCreateGraph(index_train.data(), index_train.size(),
-								F_INT64, index_train.data(), 1));
+		training_labels = findex(training_labels, train_indices);
 		training_labels->reference_counter++;
 	}
 }

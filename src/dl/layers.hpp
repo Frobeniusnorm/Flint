@@ -145,6 +145,7 @@ struct ConstantNode : public LayerGraph {
 		FGraphNode *node;
 		ConstantNode(float data, std::vector<size_t> shape) : LayerGraph(1) {
 			node = fconstant_f(data, shape.data(), shape.size());
+			name = "constant: " + std::to_string(data);
 		}
 		~ConstantNode() {
 			if (node) {
@@ -186,7 +187,7 @@ struct InputNode : public LayerGraph {
 };
 struct Relu : public LayerGraph {
 		static int relu_no;
-		Relu() : LayerGraph(1) {}
+		Relu() : LayerGraph(1) { name = "Relu" + std::to_string(relu_no++); }
 		Relu(LayerGraph *in) : LayerGraph(in) {
 			name = "Relu" + std::to_string(relu_no++);
 		}
@@ -197,7 +198,9 @@ struct Relu : public LayerGraph {
 };
 struct Dropout : public LayerGraph {
 		static int drop_no;
-		Dropout() : LayerGraph(1) {}
+		Dropout() : LayerGraph(1) {
+			name = "Dropout" + std::to_string(drop_no++);
+		}
 		Dropout(LayerGraph *in) : LayerGraph(in) {
 			name = "Dropout" + std::to_string(drop_no++);
 		}
@@ -215,7 +218,9 @@ struct Softmax : public LayerGraph {
 		 * it will index from back, i.e. -1 means the last axis,
 		 * -2 the one befor the last etc.). Calculates `exp(in)
 		 * / sum(in, ax)` */
-		Softmax(int axis = -1) : LayerGraph(1), axis(axis) {}
+		Softmax(int axis = -1) : LayerGraph(1), axis(axis) {
+			name = "Softmax" + std::to_string(softmax_no++);
+		}
 		Softmax(LayerGraph *in, int axis = -1) : LayerGraph(in), axis(axis) {
 			name = "Softmax" + std::to_string(softmax_no++);
 		}
@@ -232,7 +237,9 @@ struct Flatten : public LayerGraph {
 		Flatten() : LayerGraph(1) {
 			name = "Flatten" + std::to_string(flatten_no++);
 		}
-		Flatten(LayerGraph *in) : LayerGraph(in) {}
+		Flatten(LayerGraph *in) : LayerGraph(in) {
+			name = "Flatten" + std::to_string(flatten_no++);
+		}
 		void forward() override;
 		void deserialize_to_onnx(onnx::NodeProto *node) override {
 			node->set_op_type("Flatten");
@@ -249,7 +256,9 @@ struct Flatten : public LayerGraph {
 struct Add : public LayerGraph {
 		static int add_no;
 		Add() : LayerGraph(1) { name = "Add" + std::to_string(add_no++); }
-		Add(LayerGraph *a, LayerGraph *b) : LayerGraph({a, b}) {}
+		Add(LayerGraph *a, LayerGraph *b) : LayerGraph({a, b}) {
+			name = "Add" + std::to_string(add_no++);
+		}
 		void forward() override;
 		void deserialize_to_onnx(onnx::NodeProto *node) override {
 			node->set_op_type("Add");

@@ -41,4 +41,4 @@ target_link_libraries(mnist_train absl::strings)
 add_link_options("-Wl,--copy-dt-needed-entries")
 add_custom_command(TARGET mnist_train
                    POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:mnist_train> ${PROJECT_SOURCE_DIR}/mnist_train/mnist_train)
+                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:mnist_train> ${PROJECT_SOURCE_DIR}/mnist/mnist_train)

@@ -32,7 +32,6 @@ int main() {
 	Adam adam;
 	CrossEntropyLoss loss;
 	Trainer t(gm);
-	std::cout << "foo" << std::endl;
 	t.set_data_loader(&idx);
 	t.set_optimizer(&adam);
 	t.set_loss(&loss);
