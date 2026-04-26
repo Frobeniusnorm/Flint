@@ -29,7 +29,12 @@ void Convolve::forward() {
 	transpositions1[1] = image->operation.dimensions - 1;
 	transpositions1[image->operation.dimensions - 1] = 1;
 	image = ftranspose(image, transpositions1);
-	weight = ftranspose(weight, transpositions1);
+	int transpositions2[weight->operation.dimensions];
+	for (int i = 0; i < weight->operation.dimensions; i++)
+		transpositions2[i] = i;
+	transpositions2[1] = weight->operation.dimensions - 1;
+	transpositions2[weight->operation.dimensions - 1] = 1;
+	weight = ftranspose(weight, transpositions2);
 	FGraphNode *bias = incoming.size() == 3 ? incoming[2]->output[0] : nullptr;
 	// expand kernel s.t. it matches the batch size
 	FGraphNode *eweight = fexpand(weight, 1, 1);
