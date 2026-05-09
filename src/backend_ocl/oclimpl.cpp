@@ -733,7 +733,7 @@ find_reusable_parameters(const FGraphNode *node,
 			OperationImplementation::implementations[curr->operation.op_type]
 				->reuse_parameter_result(curr);
 		for (int i = 0; i < curr->num_predecessor; i++) {
-			if (!reusage.empty() && reusage[i]) {
+			if (i < reusage.size() && reusage[i]) {
 				const FGraphNode *pred = curr->predecessors[i];
 				bool allow_recycle = true;
 				if (pred->operation.op_type == FSTORE) {
