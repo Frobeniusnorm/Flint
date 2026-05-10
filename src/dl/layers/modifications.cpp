@@ -1,7 +1,7 @@
-#include "flint.h"
 #include "../layers.hpp"
-#include <string>
+#include "flint.h"
 #include <array>
+#include <string>
 int Flatten::flatten_no = 0;
 void Flatten::forward() {
 #ifdef FLINT_DEBUG
@@ -15,11 +15,11 @@ void Flatten::forward() {
 #endif
 	// keep first dimension by reshaping
 	using namespace std;
-	FGraphNode* in = incoming[0]->output[0];
+	FGraphNode *in = incoming[0]->output[0];
 	array<size_t, 2> flattened_shape;
 	flattened_shape[0] = in->operation.shape[0];
 	flattened_shape[1] = 1;
-	for (int i = 0; i < in->operation.dimensions; i++)
+	for (int i = 1; i < in->operation.dimensions; i++)
 		flattened_shape[1] *= in->operation.shape[i];
 	output[0] = freshape(in, flattened_shape.data(), 2);
 }

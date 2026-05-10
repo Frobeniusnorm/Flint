@@ -40,22 +40,38 @@ void Convolve::forward() {
 	FGraphNode *eweight = fexpand(weight, 1, 1);
 	using namespace std;
 	vector<unsigned int> steps(stride.size() + 1);
+	if (steps.size() != image->operation.dimensions - 1)
+		flogging(F_ERROR, "Invalid stride size for convolution layer.");
 	steps[0] = 1;
 	for (int i = 1; i < steps.size(); i++)
 		steps[i] = stride[i - 1];
 	// switch height and width
-	const unsigned int tmp = steps[1];
-	steps[1] = steps[2];
-	steps[2] = tmp;
+	if (steps.size() > 2) {
+		const unsigned int tmp = steps[1];
+		steps[1] = steps[2];
+		steps[2] = tmp;
+	}
 	// adapt image with padding
 	vector<size_t> padded_shape(image->operation.dimensions);
 	vector<size_t> inclusion_index(image->operation.dimensions, 0);
+	const size_t spatial_dims = image->operation.dimensions - 2;
+	auto padding_for = [&](size_t spatial_idx,
+						   bool end_padding) -> unsigned int {
+		if (padding.empty())
+			return 0;
+		if (padding.size() >= spatial_dims * 2)
+			return padding[spatial_idx + (end_padding ? spatial_dims : 0)];
+		if (padding.size() >= spatial_dims)
+			return padding[spatial_idx];
+		flogging(F_ERROR, "Invalid padding size for convolution layer.");
+		return 0;
+	};
 	for (int i = 0; i < padded_shape.size(); i++) {
 		padded_shape[i] = image->operation.shape[i];
 		if (padding.size() != 0 && i > 0 && i < padded_shape.size() - 1) {
-			inclusion_index[i] = padding[i - 1];
-			padded_shape[i] += padding[i - 1] +
-							   padding[i - 1 + image->operation.dimensions - 2];
+			inclusion_index[i] = padding_for(i - 1, false);
+			padded_shape[i] +=
+				padding_for(i - 1, false) + padding_for(i - 1, true);
 		}
 	}
 	image = fextend(image, padded_shape.data(), inclusion_index.data());
@@ -73,21 +89,35 @@ void MaxPool::forward() {
 		flogging(F_ERROR, "MaxPool expects an image as inputs");
 #endif
 	using namespace std;
-	vector<unsigned int> steps(stride.size() + 2);
+	vector<unsigned int> steps(incoming[0]->output[0]->operation.dimensions);
+	if (steps.size() < 2 || stride.size() + 2 < steps.size())
+		flogging(F_ERROR, "Invalid stride size for max pooling layer.");
 	steps[0] = 1;
-	steps[1] = 1; // don't touch the channels
+	steps[1] = 1; // don't touch channels
 	for (int i = 2; i < steps.size(); i++)
 		steps[i] = stride[i - 2];
 	// adapt image with padding
 	FGraphNode *image = incoming[0]->output[0];
 	vector<size_t> padded_shape(image->operation.dimensions);
 	vector<size_t> inclusion_index(image->operation.dimensions, 0);
+	const size_t spatial_dims = image->operation.dimensions - 2;
+	auto padding_for = [&](size_t spatial_idx,
+						   bool end_padding) -> unsigned int {
+		if (padding.empty())
+			return 0;
+		if (padding.size() >= spatial_dims * 2)
+			return padding[spatial_idx + (end_padding ? spatial_dims : 0)];
+		if (padding.size() >= spatial_dims)
+			return padding[spatial_idx];
+		flogging(F_ERROR, "Invalid padding size for max pooling layer.");
+		return 0;
+	};
 	for (int i = 0; i < padded_shape.size(); i++) {
 		padded_shape[i] = image->operation.shape[i];
 		if (padding.size() != 0 && i > 1) {
-			inclusion_index[i] = padding[i - 2];
-			padded_shape[i] += padding[i - 2] +
-							   padding[i - 2 + image->operation.dimensions - 2];
+			inclusion_index[i] = padding_for(i - 2, false);
+			padded_shape[i] +=
+				padding_for(i - 2, false) + padding_for(i - 2, true);
 		}
 	}
 	image = fextend(image, padded_shape.data(), inclusion_index.data());
@@ -114,12 +144,24 @@ void AvgPool::forward() {
 	FGraphNode *image = incoming[0]->output[0];
 	vector<size_t> padded_shape(image->operation.dimensions);
 	vector<size_t> inclusion_index(image->operation.dimensions, 0);
+	const size_t spatial_dims = image->operation.dimensions - 2;
+	auto padding_for = [&](size_t spatial_idx,
+						   bool end_padding) -> unsigned int {
+		if (padding.empty())
+			return 0;
+		if (padding.size() >= spatial_dims * 2)
+			return padding[spatial_idx + (end_padding ? spatial_dims : 0)];
+		if (padding.size() >= spatial_dims)
+			return padding[spatial_idx];
+		flogging(F_ERROR, "Invalid padding size for avg pooling layer.");
+		return 0;
+	};
 	for (int i = 0; i < padded_shape.size(); i++) {
 		padded_shape[i] = image->operation.shape[i];
 		if (padding.size() != 0 && i > 0 && i < padded_shape.size() - 1) {
-			inclusion_index[i] = padding[i - 1];
-			padded_shape[i] = padding[i - 1] +
-							  padding[i - 1 + image->operation.dimensions - 2];
+			inclusion_index[i] = padding_for(i - 1, false);
+			padded_shape[i] +=
+				padding_for(i - 1, false) + padding_for(i - 1, true);
 		}
 	}
 	image = fextend(image, padded_shape.data(), inclusion_index.data());

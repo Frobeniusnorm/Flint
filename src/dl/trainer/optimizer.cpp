@@ -2,8 +2,31 @@
 #include "flint.h"
 #include <cmath>
 #include <vector>
+
+static bool same_shape(const FGraphNode *a, const FGraphNode *b) {
+	if (!a || !b)
+		return false;
+	if (a->operation.dimensions != b->operation.dimensions)
+		return false;
+	for (unsigned int i = 0; i < a->operation.dimensions; i++)
+		if (a->operation.shape[i] != b->operation.shape[i])
+			return false;
+	return true;
+}
+
 FGraphNode *Adam::optimize(FGraphNode *weight, FGraphNode *gradient) {
-	if (m == nullptr) {
+	if (!m || !same_shape(m, weight) ||
+		m->operation.data_type != weight->operation.data_type) {
+		if (m) {
+			m->reference_counter--;
+			fFreeGraph(m);
+			m = nullptr;
+		}
+		if (v) {
+			v->reference_counter--;
+			fFreeGraph(v);
+			v = nullptr;
+		}
 		if (weight->operation.data_type == F_FLOAT32) {
 			m = fconstant_f(0.0, weight->operation.shape,
 							weight->operation.dimensions);
@@ -17,9 +40,21 @@ FGraphNode *Adam::optimize(FGraphNode *weight, FGraphNode *gradient) {
 		}
 		m->reference_counter++;
 		v->reference_counter++;
+		t = 1;
 	}
-	m = fadd_g(fmul_cf(m, b1), fmul_cf(gradient, (1 - b1)));
-	v = fadd_g(fmul_cf(v, b2), fmul_g(gradient, fmul_cf(gradient, (1 - b2))));
+
+	FGraphNode *new_m = fadd_g(fmul_cf(m, b1), fmul_cf(gradient, (1 - b1)));
+	FGraphNode *new_v =
+		fadd_g(fmul_cf(v, b2), fmul_g(gradient, fmul_cf(gradient, (1 - b2))));
+	new_m->reference_counter++;
+	new_v->reference_counter++;
+	m->reference_counter--;
+	v->reference_counter--;
+	fFreeGraph(m);
+	fFreeGraph(v);
+	m = new_m;
+	v = new_v;
+
 	FGraphNode *mh = fdiv_cf(m, (1 - std::pow(b1, t)));
 	FGraphNode *vh = fdiv_cf(v, (1 - std::pow(b2, t)));
 	t += 1;
@@ -34,6 +69,8 @@ TrainingMetrics Trainer::train_epoch() {
 	int total_batches = 0;
 	metrics.training_loss = 0.0;
 	while (data->remaining_for_epoch()) {
+		for (FGraphNode *weight : weights)
+			fMarkGradientVariable(weight);
 		auto [in_nodes, out_nodes] = data->next_batch();
 		fStartGradientContext();
 		auto output = model->operator()(in_nodes);
@@ -72,7 +109,12 @@ TrainingMetrics Trainer::train_epoch() {
 		}
 		// optimizing
 		for (int j = 0; j < gradients.size(); j++) {
-			optimizer->optimize(weights[j], gradients[j]);
+			FGraphNode *new_weight = optimizer->optimize(weights[j], gradients[j]);
+			new_weight->reference_counter++;
+			model->weights[j]->node->reference_counter--;
+			fFreeGraph(model->weights[j]->node);
+			model->weights[j]->node = new_weight;
+			weights[j] = new_weight;
 		}
 		metrics.training_loss += batch_loss;
 		total_batches++;
@@ -104,10 +146,7 @@ void Trainer::train(size_t epochs) {
 }
 FGraphNode *CrossEntropyLoss::calculate_loss(FGraphNode *out, FGraphNode *exp) {
 	const int n = out->operation.dimensions;
-	auto pred = fmin_cd(fmax_cd(fexpand(fdiv_g(out, freduce_sum(out, n - 1)),
-										n - 1, out->operation.shape[n - 1]),
-								1e-7),
-						1 - 1e-7);
+	auto pred = fmin_cd(fmax_cd(out, 1e-7), 1 - 1e-7);
 	auto t1 = (fmul(exp, fneg(flog(pred))));
 	while (t1->operation.dimensions > 1)
 		t1 = freduce_sum(t1, 1);

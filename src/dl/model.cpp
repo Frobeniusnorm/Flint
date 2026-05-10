@@ -306,22 +306,12 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 			continue;
 		}
 		if (curr && visited.insert(curr).second) {
-			std::cout << "doing: " << curr->name << std::endl;
 			curr->forward();
 			OCLCompilerThread::memory_barrier();
 			if (std::find(output.begin(), output.end(), curr) != output.end()) {
 				for (FGraphNode *out : curr->output) {
 					out->reference_counter++;
 				}
-			}
-			for (FGraphNode *out : curr->output) {
-				std::cout << "[";
-				for (size_t i = 0; i < out->operation.dimensions; i++) {
-					std::cout << out->operation.shape[i];
-					if (i != out->operation.dimensions - 1)
-						std::cout << ", ";
-				}
-				std::cout << "]\n";
 			}
 			// add the children bfs
 			for (LayerGraph *layer : curr->outgoing) {
@@ -330,7 +320,6 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 					todo.erase(ex);
 				todo.push_back(layer);
 			}
-			std::cout << "... continue" << std::endl;
 		}
 		//  else {
 		//		flogging(F_INFO, "Clearing");
@@ -344,7 +333,6 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 		//			todo.push_back(nullptr);
 		//	}
 	}
-	std::cout << "finished" << std::endl;
 	vector<FGraphNode *> outputs;
 	for (LayerGraph *outg : output) {
 		outputs.insert(outputs.begin(), outg->output.begin(),
@@ -358,13 +346,18 @@ GraphModel *GraphModel::sequential(std::vector<LayerGraph *> list) {
 	GraphModel *model = new GraphModel();
 	model->input = {new InputNode()};
 	LayerGraph *prev = model->input[0];
+	std::set<Variable *> seen_weights;
 	for (LayerGraph *node : list) {
 		prev->outgoing.push_back(node);
-		for (LayerGraph *pw : prev->outgoing) {
-			if (Variable *w = dynamic_cast<Variable *>(pw))
-				model->weights.push_back(w);
-		}
 		node->incoming.insert(node->incoming.begin(), prev);
+		for (LayerGraph *in_node : node->incoming) {
+			if (Variable *w = dynamic_cast<Variable *>(in_node)) {
+				if (seen_weights.insert(w).second) {
+					model->weights.push_back(w);
+				}
+			}
+		}
+		prev = node;
 	}
 	model->output = {prev};
 	return model;

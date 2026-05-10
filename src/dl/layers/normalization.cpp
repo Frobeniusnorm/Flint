@@ -87,15 +87,22 @@ void Dropout::forward() {
 				 "input tensor and the second is the probability");
 #endif
 	FGraphNode *in = incoming[0]->output[0];
-	float p;
-	{
+	float p = 0.5f;
+	if (incoming.size() == 2) {
 		FGraphNode *pnode = incoming[1]->output[0];
+		FResultData *p_result = fCalculateResult(pnode)->result_data;
 		switch (pnode->operation.data_type) {
 		case F_FLOAT32:
-			p = *(float *)pnode->result_data->data;
+			p = *(float *)p_result->data;
 			break;
 		case F_FLOAT64:
-			p = (float)*(double *)pnode->result_data->data;
+			p = (float)*(double *)p_result->data;
+			break;
+		case F_INT32:
+			p = (float)*(int *)p_result->data;
+			break;
+		case F_INT64:
+			p = (float)*(long *)p_result->data;
 			break;
 		default:
 			flogging(F_ERROR, "Illegal type of p-variable for Dropout");

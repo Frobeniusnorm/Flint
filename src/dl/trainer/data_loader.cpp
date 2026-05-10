@@ -36,7 +36,7 @@ static FGraphNode *load_idx_images(const std::string path) {
 				}
 			}
 		}
-		std::array<size_t, 3> shape{(size_t)no, (size_t)h, (size_t)w};
+		std::array<size_t, 4> shape{(size_t)no, 1, (size_t)h, (size_t)w};
 		return fCreateGraph(data.data(), no * h * w, F_FLOAT32, shape.data(),
 							shape.size());
 	} else
@@ -70,8 +70,8 @@ void IDXFormatLoader::prefetch_data() {
 	training_data = load_idx_images(train_images_path);
 	training_labels = load_idx_labels(train_labels_path);
 	if (test_images_path != "" && test_labels_path != "") {
-		test_data = load_idx_images(train_images_path);
-		test_labels = load_idx_labels(train_labels_path);
+		test_data = load_idx_images(test_images_path);
+		test_labels = load_idx_labels(test_labels_path);
 	}
 	if (validation_percentage > 0.0) {
 		// split validation set
@@ -97,7 +97,7 @@ void IDXFormatLoader::prefetch_data() {
 		vector<size_t> index_validate(validation_size);
 		for (; i < indices.size(); i++)
 			index_validate[i - index_train.size()] = indices[i];
-		// TODO add shapes // slice from training data
+		// slice from training data
 		FGraphNode *validation_indices =
 			fCreateGraph(index_validate.data(), index_validate.size(), F_INT64,
 						 &validation_size, 1);
@@ -118,31 +118,37 @@ std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
 IDXFormatLoader::next_batch() {
 	if (batch_index * batch_size >= training_labels->operation.shape[0]) {
 		batch_index = 0;
-		batch_indices->reference_counter--;
-		batch_indices = fpermutate(batch_indices, 0);
+		if (batch_indices) {
+			batch_indices->reference_counter--;
+			batch_indices = fpermutate(batch_indices, 0);
+			batch_indices->reference_counter++;
+		}
 	}
 	if (!batch_indices) {
 		batch_indices =
 			fpermutate(farange(training_labels->operation.shape, 1, 0), 0);
 		batch_indices->reference_counter++;
 	}
-	const long cur_batch_index = batch_index;
-	const long new_batch_index = ++batch_index;
-	FGraphNode *actual_indices =
-		fslice(batch_indices, &cur_batch_index, &new_batch_index);
+	const long batch_start = batch_index * batch_size;
+	const long batch_end = std::min((batch_index + 1) * batch_size,
+									training_labels->operation.shape[0]);
+	const long start[] = {batch_start};
+	const long end[] = {batch_end};
+	batch_index++;
+	FGraphNode *actual_indices = fslice(batch_indices, start, end);
 	actual_indices->reference_counter++;
 	FGraphNode *sel_labels = findex(training_labels, actual_indices);
 	FGraphNode *sel_images = findex(training_data, actual_indices);
 	actual_indices->reference_counter--;
-	return {{sel_labels}, {sel_images}};
+	return {{sel_images}, {sel_labels}};
 }
 std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
 IDXFormatLoader::validation_batch() {
-	return {{validation_labels}, {validation_data}};
+	return {{validation_data}, {validation_labels}};
 }
 std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
 IDXFormatLoader::testing_data() {
-	return {{test_labels}, {test_data}};
+	return {{test_data}, {test_labels}};
 }
 
 size_t IDXFormatLoader::remaining_for_epoch() {

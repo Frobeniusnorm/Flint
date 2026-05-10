@@ -68,6 +68,10 @@ void Connected::forward() {
 	output[0] = fmatmul(img, kernel);
 	if (incoming.size() == 3) {
 		FGraphNode *bias = incoming[2]->output[0];
+		if (bias->operation.dimensions == 2 && bias->operation.shape[0] == 1) {
+			size_t bias_shape[] = {bias->operation.shape[1]};
+			bias = freshape(bias, bias_shape, 1);
+		}
 		output[0] = fadd(output[0], bias);
 	}
 }

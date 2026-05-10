@@ -50,6 +50,13 @@ cmake ..;
 make;
 ```
 
+To additionally build the examples from `examples/` against the in-tree Flint target (without requiring an installed `-lflint`), enable:
+
+```
+cmake .. -DBUILD_EXAMPLES=ON;
+make;
+```
+
 to install it run `make install`.
 Then just run the test programs (`test` and `test_gradients`, optionally `benchmark`)  to test if the implementation
 works on your machine.

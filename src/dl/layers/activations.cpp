@@ -30,10 +30,24 @@ void Softmax::forward() {
 	// numerical stability
 	FGraphNode *exp = fexp(
 		fsub(in, fexpand(freduce_max(in, ax), ax, in->operation.shape[ax])));
-	FGraphNode *sum = freduce_sum(exp, ax);
-	if (ax == 0 || n == 1) {
-		output[0] = fdiv_g(exp, sum);
-	} else {
-		output[0] = fdiv_g(exp, fexpand(sum, ax, in->operation.shape[ax]));
+	if (n == 2 && ax == 1) {
+		const size_t channels = in->operation.shape[1];
+		const size_t one_col_shape[] = {channels, 1};
+		const size_t one_row_shape[] = {1, channels};
+		FGraphNode *ones_col = in->operation.data_type == F_FLOAT32
+								   ? fconstant_f(1.0f, one_col_shape, 2)
+								   : fconstant_d(1.0, one_col_shape, 2);
+		FGraphNode *ones_row = in->operation.data_type == F_FLOAT32
+								   ? fconstant_f(1.0f, one_row_shape, 2)
+								   : fconstant_d(1.0, one_row_shape, 2);
+		FGraphNode *sum = fmatmul(exp, ones_col);
+		FGraphNode *den = fmatmul(sum, ones_row);
+		output[0] = fdiv_g(exp, den);
+		return;
 	}
+	FGraphNode *sum = freduce_sum(exp, ax);
+	if (ax == 0 || n == 1)
+		output[0] = fdiv_g(exp, sum);
+	else
+		output[0] = fdiv_g(exp, fexpand(sum, ax, in->operation.shape[ax]));
 }

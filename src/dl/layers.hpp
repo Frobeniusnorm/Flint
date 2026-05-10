@@ -1,7 +1,9 @@
 #ifndef ONNX_LAYERS
 #define ONNX_LAYERS
 #include "onnx.proto3.pb.h"
+#include <array>
 #include <cmath>
+#include <stdexcept>
 #include <string>
 #define FLINT_DEBUG
 #include <flint/flint.h>
@@ -285,10 +287,22 @@ convolve_shape_transform(const std::vector<size_t> in,
 	vector<size_t> out_shape(in.size());
 	out_shape[0] = in[0];	  // batch size
 	out_shape[1] = filter[0]; // filters
+	const size_t spatial_dims = in.size() - 2;
+	auto padding_for = [&](size_t spatial_idx, bool end_padding) -> unsigned int {
+		if (padding.empty())
+			return 0;
+		if (padding.size() >= spatial_dims * 2)
+			return padding[spatial_idx + (end_padding ? spatial_dims : 0)];
+		if (padding.size() >= spatial_dims)
+			return padding[spatial_idx];
+		flogging(F_ERROR, "Invalid padding size for convolution layer.");
+		return 0;
+	};
 	for (int i = 2; i < in.size(); i++) {
 		size_t padded_shape = in[i];
 		if (padding.size() != 0) {
-			padded_shape += padding[i - 2] + padding[i - 2 + in.size() - 2];
+			padded_shape +=
+				padding_for(i - 2, false) + padding_for(i - 2, true);
 		}
 		std::cout << "padding " << i << ":" << padded_shape << ", ";
 		size_t window_size = padded_shape - filter[i] + 1;
@@ -353,10 +367,22 @@ pooling_shape_transform(const std::vector<size_t> in,
 	vector<size_t> out_shape(in.size());
 	out_shape[0] = in[0]; // batch size
 	out_shape[1] = in[1];
+	const size_t spatial_dims = in.size() - 2;
+	auto padding_for = [&](size_t spatial_idx, bool end_padding) -> unsigned int {
+		if (padding.empty())
+			return 0;
+		if (padding.size() >= spatial_dims * 2)
+			return padding[spatial_idx + (end_padding ? spatial_dims : 0)];
+		if (padding.size() >= spatial_dims)
+			return padding[spatial_idx];
+		flogging(F_ERROR, "Invalid padding size for pooling layer.");
+		return 0;
+	};
 	for (int i = 2; i < in.size(); i++) {
 		size_t padded_shape = in[i];
 		if (padding.size() != 0) {
-			padded_shape += padding[i - 2] + padding[i - 2 + in.size() - 2];
+			padded_shape +=
+				padding_for(i - 2, false) + padding_for(i - 2, true);
 		}
 		size_t window_size = padded_shape - filter[i - 2] + 1;
 		window_size = window_size % stride[i - 2] == 0
@@ -521,5 +547,185 @@ struct Connected : public LayerGraph {
 			return {output};
 		}
 };
+
+namespace FlintDL {
+
+enum class PaddingMode { Valid, Same, Explicit };
+enum class InitializerKind { GlorotUniform, Uniform, Constant };
+enum class ActivationKind { None, Relu, Softmax };
+
+struct Conv2DOptions {
+		std::array<unsigned int, 2> stride{1, 1};
+		PaddingMode padding_mode = PaddingMode::Valid;
+		std::array<unsigned int, 2> padding{0, 0};
+		bool use_bias = true;
+		float bias_init = 0.0f;
+		InitializerKind kernel_initializer = InitializerKind::GlorotUniform;
+		float uniform_min = -0.15f;
+		float uniform_max = 0.15f;
+		float kernel_constant = 0.0f;
+};
+
+struct DenseOptions {
+		bool use_bias = true;
+		float bias_init = 0.0f;
+		bool transpose_input = false;
+		bool transpose_kernel = false;
+		InitializerKind kernel_initializer = InitializerKind::GlorotUniform;
+		float uniform_min = -0.15f;
+		float uniform_max = 0.15f;
+		float kernel_constant = 0.0f;
+};
+
+struct Pool2DOptions {
+		std::array<unsigned int, 2> stride{0, 0};
+		PaddingMode padding_mode = PaddingMode::Valid;
+		std::array<unsigned int, 2> padding{0, 0};
+};
+
+namespace detail {
+inline Variable *make_variable(std::vector<size_t> shape,
+							   InitializerKind init_kind, float uniform_min,
+							   float uniform_max, float constant) {
+	switch (init_kind) {
+	case InitializerKind::GlorotUniform:
+		return Variable::fromGlorotUniform(shape);
+	case InitializerKind::Uniform:
+		return Variable::fromUniformRandom(shape, uniform_min, uniform_max);
+	case InitializerKind::Constant:
+		return Variable::fromConstant(shape, constant);
+	}
+	throw std::runtime_error("Unknown initializer kind");
+}
+
+inline std::vector<unsigned int>
+resolve_padding_2d(std::array<size_t, 2> kernel, PaddingMode mode,
+				   std::array<unsigned int, 2> padding) {
+	switch (mode) {
+	case PaddingMode::Valid:
+		return {0, 0};
+	case PaddingMode::Same:
+		return {static_cast<unsigned int>(kernel[0] / 2),
+				static_cast<unsigned int>(kernel[1] / 2)};
+	case PaddingMode::Explicit:
+		return {padding[0], padding[1]};
+	}
+	throw std::runtime_error("Unknown padding mode");
+}
+
+inline std::vector<unsigned int>
+resolve_stride_2d(std::array<unsigned int, 2> stride,
+				  std::array<size_t, 2> kernel) {
+	if (stride[0] == 0 || stride[1] == 0)
+		return {static_cast<unsigned int>(kernel[0]),
+				static_cast<unsigned int>(kernel[1])};
+	return {stride[0], stride[1]};
+}
+} // namespace detail
+
+inline LayerGraph *activation_layer(ActivationKind activation) {
+	switch (activation) {
+	case ActivationKind::None:
+		return nullptr;
+	case ActivationKind::Relu:
+		return new Relu();
+	case ActivationKind::Softmax:
+		return new Softmax();
+	}
+	throw std::runtime_error("Unknown activation kind");
+}
+
+inline LayerGraph *apply_activation(LayerGraph *in, ActivationKind activation) {
+	LayerGraph *layer = activation_layer(activation);
+	if (!layer)
+		return in;
+	layer->incoming.push_back(in);
+	in->outgoing.push_back(layer);
+	return layer;
+}
+
+inline Convolve *conv2d(size_t filters, std::array<size_t, 2> kernel_size,
+						size_t in_channels,
+						const Conv2DOptions &options = Conv2DOptions()) {
+	if (filters == 0 || kernel_size[0] == 0 || kernel_size[1] == 0 ||
+		in_channels == 0)
+		throw std::runtime_error("conv2d expects non-zero filters/channels/kernel");
+
+	Variable *kernel = detail::make_variable(
+		{filters, in_channels, kernel_size[0], kernel_size[1]},
+		options.kernel_initializer, options.uniform_min, options.uniform_max,
+		options.kernel_constant);
+	Variable *bias = options.use_bias
+						 ? Variable::fromConstant({filters}, options.bias_init)
+						 : nullptr;
+	return new Convolve(
+		detail::resolve_stride_2d(options.stride, kernel_size),
+		detail::resolve_padding_2d(kernel_size, options.padding_mode,
+								   options.padding),
+		kernel, bias);
+}
+
+inline Connected *dense(size_t in_units, size_t out_units,
+						const DenseOptions &options = DenseOptions()) {
+	if (in_units == 0 || out_units == 0)
+		throw std::runtime_error("dense expects non-zero in/out units");
+	Variable *kernel = detail::make_variable(
+		{in_units, out_units}, options.kernel_initializer, options.uniform_min,
+		options.uniform_max, options.kernel_constant);
+	Variable *bias = options.use_bias
+						 ? Variable::fromConstant({out_units}, options.bias_init)
+						 : nullptr;
+	return new Connected(kernel, bias, options.transpose_input,
+						 options.transpose_kernel);
+}
+
+inline MaxPool *maxpool2d(
+	std::array<size_t, 2> kernel_size,
+	const Pool2DOptions &options = Pool2DOptions()) {
+	if (kernel_size[0] == 0 || kernel_size[1] == 0)
+		throw std::runtime_error("maxpool2d expects non-zero kernel dimensions");
+	return new MaxPool(
+		{kernel_size[0], kernel_size[1]},
+		detail::resolve_stride_2d(options.stride, kernel_size),
+		detail::resolve_padding_2d(kernel_size, options.padding_mode,
+								   options.padding));
+}
+
+inline MaxPool *maxpool2d(std::array<size_t, 2> kernel_size,
+						  std::array<unsigned int, 2> stride) {
+	Pool2DOptions options;
+	options.stride = stride;
+	return maxpool2d(kernel_size, options);
+}
+
+inline AvgPool *avgpool2d(
+	std::array<size_t, 2> kernel_size,
+	const Pool2DOptions &options = Pool2DOptions()) {
+	if (kernel_size[0] == 0 || kernel_size[1] == 0)
+		throw std::runtime_error("avgpool2d expects non-zero kernel dimensions");
+	return new AvgPool(
+		{kernel_size[0], kernel_size[1]},
+		detail::resolve_stride_2d(options.stride, kernel_size),
+		detail::resolve_padding_2d(kernel_size, options.padding_mode,
+								   options.padding));
+}
+
+inline AvgPool *avgpool2d(std::array<size_t, 2> kernel_size,
+						  std::array<unsigned int, 2> stride) {
+	Pool2DOptions options;
+	options.stride = stride;
+	return avgpool2d(kernel_size, options);
+}
+
+inline Flatten *flatten() { return new Flatten(); }
+inline Relu *relu() { return new Relu(); }
+inline Softmax *softmax(int axis = -1) { return new Softmax(axis); }
+inline Dropout *dropout(float probability) {
+	if (probability < 0.0f || probability > 1.0f)
+		throw std::runtime_error("dropout probability must be in [0, 1]");
+	return new Dropout(new ConstantNode(probability, {1, 1}));
+}
+
+} // namespace FlintDL
 
 #endif

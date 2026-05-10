@@ -7,6 +7,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}") # to include FindOp
 option(BUILD_TEST "Enable building unit tests" ON)
 option(BUILD_GRADIENT_TEST "Enable building gradient tests" ON)
 option(BUILD_BENCHMARK "Enable building benchmark program" ON)
+option(BUILD_EXAMPLES "Enable building example programs" OFF)
 option(C_COMPATIBLE "Enable C-compatibility (no exceptions but erno)" OFF)
 option(DEEP_LEARNING "Enable building and installing the header-only c++ deep learning library" ON)
 
@@ -88,4 +89,8 @@ if(${BUILD_BENCHMARK})
   add_executable(benchmark test/benchmark.cpp)
   target_link_libraries(benchmark OpenCL::OpenCL)
   target_link_libraries(benchmark flint)
+endif()
+
+if(${BUILD_EXAMPLES})
+  add_subdirectory(examples)
 endif()

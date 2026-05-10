@@ -78,7 +78,7 @@ struct IDXFormatLoader : public DataLoader {
 						std::string test_labels_path = "",
 						double validation_percentage = 0.15)
 			: DataLoader(batch_size), train_images_path(train_images_path),
-			  train_labels_path(train_images_path),
+			  train_labels_path(train_labels_path),
 			  test_images_path(test_images_path),
 			  test_labels_path(test_labels_path),
 			  validation_percentage(validation_percentage) {
@@ -132,8 +132,8 @@ struct Optimizer {
 									 FGraphNode *gradient) = 0;
 };
 struct Adam : public Optimizer {
-		float epsilon;
-		float learning_rate, b1, b2;
+		float epsilon = std::numeric_limits<float>::epsilon();
+		float learning_rate = 0.001f, b1 = 0.9f, b2 = 0.999f;
 		Adam() = default;
 		Adam(const Adam &) = delete;
 		Adam(Adam &) = delete;

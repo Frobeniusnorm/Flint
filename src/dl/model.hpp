@@ -1,7 +1,9 @@
 #ifndef ONNX_MODEL
 #define ONNX_MODEL
-#include <flint/flint.h>
 #include "layers.hpp"
+#include <flint/flint.h>
+
+struct SequentialBuilder;
 /**
  * A Model for neural networks that represent the connections between the layers
  * as an acyclic graph. This allows arbitrary topology of the model.
@@ -35,7 +37,94 @@ struct GraphModel {
 		static GraphModel *load_model(std::string path);
 		static GraphModel *sequential(std::vector<LayerGraph *> list);
 		static GraphModel *from_output(LayerGraph *output);
-		// TODO training
+		static SequentialBuilder builder();
 };
+
+struct SequentialBuilder {
+		std::vector<LayerGraph *> layers;
+
+		SequentialBuilder &add(LayerGraph *layer) {
+			layers.push_back(layer);
+			return *this;
+		}
+
+		SequentialBuilder &conv2d(size_t filters,
+								  std::array<size_t, 2> kernel_size,
+								  size_t in_channels,
+								  FlintDL::ActivationKind activation =
+									  FlintDL::ActivationKind::None) {
+			return conv2d(filters, kernel_size, in_channels,
+						  FlintDL::Conv2DOptions(), activation);
+		}
+
+		SequentialBuilder &conv2d(size_t filters,
+								  std::array<size_t, 2> kernel_size,
+								  size_t in_channels,
+								  const FlintDL::Conv2DOptions &options,
+								  FlintDL::ActivationKind activation =
+									  FlintDL::ActivationKind::None) {
+			LayerGraph *base =
+				FlintDL::conv2d(filters, kernel_size, in_channels, options);
+			add(base);
+			LayerGraph *activated = FlintDL::activation_layer(activation);
+			if (activated)
+				add(activated);
+			return *this;
+		}
+
+		SequentialBuilder &dense(size_t in_units, size_t out_units,
+								 FlintDL::ActivationKind activation =
+									 FlintDL::ActivationKind::None) {
+			return dense(in_units, out_units, FlintDL::DenseOptions(),
+						 activation);
+		}
+
+		SequentialBuilder &dense(size_t in_units, size_t out_units,
+								 const FlintDL::DenseOptions &options,
+								 FlintDL::ActivationKind activation =
+									 FlintDL::ActivationKind::None) {
+			LayerGraph *base = FlintDL::dense(in_units, out_units, options);
+			add(base);
+			LayerGraph *activated = FlintDL::activation_layer(activation);
+			if (activated)
+				add(activated);
+			return *this;
+		}
+
+		SequentialBuilder &maxpool2d(
+			std::array<size_t, 2> kernel_size,
+			const FlintDL::Pool2DOptions &options = FlintDL::Pool2DOptions()) {
+			return add(FlintDL::maxpool2d(kernel_size, options));
+		}
+
+		SequentialBuilder &maxpool2d(std::array<size_t, 2> kernel_size,
+									 std::array<unsigned int, 2> stride) {
+			return add(FlintDL::maxpool2d(kernel_size, stride));
+		}
+
+		SequentialBuilder &avgpool2d(
+			std::array<size_t, 2> kernel_size,
+			const FlintDL::Pool2DOptions &options = FlintDL::Pool2DOptions()) {
+			return add(FlintDL::avgpool2d(kernel_size, options));
+		}
+
+		SequentialBuilder &avgpool2d(std::array<size_t, 2> kernel_size,
+									 std::array<unsigned int, 2> stride) {
+			return add(FlintDL::avgpool2d(kernel_size, stride));
+		}
+
+		SequentialBuilder &flatten() { return add(FlintDL::flatten()); }
+		SequentialBuilder &relu() { return add(FlintDL::relu()); }
+		SequentialBuilder &softmax(int axis = -1) {
+			return add(FlintDL::softmax(axis));
+		}
+		SequentialBuilder &dropout(float probability) {
+			return add(FlintDL::dropout(probability));
+		}
+
+		GraphModel *build() { return GraphModel::sequential(layers); }
+};
+
+inline SequentialBuilder GraphModel::builder() { return SequentialBuilder(); }
 
 #endif
