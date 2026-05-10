@@ -152,7 +152,9 @@ IDXFormatLoader::testing_data() {
 }
 
 size_t IDXFormatLoader::remaining_for_epoch() {
-	const size_t total_batches =
-		(training_labels->operation.shape[0] - 1) / batch_size;
-	return total_batches - batch_index;
+	return (total_batches() - batch_index) * batch_size;
+}
+
+size_t IDXFormatLoader::total_batches() const {
+	return (training_labels->operation.shape[0] - 1) / batch_size + 1;
 }

@@ -188,10 +188,10 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 			OCLCompilerThread::memory_barrier();
 			std::chrono::duration<double, std::milli> elapsed =
 				std::chrono::high_resolution_clock::now() - start;
-			std::cout << fop_to_string[curr->operation.op_type] << " took "
-					  << elapsed.count() << " for " << i << " type: "
-					  << type_string(local_grad->operation.data_type)
-					  << std::endl;
+			//std::cout << fop_to_string[curr->operation.op_type] << " took "
+			//		  << elapsed.count() << " for " << i << " type: "
+			//		  << type_string(local_grad->operation.data_type)
+			//		  << std::endl;
 			fOptimizeMemory(adjoints[parent]);
 		}
 		if (!vars.contains(curr)) {

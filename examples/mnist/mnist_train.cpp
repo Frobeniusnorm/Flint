@@ -13,7 +13,7 @@ int main() {
 						 .dropout(0.5f)
 						 .dense(1600, 10, FlintDL::ActivationKind::Softmax)
 						 .build();
-	IDXFormatLoader idx(32, "train-images-idx3-ubyte",
+	IDXFormatLoader idx(512, "train-images-idx3-ubyte",
 						"train-labels-idx1-ubyte", "t10k-images-idx3-ubyte",
 						"t10k-labels-idx1-ubyte");
 	Adam adam;

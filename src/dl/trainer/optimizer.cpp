@@ -1,6 +1,8 @@
 #include "../trainer.hpp"
 #include "flint.h"
 #include <cmath>
+#include <string>
+#include <unordered_set>
 #include <vector>
 
 static bool same_shape(const FGraphNode *a, const FGraphNode *b) {
@@ -12,6 +14,30 @@ static bool same_shape(const FGraphNode *a, const FGraphNode *b) {
 		if (a->operation.shape[i] != b->operation.shape[i])
 			return false;
 	return true;
+}
+
+static FGraphNode *materialize_graph(FGraphNode *node) {
+	FGraphNode *evaluated = fCalculateResult(node);
+	if (!evaluated || !evaluated->result_data) {
+		flogging(F_ERROR, "Could not evaluate graph node.");
+		return nullptr;
+	}
+	FGraphNode *res = fCreateGraph(
+		evaluated->result_data->data, (int)evaluated->result_data->num_entries,
+		evaluated->operation.data_type, evaluated->operation.shape,
+		evaluated->operation.dimensions);
+	if (!res)
+		flogging(F_ERROR, "Could not materialize graph node.");
+	return res;
+}
+
+static inline void free_graph_roots(std::vector<FGraphNode *> &nodes) {
+	std::unordered_set<FGraphNode *> seen;
+	for (FGraphNode *node : nodes) {
+		if (node && seen.insert(node).second)
+			fFreeGraph(node);
+	}
+	nodes.clear();
 }
 
 FGraphNode *Adam::optimize(FGraphNode *weight, FGraphNode *gradient) {
@@ -43,9 +69,14 @@ FGraphNode *Adam::optimize(FGraphNode *weight, FGraphNode *gradient) {
 		t = 1;
 	}
 
-	FGraphNode *new_m = fadd_g(fmul_cf(m, b1), fmul_cf(gradient, (1 - b1)));
-	FGraphNode *new_v =
+	FGraphNode *new_m_expr =
+		fadd_g(fmul_cf(m, b1), fmul_cf(gradient, (1 - b1)));
+	FGraphNode *new_v_expr =
 		fadd_g(fmul_cf(v, b2), fmul_g(gradient, fmul_cf(gradient, (1 - b2))));
+	FGraphNode *new_m = materialize_graph(new_m_expr);
+	FGraphNode *new_v = materialize_graph(new_v_expr);
+	fFreeGraph(new_m_expr);
+	fFreeGraph(new_v_expr);
 	new_m->reference_counter++;
 	new_v->reference_counter++;
 	m->reference_counter--;
@@ -58,8 +89,31 @@ FGraphNode *Adam::optimize(FGraphNode *weight, FGraphNode *gradient) {
 	FGraphNode *mh = fdiv_cf(m, (1 - std::pow(b1, t)));
 	FGraphNode *vh = fdiv_cf(v, (1 - std::pow(b2, t)));
 	t += 1;
-	return fsub_g(weight, fdiv_g(fmul_cf(mh, learning_rate),
-								 fadd_cf(fsqrt_g(vh), epsilon)));
+	FGraphNode *new_weight_expr =
+		fsub_g(weight, fdiv_g(fmul_cf(mh, learning_rate),
+							  fadd_cf(fsqrt_g(vh), epsilon)));
+	FGraphNode *new_weight = materialize_graph(new_weight_expr);
+	fFreeGraph(new_weight_expr);
+	return new_weight;
+}
+static void report_batch(int batch, int n_batch, float error = NAN,
+						 bool first_print = true) {
+	std::string output = "";
+	if (!first_print) {
+		output += "\r";
+	}
+	int num_digits_batch = ceil(log10(n_batch));
+	output += "%0" + std::to_string(num_digits_batch) + "d/%d: [";
+	int progress = (int)((batch / (double)n_batch) * 15);
+	for (int i = 0; i < progress; i++) {
+		output += "#";
+	}
+	for (int i = progress; i < 15; i++) {
+		output += " ";
+	}
+	output += "], batch error: %f";
+	printf(output.c_str(), batch, n_batch, error);
+	fflush(stdout);
 }
 TrainingMetrics Trainer::train_epoch() {
 	TrainingMetrics metrics;
@@ -68,7 +122,8 @@ TrainingMetrics Trainer::train_epoch() {
 		weights[i] = model->weights[i]->node;
 	int total_batches = 0;
 	metrics.training_loss = 0.0;
-	while (data->remaining_for_epoch()) {
+	report_batch(0, data->total_batches());
+	do {
 		for (FGraphNode *weight : weights)
 			fMarkGradientVariable(weight);
 		auto [in_nodes, out_nodes] = data->next_batch();
@@ -109,21 +164,26 @@ TrainingMetrics Trainer::train_epoch() {
 		}
 		// optimizing
 		for (int j = 0; j < gradients.size(); j++) {
-			FGraphNode *new_weight = optimizer->optimize(weights[j], gradients[j]);
+			FGraphNode *new_weight =
+				optimizer->optimize(weights[j], gradients[j]);
 			new_weight->reference_counter++;
 			model->weights[j]->node->reference_counter--;
 			fFreeGraph(model->weights[j]->node);
 			model->weights[j]->node = new_weight;
 			weights[j] = new_weight;
 		}
+		free_graph_roots(errors);
 		metrics.training_loss += batch_loss;
 		total_batches++;
-	}
+		report_batch(total_batches, data->total_batches(), batch_loss, false);
+	} while (data->remaining_for_epoch());
 	metrics.training_loss /= total_batches;
 	return metrics;
 }
 void Trainer::train(size_t epochs) {
 	for (size_t i = 0; i < epochs; i++) {
+		std::cout << "Training epoch " << (i + 1) << "/" << epochs << " ("
+				  << (int)((i / (double)epochs) * 100.0) << "%)" << std::endl;
 		TrainingMetrics metrics = train_epoch();
 		// run validation
 		auto [in_nodes, out_nodes] = data->validation_batch();
@@ -137,11 +197,11 @@ void Trainer::train(size_t epochs) {
 			error = fconvert(freduce_sum(error, 0), F_FLOAT32);
 			validation_error +=
 				((float *)fCalculateResult(error)->result_data->data)[0];
+			fFreeGraph(error);
 		}
 		metrics.validation_loss = validation_error;
-		std::cout << "epoch " << i
-				  << ": training loss: " << metrics.training_loss
-				  << "validation loss: " << validation_error << std::endl;
+		std::cout << "\ntraining loss: " << metrics.training_loss
+				  << ", validation loss: " << validation_error << std::endl;
 	}
 }
 FGraphNode *CrossEntropyLoss::calculate_loss(FGraphNode *out, FGraphNode *exp) {

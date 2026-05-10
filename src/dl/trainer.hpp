@@ -1,8 +1,8 @@
 #ifndef FLINT_DL_TRAINER
 #define FLINT_DL_TRAINER
 
-#include <flint/flint.h>
 #include "model.hpp"
+#include <flint/flint.h>
 #include <optional>
 #include <vector>
 /**
@@ -40,6 +40,8 @@ struct DataLoader {
 		 * training */
 		virtual std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
 		testing_data() = 0;
+		/** Return the number of batches this/an epoch has */
+		virtual size_t total_batches() const = 0;
 };
 /**
  * Loads data from pre-existing tensors.
@@ -101,6 +103,7 @@ struct IDXFormatLoader : public DataLoader {
 		std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
 		validation_batch() override;
 		size_t remaining_for_epoch() override;
+		size_t total_batches() const override;
 		std::pair<std::vector<FGraphNode *>, std::vector<FGraphNode *>>
 		testing_data() override;
 
