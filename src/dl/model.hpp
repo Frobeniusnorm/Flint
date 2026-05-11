@@ -2,6 +2,9 @@
 #define ONNX_MODEL
 #include "layers.hpp"
 #include <flint/flint.h>
+#include <functional>
+#include <map>
+#include <optional>
 
 struct SequentialBuilder;
 /**
@@ -22,7 +25,10 @@ struct GraphModel {
 		 * counter of 0 (so if it is used in further calculations, its reference
 		 * counter should be incremented).
 		 */
-		FGraphNode *operator()(FGraphNode *in);
+		FGraphNode *operator()(
+			FGraphNode *in,
+			std::optional<std::reference_wrapper<std::map<LayerGraph *, long>>>
+				time_per_layer = std::nullopt);
 		/**
 		 * Feeds all input tensors through the model and returns the output
 		 * tensors. The input nodes are only preserved if its reference counter
@@ -30,7 +36,10 @@ struct GraphModel {
 		 * used in further calculations, its reference counter should be
 		 * incremented).
 		 */
-		std::vector<FGraphNode *> operator()(std::vector<FGraphNode *> in);
+		std::vector<FGraphNode *> operator()(
+			std::vector<FGraphNode *> in,
+			std::optional<std::reference_wrapper<std::map<LayerGraph *, long>>>
+				time_per_layer = std::nullopt);
 		std::string serialize_onnx();
 		std::vector<std::vector<size_t>>
 		shape_interference(std::vector<std::vector<size_t>> input_shapes);

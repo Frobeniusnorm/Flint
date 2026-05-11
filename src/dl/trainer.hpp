@@ -3,8 +3,114 @@
 
 #include "model.hpp"
 #include <flint/flint.h>
+#include <atomic>
+#include <condition_variable>
+#include <limits>
+#include <memory>
+#include <mutex>
+#include <netinet/in.h>
 #include <optional>
+#include <thread>
+#include <unordered_map>
 #include <vector>
+
+struct MetricInfo {
+		int batch = 0, epoch = 0;
+		size_t total_batches = 0, total_epochs = 0;
+		double last_batch_error = 0.0;
+		double last_epoch_error = 0.0;
+		double last_validation_error = 0.0;
+		double gradient_time_ns = 0.0;
+		std::vector<std::pair<std::string, double>> time_per_layer_ns;
+};
+
+struct ControlInformation {
+		virtual ~ControlInformation() = default;
+		virtual bool stop_signal() const = 0;
+		virtual void set_stop_signal(bool stop) = 0;
+		virtual bool profiling() const = 0;
+		virtual void set_profiling(bool profiling) = 0;
+};
+
+class ReporterControlInformation : public ControlInformation {
+		std::atomic<bool> stop_signal_state = false;
+		std::atomic<bool> profiling_state = false;
+
+	public:
+		ReporterControlInformation() = default;
+		bool stop_signal() const override;
+		void set_stop_signal(bool stop) override;
+		bool profiling() const override;
+		void set_profiling(bool profiling) override;
+};
+
+struct MetricReporter {
+		MetricReporter();
+		explicit MetricReporter(std::shared_ptr<ControlInformation> control_info);
+		virtual ~MetricReporter() = default;
+		ControlInformation &control_information() const;
+		virtual void report_batch(const MetricInfo &info) = 0;
+		virtual void report_epoch(const MetricInfo &info) = 0;
+		virtual void report_finished() {}
+		virtual void
+		model_description(std::vector<std::string> layer_names,
+						  std::vector<std::string> layer_descriptions,
+						  std::vector<size_t> number_parameters,
+						  std::string loss_fct, std::string optimizer_name,
+						  std::string optimizer_desc);
+
+	protected:
+		std::shared_ptr<ControlInformation> control_info;
+		std::vector<std::string> layer_names;
+		std::vector<std::string> layer_descriptions;
+		std::vector<size_t> number_parameters;
+		std::string loss_fct, optimizer_name, optimizer_desc;
+};
+
+class CLIReporter : public MetricReporter {
+		bool first_print = true;
+
+	public:
+		CLIReporter() = default;
+		void report_batch(const MetricInfo &info) override;
+		void report_epoch(const MetricInfo &info) override;
+		void report_finished() override;
+};
+
+/**
+ * Sends training data over a REST API for HTTP connections on port 5111.
+ * For API documentation see `dl/visualization/README.md`.
+ */
+class NetworkMetricReporter : public MetricReporter {
+		std::thread thread;
+		std::atomic<bool> terminate = false;
+		bool pause = false;
+		bool has_finished = false;
+		int socket_id = -1;
+		sockaddr_in socket_address{};
+		unsigned short port;
+		std::vector<MetricInfo> batches, epochs;
+		std::unordered_map<long, std::pair<long, long>> last_read;
+		std::mutex data_lock;
+		std::mutex pause_lock;
+		std::mutex finish_lock;
+		std::condition_variable pause_cv;
+
+		void open_connection();
+		void thread_routine();
+		void wait_if_paused();
+
+	public:
+		explicit NetworkMetricReporter(unsigned short port = 5111);
+		~NetworkMetricReporter() override;
+		NetworkMetricReporter(NetworkMetricReporter &&) = delete;
+		NetworkMetricReporter(const NetworkMetricReporter &) = delete;
+		NetworkMetricReporter &operator=(NetworkMetricReporter &&) = delete;
+		NetworkMetricReporter &operator=(const NetworkMetricReporter &) = delete;
+		void report_batch(const MetricInfo &info) override;
+		void report_epoch(const MetricInfo &info) override;
+		void report_finished() override;
+};
 /**
  * Loads the Data for the training process
  */
@@ -133,6 +239,10 @@ struct Optimizer {
 		 */
 		virtual FGraphNode *optimize(FGraphNode *weight,
 									 FGraphNode *gradient) = 0;
+		virtual std::string name() const { return "Optimizer"; }
+		virtual std::string description() const {
+			return "No optimizer description available.";
+		}
 };
 struct Adam : public Optimizer {
 		float epsilon = std::numeric_limits<float>::epsilon();
@@ -156,6 +266,8 @@ struct Adam : public Optimizer {
 			}
 		}
 		FGraphNode *optimize(FGraphNode *weight, FGraphNode *gradient) override;
+		std::string name() const override { return "Adam"; }
+		std::string description() const override;
 
 	private:
 		FGraphNode *m = nullptr;
@@ -169,6 +281,10 @@ struct LossFunction {
 		 */
 		virtual FGraphNode *calculate_loss(FGraphNode *actual,
 										   FGraphNode *expected) = 0;
+		virtual std::string name() const { return "Loss"; }
+		virtual std::string description() const {
+			return "No loss function description available.";
+		}
 };
 /** Calculates the Categorical Cross Entropy Loss with full summation.
  * It is advised to apply a softmax as the last activation layer in the
@@ -179,6 +295,8 @@ struct LossFunction {
 struct CrossEntropyLoss : public LossFunction {
 		FGraphNode *calculate_loss(FGraphNode *actual,
 								   FGraphNode *expected) override;
+		std::string name() const override { return "Cross Entropy"; }
+		std::string description() const override;
 };
 struct TrainingMetrics {
 		/** if true a epoch has been trained, else it returns the
@@ -209,7 +327,7 @@ struct Trainer {
 		GraphModel *model = nullptr;
 		Optimizer *optimizer = nullptr;
 		LossFunction *loss = nullptr;
-		size_t epochs;
+		size_t epochs = 0;
 		std::optional<double> early_stopping_error;
 		/**
 		 * Initializes the data of the Trainer.
@@ -225,15 +343,17 @@ struct Trainer {
 		 */
 		Trainer(GraphModel *model, DataLoader *dl, Optimizer *opt,
 				LossFunction *loss)
-			: model(model), data(dl), optimizer(opt), loss(loss) {}
+			: model(model), data(dl), optimizer(opt), loss(loss) {
+			refresh_metric_reporters();
+		}
 		/**
 		 * Initializes the model that should be trained by the Trainer.
 		 * The `GraphModel` has to be maintained by whoever passed it
 		 * and it has to live at least as long as the `Trainer`. The
 		 * model `model` will be trained.
 		 */
-		Trainer(GraphModel *model) : model(model) {}
-		Trainer() {};
+		Trainer(GraphModel *model) : model(model) { refresh_metric_reporters(); }
+		Trainer() { refresh_metric_reporters(); };
 
 		/**
 		 * Enables the early stopping criterion for the following
@@ -259,7 +379,10 @@ struct Trainer {
 		 * used to optimize the weights after each batch is passed
 		 * through the model.
 		 */
-		void set_optimizer(Optimizer *opt) { this->optimizer = opt; }
+		void set_optimizer(Optimizer *opt) {
+			this->optimizer = opt;
+			refresh_metric_reporters();
+		}
 
 		/**
 		 * The `LossFunction` has to be maintained by whoever passed it
@@ -267,7 +390,18 @@ struct Trainer {
 		 * be used to calculate the error of the model per batch for
 		 * optimization.
 		 */
-		void set_loss(LossFunction *loss) { this->loss = loss; }
+		void set_loss(LossFunction *loss) {
+			this->loss = loss;
+			refresh_metric_reporters();
+		}
+		/**
+		 * Sets the metric reporter (to print or display informations about the
+		 * training process)
+		 */
+		void set_metric_reporter(MetricReporter *reporter) {
+			this->reporter = reporter;
+			refresh_metric_reporters();
+		}
 		/**
 		 * Trains exactly one epoch, i.e., the complete dataset is
 		 * passed through the model by splitting it into `batch_size`
@@ -295,6 +429,15 @@ struct Trainer {
 		 * of this function.
 		 */
 		void train(size_t epochs);
+
+	private:
+		MetricReporter *reporter = nullptr;
+		CLIReporter default_reporter;
+		size_t active_epoch = 0;
+		size_t active_total_epochs = 0;
+		MetricReporter &get_metric_reporter();
+		void refresh_metric_reporters();
+		void refresh_metric_reporter(MetricReporter &metric);
 };
 
 #endif

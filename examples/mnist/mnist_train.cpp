@@ -1,7 +1,7 @@
-#include "../../src/dl/model.hpp"
-#include "../../src/dl/trainer.hpp"
 #include "../../flint.h"
 #include "../../flint.hpp"
+#include "../../src/dl/model.hpp"
+#include "../../src/dl/trainer.hpp"
 int main() {
 	FlintContext _(FLINT_BACKEND_ONLY_GPU, F_WARNING);
 	GraphModel *gm = GraphModel::builder()
@@ -18,9 +18,15 @@ int main() {
 						"t10k-labels-idx1-ubyte");
 	Adam adam;
 	CrossEntropyLoss loss;
+	NetworkMetricReporter reporter;
 	Trainer t(gm);
+	t.set_metric_reporter(&reporter);
 	t.set_data_loader(&idx);
 	t.set_optimizer(&adam);
 	t.set_loss(&loss);
 	t.train(10);
+	{
+		std::ofstream out_file("model.onnx", std::ios::out | std::ios::trunc);
+		out_file << gm->serialize_onnx();
+	}
 }

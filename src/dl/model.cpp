@@ -3,6 +3,7 @@
 #include "flint.h"
 #include "layers.hpp"
 #include "onnx.proto3.pb.h"
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <list>
@@ -265,10 +266,16 @@ std::string GraphModel::serialize_onnx() {
 	return model.SerializeAsString();
 }
 
-FGraphNode *GraphModel::operator()(FGraphNode *in) {
-	return this->operator()(std::vector{in})[0];
+FGraphNode *GraphModel::operator()(
+	FGraphNode *in,
+	std::optional<std::reference_wrapper<std::map<LayerGraph *, long>>>
+		time_per_layer) {
+	return this->operator()(std::vector{in}, time_per_layer)[0];
 }
-std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
+std::vector<FGraphNode *> GraphModel::operator()(
+	std::vector<FGraphNode *> in,
+	std::optional<std::reference_wrapper<std::map<LayerGraph *, long>>>
+		time_per_layer) {
 	using namespace std;
 	list<LayerGraph *> todo;
 	set<LayerGraph *> visited;
@@ -306,8 +313,20 @@ std::vector<FGraphNode *> GraphModel::operator()(std::vector<FGraphNode *> in) {
 			continue;
 		}
 		if (curr && visited.insert(curr).second) {
-			curr->forward();
-			OCLCompilerThread::memory_barrier();
+			if (time_per_layer.has_value()) {
+				auto &layer_timings = time_per_layer->get();
+				const auto layer_start = std::chrono::steady_clock::now();
+				curr->forward();
+				OCLCompilerThread::memory_barrier();
+				const auto layer_end = std::chrono::steady_clock::now();
+				const long elapsed_ns = std::chrono::duration_cast<
+					std::chrono::nanoseconds>(layer_end - layer_start)
+										   .count();
+				layer_timings[curr] += elapsed_ns;
+			} else {
+				curr->forward();
+				OCLCompilerThread::memory_barrier();
+			}
 			if (std::find(output.begin(), output.end(), curr) != output.end()) {
 				for (FGraphNode *out : curr->output) {
 					out->reference_counter++;
