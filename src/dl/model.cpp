@@ -319,9 +319,10 @@ std::vector<FGraphNode *> GraphModel::operator()(
 				curr->forward();
 				OCLCompilerThread::memory_barrier();
 				const auto layer_end = std::chrono::steady_clock::now();
-				const long elapsed_ns = std::chrono::duration_cast<
-					std::chrono::nanoseconds>(layer_end - layer_start)
-										   .count();
+				const long elapsed_ns =
+					std::chrono::duration_cast<std::chrono::nanoseconds>(
+						layer_end - layer_start)
+						.count();
 				layer_timings[curr] += elapsed_ns;
 			} else {
 				curr->forward();

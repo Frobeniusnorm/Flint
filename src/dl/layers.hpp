@@ -27,6 +27,7 @@ static void compute_fans(std::vector<size_t> shape, unsigned int &fan_in,
 }
 // TODO adapt the data s.t. channels are switched to back to remove the
 // transpositions
+/** Base class for all layer graph nodes. */
 struct LayerGraph {
 		std::vector<LayerGraph *> incoming; // incoming edges in graph
 		std::vector<LayerGraph *> outgoing; // incoming edges in graph
@@ -86,6 +87,7 @@ struct LayerGraph {
 	private:
 		bool marked_for_deletion = false; // for destructor
 };
+/** Represents a learnable tensor */
 struct Variable : public LayerGraph {
 		static int variable_no;
 		FGraphNode *node = nullptr;
@@ -143,6 +145,7 @@ struct Variable : public LayerGraph {
 			return new Variable(res);
 		}
 };
+/** Represents a constant tensor */
 struct ConstantNode : public LayerGraph {
 		FGraphNode *node;
 		ConstantNode(float data, std::vector<size_t> shape) : LayerGraph(1) {
@@ -162,6 +165,7 @@ struct ConstantNode : public LayerGraph {
 			// only referenced by its name
 		}
 };
+/** Input Layers */
 struct InputNode : public LayerGraph {
 		static int data_no;
 		std::vector<FGraphNode *> nodes;
@@ -187,6 +191,7 @@ struct InputNode : public LayerGraph {
 			// only referenced by its name
 		}
 };
+/** Relu activation layer */
 struct Relu : public LayerGraph {
 		static int relu_no;
 		Relu() : LayerGraph(1) { name = "Relu" + std::to_string(relu_no++); }
@@ -198,6 +203,9 @@ struct Relu : public LayerGraph {
 			node->set_op_type("Relu");
 		}
 };
+/** Dropout layer (randomly sets entries of its input to 0 to avoid
+ * overfitting). The dropout probability is given by a second input (expects a
+ * 1D constant float). */
 struct Dropout : public LayerGraph {
 		static int drop_no;
 		Dropout() : LayerGraph(1) {
@@ -211,6 +219,7 @@ struct Dropout : public LayerGraph {
 			node->set_op_type("Dropout");
 		}
 };
+/** Softmax classification layer */
 struct Softmax : public LayerGraph {
 		int axis = 0;
 		static int softmax_no;
@@ -218,7 +227,7 @@ struct Softmax : public LayerGraph {
 		 * axis parameter that describes the dimension of which
 		 * the sum will be taken (may be negative in which case
 		 * it will index from back, i.e. -1 means the last axis,
-		 * -2 the one befor the last etc.). Calculates `exp(in)
+		 * -2 the one before the last etc.). Calculates `exp(in)
 		 * / sum(in, ax)` */
 		Softmax(int axis = -1) : LayerGraph(1), axis(axis) {
 			name = "Softmax" + std::to_string(softmax_no++);
@@ -234,6 +243,7 @@ struct Softmax : public LayerGraph {
 			attr_ax->set_i(axis);
 		}
 };
+/** Flattens a dimension of its input */
 struct Flatten : public LayerGraph {
 		static int flatten_no;
 		Flatten() : LayerGraph(1) {
@@ -255,6 +265,7 @@ struct Flatten : public LayerGraph {
 			return {{in[0], total}};
 		}
 };
+/** Sums to inputs */
 struct Add : public LayerGraph {
 		static int add_no;
 		Add() : LayerGraph(1) { name = "Add" + std::to_string(add_no++); }
@@ -288,7 +299,8 @@ convolve_shape_transform(const std::vector<size_t> in,
 	out_shape[0] = in[0];	  // batch size
 	out_shape[1] = filter[0]; // filters
 	const size_t spatial_dims = in.size() - 2;
-	auto padding_for = [&](size_t spatial_idx, bool end_padding) -> unsigned int {
+	auto padding_for = [&](size_t spatial_idx,
+						   bool end_padding) -> unsigned int {
 		if (padding.empty())
 			return 0;
 		if (padding.size() >= spatial_dims * 2)
@@ -316,6 +328,15 @@ convolve_shape_transform(const std::vector<size_t> in,
 	}
 	return out_shape;
 }
+/** Convolution layer.
+ * Slides a set of filter kernels along the input and optionally adds a bias.
+ * The input has `[batch, channels, h, w, ...]`, the kernel weights have
+ * `[filters, channels, p, q, ...]`, the bias `[filters]` and the output has
+ * `[batch, filters, y, x, ...]` where `y` and `x` depend on `stride` and
+ * `padding`. `stride` defines the step size of the kernel window and `padding`
+ * adds a zero border around the spatial dimensions to control the output size
+ * and include the border elements.
+ */
 struct Convolve : public LayerGraph {
 		static int conv_no;
 		std::vector<unsigned int> stride, padding;
@@ -368,7 +389,8 @@ pooling_shape_transform(const std::vector<size_t> in,
 	out_shape[0] = in[0]; // batch size
 	out_shape[1] = in[1];
 	const size_t spatial_dims = in.size() - 2;
-	auto padding_for = [&](size_t spatial_idx, bool end_padding) -> unsigned int {
+	auto padding_for = [&](size_t spatial_idx,
+						   bool end_padding) -> unsigned int {
 		if (padding.empty())
 			return 0;
 		if (padding.size() >= spatial_dims * 2)
@@ -392,6 +414,12 @@ pooling_shape_transform(const std::vector<size_t> in,
 	}
 	return out_shape;
 }
+/** Max pooling layer.
+ * Reduces each spatial window to its maximum value. The window size is given by
+ * `kernel_shape`, the step size by `stride`. Padding works like for
+ * convolution: it adds a zero border around the spatial dimensions before
+ * pooling. Batch and channel dimensions are preserved.
+ */
 struct MaxPool : public LayerGraph {
 		static int mpool_no;
 		std::vector<size_t> kernel_shape;
@@ -426,6 +454,11 @@ struct MaxPool : public LayerGraph {
 											stride)};
 		}
 };
+/** Average pooling layer.
+ * Reduces each spatial window to its average value. The window size is given by
+ * `kernel_shape`, the step size by `stride`, and padding behaves like in
+ * convolution. Batch and channel dimensions are preserved.
+ */
 struct AvgPool : public LayerGraph {
 		static int apool_no;
 		std::vector<size_t> kernel_shape;
@@ -460,6 +493,11 @@ struct AvgPool : public LayerGraph {
 											stride)};
 		}
 };
+/** Global average pooling layer.
+ * Averages over all spatial dimensions so each channel is reduced to a single
+ * value per batch. The output keeps the batch and channel dimensions and sets
+ * all spatial dimensions to 1.
+ */
 struct GlobalAvgPool : public LayerGraph {
 		static int gapool_no;
 		GlobalAvgPool() : LayerGraph(1) {
@@ -482,6 +520,11 @@ struct GlobalAvgPool : public LayerGraph {
 			return {rank_shape};
 		}
 };
+/** Batch normalization layer.
+ * Normalizes the input per channel and applies a learnable scale (gamma) and
+ * bias (beta). If running mean and variance are provided they are updated with
+ * momentum `alpha` when training, otherwise they are computed on the fly.
+ */
 struct BatchNorm : public LayerGraph {
 		// TODO dynamically determine if running mean and variance should be
 		// used as additional outputs
@@ -503,6 +546,7 @@ struct BatchNorm : public LayerGraph {
 			attr_alpha->set_f(alpha);
 		}
 };
+/** Fully connected (dense) layer. */
 struct Connected : public LayerGraph {
 		static int connected_no;
 		Connected() : LayerGraph(1) {
@@ -548,12 +592,30 @@ struct Connected : public LayerGraph {
 		}
 };
 
+/** High level layer factories and configuration helpers. */
 namespace FlintDL {
 
+/** Padding for convolution and pooling.
+ * - `Valid` uses no padding (only fully covered windows are used)
+ * - `Same` adds padding so the output keeps its spatial size (for odd kernels)
+ * - `Explicit` uses the `padding` values from the options
+ */
 enum class PaddingMode { Valid, Same, Explicit };
+/** Weight initializer kind for trainable weights. */
 enum class InitializerKind { GlorotUniform, Uniform, Constant };
+/** Activation layer kind for builder helpers. */
 enum class ActivationKind { None, Relu, Softmax };
 
+/** Options for a 2D convolution layer.
+ * - `stride` step size of the kernel window
+ * - `padding_mode` controls how padding is generated
+ * - `padding` is used only if `padding_mode` is `Explicit`
+ * - `use_bias` adds a trainable bias per filter
+ * - `bias_init` initializes the bias if enabled
+ * - `kernel_initializer` selects the weight initializer
+ * - `uniform_min`/`uniform_max` are used for the uniform initializer
+ * - `kernel_constant` is used for constant initialization
+ */
 struct Conv2DOptions {
 		std::array<unsigned int, 2> stride{1, 1};
 		PaddingMode padding_mode = PaddingMode::Valid;
@@ -566,6 +628,13 @@ struct Conv2DOptions {
 		float kernel_constant = 0.0f;
 };
 
+/** Options for a dense layer.
+ * - `use_bias` adds a trainable bias
+ * - `bias_init` initializes the bias if enabled
+ * - `transpose_input` transposes the input before multiplication
+ * - `transpose_kernel` transposes the kernel weights before multiplication
+ * - `kernel_initializer` selects the weight initializer
+ */
 struct DenseOptions {
 		bool use_bias = true;
 		float bias_init = 0.0f;
@@ -577,6 +646,11 @@ struct DenseOptions {
 		float kernel_constant = 0.0f;
 };
 
+/** Options for pooling layers.
+ * - `stride` step size of the pooling window (0 means kernel size)
+ * - `padding_mode` controls how padding is generated
+ * - `padding` is used only if `padding_mode` is `Explicit`
+ */
 struct Pool2DOptions {
 		std::array<unsigned int, 2> stride{0, 0};
 		PaddingMode padding_mode = PaddingMode::Valid;
@@ -623,6 +697,10 @@ resolve_stride_2d(std::array<unsigned int, 2> stride,
 }
 } // namespace detail
 
+/**
+ * Constructs an Activation Layer from an `ActivationKind`
+ * (None, Relu, or Softmax).
+ */
 inline LayerGraph *activation_layer(ActivationKind activation) {
 	switch (activation) {
 	case ActivationKind::None:
@@ -635,6 +713,10 @@ inline LayerGraph *activation_layer(ActivationKind activation) {
 	throw std::runtime_error("Unknown activation kind");
 }
 
+/**
+ * Chains a newly constructed activation layer (from a `ActivationKind`) to its
+ * input node (i.e. input -> activation) and returns the activation layer.
+ */
 inline LayerGraph *apply_activation(LayerGraph *in, ActivationKind activation) {
 	LayerGraph *layer = activation_layer(activation);
 	if (!layer)
@@ -643,13 +725,19 @@ inline LayerGraph *apply_activation(LayerGraph *in, ActivationKind activation) {
 	in->outgoing.push_back(layer);
 	return layer;
 }
-
+/**
+ * Constructs a 2D convolution layer and initializes its weights.
+ * - `filters` number of filter kernels
+ * - `kernel_size` shape of filter kernels
+ * - `in_channels` number of channels of the input image (e.g., 3 for RGB)
+ * - `options` control stride, padding, bias and initialization
+ */
 inline Convolve *conv2d(size_t filters, std::array<size_t, 2> kernel_size,
 						size_t in_channels,
 						const Conv2DOptions &options = Conv2DOptions()) {
 	if (filters == 0 || kernel_size[0] == 0 || kernel_size[1] == 0 ||
 		in_channels == 0)
-		throw std::runtime_error("conv2d expects non-zero filters/channels/kernel");
+		throw std::runtime_error("conv2d expects filters/channels/kernel");
 
 	Variable *kernel = detail::make_variable(
 		{filters, in_channels, kernel_size[0], kernel_size[1]},
@@ -658,13 +746,18 @@ inline Convolve *conv2d(size_t filters, std::array<size_t, 2> kernel_size,
 	Variable *bias = options.use_bias
 						 ? Variable::fromConstant({filters}, options.bias_init)
 						 : nullptr;
-	return new Convolve(
-		detail::resolve_stride_2d(options.stride, kernel_size),
-		detail::resolve_padding_2d(kernel_size, options.padding_mode,
-								   options.padding),
-		kernel, bias);
+	return new Convolve(detail::resolve_stride_2d(options.stride, kernel_size),
+						detail::resolve_padding_2d(
+							kernel_size, options.padding_mode, options.padding),
+						kernel, bias);
 }
 
+/**
+ * Constructs a fully connected layer and initializes its weights.
+ * - `in_units` number of input units
+ * - `out_units` number of output units
+ * - `options` control bias, transpositions and initialization
+ */
 inline Connected *dense(size_t in_units, size_t out_units,
 						const DenseOptions &options = DenseOptions()) {
 	if (in_units == 0 || out_units == 0)
@@ -672,25 +765,33 @@ inline Connected *dense(size_t in_units, size_t out_units,
 	Variable *kernel = detail::make_variable(
 		{in_units, out_units}, options.kernel_initializer, options.uniform_min,
 		options.uniform_max, options.kernel_constant);
-	Variable *bias = options.use_bias
-						 ? Variable::fromConstant({out_units}, options.bias_init)
-						 : nullptr;
+	Variable *bias =
+		options.use_bias
+			? Variable::fromConstant({out_units}, options.bias_init)
+			: nullptr;
 	return new Connected(kernel, bias, options.transpose_input,
 						 options.transpose_kernel);
 }
 
-inline MaxPool *maxpool2d(
-	std::array<size_t, 2> kernel_size,
-	const Pool2DOptions &options = Pool2DOptions()) {
+/**
+ * Constructs a max pooling layer.
+ * - `kernel_size` pooling window size
+ * - `options` control stride and padding
+ */
+inline MaxPool *maxpool2d(std::array<size_t, 2> kernel_size,
+						  const Pool2DOptions &options = Pool2DOptions()) {
 	if (kernel_size[0] == 0 || kernel_size[1] == 0)
-		throw std::runtime_error("maxpool2d expects non-zero kernel dimensions");
-	return new MaxPool(
-		{kernel_size[0], kernel_size[1]},
-		detail::resolve_stride_2d(options.stride, kernel_size),
-		detail::resolve_padding_2d(kernel_size, options.padding_mode,
-								   options.padding));
+		throw std::runtime_error(
+			"maxpool2d expects non-zero kernel dimensions");
+	return new MaxPool({kernel_size[0], kernel_size[1]},
+					   detail::resolve_stride_2d(options.stride, kernel_size),
+					   detail::resolve_padding_2d(
+						   kernel_size, options.padding_mode, options.padding));
 }
 
+/**
+ * Constructs a max pooling layer with explicit stride.
+ */
 inline MaxPool *maxpool2d(std::array<size_t, 2> kernel_size,
 						  std::array<unsigned int, 2> stride) {
 	Pool2DOptions options;
@@ -698,18 +799,25 @@ inline MaxPool *maxpool2d(std::array<size_t, 2> kernel_size,
 	return maxpool2d(kernel_size, options);
 }
 
-inline AvgPool *avgpool2d(
-	std::array<size_t, 2> kernel_size,
-	const Pool2DOptions &options = Pool2DOptions()) {
+/**
+ * Constructs an average pooling layer.
+ * - `kernel_size` pooling window size
+ * - `options` control stride and padding
+ */
+inline AvgPool *avgpool2d(std::array<size_t, 2> kernel_size,
+						  const Pool2DOptions &options = Pool2DOptions()) {
 	if (kernel_size[0] == 0 || kernel_size[1] == 0)
-		throw std::runtime_error("avgpool2d expects non-zero kernel dimensions");
-	return new AvgPool(
-		{kernel_size[0], kernel_size[1]},
-		detail::resolve_stride_2d(options.stride, kernel_size),
-		detail::resolve_padding_2d(kernel_size, options.padding_mode,
-								   options.padding));
+		throw std::runtime_error(
+			"avgpool2d expects non-zero kernel dimensions");
+	return new AvgPool({kernel_size[0], kernel_size[1]},
+					   detail::resolve_stride_2d(options.stride, kernel_size),
+					   detail::resolve_padding_2d(
+						   kernel_size, options.padding_mode, options.padding));
 }
 
+/**
+ * Constructs an average pooling layer with explicit stride.
+ */
 inline AvgPool *avgpool2d(std::array<size_t, 2> kernel_size,
 						  std::array<unsigned int, 2> stride) {
 	Pool2DOptions options;
@@ -717,9 +825,13 @@ inline AvgPool *avgpool2d(std::array<size_t, 2> kernel_size,
 	return avgpool2d(kernel_size, options);
 }
 
+/** Constructs a flatten layer. */
 inline Flatten *flatten() { return new Flatten(); }
+/** Constructs a ReLU activation layer. */
 inline Relu *relu() { return new Relu(); }
+/** Constructs a softmax activation layer. */
 inline Softmax *softmax(int axis = -1) { return new Softmax(axis); }
+/** Constructs a dropout layer with the given probability. */
 inline Dropout *dropout(float probability) {
 	if (probability < 0.0f || probability > 1.0f)
 		throw std::runtime_error("dropout probability must be in [0, 1]");

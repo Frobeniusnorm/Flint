@@ -2,9 +2,9 @@
 #define FLINT_DL_TRAINER
 
 #include "model.hpp"
-#include <flint/flint.h>
 #include <atomic>
 #include <condition_variable>
+#include <flint/flint.h>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -14,16 +14,33 @@
 #include <unordered_map>
 #include <vector>
 
+/**
+ * Information about the current training process, passed to MetricReporters.
+ */
 struct MetricInfo {
-		int batch = 0, epoch = 0;
-		size_t total_batches = 0, total_epochs = 0;
+		/** The current batch (1-based). */
+		int batch = 0;
+		/** The current epoch (1-based). */
+		int epoch = 0;
+		/** The number of batches in this epoch. */
+		size_t total_batches = 0;
+		/** The number of epochs requested for this training run. */
+		size_t total_epochs = 0;
+		/** The error of the last batch. */
 		double last_batch_error = 0.0;
+		/** The average error of the epoch. */
 		double last_epoch_error = 0.0;
+		/** The validation error after the epoch. */
 		double last_validation_error = 0.0;
+		/** Time for gradient calculation for this batch in nanoseconds. */
 		double gradient_time_ns = 0.0;
+		/** Time per layer for this batch in nanoseconds. */
 		std::vector<std::pair<std::string, double>> time_per_layer_ns;
 };
 
+/**
+ * Control interface for the training process that can be used by reporters.
+ */
 struct ControlInformation {
 		virtual ~ControlInformation() = default;
 		virtual bool stop_signal() const = 0;
@@ -32,6 +49,9 @@ struct ControlInformation {
 		virtual void set_profiling(bool profiling) = 0;
 };
 
+/**
+ * Thread-safe default implementation for ControlInformation.
+ */
 class ReporterControlInformation : public ControlInformation {
 		std::atomic<bool> stop_signal_state = false;
 		std::atomic<bool> profiling_state = false;
@@ -44,14 +64,23 @@ class ReporterControlInformation : public ControlInformation {
 		void set_profiling(bool profiling) override;
 };
 
+/**
+ * Receives metrics during training and exposes control information.
+ */
 struct MetricReporter {
 		MetricReporter();
-		explicit MetricReporter(std::shared_ptr<ControlInformation> control_info);
+		explicit MetricReporter(
+			std::shared_ptr<ControlInformation> control_info);
 		virtual ~MetricReporter() = default;
+		/** Access to the mutable control information. */
 		ControlInformation &control_information() const;
 		virtual void report_batch(const MetricInfo &info) = 0;
 		virtual void report_epoch(const MetricInfo &info) = 0;
 		virtual void report_finished() {}
+		/**
+		 * Receives a description of the model (layer overview, loss,
+		 * optimizer).
+		 */
 		virtual void
 		model_description(std::vector<std::string> layer_names,
 						  std::vector<std::string> layer_descriptions,
@@ -67,6 +96,9 @@ struct MetricReporter {
 		std::string loss_fct, optimizer_name, optimizer_desc;
 };
 
+/**
+ * Default reporter that prints to stdout.
+ */
 class CLIReporter : public MetricReporter {
 		bool first_print = true;
 
@@ -106,7 +138,8 @@ class NetworkMetricReporter : public MetricReporter {
 		NetworkMetricReporter(NetworkMetricReporter &&) = delete;
 		NetworkMetricReporter(const NetworkMetricReporter &) = delete;
 		NetworkMetricReporter &operator=(NetworkMetricReporter &&) = delete;
-		NetworkMetricReporter &operator=(const NetworkMetricReporter &) = delete;
+		NetworkMetricReporter &
+		operator=(const NetworkMetricReporter &) = delete;
 		void report_batch(const MetricInfo &info) override;
 		void report_epoch(const MetricInfo &info) override;
 		void report_finished() override;
@@ -171,8 +204,8 @@ class StaticLoader : public DataLoader {
 			  test_labels(test_labels) {}
 };
 /**
- * DataLoaderfor the MNIST dataset.
- * TODO dont prefetch data but load lazy when needed if > 6GB something
+ * DataLoader for the MNIST dataset.
+ * TODO don't prefetch data but load lazy when needed if > 6GB something
  *  -> maybe derive second class for something like that
  */
 struct IDXFormatLoader : public DataLoader {
@@ -239,7 +272,9 @@ struct Optimizer {
 		 */
 		virtual FGraphNode *optimize(FGraphNode *weight,
 									 FGraphNode *gradient) = 0;
+		/** Human readable optimizer name used in model reports. */
 		virtual std::string name() const { return "Optimizer"; }
+		/** Human readable optimizer description used in model reports. */
 		virtual std::string description() const {
 			return "No optimizer description available.";
 		}
@@ -281,7 +316,9 @@ struct LossFunction {
 		 */
 		virtual FGraphNode *calculate_loss(FGraphNode *actual,
 										   FGraphNode *expected) = 0;
+		/** Human readable loss name used in model reports. */
 		virtual std::string name() const { return "Loss"; }
+		/** Human readable loss description used in model reports. */
 		virtual std::string description() const {
 			return "No loss function description available.";
 		}
@@ -352,7 +389,9 @@ struct Trainer {
 		 * and it has to live at least as long as the `Trainer`. The
 		 * model `model` will be trained.
 		 */
-		Trainer(GraphModel *model) : model(model) { refresh_metric_reporters(); }
+		Trainer(GraphModel *model) : model(model) {
+			refresh_metric_reporters();
+		}
 		Trainer() { refresh_metric_reporters(); };
 
 		/**
@@ -395,7 +434,7 @@ struct Trainer {
 			refresh_metric_reporters();
 		}
 		/**
-		 * Sets the metric reporter (to print or display informations about the
+		 * Sets the metric reporter (to print or display information about the
 		 * training process)
 		 */
 		void set_metric_reporter(MetricReporter *reporter) {
@@ -408,7 +447,7 @@ struct Trainer {
 		 * batches and passing them through the model. The weights of
 		 * the model are optimized for each batch. If a validation
 		 * dataset is available in the dataloader it is evaluated. This
-		 * method returns informations (average loss, validation loss,
+		 * method returns information (average loss, validation loss,
 		 * total time, etc.) about the training.
 		 *
 		 * If a `TrainingReporter` is set, it reports the metrics per
