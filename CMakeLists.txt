@@ -7,19 +7,40 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}") # to include FindOp
 option(BUILD_TEST "Enable building unit tests" ON)
 option(BUILD_GRADIENT_TEST "Enable building gradient tests" ON)
 option(BUILD_BENCHMARK "Enable building benchmark program" ON)
+option(BUILD_EXAMPLES "Enable building example programs" OFF)
 option(C_COMPATIBLE "Enable C-compatibility (no exceptions but erno)" OFF)
-option(INSTALL_DEEP_LEARNING "Enable installing the header-only c++ deep learning library" ON)
+option(DEEP_LEARNING "Enable building and installing the header-only c++ deep learning library" ON)
 
 include(GNUInstallDirs)
 
-FILE(GLOB_RECURSE SRCFILES src/*.cpp)
 find_package(OpenCL REQUIRED)
-add_library(flint STATIC ${SRCFILES})
+
+FILE(GLOB SRCFILES src/*.cpp src/backend_cpu/*.cpp src/backend_ocl/*.cpp src/operations/*.cpp)
+SET(HEADERFILES "flint.h;flint.hpp;flint_helper.hpp;flint_1.hpp;flint_n.hpp")
+SET(INCLFILES)
+if(${DEEP_LEARNING})
+	find_package(Protobuf REQUIRED)
+	FILE(GLOB_RECURSE SRCFILESDL src/dl/*.cpp src/dl/layers/*.cpp src/dl/trainer/*.cpp)
+	list(APPEND SRCFILES ${SRCFILESDL})
+	protobuf_generate_cpp(PROTO_SRCFILES INCLFILES src/dl/onnx.proto3)
+	list(APPEND SRCFILES onnx.proto3.pb.cc)
+	set_source_files_properties(onnx.proto3.pb.cc PROPERTIES GENERATED TRUE)
+	list(APPEND HEADERFILES "src/dl/model.hpp;build/onnx.proto3.pb.h;src/dl/layers.hpp;src/dl/trainer.hpp;src/dl/flint_dl.hpp")
+	find_package(absl REQUIRED)
+endif()
+add_library(flint STATIC ${SRCFILES} ${INCLFILES})
 
 set_property(TARGET flint PROPERTY CXX_STANDARD 20)
 target_include_directories(flint PRIVATE .)
+target_include_directories(flint PRIVATE build)
 target_link_libraries(flint OpenCL::OpenCL)
-set_target_properties(flint PROPERTIES VERSION ${PROJECT_VERSION} PUBLIC_HEADER "flint.h;flint.hpp;flint_helper.hpp;flint_1.hpp;flint_n.hpp")
+if(${DEEP_LEARNING})
+	target_link_libraries(flint ${Protobuf_LIBRARIES})
+	target_link_libraries(flint absl::base)
+	target_link_libraries(flint absl::strings)
+	add_link_options("-Wl,--copy-dt-needed-entries")
+endif()
+set_target_properties(flint PROPERTIES VERSION ${PROJECT_VERSION} PUBLIC_HEADER "${HEADERFILES}")
 
 if(C_COMPATIBLE)
   add_compile_definitions("C_COMPATIBILITY")
@@ -29,9 +50,11 @@ install(TARGETS flint
     EXPORT flintTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/flint)
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/flint
+    )
 
-    include(CMakePackageConfigHelpers)
+
+include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
     flintConfigVersion.cmake
     VERSION ${PACKAGE_VERSION}
@@ -46,13 +69,6 @@ configure_file(flintConfig.cmake @ONLY)
 install(FILES "flintConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/flintConfigVersion.cmake"
         DESTINATION lib/cmake/flint)
-
-if(${INSTALL_DEEP_LEARNING})
-  install(DIRECTORY dl/
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/flint/dl
-      FILES_MATCHING PATTERN "*.hpp"
-  )
-endif()
 
 if(${BUILD_TEST})
   project(test)
@@ -73,4 +89,8 @@ if(${BUILD_BENCHMARK})
   add_executable(benchmark test/benchmark.cpp)
   target_link_libraries(benchmark OpenCL::OpenCL)
   target_link_libraries(benchmark flint)
+endif()
+
+if(${BUILD_EXAMPLES})
+  add_subdirectory(examples)
 endif()

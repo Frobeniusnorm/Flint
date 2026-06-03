@@ -6,8 +6,10 @@
 
 Flint (_Frobeniusnorm's Lightweight Implementation of Neural Tensors_) is a Tensor math framework based on OpenCL,
 allowing you to use Tensor operations, which are semi-lazily computed by the library. It supports gradient calculations
-for its operations including a gradient calculation algorithm. Once finished it will contain example implementations of
+for its operations including a gradient calculation algorithm. Once finished, it will contain example implementations of
 the most popular optimization algorithms, loss functions and Neural Layers for machine learning.
+* THE LIBRARY IS A WORK IN PROGRESS. WHILE YOU CAN LOAD ONNX MODELS AND EXECUTE MANY DEEP LEARNING TASKS, IT IS FAR FROM FINISHED. 
+THE PERFORMANCE ALSO STILL LACKS BEHIND LARGER DEEP LEARNING FRAMEWORKS *
 
 ## Motivation ##
 
@@ -50,6 +52,13 @@ cmake ..;
 make;
 ```
 
+To additionally build the examples from `examples/` against the in-tree Flint target (without requiring an installed `-lflint`), enable:
+
+```
+cmake .. -DBUILD_EXAMPLES=ON;
+make;
+```
+
 to install it run `make install`.
 Then just run the test programs (`test` and `test_gradients`, optionally `benchmark`)  to test if the implementation
 works on your machine.
@@ -86,6 +95,7 @@ All requests and tips for future developement are very welcome :)
 - OpenCL
 - C++ Compiler with C++20 feature implementations like e.g. semaphores
 - CMake and Make
+- Protobuf C++ dependencies (for the deep learning library)
 
 For Archlinux installing the dependencies for an AMD GPU would look like this:
 

@@ -21,319 +21,228 @@
   <div id="showcase_background" style="min-height: 18em; background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(61,215,193,1) 0%, rgba(33,100,228,1) 100%);">
     <center style="margin-top:2em">
       <h1>
-        Documentation <u>dl/layers.hpp</u> <u>dl/layers/*</u> <u>dl/activations.hpp</u>
+        Documentation <u>layers.hpp</u>
       </h1>
       <div style="display: block; height: 0.5em;"></div>
       <h2>
-        Flint's C++ Deep Learning Framework 
+        Flint's C++ Deep Learning Framework
       </h2>
     </center>
   </div>
   <center>
     <div class="content">
-      Jump to documentation:
-      <div class="standalone-button button1"><a href="#layers">Generic Layer</a></div>
-      <div class="standalone-button button2"><a href="#all_layers">All Layers</a></div>
-      <div class="standalone-button button3"><a href="#activations">Activations</a></div>
+      <div class="card" style="padding: 20px 15px;">
+        Layers in this architecture are graph nodes. Use the factory helpers in
+        <pre class="inline_code">FlintDL</pre> (e.g. <pre class="inline_code">conv2d</pre>,
+        <pre class="inline_code">dense</pre>, <pre class="inline_code">maxpool2d</pre>)
+        to build a model quickly, or derive from <pre class="inline_code">LayerGraph</pre>
+        to implement custom behavior.
+      </div>
       <div style="display: block; height: 2em;"></div>
-      <h1 id="layers"><u>dl/layers.hpp</u></h1>
-      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_index__int____w__class_WeightRef_">template &lt;typename T, unsigned int index, int... w&gt; class <b>WeightRef </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T_concept_GenericLayer_=	requires_T_a__Tensor_float__2__&t1__Tensor_int__2__&t2_			_Tensor_double__2__&t3__Tensor_long__2__&t4__AdamFactory_fac_			_std::vector_FGraphNode_*__grads__">template &lt;typename T&gt;
-concept GenericLayer <b>=
-	requires</b>(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
-			 Tensor<double, 2> &t3, Tensor<long, 2> &t4, AdamFactory fac,
-			 std::vector<FGraphNode *> grads) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-UntrainableLayer_">struct <b>UntrainableLayer </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_F__int____wn__class_Layer_">template &lt;typename F, int... wn&gt; class <b>Layer </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename____args__Layer_args____weights__">template &lt;typename... args&gt; <b>Layer</b>(args... weights) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_int_index__int_dim__void_set_weight_Tensor_F__dim__t__">template &lt;int index, int dim&gt; void <b>set_weight</b>(Tensor<F, dim> t) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-set_weights_const_std::vector_FGraphNode_*__weights__">void <b>set_weights</b>(const std::vector<FGraphNode *> weights) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_int_index_		Tensor_F__get_dim_index__wn________&get_weight___">template &lt;int index&gt;
-		Tensor&lt;F, get_dim&lt;index, wn...&gt;()&gt; <b>&get_weight</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_OptimizerFactory_Fac__void_generate_optimizer_Fac_factory__">template &lt;OptimizerFactory Fac&gt; void <b>generate_optimizer</b>(Fac factory) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T__unsigned_int_dim_		void_optimize_weights_const_Tensor_T__dim__&error__">template &lt;typename T, unsigned int dim&gt;
-		void <b>optimize_weights</b>(const Tensor<T, dim> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-__collect_weights___">std::vector&lt;FGraphNode *&gt; <b>collect_weights</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-optimize_weights_std::vector_FGraphNode_*__grads__">void <b>optimize_weights</b>(std::vector<FGraphNode *> grads) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::string_name___">virtual std::string <b>name</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::string_description___">virtual std::string <b>description</b>() </a><br/><br/></div>
+      <h1 id="layers"><u>src/dl/layers.hpp</u></h1>
+      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-LayerGraph_">struct <b>LayerGraph </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-void_forward___=_0">virtual void <b>forward</b>() = 0</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Variable_:_public_LayerGraph_">struct <b>Variable : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-ConstantNode_:_public_LayerGraph_">struct <b>ConstantNode : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-InputNode_:_public_LayerGraph_">struct <b>InputNode : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Relu_:_public_LayerGraph_">struct <b>Relu : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Dropout_:_public_LayerGraph_">struct <b>Dropout : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Softmax_:_public_LayerGraph_">struct <b>Softmax : public LayerGraph </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-axis_=_-1__:_LayerGraph_1___axis_axis__"><b>Softmax</b>(int axis = -1) : LayerGraph(1), axis(axis) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Flatten_:_public_LayerGraph_">struct <b>Flatten : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Add_:_public_LayerGraph_">struct <b>Add : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Convolve_:_public_LayerGraph_">struct <b>Convolve : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-MaxPool_:_public_LayerGraph_">struct <b>MaxPool : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-AvgPool_:_public_LayerGraph_">struct <b>AvgPool : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-GlobalAvgPool_:_public_LayerGraph_">struct <b>GlobalAvgPool : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-BatchNorm_:_public_LayerGraph_">struct <b>BatchNorm : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Connected_:_public_LayerGraph_">struct <b>Connected : public LayerGraph </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FlintDL_">namespace FlintDL </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-class_PaddingMode_">enum <b>class PaddingMode </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-class_InitializerKind_">enum <b>class InitializerKind </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-class_ActivationKind_">enum <b>class ActivationKind </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Conv2DOptions_">struct <b>Conv2DOptions </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-DenseOptions_">struct <b>DenseOptions </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Pool2DOptions_">struct <b>Pool2DOptions </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-LayerGraph_*activation_layer_ActivationKind_activation__">inline LayerGraph <b>*activation_layer</b>(ActivationKind activation) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-LayerGraph_*apply_activation_LayerGraph_*in__ActivationKind_activation__">inline LayerGraph <b>*apply_activation</b>(LayerGraph *in, ActivationKind activation) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Convolve_*conv2d_size_t_filters__std::array_size_t__2__kernel_size_						size_t_in_channels_						const_Conv2DOptions_&options_=_Conv2DOptions____">inline Convolve <b>*conv2d</b>(size_t filters, std::array&lt;size_t, 2&gt; kernel_size,
+						size_t in_channels,
+						const Conv2DOptions &options = Conv2DOptions()) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Connected_*dense_size_t_in_units__size_t_out_units_						const_DenseOptions_&options_=_DenseOptions____">inline Connected <b>*dense</b>(size_t in_units, size_t out_units,
+						const DenseOptions &options = DenseOptions()) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-MaxPool_*maxpool2d_std::array_size_t__2__kernel_size_						__const_Pool2DOptions_&options_=_Pool2DOptions____">inline MaxPool <b>*maxpool2d</b>(std::array&lt;size_t, 2&gt; kernel_size,
+						  const Pool2DOptions &options = Pool2DOptions()) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-MaxPool_*maxpool2d_std::array_size_t__2__kernel_size_						__std::array_unsigned_int__2__stride__">inline MaxPool <b>*maxpool2d</b>(std::array&lt;size_t, 2&gt; kernel_size,
+						  std::array&lt;unsigned int, 2&gt; stride) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-AvgPool_*avgpool2d_std::array_size_t__2__kernel_size_						__const_Pool2DOptions_&options_=_Pool2DOptions____">inline AvgPool <b>*avgpool2d</b>(std::array&lt;size_t, 2&gt; kernel_size,
+						  const Pool2DOptions &options = Pool2DOptions()) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-AvgPool_*avgpool2d_std::array_size_t__2__kernel_size_						__std::array_unsigned_int__2__stride__">inline AvgPool <b>*avgpool2d</b>(std::array&lt;size_t, 2&gt; kernel_size,
+						  std::array&lt;unsigned int, 2&gt; stride) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Flatten_*flatten___">inline Flatten <b>*flatten</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Relu_*relu___">inline Relu <b>*relu</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Softmax_*softmax_int_axis_=_-1__">inline Softmax <b>*softmax</b>(int axis = -1) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-Dropout_*dropout_float_probability__">inline Dropout <b>*dropout</b>(float probability) </a><br/><br/></div>
       <div style="display: block; height: 2em;"></div>
-      <div id="s-_typename_T__unsigned_int_index__int____w__class_WeightRef_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T, unsigned int index, int... w&gt; class <b>WeightRef </b></pre></div>
+      <div id="s-LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>LayerGraph </b></pre></div>
 <br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- FOR INTERNAL USE ONLY
- builds an compile-time linked list of Tensor pointer
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_T_concept_GenericLayer_=	requires_T_a__Tensor_float__2__&t1__Tensor_int__2__&t2_			_Tensor_double__2__&t3__Tensor_long__2__&t4__AdamFactory_fac_			_std::vector_FGraphNode_*__grads__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename T&gt;
-concept GenericLayer <b>=
-	requires</b>(T a, Tensor<float, 2> &t1, Tensor<int, 2> &t2,
-			 Tensor<double, 2> &t3, Tensor<long, 2> &t4, AdamFactory fac,
-			 std::vector<FGraphNode *> grads) </pre></div>
-<br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Concept of methods a Layer for neural networks has to implement.
- Mind the static constexpr methods that determine the modifications of
- dimensionality and types of the input tensors <pre class="inline_code">int
- transform_dimensionality(int)</pre> and <pre class="inline_code">FType transform_type(FType)</pre>, they
- describe the type of your forward (i.e. if a tensor of dimensionality <pre class="inline_code">n</pre> and
- type <pre class="inline_code">T</pre> is inserted into your forward, a tensor of dimensionality
- <pre class="inline_code">transform_dimensionality(n)</pre> and type <pre class="inline_code">transform_type(T)</pre> should be
- returned). It is highly recommended to derive your Layer from
-  <a href="#s-UntrainableLayer_"><pre class="inline_code">UntrainableLayer</pre></a> or <pre class="inline_code">Layer</pre>, since they provide already implementations for
- some methods. <pre class="inline_code">forward</pre> may consume its input tensor since it isn't needed
- afterwards.
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-UntrainableLayer_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>UntrainableLayer </b></pre></div>
-<br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Implements blank methods for every method of GenericLayer that is not needed
- for a Layer that is not trainable.
- If you derive from this class you have to implement the <pre class="inline_code">forward</pre> method from
- the <pre class="inline_code">GenericLayer</pre> concept and - if the forward outputs another type or
- dimensionality then its parameter has - overload <pre class="inline_code">transform_type</pre> and
- <pre class="inline_code">transform_dimensionality</pre>.
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_F__int____wn__class_Layer_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename F, int... wn&gt; class <b>Layer </b></pre></div>
-<br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Virtual super class of all Layer implementations with type safe weight
- management capabilities. The variadic template describes the dimensionality
- of the individual weights i.e. a <pre class="inline_code">Layer&lt;double, 3,4,5&gt;</pre> has three weights:
- <pre class="inline_code">Tensor&lt;double, 3&gt;</pre>, <pre class="inline_code">Tensor&lt;double, 4&gt;</pre>, <pre class="inline_code">Tensor&lt;double, 5&gt;</pre>.
- You have to initialize them by providing their initial state in the
- constructor, after that you may access references to them with the function
- <pre class="inline_code">get_weight&lt;int index&gt;()</pre>.<div style="display:block; height: 0.5em"></div>
- If you derive from this class you have to implement the <pre class="inline_code">forward</pre> method from
- the <pre class="inline_code">GenericLayer</pre> concept and - if the <pre class="inline_code">forward</pre> outputs another type or
- dimensionality then its parameter has - overload <pre class="inline_code">transform_type</pre> and
- <pre class="inline_code">transform_dimensionality</pre>.
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename____args__Layer_args____weights__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename... args&gt; <b>Layer</b>(args... weights) </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Initializes the weights by copying the provided ones.
- After that you may access them with <pre class="inline_code">get_weight&lt;int index&gt;()</pre>. </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_int_index__int_dim__void_set_weight_Tensor_F__dim__t__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;int index, int dim&gt; void <b>set_weight</b>(Tensor<F, dim> t) </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Sets a specific weight described by its index </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-set_weights_const_std::vector_FGraphNode_*__weights__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>set_weights</b>(const std::vector<FGraphNode *> weights) </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Sets all weights from an array </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_int_index_		Tensor_F__get_dim_index__wn________&get_weight___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;int index&gt;
-		Tensor&lt;F, get_dim&lt;index, wn...&gt;()&gt; <b>&get_weight</b>() </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Returns a reference to a specific weight described by its index </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_OptimizerFactory_Fac__void_generate_optimizer_Fac_factory__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;OptimizerFactory Fac&gt; void <b>generate_optimizer</b>(Fac factory) </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Creates an optimizer for each weight with the methods of the
- provided <pre class="inline_code">OptimizerFactory</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_T__unsigned_int_dim_		void_optimize_weights_const_Tensor_T__dim__&error__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename T, unsigned int dim&gt;
-		void <b>optimize_weights</b>(const Tensor<T, dim> &error) </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Calculates the gradients of each weight to the <pre class="inline_code">error</pre> tensor and
- optimizes them by their gradient with their optimizer (if one has
- been generated, see <pre class="inline_code">generate_optimizer()</pre>) </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-__collect_weights___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::vector&lt;FGraphNode *&gt; <b>collect_weights</b>() </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Collects pointer to the underlying <pre class="inline_code">FGraphNode</pre> references of the
- weights. Usefull for gradient calculation. </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-optimize_weights_std::vector_FGraphNode_*__grads__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>optimize_weights</b>(std::vector<FGraphNode *> grads) </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Takes already calculated Gradients of the weights (<pre class="inline_code">ǹ</pre>th entry in
- <pre class="inline_code">grads</pre> correspons to the <pre class="inline_code">n</pre>th weight) and optimizes them by their
- gradient with their optimizer (if one has been generated, see
- <pre class="inline_code">generate_optimizer()</pre>) </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-std::string_name___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual std::string <b>name</b>() </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Returns the name of this Layer for overviews and debugging. </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-std::string_description___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual std::string <b>description</b>() </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Returns a summary of this Layer for overviews and debugging. </div></div><div style="display: block; height: 2em;"></div>
-
-
-      <h1 id="all_layers"><u>dl/layers/*</u></h1>
-      <ul>
-        <li><a href="#connected">Fully Connected</a></li>
-        <li><a href="#convolution">Convolution and Pooling</a></li>
-        <li><a href="#normalization">Normalization</a></li>
-      </ul>
-      <h2 id="connected">dl/layers/connected.hpp</h2>
-      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-_typename_F_=_float__struct_Connected_:_public_Layer_F__2__">template &lt;typename F = float&gt; struct <b>Connected : public Layer</b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_Initializer_InitWeights__Initializer_InitBias_		Connected_size_t_units_in__size_t_units_out__InitWeights_init_weights_				__InitBias_init_bias_			:_Layer_F__2__				__Flint::concat_init_weights_template_initialize_F__									std::array_size_t__2_">template &lt;Initializer InitWeights, Initializer <b>InitBias&gt;
-		Connected</b>(size_t units_in, size_t units_out, InitWeights init_weights,
-				  InitBias init_bias)
-			: Layer<F, 2>(
-				  Flint::concat(init_weights.template initialize<F>(
-									std::array<size_t, 2></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-units_in__size_t_units_out_			:_Layer_F__2__Flint::concat_				__GlorotUniform___template_initialize_F__					__std::array_size_t__2_"><b>Connected</b>(size_t units_in, size_t units_out)
-			: Layer<F, 2>(Flint::concat(
-				  GlorotUniform().template initialize<F>(
-					  std::array<size_t, 2></a><br/><br/></div>
-      <div style="display: block; height: 2em;"></div>
-      <div id="s-_typename_F_=_float__struct_Connected_:_public_Layer_F__2__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;typename F = float&gt; struct <b>Connected : public Layer</b></pre></div>
-<br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Layer for fully connected neuronal network layer.
- A connected layer has a 2 dimensional matrix and a bias as parameters.
- The matrix is multiplied (with matrix multiplication) with the last two
- dimensions of the input tensor. The bias is added on the result (in practice
- this happens in one matrix multiplication, the input tensor is padded with a
- 1 in its last dimension and the bias is the last row of the matrix).
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_Initializer_InitWeights__Initializer_InitBias_		Connected_size_t_units_in__size_t_units_out__InitWeights_init_weights_				__InitBias_init_bias_			:_Layer_F__2__				__Flint::concat_init_weights_template_initialize_F__									std::array_size_t__2_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;Initializer InitWeights, Initializer <b>InitBias&gt;
-		Connected</b>(size_t units_in, size_t units_out, InitWeights init_weights,
-				  InitBias init_bias)
-			: Layer<F, 2>(
-				  Flint::concat(init_weights.template initialize<F>(
-									std::array<size_t, 2></pre></div>
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Base class for all layer graph nodes. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-void_forward___=_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual void <b>forward</b>() = 0</pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Creates the layer and initializes the weights.<ul><li><pre class="inline_code">units_in</pre> size of the last dimension of the input tensors (will be
-</li></ul> the size of the dimension before the last dimension of the weights).<ul><li><pre class="inline_code">units_out</pre> size of the last dimension the result tensor is
-</li></ul> supposed to have (will be the size of the last dimension of the
- weights).<ul><li><pre class="inline_code">init_weights</pre> a weight initializer (has to fulfill the
-</li></ul> <pre class="inline_code">Initializer</pre> concept, close to Gauss-distributed random values yield
- good results).<ul><li><pre class="inline_code">init_bias</pre> a bias initializer (has to fulfill the <pre class="inline_code">Initializer</pre>
-</li></ul> concept, small values yield good results, can be constant for bias).
+ Computes the layer output in <pre class="inline_code">output</pre> by the output of the
+ previous layers. The framework makes sure that the output of
+ the incoming layers exists.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-units_in__size_t_units_out_			:_Layer_F__2__Flint::concat_				__GlorotUniform___template_initialize_F__					__std::array_size_t__2_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>Connected</b>(size_t units_in, size_t units_out)
-			: Layer<F, 2>(Flint::concat(
-				  GlorotUniform().template initialize<F>(
-					  std::array<size_t, 2></pre></div>
+<div id="s-Variable_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>Variable : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Represents a learnable tensor </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-ConstantNode_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>ConstantNode : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Represents a constant tensor </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-InputNode_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>InputNode : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Input Layers </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Relu_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>Relu : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Relu activation layer </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Dropout_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>Dropout : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Dropout layer (randomly sets entries of its input to 0 to avoid
+ overfitting). The dropout probability is given by a second input (expects a
+ 1D constant float). </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Softmax_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>Softmax : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Softmax classification layer </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-axis_=_-1__:_LayerGraph_1___axis_axis__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>Softmax</b>(int axis = -1) : LayerGraph(1), axis(axis) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Initializes the SoftMax function with an optional
+ axis parameter that describes the dimension of which
+ the sum will be taken (may be negative in which case
+ it will index from back, i.e. -1 means the last axis,<ul><li> the one before the last etc.). Calculates <pre class="inline_code">exp(in)
+</li></ul> / sum(in, ax)</pre> </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Flatten_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>Flatten : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Flattens a dimension of its input </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Add_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>Add : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Sums to inputs </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Convolve_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>Convolve : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Convolution layer.
+ Slides a set of filter kernels along the input and optionally adds a bias.
+ The input has <pre class="inline_code">[batch, channels, h, w, ...]</pre>, the kernel weights have
+ <pre class="inline_code">[filters, channels, p, q, ...]</pre>, the bias <pre class="inline_code">[filters]</pre> and the output has
+ <pre class="inline_code">[batch, filters, y, x, ...]</pre> where <pre class="inline_code">y</pre> and <pre class="inline_code">x</pre> depend on <pre class="inline_code">stride</pre> and
+ <pre class="inline_code">padding</pre>. <pre class="inline_code">stride</pre> defines the step size of the kernel window and <pre class="inline_code">padding</pre>
+ adds a zero border around the spatial dimensions to control the output size
+ and include the border elements.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-MaxPool_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>MaxPool : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Max pooling layer.
+ Reduces each spatial window to its maximum value. The window size is given by
+ <pre class="inline_code">kernel_shape</pre>, the step size by <pre class="inline_code">stride</pre>. Padding works like for
+ convolution: it adds a zero border around the spatial dimensions before
+ pooling. Batch and channel dimensions are preserved.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-AvgPool_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>AvgPool : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Average pooling layer.
+ Reduces each spatial window to its average value. The window size is given by
+ <pre class="inline_code">kernel_shape</pre>, the step size by <pre class="inline_code">stride</pre>, and padding behaves like in
+ convolution. Batch and channel dimensions are preserved.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-GlobalAvgPool_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>GlobalAvgPool : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Global average pooling layer.
+ Averages over all spatial dimensions so each channel is reduced to a single
+ value per batch. The output keeps the batch and channel dimensions and sets
+ all spatial dimensions to 1.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-BatchNorm_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>BatchNorm : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Batch normalization layer.
+ Normalizes the input per channel and applies a learnable scale (gamma) and
+ bias (beta). If running mean and variance are provided they are updated with
+ momentum <pre class="inline_code">alpha</pre> when training, otherwise they are computed on the fly.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Connected_:_public_LayerGraph_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>Connected : public LayerGraph </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Fully connected (dense) layer. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-FlintDL_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">namespace FlintDL </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> High level layer factories and configuration helpers. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-class_PaddingMode_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">enum <b>class PaddingMode </b></pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Padding for convolution and pooling.<ul><li><pre class="inline_code">Valid</pre> uses no padding (only fully covered windows are used)
+</li><li><pre class="inline_code">Same</pre> adds padding so the output keeps its spatial size (for odd kernels)
+</li><li><pre class="inline_code">Explicit</pre> uses the <pre class="inline_code">padding</pre> values from the options</li></ul>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-class_InitializerKind_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">enum <b>class InitializerKind </b></pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Weight initializer kind for trainable weights. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-class_ActivationKind_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">enum <b>class ActivationKind </b></pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Activation layer kind for builder helpers. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Conv2DOptions_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">struct <b>Conv2DOptions </b></pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Options for a 2D convolution layer.<ul><li><pre class="inline_code">stride</pre> step size of the kernel window
+</li><li><pre class="inline_code">padding_mode</pre> controls how padding is generated
+</li><li><pre class="inline_code">padding</pre> is used only if <pre class="inline_code">padding_mode</pre> is <pre class="inline_code">Explicit</pre>
+</li><li><pre class="inline_code">use_bias</pre> adds a trainable bias per filter
+</li><li><pre class="inline_code">bias_init</pre> initializes the bias if enabled
+</li><li><pre class="inline_code">kernel_initializer</pre> selects the weight initializer
+</li><li><pre class="inline_code">uniform_min</pre>/<pre class="inline_code">uniform_max</pre> are used for the uniform initializer
+</li><li><pre class="inline_code">kernel_constant</pre> is used for constant initialization</li></ul>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-DenseOptions_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">struct <b>DenseOptions </b></pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Options for a dense layer.<ul><li><pre class="inline_code">use_bias</pre> adds a trainable bias
+</li><li><pre class="inline_code">bias_init</pre> initializes the bias if enabled
+</li><li><pre class="inline_code">transpose_input</pre> transposes the input before multiplication
+</li><li><pre class="inline_code">transpose_kernel</pre> transposes the kernel weights before multiplication
+</li><li><pre class="inline_code">kernel_initializer</pre> selects the weight initializer</li></ul>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Pool2DOptions_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">struct <b>Pool2DOptions </b></pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Options for pooling layers.<ul><li><pre class="inline_code">stride</pre> step size of the pooling window (0 means kernel size)
+</li><li><pre class="inline_code">padding_mode</pre> controls how padding is generated
+</li><li><pre class="inline_code">padding</pre> is used only if <pre class="inline_code">padding_mode</pre> is <pre class="inline_code">Explicit</pre></li></ul>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-LayerGraph_*activation_layer_ActivationKind_activation__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">inline LayerGraph <b>*activation_layer</b>(ActivationKind activation) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Creates the layer and initializes the weights.<ul><li><pre class="inline_code">units_in</pre> size of the last dimension of the input tensors (will be
-</li></ul> the size of the dimension before the last dimension of the weights).<ul><li><pre class="inline_code">units_out</pre> size of the last dimension the result tensor is
-</li></ul> supposed to have (will be the size of the last dimension of the
- weights).<div style="display:block; height: 0.5em"></div>
- The weights are initialized with glorot uniform random values and
- the bias with 0s.
+ Constructs an Activation Layer from an  <a href="#s-class_ActivationKind_"><pre class="inline_code">ActivationKind</pre></a>
+ (None, Relu, or Softmax).
 </div></div><div style="display: block; height: 2em;"></div>
-
-      <h2 id="convolution">dl/layers/convolution.hpp</h2>
-      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-PaddingMode_">enum <b>PaddingMode </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_int_n__typename_F_=_float__class_Convolution_:_public_Layer_F__n__1__">template &lt;int n, typename F = float&gt; class <b>Convolution : public Layer</b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_Initializer_InitWeights__Initializer_InitBias_		Convolution_size_t_units_in__unsigned_int_filters_					unsigned_int_kernel_size__InitWeights_weight_init_					InitBias_bias_init__std::array_unsigned_int__n_-_2__stride_					PaddingMode_padding_mode_=_NO_PADDING_			:_Layer_F__n__1__weight_init_template_initialize_F__								_weight_shape_filters__kernel_size__units_in___							_bias_init_template_initialize_F__								_std::array_size_t__1_">template &lt;Initializer InitWeights, Initializer <b>InitBias&gt;
-		Convolution</b>(size_t units_in, unsigned int filters,
-					unsigned int kernel_size, InitWeights weight_init,
-					InitBias bias_init, std::array<unsigned int, n - 2> stride,
-					PaddingMode padding_mode = NO_PADDING)
-			: Layer<F, n, 1>(weight_init.template initialize<F>(
-								 weight_shape(filters, kernel_size, units_in)),
-							 bias_init.template initialize<F>(
-								 std::array<size_t, 1></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-units_in__unsigned_int_filters_					unsigned_int_kernel_size_					std::array_unsigned_int__n_-_2__stride_					PaddingMode_padding_mode_=_NO_PADDING_			:_Layer_F__n__1__GlorotUniform___template_initialize_F__								_weight_shape_filters__kernel_size__units_in___							_ConstantInitializer___template_initialize_F__								_std::array_size_t__1_"><b>Convolution</b>(size_t units_in, unsigned int filters,
-					unsigned int kernel_size,
-					std::array<unsigned int, n - 2> stride,
-					PaddingMode padding_mode = NO_PADDING)
-			: Layer<F, n, 1>(GlorotUniform().template initialize<F>(
-								 weight_shape(filters, kernel_size, units_in)),
-							 ConstantInitializer().template initialize<F>(
-								 std::array<size_t, 1></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Convolution_4__Conv2D">typedef Convolution&lt;4&gt; Conv2D</a><br/><br/></div>
-      <div style="display: block; height: 2em;"></div>
-      <div id="s-PaddingMode_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">enum <b>PaddingMode </b></pre></div>
+<div id="s-LayerGraph_*apply_activation_LayerGraph_*in__ActivationKind_activation__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">inline LayerGraph <b>*apply_activation</b>(LayerGraph *in, ActivationKind activation) </pre></div>
 <br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Padding of convolution operations<ul><li><pre class="inline_code">NO_PADDING</pre>: a normal convolution operation. Each filter is slid over the
-   input tensor with its step size as many times as it completly fits into the
-   input tensor. The output may have a smaller size then the input.
-</li><li><pre class="inline_code">SAME_PADDING</pre>: the image tensor is padded on each side as equally as
-   possible so that the output has the same size as the input if steps = 1 in
-   all dimensions (i.e. the image is padded so that the kernels fit fully into
-   the image)
-</li><li><pre class="inline_code">FULL_PADDING</pre>: the image tensor is padded on each side by the size of the
-   kernel - 1 in that dimension. This yields as many kernel multiplications as
-   possible with the given step size</li></ul>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Chains a newly constructed activation layer (from a  <a href="#s-class_ActivationKind_"><pre class="inline_code">ActivationKind</pre></a>) to its
+ input node (i.e. input -&gt; activation) and returns the activation layer.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_int_n__typename_F_=_float__class_Convolution_:_public_Layer_F__n__1__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;int n, typename F = float&gt; class <b>Convolution : public Layer</b></pre></div>
+<div id="s-Convolve_*conv2d_size_t_filters__std::array_size_t__2__kernel_size_						size_t_in_channels_						const_Conv2DOptions_&options_=_Conv2DOptions____"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">inline Convolve <b>*conv2d</b>(size_t filters, std::array&lt;size_t, 2&gt; kernel_size,
+						size_t in_channels,
+						const Conv2DOptions &options = Conv2DOptions()) </pre></div>
 <br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- A generic Convolution layer. It creates multiple filters that are slid along
- the input in each dimension by a step size. Each time the filter values are
- multiplied with the elements of the input tensor with which it is currently
- aligned and the result (with shape of the filter) is summed up to a single
- value in the resulting tensor. After that the filter is moved by its step
- size in each dimension and the process repeats. After the convolution is
- calculated a learnable bias is added to the result per filter.<div style="display:block; height: 0.5em"></div>
- TLDR; Each element in the result of this layer is a full multiplication of a
- filter with a corresponding window in the input array. This is especially
- helpful for image processing tasks, since the parameters (filters) allow the
- recognize location independent features in the input.<div style="display:block; height: 0.5em"></div>
- You are supposed to configure this layer by providing a number of <pre class="inline_code">filters</pre>,
- a <pre class="inline_code">kernel_size</pre> and the size of the last dimension of the input tensor, i.e.
- the channels of the input tensor called <pre class="inline_code">units_in</pre>. The template expects you
- to provide the dimensionality of the input tensor (including batch size and
- channels). The output size is the same as of the input tensor for the first
- dimension (usually the <pre class="inline_code">batch_size</pre>), in the last dimension it is the number
- of <pre class="inline_code">filters</pre> and in every other the number of times each filter can be slid
- against the input tensor (depending on the size of the input tensor, the
- <pre class="inline_code">kernel_size</pre>, the step size and padding see  <a href="#s-PaddingMode_"><pre class="inline_code">PaddingMode</pre></a>).<div style="display:block; height: 0.5em"></div>
- E.g. if you have a batch of two dimensional rgb (3 channels) images, it
- would have a shape of <pre class="inline_code">(batch_size, height, width, 3)</pre>. Then you would
- create a <pre class="inline_code">Convolution&lt;4&gt;</pre> layer (also called  <a href="#s-Convolution_4__Conv2D"><pre class="inline_code">Conv2D</pre></a>) with <pre class="inline_code">units_in = 3</pre>.
- The output tensor would also be a 4 dimensional tensor.
- Lets say you dont use padding (<pre class="inline_code">NO_PADDING</pre>), 10 filters, a step size of 2 in
- each dimension, 32 as <pre class="inline_code">kernel_size</pre> and your 100 images have widths and
- heights of <pre class="inline_code">128</pre> (<pre class="inline_code">input_shape = (100, 128, 128, 3)</pre>).
- The output size would be
- <pre class="inline_code">(batch_size, ceil((input_shape - kernel_size + 1) / steps),
-   ceil((input_shape - kernel_size + 1) / steps), filters) =
-   (100, 49, 49, 10)</pre>.
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Constructs a 2D convolution layer and initializes its weights.<ul><li><pre class="inline_code">filters</pre> number of filter kernels
+</li><li><pre class="inline_code">kernel_size</pre> shape of filter kernels
+</li><li><pre class="inline_code">in_channels</pre> number of channels of the input image (e.g., 3 for RGB)
+</li><li><pre class="inline_code">options</pre> control stride, padding, bias and initialization</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_Initializer_InitWeights__Initializer_InitBias_		Convolution_size_t_units_in__unsigned_int_filters_					unsigned_int_kernel_size__InitWeights_weight_init_					InitBias_bias_init__std::array_unsigned_int__n_-_2__stride_					PaddingMode_padding_mode_=_NO_PADDING_			:_Layer_F__n__1__weight_init_template_initialize_F__								_weight_shape_filters__kernel_size__units_in___							_bias_init_template_initialize_F__								_std::array_size_t__1_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;Initializer InitWeights, Initializer <b>InitBias&gt;
-		Convolution</b>(size_t units_in, unsigned int filters,
-					unsigned int kernel_size, InitWeights weight_init,
-					InitBias bias_init, std::array<unsigned int, n - 2> stride,
-					PaddingMode padding_mode = NO_PADDING)
-			: Layer<F, n, 1>(weight_init.template initialize<F>(
-								 weight_shape(filters, kernel_size, units_in)),
-							 bias_init.template initialize<F>(
-								 std::array<size_t, 1></pre></div>
+<div id="s-Connected_*dense_size_t_in_units__size_t_out_units_						const_DenseOptions_&options_=_DenseOptions____"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">inline Connected <b>*dense</b>(size_t in_units, size_t out_units,
+						const DenseOptions &options = DenseOptions()) </pre></div>
 <br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Initializes the Convolution Layer.<ul><li><pre class="inline_code">units_in</pre> number of channels (size of last dimension) of input
-</li></ul> tensor<ul><li><pre class="inline_code">filters</pre> number of used filters (size of last dimension of the
-</li></ul> result tensor)<ul><li><pre class="inline_code">kernel_size</pre> size of filters
-</li><li><pre class="inline_code">weight_init</pre> Initializer for filters, has to implement the
-</li></ul> <pre class="inline_code">Initializer</pre> concept, should generate random values close to a
- normal distribution<ul><li><pre class="inline_code">bias_init</pre> Initializer for the bias, has to implement the
-</li></ul> <pre class="inline_code">Initializer</pre> concept, should generate small values, constant values
- like <pre class="inline_code">0</pre> are fine<ul><li><pre class="inline_code">stride</pre> step size per dimension (2 dimensions less then the input
-    tensor, since the convolution is broadcasted along the
-</li></ul> <pre class="inline_code">batch_size</pre> and the channels in the last dimension are fully
- reduced)<ul><li><pre class="inline_code">padding_mode</pre> which type of padding to use (see  <a href="#s-PaddingMode_"><pre class="inline_code">PaddingMode</pre></a> for
-</li></ul> more information)
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Constructs a fully connected layer and initializes its weights.<ul><li><pre class="inline_code">in_units</pre> number of input units
+</li><li><pre class="inline_code">out_units</pre> number of output units
+</li><li><pre class="inline_code">options</pre> control bias, transpositions and initialization</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-units_in__unsigned_int_filters_					unsigned_int_kernel_size_					std::array_unsigned_int__n_-_2__stride_					PaddingMode_padding_mode_=_NO_PADDING_			:_Layer_F__n__1__GlorotUniform___template_initialize_F__								_weight_shape_filters__kernel_size__units_in___							_ConstantInitializer___template_initialize_F__								_std::array_size_t__1_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>Convolution</b>(size_t units_in, unsigned int filters,
-					unsigned int kernel_size,
-					std::array<unsigned int, n - 2> stride,
-					PaddingMode padding_mode = NO_PADDING)
-			: Layer<F, n, 1>(GlorotUniform().template initialize<F>(
-								 weight_shape(filters, kernel_size, units_in)),
-							 ConstantInitializer().template initialize<F>(
-								 std::array<size_t, 1></pre></div>
+<div id="s-MaxPool_*maxpool2d_std::array_size_t__2__kernel_size_						__const_Pool2DOptions_&options_=_Pool2DOptions____"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">inline MaxPool <b>*maxpool2d</b>(std::array&lt;size_t, 2&gt; kernel_size,
+						  const Pool2DOptions &options = Pool2DOptions()) </pre></div>
 <br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Initializes the Convolution Layer.<ul><li><pre class="inline_code">units_in</pre> number of channels (size of last dimension) of input
-</li></ul> tensor<ul><li><pre class="inline_code">filters</pre> number of used filters (size of last dimension of the
-</li></ul> result tensor)<ul><li><pre class="inline_code">kernel_size</pre> size of filters
-</li><li><pre class="inline_code">stride</pre> step size per dimension (2 dimensions less then the input
-    tensor, since the convolution is broadcasted along the
-</li></ul> <pre class="inline_code">batch_size</pre> and the channels in the last dimension are fully
- reduced)<ul><li><pre class="inline_code">padding_mode</pre> which type of padding to use (see  <a href="#s-PaddingMode_"><pre class="inline_code">PaddingMode</pre></a> for
-</li></ul> more information)<div style="display:block; height: 0.5em"></div>
- The filters are initialized with a glorot uniform distribution.
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Constructs a max pooling layer.<ul><li><pre class="inline_code">kernel_size</pre> pooling window size
+</li><li><pre class="inline_code">options</pre> control stride and padding</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-Convolution_4__Conv2D"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">typedef Convolution&lt;4&gt; Conv2D</pre></div>
+<div id="s-MaxPool_*maxpool2d_std::array_size_t__2__kernel_size_						__std::array_unsigned_int__2__stride__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">inline MaxPool <b>*maxpool2d</b>(std::array&lt;size_t, 2&gt; kernel_size,
+						  std::array&lt;unsigned int, 2&gt; stride) </pre></div>
 <br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> For inputs of images with shape <pre class="inline_code">(batch_size, width, height, channels)</pre> </div></div><div style="display: block; height: 2em;"></div>
-
-      <h2 id="normalization">dl/layers/normalization.hpp</h2>
-      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-Dropout_:_public_UntrainableLayer_">class <b>Dropout : public UntrainableLayer </b></a><br/><br/></div>
-      <div style="display: block; height: 2em;"></div>
-      <div id="s-Dropout_:_public_UntrainableLayer_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">class <b>Dropout : public UntrainableLayer </b></pre></div>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Constructs a max pooling layer with explicit stride.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-AvgPool_*avgpool2d_std::array_size_t__2__kernel_size_						__const_Pool2DOptions_&options_=_Pool2DOptions____"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">inline AvgPool <b>*avgpool2d</b>(std::array&lt;size_t, 2&gt; kernel_size,
+						  const Pool2DOptions &options = Pool2DOptions()) </pre></div>
 <br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Randomly sets some values in the input to 0 with a probability of <pre class="inline_code">p</pre>.
- Reduces over fitting. Degenerates to an identity function when <pre class="inline_code">training</pre> is
- false. </div></div><div style="display: block; height: 2em;"></div>
-
-
-      <div style="display: block; height: 2em;"></div>
-      <h1 id="activations"><u>dl/activations.hpp</u></h1>
-      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-SoftMax_:_public_UntrainableLayer_">class <b>SoftMax : public UntrainableLayer </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-ax_=_-1__:_ax_ax__"><b>SoftMax</b>(int ax = -1) : ax(ax) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Relu_:_public_UntrainableLayer_">struct <b>Relu : public UntrainableLayer </b></a><br/><br/></div>
-      <div style="display: block; height: 2em;"></div>
-      <div id="s-SoftMax_:_public_UntrainableLayer_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">class <b>SoftMax : public UntrainableLayer </b></pre></div>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Constructs an average pooling layer.<ul><li><pre class="inline_code">kernel_size</pre> pooling window size
+</li><li><pre class="inline_code">options</pre> control stride and padding</li></ul>
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-AvgPool_*avgpool2d_std::array_size_t__2__kernel_size_						__std::array_unsigned_int__2__stride__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">inline AvgPool <b>*avgpool2d</b>(std::array&lt;size_t, 2&gt; kernel_size,
+						  std::array&lt;unsigned int, 2&gt; stride) </pre></div>
 <br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> SoftMax activation Layer. For multiclass classification. </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-ax_=_-1__:_ax_ax__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>SoftMax</b>(int ax = -1) : ax(ax) </pre></div>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Constructs an average pooling layer with explicit stride.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Flatten_*flatten___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">inline Flatten <b>*flatten</b>() </pre></div>
 <br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Initializes the SoftMax function with an optional axis parameter
- that describes the dimension of which the sum will be taken (may be
- negative in which case it will index from back, i.e. -1 means the
- last axis, -2 the one befor the last etc.). Calculates <pre class="inline_code">exp(in) /
- sum(in, ax)</pre> </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-Relu_:_public_UntrainableLayer_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>Relu : public UntrainableLayer </b></pre></div>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Constructs a flatten layer. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Relu_*relu___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">inline Relu <b>*relu</b>() </pre></div>
 <br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Rectified Linear Unit. Does <pre class="inline_code">max(input, 0)</pre>. Simple and it works. </div></div><div style="display: block; height: 2em;"></div>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Constructs a ReLU activation layer. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Softmax_*softmax_int_axis_=_-1__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">inline Softmax <b>*softmax</b>(int axis = -1) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Constructs a softmax activation layer. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Dropout_*dropout_float_probability__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">inline Dropout <b>*dropout</b>(float probability) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Constructs a dropout layer with the given probability. </div></div><div style="display: block; height: 2em;"></div>
 
     </div>
   </center>

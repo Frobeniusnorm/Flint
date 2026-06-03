@@ -9,3 +9,4 @@ addition.o
 # gauss
 gauss
 gauss.o
+mnist_train

@@ -13,10 +13,10 @@ data DeclDoc = SymDoc {name :: String, docu :: String} | StructDoc {name :: Stri
 highlightName decl =
   highlightHelper decl "" 0
   where
-    highlightHelper ('(' : t) prev 0 = "<b>" ++ prev ++ "</b>(" ++ t
-    highlightHelper ('<' : '(' : t) prev 0 = "<b>" ++ prev ++ "&lt;</b>(" ++ t
-    highlightHelper ('<' : '<' : '(' : t) prev 0 = "<b>" ++ prev ++ "&lt;&lt;</b>(" ++ t
-    highlightHelper ('>' : '(' : t) prev 0 = "<b>" ++ prev ++ "&gt;</b>(" ++ t
+    highlightHelper ('(' : t) prev 0 = "<b>" ++ prev ++ "</b>(" ++ removeIllegal t
+    highlightHelper ('<' : '(' : t) prev 0 = "<b>" ++ prev ++ "&lt;</b>(" ++ removeIllegal t
+    highlightHelper ('<' : '<' : '(' : t) prev 0 = "<b>" ++ prev ++ "&lt;&lt;</b>(" ++ removeIllegal t
+    highlightHelper ('>' : '(' : t) prev 0 = "<b>" ++ prev ++ "&gt;</b>(" ++ removeIllegal t
     highlightHelper ('>' : '=' : t) prev nb = highlightHelper t (prev ++ "&gt;=") nb
     highlightHelper ('<' : t) prev nb = highlightHelper t (prev ++ "&lt;") (nb + 1)
     highlightHelper ('>' : t) prev nb = highlightHelper t (prev ++ "&gt;") (nb - 1)

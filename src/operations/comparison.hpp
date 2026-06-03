@@ -13,9 +13,9 @@
  * limitations under the License. */
 #ifndef FLINT_COMPARISON_HPP
 #define FLINT_COMPARISON_HPP
-#include "implementation.hpp"
 #include "../utils.hpp"
 #include "binary_arithmetic.hpp"
+#include "implementation.hpp"
 
 struct MinImpl : OperationImplementation {
 		template <typename T, typename A, typename B>
@@ -94,7 +94,10 @@ struct LessImpl : OperationImplementation {
 		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
-			return {type_size(node->predecessors[0]->operation.data_type) == type_size(F_INT32)};
+			return {type_size(node->predecessors[0]->operation.data_type) ==
+						type_size(F_INT32),
+					type_size(node->predecessors[1]->operation.data_type) ==
+						type_size(F_INT32)};
 		}
 };
 struct GreaterImpl : OperationImplementation {
@@ -126,7 +129,10 @@ struct GreaterImpl : OperationImplementation {
 		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
-			return {type_size(node->predecessors[0]->operation.data_type) == type_size(F_INT32)};
+			return {type_size(node->predecessors[0]->operation.data_type) ==
+						type_size(F_INT32),
+					type_size(node->predecessors[1]->operation.data_type) ==
+						type_size(F_INT32)};
 		}
 };
 struct EqualImpl : OperationImplementation {
@@ -158,7 +164,10 @@ struct EqualImpl : OperationImplementation {
 		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
-			return {type_size(node->predecessors[0]->operation.data_type) == type_size(F_INT32)};
+			return {type_size(node->predecessors[0]->operation.data_type) ==
+						type_size(F_INT32),
+					type_size(node->predecessors[1]->operation.data_type) ==
+						type_size(F_INT32)};
 		}
 };
 struct DropoutImpl : OperationImplementation {

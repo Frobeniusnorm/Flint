@@ -36,8 +36,8 @@ struct OCLCompilerThread {
 		//      kernels
 #define MAX_NUMBER_PARAMS 3
 		static int generate_kernel_hash(FOperationType operation,
-									  FType return_type,
-									  std::vector<FType> params) {
+										FType return_type,
+										std::vector<FType> params) {
 			int hash = (operation << 3) |
 					   return_type; // 4 types, 2 bits are enough to decode them
 			for (int i = 0; i < params.size(); i++)

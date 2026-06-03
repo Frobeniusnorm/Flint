@@ -22,221 +22,481 @@
   <div id="showcase_background" style="min-height: 18em; background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(61,215,193,1) 0%, rgba(33,100,228,1) 100%);">
     <center style="margin-top:2em">
       <h1>
-        Documentation <u>dl/models.hpp</u>, <u>dl/trainer.hpp</u>
+        Documentation <u>model.hpp</u>, <u>trainer.hpp</u>
       </h1>
       <div style="display: block; height: 0.5em;"></div>
       <h2>
-        Flint's C++ Deep Learning Framework 
+        Flint's C++ Deep Learning Framework
       </h2>
     </center>
   </div>
   <center>
     <div class="content">
-      Jump to documentation:
-      <div class="standalone-button button1"><a href="#models">models</a></div>
-      <div class="standalone-button button2"><a href="#trainer">trainer</a></div>
+      <div class="card" style="padding: 20px 15px;">
+        Build models with <pre class="inline_code">GraphModel</pre> and the
+        <pre class="inline_code">SequentialBuilder</pre> helper, or load ONNX models
+        with <pre class="inline_code">GraphModel::load_model</pre>. Training is
+        handled by <pre class="inline_code">Trainer</pre> together with a
+        <pre class="inline_code">DataLoader</pre>, an <pre class="inline_code">Optimizer</pre>
+        and a <pre class="inline_code">LossFunction</pre>.
+      </div>
       <div style="display: block; height: 2em;"></div>
-      <h1 id="models"><u>dl/models.hpp</u></h1>
-      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-ProfilingData_">struct <b>ProfilingData </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-_GenericLayer____T__struct_SequentialModel_">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_to_flint_type_K_____T________			___get_output_dim_n__T_______		forward_batch_Tensor_K__n__&in__">template &lt;typename K, unsigned int n&gt;
-		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
-				   get_output_type&lt;to_flint_type&lt;K&gt;(), T...&gt;()&gt;,
-			   get_output_dim&lt;n, <b>T...&gt;()&gt;
-		forward_batch</b>(Tensor<K, n> &in) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_to_flint_type_K_____T________			___get_output_dim_n__T_______		forward_Tensor_K__n__&in__">template &lt;typename K, unsigned int n&gt;
-		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
-				   get_output_type&lt;to_flint_type&lt;K&gt;(), T...&gt;()&gt;,
-			   get_output_dim&lt;n, <b>T...&gt;()&gt;
-		forward</b>(Tensor<K, n> &in) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_K__unsigned_int_n_		void_optimize_const_Tensor_K__n__&error__">template &lt;typename K, unsigned int n&gt;
-		void <b>optimize</b>(const Tensor<K, n> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-load_const_std::string_path__">void <b>load</b>(const std::string path) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-save_const_std::string_path__">void <b>save</b>(const std::string path) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-_typename_T1__unsigned_int_n1_		void_backward_Tensor_T1__n1__&error__">template &lt;typename T1, unsigned int n1&gt;
-		void <b>backward</b>(Tensor<T1, n1> &error) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-enable_training___">void <b>enable_training</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-disable_training___">void <b>disable_training</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-enable_profiling___">void <b>enable_profiling</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-disable_profiling___">void <b>disable_profiling</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-last_profiling_data___const_">ProfilingData <b>last_profiling_data</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-summary___">std::string <b>summary</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-sizeof____T___layer_names___">std::array&lt;std::string, sizeof...(T)&gt; <b>layer_names</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-sizeof____T___layer_descriptions___">std::array&lt;std::string, sizeof...(T)&gt; <b>layer_descriptions</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-optimizer___">std::string <b>optimizer</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-optimizer_description___">std::string <b>optimizer_description</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-sizeof____T___num_layer_parameters___">std::array&lt;size_t, sizeof...(T)&gt; <b>num_layer_parameters</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-___collect_weights___">std::vector&lt;std::vector&lt;FGraphNode *&gt;&gt; <b>collect_weights</b>() </a><br/><br/></div>
+      <h1 id="models"><u>src/dl/model.hpp</u></h1>
+      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-GraphModel_">struct <b>GraphModel </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-operator___			FGraphNode_*in_			std::optional_std::reference_wrapper_std::map_LayerGraph_*__long___				time_per_layer_=_std::nullopt_">FGraphNode <b>*operator</b>()(
+			FGraphNode *in,
+			std::optional&lt;std::reference_wrapper&lt;std::map&lt;LayerGraph *, long&gt;&gt;&gt;
+				time_per_layer = std::nullopt)</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-__operator___			std::vector_FGraphNode_*__in_			std::optional_std::reference_wrapper_std::map_LayerGraph_*__long___				time_per_layer_=_std::nullopt_">std::vector&lt;FGraphNode *&gt; <b>operator</b>()(
+			std::vector&lt;FGraphNode *&gt; in,
+			std::optional&lt;std::reference_wrapper&lt;std::map&lt;LayerGraph *, long&gt;&gt;&gt;
+				time_per_layer = std::nullopt)</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-serialize_onnx__">std::string <b>serialize_onnx</b>()</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-input_shapes_"><b>std::vector&lt;std::vector&lt;size_t&gt;&gt;
+		shape_interference</b>(std::vector&lt;std::vector&lt;size_t&gt;&gt; input_shapes)</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-GraphModel_*load_model_std::string_path_">static GraphModel <b>*load_model</b>(std::string path)</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-GraphModel_*sequential_std::vector_LayerGraph_*__list_">static GraphModel <b>*sequential</b>(std::vector&lt;LayerGraph *&gt; list)</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-GraphModel_*from_output_LayerGraph_*output_">static GraphModel <b>*from_output</b>(LayerGraph *output)</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-SequentialBuilder_builder__">static SequentialBuilder <b>builder</b>()</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-SequentialBuilder_">struct <b>SequentialBuilder </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&add_LayerGraph_*layer__">SequentialBuilder <b>&add</b>(LayerGraph *layer) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&conv2d_size_t_filters_								__std::array_size_t__2__kernel_size_								__size_t_in_channels_								__FlintDL::ActivationKind_activation_=									__FlintDL::ActivationKind::None__">SequentialBuilder <b>&conv2d</b>(size_t filters,
+								  std::array&lt;size_t, 2&gt; kernel_size,
+								  size_t in_channels,
+								  FlintDL::ActivationKind activation =
+									  FlintDL::ActivationKind::None) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&dense_size_t_in_units__size_t_out_units_								_FlintDL::ActivationKind_activation_=									_FlintDL::ActivationKind::None__">SequentialBuilder <b>&dense</b>(size_t in_units, size_t out_units,
+								 FlintDL::ActivationKind activation =
+									 FlintDL::ActivationKind::None) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&maxpool2d_			std::array_size_t__2__kernel_size_			const_FlintDL::Pool2DOptions_&options_=_FlintDL::Pool2DOptions____">SequentialBuilder <b>&maxpool2d</b>(
+			std::array&lt;size_t, 2&gt; kernel_size,
+			const FlintDL::Pool2DOptions &options = FlintDL::Pool2DOptions()) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&avgpool2d_			std::array_size_t__2__kernel_size_			const_FlintDL::Pool2DOptions_&options_=_FlintDL::Pool2DOptions____">SequentialBuilder <b>&avgpool2d</b>(
+			std::array&lt;size_t, 2&gt; kernel_size,
+			const FlintDL::Pool2DOptions &options = FlintDL::Pool2DOptions()) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&flatten___">SequentialBuilder <b>&flatten</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&relu___">SequentialBuilder <b>&relu</b>() </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&softmax_int_axis_=_-1__">SequentialBuilder <b>&softmax</b>(int axis = -1) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&dropout_float_probability__">SequentialBuilder <b>&dropout</b>(float probability) </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-build___">GraphModel <b>*build</b>() </a><br/><br/></div>
       <div style="display: block; height: 2em;"></div>
-      <div id="s-ProfilingData_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>ProfilingData </b></pre></div>
+      <div id="s-GraphModel_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>GraphModel </b></pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Informations about time consumption per layer and memory consumption
+ A Model for neural networks that represent the connections between the
+ layers as an acyclic graph. This allows arbitrary topology of the model.
+ In- and Export is implemented for the ONNX specification.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_GenericLayer____T__struct_SequentialModel_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">template &lt;GenericLayer... T&gt; struct <b>SequentialModel </b></pre></div>
+<div id="s-operator___			FGraphNode_*in_			std::optional_std::reference_wrapper_std::map_LayerGraph_*__long___				time_per_layer_=_std::nullopt_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">FGraphNode <b>*operator</b>()(
+			FGraphNode *in,
+			std::optional&lt;std::reference_wrapper&lt;std::map&lt;LayerGraph *, long&gt;&gt;&gt;
+				time_per_layer = std::nullopt)</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Feeds the single input tensor through the model and returns a single
+ output. This function should be used if you have a model with exactly
+ one input and one output tensor. The input node is only preserved if
+ its reference counter is &gt;= 1. The output node has a reference
+ counter of 0 (so if it is used in further calculations, its reference
+ counter should be incremented). If <pre class="inline_code">time_per_layer</pre> is provided, it
+ is filled with per layer execution time in nanoseconds.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-__operator___			std::vector_FGraphNode_*__in_			std::optional_std::reference_wrapper_std::map_LayerGraph_*__long___				time_per_layer_=_std::nullopt_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::vector&lt;FGraphNode *&gt; <b>operator</b>()(
+			std::vector&lt;FGraphNode *&gt; in,
+			std::optional&lt;std::reference_wrapper&lt;std::map&lt;LayerGraph *, long&gt;&gt;&gt;
+				time_per_layer = std::nullopt)</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Feeds all input tensors through the model and returns the output
+ tensors. The input nodes are only preserved if its reference counter
+ is &gt;= 1. The output node has a reference counter of 0 (so if it is
+ used in further calculations, its reference counter should be
+ incremented). If <pre class="inline_code">time_per_layer</pre> is provided, it is filled with per
+ layer execution time in nanoseconds.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-serialize_onnx__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::string <b>serialize_onnx</b>()</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Serializes the model into an ONNX string. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-input_shapes_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>std::vector&lt;std::vector&lt;size_t&gt;&gt;
+		shape_interference</b>(std::vector&lt;std::vector&lt;size_t&gt;&gt; input_shapes)</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Infers all output shapes for the given input shapes. The returned
+ shapes are ordered like the output nodes of the model.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-GraphModel_*load_model_std::string_path_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">static GraphModel <b>*load_model</b>(std::string path)</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Loads an ONNX model from disk. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-GraphModel_*sequential_std::vector_LayerGraph_*__list_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">static GraphModel <b>*sequential</b>(std::vector&lt;LayerGraph *&gt; list)</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Builds a sequential model from the given list of layers. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-GraphModel_*from_output_LayerGraph_*output_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">static GraphModel <b>*from_output</b>(LayerGraph *output)</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Builds a model by tracing all incoming layers of one output node. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-SequentialBuilder_builder__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">static SequentialBuilder <b>builder</b>()</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Returns a SequentialBuilder helper for fluent model construction. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-SequentialBuilder_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>SequentialBuilder </b></pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Model where each layer outputs the input of the next layer.
- Best used with C++ auto typing:<div style="display:block; height: 0.5em"></div>
- <pre class="card code" style="margin: 5px;">
- auto model = SequentialModel(
-  Connected(<span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">2</span><span style="color: #30F0FF">0</span>),
-  Relu(),
-  Dropout(<span style="color: #30F0FF">0</span>.<span style="color: #30F0FF">1</span>),
-  Connected(<span style="color: #30F0FF">2</span><span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span><span style="color: #30F0FF">0</span>),
-  SoftMax()
- ); <span style="color: #D0D0D0">// has type SequentialModel&lt;Connected, Relu, Dropout, Connected, SoftMax&gt;</span></pre>
+ For building a sequential (layer following layer) GraphModel
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_to_flint_type_K_____T________			___get_output_dim_n__T_______		forward_batch_Tensor_K__n__&in__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
-		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
-				   get_output_type&lt;to_flint_type&lt;K&gt;(), T...&gt;()&gt;,
-			   get_output_dim&lt;n, <b>T...&gt;()&gt;
-		forward_batch</b>(Tensor<K, n> &in) </pre></div>
+<div id="s-&add_LayerGraph_*layer__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">SequentialBuilder <b>&add</b>(LayerGraph *layer) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Adds an arbitrary layer next </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-&conv2d_size_t_filters_								__std::array_size_t__2__kernel_size_								__size_t_in_channels_								__FlintDL::ActivationKind_activation_=									__FlintDL::ActivationKind::None__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">SequentialBuilder <b>&conv2d</b>(size_t filters,
+								  std::array&lt;size_t, 2&gt; kernel_size,
+								  size_t in_channels,
+								  FlintDL::ActivationKind activation =
+									  FlintDL::ActivationKind::None) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Passes a batch of input tensors through all layers and returns the
- output of the last layer.
+ Constructs and adds a 2D Convolution Layer with a default
+ Conv2DOptions struct.<ul><li><pre class="inline_code">filters</pre> gives the number of filters to use (or "number of
+</li></ul> kernels")<ul><li><pre class="inline_code">kernel_size</pre> gives the shape of the individual filter kernels (2D)
+</li><li><pre class="inline_code">in_channels</pre> gives the number of channels in the input tensor
+</li><li><pre class="inline_code">activation</pre> adds an activation layer after the convolution</li></ul>
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_K__unsigned_int_n_		Tensor_LayerHelper::FlintTypeToCpp_				___get_output_type_to_flint_type_K_____T________			___get_output_dim_n__T_______		forward_Tensor_K__n__&in__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
-		Tensor&lt;LayerHelper::FlintTypeToCpp&lt;
-				   get_output_type&lt;to_flint_type&lt;K&gt;(), T...&gt;()&gt;,
-			   get_output_dim&lt;n, <b>T...&gt;()&gt;
-		forward</b>(Tensor<K, n> &in) </pre></div>
+<div id="s-&dense_size_t_in_units__size_t_out_units_								_FlintDL::ActivationKind_activation_=									_FlintDL::ActivationKind::None__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">SequentialBuilder <b>&dense</b>(size_t in_units, size_t out_units,
+								 FlintDL::ActivationKind activation =
+									 FlintDL::ActivationKind::None) </pre></div>
 <br />
 <div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Passes an input tensor through all layers and returns the output of
- the last layer.
+ Constructs and adds a fully connected layer with a default
+ DenseOptions struct.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_K__unsigned_int_n_		void_optimize_const_Tensor_K__n__&error__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename K, unsigned int n&gt;
-		void <b>optimize</b>(const Tensor<K, n> &error) </pre></div>
+<div id="s-&maxpool2d_			std::array_size_t__2__kernel_size_			const_FlintDL::Pool2DOptions_&options_=_FlintDL::Pool2DOptions____"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">SequentialBuilder <b>&maxpool2d</b>(
+			std::array&lt;size_t, 2&gt; kernel_size,
+			const FlintDL::Pool2DOptions &options = FlintDL::Pool2DOptions()) </pre></div>
 <br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Optimizes the weights (calculates the gradients + calls the
- optimizers) of all layer to an error.
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-load_const_std::string_path__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>load</b>(const std::string path) </pre></div>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Adds a max pooling layer. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-&avgpool2d_			std::array_size_t__2__kernel_size_			const_FlintDL::Pool2DOptions_&options_=_FlintDL::Pool2DOptions____"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">SequentialBuilder <b>&avgpool2d</b>(
+			std::array&lt;size_t, 2&gt; kernel_size,
+			const FlintDL::Pool2DOptions &options = FlintDL::Pool2DOptions()) </pre></div>
 <br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Loads the weights of a model from a file.
- The file has to be in a concatenated representation of the
- deserialization of each weight in the correct order.
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-save_const_std::string_path__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>save</b>(const std::string path) </pre></div>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Adds an average pooling layer. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-&flatten___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">SequentialBuilder <b>&flatten</b>() </pre></div>
 <br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Saves the deserialization of all weights of the model to a file.
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-_typename_T1__unsigned_int_n1_		void_backward_Tensor_T1__n1__&error__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">template &lt;typename T1, unsigned int n1&gt;
-		void <b>backward</b>(Tensor<T1, n1> &error) </pre></div>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Adds a flatten layer. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-&relu___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">SequentialBuilder <b>&relu</b>() </pre></div>
 <br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Calculated gradient to the given error tensor for each weight and
- optimized the weights with their corres
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-enable_training___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>enable_training</b>() </pre></div>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Adds a ReLU activation layer. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-&softmax_int_axis_=_-1__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">SequentialBuilder <b>&softmax</b>(int axis = -1) </pre></div>
 <br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Enables the training mode, i.e. layers like dropout will be enabled
- (internally used by the trainer)
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-disable_training___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>disable_training</b>() </pre></div>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Adds a softmax activation layer. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-&dropout_float_probability__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">SequentialBuilder <b>&dropout</b>(float probability) </pre></div>
 <br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Disables the training mode, i.e. layers like dropout will be disabled
- (internally used by the trainer)
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-enable_profiling___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>enable_profiling</b>() </pre></div>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Adds a dropout layer. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-build___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">GraphModel <b>*build</b>() </pre></div>
 <br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Starts collection profiling data.
- This hurts performance in uneager execution.
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-disable_profiling___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">void <b>disable_profiling</b>() </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Stops collection profiling data
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-last_profiling_data___const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">ProfilingData <b>last_profiling_data</b>() const </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Returns collected profiling data of the last call to <pre class="inline_code">forward</pre>
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-summary___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::string <b>summary</b>() </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Returns a small summary of the model. </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-sizeof____T___layer_names___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::array&lt;std::string, sizeof...(T)&gt; <b>layer_names</b>() </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Returns the name of each layer in an array
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-sizeof____T___layer_descriptions___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::array&lt;std::string, sizeof...(T)&gt; <b>layer_descriptions</b>() </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Returns the description of each layer in an array
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-optimizer___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::string <b>optimizer</b>() </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Returns the name of the generated optimizer
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-optimizer_description___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::string <b>optimizer_description</b>() </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Returns the description of the generated optimizer
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-sizeof____T___num_layer_parameters___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::array&lt;size_t, sizeof...(T)&gt; <b>num_layer_parameters</b>() </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Returns the number of parameters of each layer in an array
-</div></div><div style="display: block; height: 2em;"></div>
-<div id="s-___collect_weights___"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::vector&lt;std::vector&lt;FGraphNode *&gt;&gt; <b>collect_weights</b>() </pre></div>
-<br />
-<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
- Returns a per-layer vector of all weight-tensors of that layer
-</div></div><div style="display: block; height: 2em;"></div>
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Builds the sequential GraphModel. </div></div><div style="display: block; height: 2em;"></div>
 
 
       <div style="display: block; height: 2em;"></div>
-      <h1 id="trainer"><u>dl/trainer.hpp</u></h1>
-      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-&model_				TrainingData_T1__n1__T2__n2__&data__L_loss_			:_model_model___data_data___loss_loss__"><b>Trainer</b>(SequentialModel<T...> &model,
-				TrainingData<T1, n1, T2, n2> &data, L loss)
-			: model(model), data(data), loss(loss) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-max_epochs_int_epochs__">void <b>max_epochs</b>(int epochs) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-stopping_error_double_error__">void <b>stopping_error</b>(double error) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-set_metric_reporter_MetricReporter_*reporter__">void <b>set_metric_reporter</b>(MetricReporter *reporter) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-train_int_batch_size_=_32__">void <b>train</b>(int batch_size = 32) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-NetworkMetricReporter_:_public_MetricReporter_">class <b>NetworkMetricReporter : public MetricReporter </b></a><br/><br/></div>
+      <h1 id="trainer"><u>src/dl/trainer.hpp</u></h1>
+      <div class="card">    <span class="card_header">Overview</span></div><br /><div class="card"><span class="card_header" style="font-size:1.2em">Types and Functions</span><div class="spacer" style="height:1em"></div>&nbsp;&#x2022;&nbsp;<a href="#s-MetricInfo_">struct <b>MetricInfo </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-batch_=_0">int batch = 0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-epoch_=_0">int epoch = 0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-total_batches_=_0">size_t total_batches = 0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-total_epochs_=_0">size_t total_epochs = 0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-last_batch_error_=_0_0">double last_batch_error = 0.0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-last_epoch_error_=_0_0">double last_epoch_error = 0.0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-last_validation_error_=_0_0">double last_validation_error = 0.0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-gradient_time_ns_=_0_0">double gradient_time_ns = 0.0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-double___time_per_layer_ns">std::vector&lt;std::pair&lt;std::string, double&gt;&gt; time_per_layer_ns</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-ControlInformation_">struct <b>ControlInformation </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-ReporterControlInformation_:_public_ControlInformation_">class <b>ReporterControlInformation : public ControlInformation </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-MetricReporter_">struct <b>MetricReporter </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-&control_information___const">ControlInformation <b>&control_information</b>() const</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-void		model_description_std::vector_std::string__layer_names_						__std::vector_std::string__layer_descriptions_						__std::vector_size_t__number_parameters_						__std::string_loss_fct__std::string_optimizer_name_						__std::string_optimizer_desc_">virtual <b>void
+		model_description</b>(std::vector&lt;std::string&gt; layer_names,
+						  std::vector&lt;std::string&gt; layer_descriptions,
+						  std::vector&lt;size_t&gt; number_parameters,
+						  std::string loss_fct, std::string optimizer_name,
+						  std::string optimizer_desc)</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-CLIReporter_:_public_MetricReporter_">class <b>CLIReporter : public MetricReporter </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-NetworkMetricReporter_:_public_MetricReporter_">class <b>NetworkMetricReporter : public MetricReporter </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-DataLoader_">struct <b>DataLoader </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::pair_std::vector_FGraphNode_*___std::vector_FGraphNode_*__		next_batch___=_0">virtual std::pair&lt;std::vector&lt;FGraphNode *&gt;, std::vector&lt;FGraphNode <b>*&gt;&gt;
+		next_batch</b>() = 0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-size_t_remaining_for_epoch___=_0">virtual size_t <b>remaining_for_epoch</b>() = 0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::pair_std::vector_FGraphNode_*___std::vector_FGraphNode_*__		validation_batch___=_0">virtual std::pair&lt;std::vector&lt;FGraphNode *&gt;, std::vector&lt;FGraphNode <b>*&gt;&gt;
+		validation_batch</b>() = 0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::pair_std::vector_FGraphNode_*___std::vector_FGraphNode_*__		testing_data___=_0">virtual std::pair&lt;std::vector&lt;FGraphNode *&gt;, std::vector&lt;FGraphNode <b>*&gt;&gt;
+		testing_data</b>() = 0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-size_t_total_batches___const_=_0">virtual size_t <b>total_batches</b>() const = 0</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-StaticLoader_:_public_DataLoader_">class <b>StaticLoader : public DataLoader </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-IDXFormatLoader_:_public_DataLoader_">struct <b>IDXFormatLoader : public DataLoader </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-batch_size__std::string_train_images_path_						std::string_train_labels_path_						std::string_test_images_path_=_""_						std::string_test_labels_path_=_""_						double_validation_percentage_=_0_15_			:_DataLoader_batch_size___train_images_path_train_images_path__			__train_labels_path_train_labels_path__			__test_images_path_test_images_path__			__test_labels_path_test_labels_path__			__validation_percentage_validation_percentage__"><b>IDXFormatLoader</b>(size_t batch_size, std::string train_images_path,
+						std::string train_labels_path,
+						std::string test_images_path = "",
+						std::string test_labels_path = "",
+						double validation_percentage = 0.15)
+			: DataLoader(batch_size), train_images_path(train_images_path),
+			  train_labels_path(train_labels_path),
+			  test_images_path(test_images_path),
+			  test_labels_path(test_labels_path),
+			  validation_percentage(validation_percentage) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-Optimizer_">struct <b>Optimizer </b></a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-FGraphNode_*optimize_FGraphNode_*weight_									_FGraphNode_*gradient__=_0">virtual FGraphNode <b>*optimize</b>(FGraphNode *weight,
+									 FGraphNode *gradient) = 0</a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::string_name___const_">virtual std::string <b>name</b>() const </a><br/>&nbsp;&nbsp;&#x2022;&nbsp;<a href="#s-std::string_description___const_">virtual std::string <b>description</b>() const </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-FGraphNode_*calculate_loss_FGraphNode_*actual_										___FGraphNode_*expected__=_0">virtual FGraphNode <b>*calculate_loss</b>(FGraphNode *actual,
+										   FGraphNode *expected) = 0</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-std::string_name___const_">virtual std::string <b>name</b>() const </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-std::string_description___const_">virtual std::string <b>description</b>() const </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-CrossEntropyLoss_:_public_LossFunction_">struct <b>CrossEntropyLoss : public LossFunction </b></a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-is_epoch">bool is_epoch</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-training_loss">double training_loss</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-validation_loss">double validation_loss</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-training_time_ms">double training_time_ms</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-validation_time_ms">double validation_time_ms</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-avg_batch_time_ms">double avg_batch_time_ms</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-double___avg_batch_time_per_layer_ms">std::vector&lt;std::pair&lt;std::string, double&gt;&gt; avg_batch_time_per_layer_ms</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-model__DataLoader_*dl__Optimizer_*opt_				LossFunction_*loss_			:_model_model___data_dl___optimizer_opt___loss_loss__"><b>Trainer</b>(GraphModel *model, DataLoader *dl, Optimizer *opt,
+				LossFunction *loss)
+			: model(model), data(dl), optimizer(opt), loss(loss) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-model__:_model_model__"><b>Trainer</b>(GraphModel *model) : model(model) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-enable_early_stopping_double_error__">void <b>enable_early_stopping</b>(double error) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-set_data_loader_DataLoader_*dl__">void <b>set_data_loader</b>(DataLoader *dl) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-set_optimizer_Optimizer_*opt__">void <b>set_optimizer</b>(Optimizer *opt) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-set_loss_LossFunction_*loss__">void <b>set_loss</b>(LossFunction *loss) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-set_metric_reporter_MetricReporter_*reporter__">void <b>set_metric_reporter</b>(MetricReporter *reporter) </a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-train_epoch__">TrainingMetrics <b>train_epoch</b>()</a><br/>&nbsp;&#x2022;&nbsp;<a href="#s-train_size_t_epochs_">void <b>train</b>(size_t epochs)</a><br/><br/></div>
       <div style="display: block; height: 2em;"></div>
-      <div id="s-&model_				TrainingData_T1__n1__T2__n2__&data__L_loss_			:_model_model___data_data___loss_loss__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code"><b>Trainer</b>(SequentialModel<T...> &model,
-				TrainingData<T1, n1, T2, n2> &data, L loss)
-			: model(model), data(data), loss(loss) </pre></div>
+      <div id="s-MetricInfo_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>MetricInfo </b></pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Trains the model with input data and the desired output.<ul><li><pre class="inline_code">data</pre> contains the input (<pre class="inline_code">X</pre>) and desired data (<pre class="inline_code">Y</pre>) and
-   optionally validation data, if it does after each epoch a
-   validation error is calculated.
-</li><li> <a href="#s-&model_				TrainingData_T1__n1__T2__n2__&data__L_loss_			:_model_model___data_data___loss_loss__"><pre class="inline_code">loss</pre></a> The loss function to calculate the error between the actual
-   output and the desired one from the training data. Can be an
-   arbitrary class that implements the <pre class="inline_code">GenericLoss</pre> concept, some
-   implementations can be found in "losses.hpp".
-</li><li><pre class="inline_code">epochs</pre> .</li></ul> </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-max_epochs_int_epochs__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>max_epochs</b>(int epochs) </pre></div>
-<br />
-<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Sets the maximum number of epochs after which the training should be
- stopped. The complete dataset is passed through the model per epoch
- (It is split into <pre class="inline_code">batch_size</pre> - configured in the  <a href="#s-train_int_batch_size_=_32__"><pre class="inline_code">train</pre></a> method -
- slices in the first dimension of the input data and each batch has to
- be passed through the model once per epoch)
+ Information about the current training process, passed to MetricReporters.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-stopping_error_double_error__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>stopping_error</b>(double error) </pre></div>
+<div id="s-batch_=_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">int batch = 0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> The current batch (1-based). </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-epoch_=_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">int epoch = 0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> The current epoch (1-based). </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-total_batches_=_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">size_t total_batches = 0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> The number of batches in this epoch. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-total_epochs_=_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">size_t total_epochs = 0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> The number of epochs requested for this training run. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-last_batch_error_=_0_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">double last_batch_error = 0.0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> The error of the last batch. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-last_epoch_error_=_0_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">double last_epoch_error = 0.0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> The average error of the epoch. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-last_validation_error_=_0_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">double last_validation_error = 0.0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> The validation error after the epoch. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-gradient_time_ns_=_0_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">double gradient_time_ns = 0.0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Time for gradient calculation for this batch in nanoseconds. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-double___time_per_layer_ns"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">std::vector&lt;std::pair&lt;std::string, double&gt;&gt; time_per_layer_ns</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Time per layer for this batch in nanoseconds. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-ControlInformation_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>ControlInformation </b></pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Sets the minimum epoch error after which the training should be
- stopped
+ Control interface for the training process that can be used by reporters.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-set_metric_reporter_MetricReporter_*reporter__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>set_metric_reporter</b>(MetricReporter *reporter) </pre></div>
+<div id="s-ReporterControlInformation_:_public_ControlInformation_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">class <b>ReporterControlInformation : public ControlInformation </b></pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Sets the metric reporter (to print or display informations about the
- training process)
+ Thread-safe default implementation for ControlInformation.
 </div></div><div style="display: block; height: 2em;"></div>
-<div id="s-train_int_batch_size_=_32__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>train</b>(int batch_size = 32) </pre></div>
+<div id="s-MetricReporter_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>MetricReporter </b></pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Trains the model for the given batch size. A batch is a slice of the
- first imension of the input data. The input is shuffeled every epoch,
- which is important if your batch size is smaller then your input
- size. The weights of the model are optimized per batch that was
- passed through the model. Meaning small batch sizes lead to faster
- convergence (since more optimizations are executed) and lower memory
- consumption, but to more noise and variance, since each batch is only
- an approximation of the complete dataset. If training times and
- memory consumption don't matter we suggest full gradient descent
- (meaning <pre class="inline_code">batch_size = input_size</pre>), else finetune this value to your
- usecase.
+ Receives metrics during training and exposes control information.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-&control_information___const"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">ControlInformation <b>&control_information</b>() const</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Access to the mutable control information. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-void		model_description_std::vector_std::string__layer_names_						__std::vector_std::string__layer_descriptions_						__std::vector_size_t__number_parameters_						__std::string_loss_fct__std::string_optimizer_name_						__std::string_optimizer_desc_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual <b>void
+		model_description</b>(std::vector&lt;std::string&gt; layer_names,
+						  std::vector&lt;std::string&gt; layer_descriptions,
+						  std::vector&lt;size_t&gt; number_parameters,
+						  std::string loss_fct, std::string optimizer_name,
+						  std::string optimizer_desc)</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Receives a description of the model (layer overview, loss,
+ optimizer).
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-CLIReporter_:_public_MetricReporter_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">class <b>CLIReporter : public MetricReporter </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Default reporter that prints to stdout.
 </div></div><div style="display: block; height: 2em;"></div>
 <div id="s-NetworkMetricReporter_:_public_MetricReporter_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">class <b>NetworkMetricReporter : public MetricReporter </b></pre></div>
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
- Sends the trainings data over a REST API for HTTP connections on the port
- 5111. For a documentation of the API see <pre class="inline_code">dl/visualization/README.md</pre>
+ Sends training data over a REST API for HTTP connections on port 5111.
+ For API documentation see <pre class="inline_code">dl/visualization/README.md</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-DataLoader_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>DataLoader </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Loads the Data for the training process
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-std::pair_std::vector_FGraphNode_*___std::vector_FGraphNode_*__		next_batch___=_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual std::pair&lt;std::vector&lt;FGraphNode *&gt;, std::vector&lt;FGraphNode <b>*&gt;&gt;
+		next_batch</b>() = 0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Loads the next batch and returns it as a pair of model input and
+ expected output. I.e. the returned pair is a tuple, where the first
+ entry describes the input values for the model (each entry in the
+ vector is a batch-sized input for the model, the vector is used for
+ models that have multiple inputs. If your model just has one, return
+ a 1-element vector) and the second the output values that are
+ expected.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-size_t_remaining_for_epoch___=_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual size_t <b>remaining_for_epoch</b>() = 0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Used to determine how many elements (not batches!) are still to be
+ processed to finish the epoch. Return 0 if the epoch is finished.
+ Used for metrics and determining if validation can be run and the
+ next epoch started.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-std::pair_std::vector_FGraphNode_*___std::vector_FGraphNode_*__		validation_batch___=_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual std::pair&lt;std::vector&lt;FGraphNode *&gt;, std::vector&lt;FGraphNode <b>*&gt;&gt;
+		validation_batch</b>() = 0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Returns the data for the validation. Same semantic as for
+ <pre class="inline_code">next_batch</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-std::pair_std::vector_FGraphNode_*___std::vector_FGraphNode_*__		testing_data___=_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual std::pair&lt;std::vector&lt;FGraphNode *&gt;, std::vector&lt;FGraphNode <b>*&gt;&gt;
+		testing_data</b>() = 0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Return the complete training dataset, used for testing after
+ training </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-size_t_total_batches___const_=_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual size_t <b>total_batches</b>() const = 0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Return the number of batches this/an epoch has </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-StaticLoader_:_public_DataLoader_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">class <b>StaticLoader : public DataLoader </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Loads data from pre-existing tensors.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-IDXFormatLoader_:_public_DataLoader_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>IDXFormatLoader : public DataLoader </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ DataLoader for the MNIST dataset.
+ TODO don't prefetch data but load lazy when needed if &gt; 6GB something
+  -&gt; maybe derive second class for something like that
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-batch_size__std::string_train_images_path_						std::string_train_labels_path_						std::string_test_images_path_=_""_						std::string_test_labels_path_=_""_						double_validation_percentage_=_0_15_			:_DataLoader_batch_size___train_images_path_train_images_path__			__train_labels_path_train_labels_path__			__test_images_path_test_images_path__			__test_labels_path_test_labels_path__			__validation_percentage_validation_percentage__"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code"><b>IDXFormatLoader</b>(size_t batch_size, std::string train_images_path,
+						std::string train_labels_path,
+						std::string test_images_path = "",
+						std::string test_labels_path = "",
+						double validation_percentage = 0.15)
+			: DataLoader(batch_size), train_images_path(train_images_path),
+			  train_labels_path(train_labels_path),
+			  test_images_path(test_images_path),
+			  test_labels_path(test_labels_path),
+			  validation_percentage(validation_percentage) </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Sets the batch size, the paths to the train and test data
+ and the validation percentage. The validation percentage is
+ the percentage of the training data that is split to validate
+ the error after each training epoch. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-Optimizer_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>Optimizer </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Interface to optimize variables.
+ For each Variable an Optimizer is created and managed.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-FGraphNode_*optimize_FGraphNode_*weight_									_FGraphNode_*gradient__=_0"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual FGraphNode <b>*optimize</b>(FGraphNode *weight,
+									 FGraphNode *gradient) = 0</pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;">
+ Updates the weight regarding its gradient or derivation.
+ <pre class="inline_code">weight</pre> is the variable and <pre class="inline_code">gradient</pre> the gradient.
+ Returns the new variable, the old one will be replaced.
+ Do not set the reference counter as this is done by the
+ trainer.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-std::string_name___const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual std::string <b>name</b>() const </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Human readable optimizer name used in model reports. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-std::string_description___const_"></div><div style="margin-left: 1em;" class="card"><pre class="card_header_code">virtual std::string <b>description</b>() const </pre></div>
+<br />
+<div style="margin-left: 1em;" class="card"><div style="padding: 5px;"> Human readable optimizer description used in model reports. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-FGraphNode_*calculate_loss_FGraphNode_*actual_										___FGraphNode_*expected__=_0"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">virtual FGraphNode <b>*calculate_loss</b>(FGraphNode *actual,
+										   FGraphNode *expected) = 0</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Calculates the loss between the actual output of the model
+ and the expected output from the trainings data.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-std::string_name___const_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">virtual std::string <b>name</b>() const </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Human readable loss name used in model reports. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-std::string_description___const_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">virtual std::string <b>description</b>() const </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Human readable loss description used in model reports. </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-CrossEntropyLoss_:_public_LossFunction_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">struct <b>CrossEntropyLoss : public LossFunction </b></pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Calculates the Categorical Cross Entropy Loss with full summation.
+ It is advised to apply a softmax as the last activation layer in the
+ calculation of <pre class="inline_code">in</pre>.<div style="display:block; height: 0.5em"></div>
+ Calculates: <pre class="inline_code">sum(-expected * log(in))</pre>
+ </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-is_epoch"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">bool is_epoch</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> if true a epoch has been trained, else it returns the
+ metrics for a single batch and only some members are set.</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-training_loss"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">double training_loss</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> The average loss for the training dataset for the epoch (if
+  <a href="#s-is_epoch"><pre class="inline_code">is_epoch</pre></a> is false it is the loss of the single batch) </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-validation_loss"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">double validation_loss</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> The average loss for the validation dataset for the epoch
+ (not set if  <a href="#s-is_epoch"><pre class="inline_code">is_epoch</pre></a> is false) </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-training_time_ms"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">double training_time_ms</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> The combined time for the training dataset for the epoch (if
+  <a href="#s-is_epoch"><pre class="inline_code">is_epoch</pre></a> is false it is not set) </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-validation_time_ms"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">double validation_time_ms</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> The time for the validation dataset for the epoch (if
+  <a href="#s-is_epoch"><pre class="inline_code">is_epoch</pre></a> is false it is not set) </div></div><div style="display: block; height: 2em;"></div>
+<div id="s-avg_batch_time_ms"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">double avg_batch_time_ms</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Average time for passing a batch through the model (if
+  <a href="#s-is_epoch"><pre class="inline_code">is_epoch</pre></a> is false, it is the time of the single batch)</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-double___avg_batch_time_per_layer_ms"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">std::vector&lt;std::pair&lt;std::string, double&gt;&gt; avg_batch_time_per_layer_ms</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Average time for passing a batch through the model per layer
+ (if  <a href="#s-is_epoch"><pre class="inline_code">is_epoch</pre></a> is false, it is the time of the single batch).
+ Each layer is given with its name and its execution time.</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-model__DataLoader_*dl__Optimizer_*opt_				LossFunction_*loss_			:_model_model___data_dl___optimizer_opt___loss_loss__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code"><b>Trainer</b>(GraphModel *model, DataLoader *dl, Optimizer *opt,
+				LossFunction *loss)
+			: model(model), data(dl), optimizer(opt), loss(loss) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Initializes the data of the Trainer.
+ The <pre class="inline_code">DataLoader</pre>, <pre class="inline_code">GraphModel</pre> and  <a href="#s-Optimizer_"><pre class="inline_code">Optimizer</pre></a> have to be
+ maintained by whoever passed them and they have to live at
+ least as long as the <pre class="inline_code">Trainer</pre>. The data for the training and
+ validation will be taken from the <pre class="inline_code">DataLoader</pre>. The model
+  <a href="#s-model__:_model_model__"><pre class="inline_code">model</pre></a> will be trained. The <pre class="inline_code">opt</pre> optimizer will be used to
+ optimize the weights after each batch is passed through the
+ model. The  <a href="#s-model__DataLoader_*dl__Optimizer_*opt_				LossFunction_*loss_			:_model_model___data_dl___optimizer_opt___loss_loss__"><pre class="inline_code">loss</pre></a> Loss function calculates the loss between
+ the output of the model and the expected output from the
+ labeled dataset.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-model__:_model_model__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code"><b>Trainer</b>(GraphModel *model) : model(model) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Initializes the model that should be trained by the Trainer.
+ The <pre class="inline_code">GraphModel</pre> has to be maintained by whoever passed it
+ and it has to live at least as long as the <pre class="inline_code">Trainer</pre>. The
+ model  <a href="#s-model__:_model_model__"><pre class="inline_code">model</pre></a> will be trained.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-enable_early_stopping_double_error__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>enable_early_stopping</b>(double error) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Enables the early stopping criterion for the following
+ training runs. I.e. even if the minimum number of epochs is
+ not reached, training will stop once the validation error
+ reaches or is bellow the given minimum.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-set_data_loader_DataLoader_*dl__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>set_data_loader</b>(DataLoader *dl) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Sets the data of the Trainer.
+ The <pre class="inline_code">DataLoader</pre> has to be maintained by whoever passed it
+ and it has to live at least as long as the trainer. The data
+ for the training and validation will be taken from the
+ <pre class="inline_code">DataLoader</pre>.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-set_optimizer_Optimizer_*opt__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>set_optimizer</b>(Optimizer *opt) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ The  <a href="#s-Optimizer_"><pre class="inline_code">Optimizer</pre></a> has to be maintained by whoever passed it and
+ it has to live at least as long as the trainer. It will be
+ used to optimize the weights after each batch is passed
+ through the model.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-set_loss_LossFunction_*loss__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>set_loss</b>(LossFunction *loss) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ The  <a href="#s-CrossEntropyLoss_:_public_LossFunction_"><pre class="inline_code">LossFunction</pre></a> has to be maintained by whoever passed it
+ and it has to live at least as long as the trainer. It will
+ be used to calculate the error of the model per batch for
+ optimization.
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-set_metric_reporter_MetricReporter_*reporter__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>set_metric_reporter</b>(MetricReporter *reporter) </pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Sets the metric reporter (to print or display information about the
+ training process)
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-train_epoch__"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">TrainingMetrics <b>train_epoch</b>()</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Trains exactly one epoch, i.e., the complete dataset is
+ passed through the model by splitting it into <pre class="inline_code">batch_size</pre>
+ batches and passing them through the model. The weights of
+ the model are optimized for each batch. If a validation
+ dataset is available in the dataloader it is evaluated. This
+ method returns information (average loss, validation loss,
+ total time, etc.) about the training.<div style="display:block; height: 0.5em"></div>
+ If a <pre class="inline_code">TrainingReporter</pre> is set, it reports the metrics per
+ batch
+</div></div><div style="display: block; height: 2em;"></div>
+<div id="s-train_size_t_epochs_"></div><div style="margin-left: 0em;" class="card"><pre class="card_header_code">void <b>train</b>(size_t epochs)</pre></div>
+<br />
+<div style="margin-left: 0em;" class="card"><div style="padding: 5px;">
+ Trains the model for <pre class="inline_code">epochs</pre> number of epochs.
+ The complete dataset is passed through the model per epoch
+ (It is split into <pre class="inline_code">batch_size</pre> sized slices in the first
+ dimension of the input data and each batch has to be passed
+ through the model once per epoch). The weights of the model
+ are optimized after each batch. Once all batches have been
+ run for a epoch, the validation data is passed through the
+ model and the error reported.<div style="display:block; height: 0.5em"></div>
+ Make sure the <pre class="inline_code">DataLoader</pre> and <pre class="inline_code">Model</pre> are valid for the call
+ of this function.
 </div></div><div style="display: block; height: 2em;"></div>
 
     </div>
