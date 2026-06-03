@@ -8,8 +8,8 @@ Flint (_Frobeniusnorm's Lightweight Implementation of Neural Tensors_) is a Tens
 allowing you to use Tensor operations, which are semi-lazily computed by the library. It supports gradient calculations
 for its operations including a gradient calculation algorithm. Once finished, it will contain example implementations of
 the most popular optimization algorithms, loss functions and Neural Layers for machine learning.
-* THE LIBRARY IS A WORK IN PROGRESS. WHILE YOU CAN LOAD ONNX MODELS AND EXECUTE MANY DEEP LEARNING TASKS, IT IS FAR FROM FINISHED. 
-THE PERFORMANCE ALSO STILL LACKS BEHIND LARGER DEEP LEARNING FRAMEWORKS *
+THE LIBRARY IS A WORK IN PROGRESS. WHILE YOU CAN LOAD ONNX MODELS AND EXECUTE MANY DEEP LEARNING TASKS, IT IS FAR FROM FINISHED. 
+THE PERFORMANCE ALSO STILL LACKS BEHIND LARGER DEEP LEARNING FRAMEWORKS
 
 ## Motivation ##
 
