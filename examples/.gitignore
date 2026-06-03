@@ -10,3 +10,4 @@ addition.o
 gauss
 gauss.o
 mnist_train
+unet/
