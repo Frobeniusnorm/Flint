@@ -7,7 +7,6 @@
 int main(int argc, char **argv) {
 	{
 		flintInit(FLINT_BACKEND_ONLY_GPU);
-		fEnableEagerExecution();
 		if (argc != 3) {
 			std::cout << "Usage: " << argv[0]
 					  << " <path to model> <path to image>" << std::endl;
