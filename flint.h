@@ -460,7 +460,7 @@ void fFreeGraph(FGraphNode *graph);
  * execution is enabled each node will be executed eagerly upon construction or
  * with this method.
  *
- * Also see `fEnableEagerExecution`, `fSyncMemory`*/
+ * Also see `fSyncMemory`*/
 FGraphNode *fExecuteGraph(FGraphNode *node);
 
 /** Executes the graph node operations from all yet to be executed predecessors
