@@ -75,6 +75,8 @@ static inline int reducing(const FGraphNode *node, std::string name,
 				  base + " + " + itv + " * " + to_string(it_dim) + ") % " +
 				  to_string(total_el_size) + ";\n";
 	compiler_state.index_defs = index_defs;
+	// the loop masks the index with the size of the reduced tensor
+	compiler_state.pred_index_bound = total_el_size;
 	Twine reduce_code;
 	switch (op_type) {
 	case FREDUCE_SUM:

@@ -18,6 +18,7 @@
 #include "../flint_helper.hpp"
 #include "src/errors.hpp"
 #include "src/operations/implementation.hpp"
+#include <algorithm>
 #include <cmath>
 #include <condition_variable>
 #include <iostream>
@@ -26,6 +27,7 @@
 #include <mutex>
 #include <queue>
 #include <stdexcept>
+#include <unordered_set>
 #include <vector>
 
 template <typename T> inline T *safe_mal(unsigned int count) {
@@ -148,6 +150,64 @@ inline std::vector<size_t> calc_acc_sizes(const int dimensions,
 inline std::vector<size_t> calc_acc_sizes(const FOperation op) {
 	return calc_acc_sizes(op.dimensions, op.shape);
 }
+/**
+ * The index calculations of the generated kernels are dominated by integer
+ * divisions and modulos - they are the most expensive instructions a kernel
+ * executes (the 64 bit variants are emulated in software on most GPUs) and the
+ * index of a node is remapped once per operation between it and the data it
+ * reads. Since all shapes are known during code generation, the following
+ * helpers leave out every division and modulo that provably is the identity or
+ * always yields zero.
+ *
+ * They all take an exclusive upper bound of their operand, `0` meaning that
+ * nothing is known about it. The operand has to be a single variable or a
+ * parenthesized expression, it is never wrapped in parentheses.
+ */
+/** Emits `val / divisor`, or `"0"` if the quotient is always zero */
+inline std::string index_div(const std::string &val, const size_t divisor,
+							 const size_t bound = 0) {
+	if (val == "0")
+		return val;
+	if (bound && bound <= divisor)
+		return "0";
+	return divisor == 1 ? val : val + " / " + std::to_string(divisor);
+}
+/** Emits `val % modulus`, left out if `bound` proves `val` is already smaller
+ */
+inline std::string index_mod(const std::string &val, const size_t modulus,
+							 const size_t bound = 0) {
+	if (val == "0" || modulus == 1)
+		return "0";
+	if (bound && bound <= modulus)
+		return val;
+	return val + " % " + std::to_string(modulus);
+}
+/** Emits `val * factor`, left out for a factor of one */
+inline std::string index_mul(const std::string &val, const size_t factor) {
+	if (val == "0" || factor == 0)
+		return "0";
+	return factor == 1 ? val : val + " * " + std::to_string(factor);
+}
+/** Exclusive upper bound of `val / divisor` for a `val` bounded by `bound` */
+inline size_t index_div_bound(const size_t bound, const size_t divisor) {
+	return bound ? (bound - 1) / divisor + 1 : 0;
+}
+/**
+ * Decomposes `index` into the coordinate of dimension `dim` of the shape
+ * described by `acc_sizes` (its accumulated sizes) and `shape`. `bound` is an
+ * exclusive upper bound of `index` and is updated to one of the returned
+ * coordinate.
+ */
+inline std::string index_coordinate(const std::string &index, const int dim,
+									const std::vector<size_t> &acc_sizes,
+									const size_t *shape, size_t &bound) {
+	const std::string quotient = index_div(index, acc_sizes[dim], bound);
+	bound = index_div_bound(bound, acc_sizes[dim]);
+	const std::string coordinate = index_mod(quotient, shape[dim], bound);
+	if (bound > shape[dim] || !bound)
+		bound = shape[dim];
+	return coordinate;
+}
 inline std::vector<std::vector<FType>> all_type_permutations(int num) {
 	using namespace std;
 	if (num == 0)
@@ -234,6 +294,46 @@ template <typename T> class blocking_queue {
 			return foo;
 		}
 };
+/** Number of elements of the largest tensor `node` reads from memory */
+inline size_t largest_input(const FGraphNode *node) {
+	size_t largest = 0;
+	std::unordered_set<const FGraphNode *> visited;
+	std::list<const FGraphNode *> todo = {node};
+	while (!todo.empty()) {
+		const FGraphNode *curr = todo.front();
+		todo.pop_front();
+		if (!visited.insert(curr).second)
+			continue;
+		// everything else is calculated inside of the kernel that reads it
+		if (curr != node &&
+			(curr->result_data || curr->operation.op_type == FSTORE)) {
+			size_t size = 1;
+			for (int i = 0; i < curr->operation.dimensions; i++)
+				size *= curr->operation.shape[i];
+			largest = std::max(largest, size);
+			continue;
+		}
+		for (int i = 0; i < curr->num_predecessor; i++)
+			todo.push_back(curr->predecessors[i]);
+	}
+	return largest;
+}
+/**
+ * A node that many others use is calculated once and materialized instead of
+ * being recalculated per use. That only pays off as long as it does not expand
+ * what it reads - a repetition or a sliding window can be orders of magnitude
+ * larger than its input, and writing such a node out costs far more memory
+ * bandwidth than recalculating its index arithmetic ever could.
+ */
+inline bool worth_materializing(const FGraphNode *node) {
+	size_t size = 1;
+	for (int i = 0; i < node->operation.dimensions; i++)
+		size *= node->operation.shape[i];
+	const size_t input = largest_input(node);
+	// a node that reads no memory at all (a generator) has nothing to compare
+	// against, it keeps being materialized so that its values stay stable
+	return !input || size <= input;
+}
 /**
  * Generates a permutation index array for a axis of a multidimensional tensor
  * by generating for each entry in this dimension an index in the same dimension

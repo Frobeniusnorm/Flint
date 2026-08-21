@@ -102,22 +102,39 @@ int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 				  itype + " wi = (" + i + "%" + to_string(num_elems) + ")/" +
 				  to_string(acc_size) + ";\n" + itype + " rest = " + i + "%" +
 				  to_string(acc_size) + ";\n";
+	// `wi` selects the window, `rest` the entry inside of it. Both are peeled
+	// off dimension by dimension, which bounds them for the following ones.
+	size_t wi_bound = node->operation.shape[0];
+	size_t rest_bound = acc_size;
 	for (int d = 0; d < pred.dimensions; d++) {
-		std::string local_wi = "wi/" + to_string(acc_sizes_win[d]);
-		std::string loc_base = local_wi + "*" + to_string(acc_sizes_pred[d]) +
-							   "*" + to_string(slidewin->step[d]);
-		std::string local_ri = "rest/" + to_string(acc_sizes_rest[d]) + "*" +
-							   to_string(acc_sizes_pred[d]);
-		index_defs += "index += " + loc_base + " + " + local_ri +
-					  ";\n"
-					  "wi %= " +
-					  to_string(acc_sizes_win[d]) +
-					  ";\n"
-					  "rest %= " +
-					  to_string(acc_sizes_rest[d]) + ";\n";
+		// the window is placed `step` entries apart per window index
+		const std::string loc_base =
+			index_mul(index_div("wi", acc_sizes_win[d], wi_bound),
+					  acc_sizes_pred[d] * slidewin->step[d]);
+		const std::string local_ri =
+			index_mul(index_div("rest", acc_sizes_rest[d], rest_bound),
+					  acc_sizes_pred[d]);
+		if (loc_base != "0")
+			index_defs += "index += " + loc_base + ";\n";
+		if (local_ri != "0")
+			index_defs += "index += " + local_ri + ";\n";
+		if (d + 1 < pred.dimensions) {
+			if (wi_bound > acc_sizes_win[d]) {
+				index_defs += "wi %= " + to_string(acc_sizes_win[d]) + ";\n";
+				wi_bound = acc_sizes_win[d];
+			}
+			if (rest_bound > acc_sizes_rest[d]) {
+				index_defs += "rest %= " + to_string(acc_sizes_rest[d]) + ";\n";
+				rest_bound = acc_sizes_rest[d];
+			}
+		}
 	}
 	index_defs += "}\n";
 	compiler_state.index_defs = index_defs;
+	// a window never reaches past the predecessor, so neither does the index
+	compiler_state.pred_index_bound = 1;
+	for (int d = 0; d < pred.dimensions; d++)
+		compiler_state.pred_index_bound *= pred.shape[d];
 	compiler_state.code.prepend(
 		"const " + type_string(node->operation.data_type) + " " + name +
 		" = v" + to_string(compiler_state.variable_index + 1) +
@@ -234,7 +251,8 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 	Twine local_code = type_string(node->operation.data_type) + " " + name +
 					   " = 0;\n"
 					   "{\n"
-					   "const long first_w = 0";
+					   "const " +
+					   compiler_state.index_type + " first_w = 0";
 	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
 		local_code += " + max((" + compiler_state.index_type +
 					  ")0, ((index / " + to_string(acc_sizes[d]) + ") % " +
@@ -243,24 +261,30 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 					  to_string(steps[d]) + " * " +
 					  to_string(acc_no_windows[d]);
 	}
-	local_code += ";\nconst long last_w = 0";
+	local_code += ";\nconst " + compiler_state.index_type + " last_w = 0";
 	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
 		local_code += " + ((index / " + to_string(acc_sizes[d]) + ") % " +
 					  to_string(node->operation.shape[d]) + ") / " +
 					  to_string(steps[d]) + " * " +
 					  to_string(acc_no_windows[d]);
 	}
-	local_code += ";\nfor(long w=first_w;w<=last_w;){\n"
+	local_code += ";\nfor(" + compiler_state.index_type +
+				  " w=first_w;w<=last_w;){\n"
 				  " bool contained = true;\n"
-				  " long wi = 0;\n"
-				  " long wpp = 0;\n";
+				  " " +
+				  compiler_state.index_type +
+				  " wi = 0;\n"
+				  " " +
+				  compiler_state.index_type + " wpp = 0;\n";
 	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
 		local_code += " {\n"
-					  "  const long w_start=((w/" +
+					  "  const " +
+					  compiler_state.index_type + " w_start=((w/" +
 					  to_string(acc_no_windows[d]) + ")%" +
 					  to_string(no_windows[d]) + ")*" + to_string(steps[d]) +
 					  ";\n"
-					  "  const long id=(index/" +
+					  "  const " +
+					  compiler_state.index_type + " id=(index/" +
 					  to_string(acc_sizes[d]) + ")%" +
 					  to_string(node->operation.shape[d]) +
 					  ";\n"

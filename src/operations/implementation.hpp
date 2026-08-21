@@ -289,6 +289,10 @@ struct CodegenTask {
 		 * Operations that push predecessors themselves all modify the index,
 		 * so leaving this false is the safe default. */
 		bool same_index = false;
+		/** Exclusive upper bound of `index` here, `0` if it is unknown. Only
+		 * bounds that hold for every execution may be entered, they decide
+		 * which divisions and modulos of the index calculations are left out */
+		size_t index_bound = 0;
 };
 struct OCLLazyCodegenState {
 		/** Working queue of nodes for which still code has to be generated */
@@ -307,6 +311,14 @@ struct OCLLazyCodegenState {
 		/** a code segment that is inserted before the predecessors (cleared
 		 * after each node) */
 		std::string index_defs;
+		/** Exclusive upper bound of `index` for the node that is currently
+		 * generated, `0` if nothing is known about it */
+		size_t index_bound = 0;
+		/** Exclusive upper bound of `index` for the predecessors of the node
+		 * that is currently generated. Operations that remap the index set it
+		 * to the largest index their mapping can produce, it defaults to the
+		 * bound of the node itself for those that pass the index on. */
+		size_t pred_index_bound = 0;
 		/** Actual code as twine for fast prepend and append operations */
 		Twine code;
 		/** Type of all index calculations in the kernel. 64 bit integer

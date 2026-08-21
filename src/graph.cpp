@@ -317,7 +317,7 @@ static FGraphNode *addNode(FOperation op, std::vector<FGraphNode *> pre) {
 		return nullptr;
 	for (size_t i = 0; i < pre.size(); i++) {
 		foo->predecessors[i] = pre[i];
-		if (pre[i]->reference_counter++ > 2)
+		if (pre[i]->reference_counter++ > 2 && worth_materializing(pre[i]))
 			fExecuteGraph(pre[i]);
 	}
 	return foo;
@@ -926,7 +926,7 @@ FGraphNode *freshape(FGraphNode *a, const size_t *newshape,
 		return nullptr;
 	node->predecessors[0] = a;
 	node->reference_counter = 0;
-	if (a->reference_counter++ > 2)
+	if (a->reference_counter++ > 2 && worth_materializing(a))
 		fExecuteGraph(a);
 	return node;
 }
@@ -940,7 +940,7 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
 	if (!foo->predecessors)
 		return nullptr;
 	foo->predecessors[0] = a;
-	if (a->reference_counter++ > 2)
+	if (a->reference_counter++ > 2 && worth_materializing(a))
 		fExecuteGraph(a);
 	foo->operation.data_type = newtype;
 	foo->operation.dimensions = a->operation.dimensions;
@@ -954,6 +954,41 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
 	return foo;
 }
 
+/** How much larger than the tensor that reads it a permutation may become
+ * before it is left lazy. Only a permutation above an expansion grows that
+ * far, and writing such a one out costs more memory than it saves traffic. */
+static const size_t MAX_PERMUTATION_EXPANSION = 4;
+/**
+ * A reduction reads every entry of a transpose below it once per element of
+ * the tensor it reduces - for a convolution that is hundreds of times per
+ * entry. Those reads are scattered: a transpose between two channel layouts
+ * places neighbouring work items hundreds of entries apart, so every one of
+ * them pulls in its own cache line to use a single value of it. Calculating
+ * the permutation into memory once turns all of them into neighbouring reads.
+ * Since a scattered read wastes the rest of the cache line it fetches, that
+ * pays off even if the reduction reads every entry only once.
+ */
+static void materialize_permutations(FGraphNode *a, const size_t reduced_size) {
+	std::list<FGraphNode *> todo = {a};
+	std::unordered_set<FGraphNode *> visited;
+	while (!todo.empty()) {
+		FGraphNode *curr = todo.front();
+		todo.pop_front();
+		if (curr->result_data || !visited.insert(curr).second)
+			continue;
+		if (curr->operation.op_type == FTRANSPOSE) {
+			size_t size = 1;
+			for (int i = 0; i < curr->operation.dimensions; i++)
+				size *= curr->operation.shape[i];
+			if (size <= reduced_size * MAX_PERMUTATION_EXPANSION) {
+				fExecuteGraph(curr);
+				continue;
+			}
+		}
+		for (int i = 0; i < curr->num_predecessor; i++)
+			todo.push_back(curr->predecessors[i]);
+	}
+}
 static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 										   FOperationType type) {
 	size_t total = 1;
@@ -961,6 +996,7 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 		if (i != dimension)
 			total *= a->operation.shape[i];
 	if (!a->result_data) {
+		materialize_permutations(a, total * a->operation.shape[dimension]);
 		// we dont want interleaved reduction since that is slow
 		std::list<FGraphNode *> todo;
 		todo.push_back(a);
@@ -1129,7 +1165,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
 		return nullptr;
 	foo->predecessors[0] = a;
 	foo->reference_counter = 0;
-	if (a->reference_counter++ > 2)
+	if (a->reference_counter++ > 2 && worth_materializing(a))
 		fExecuteGraph(a);
 	FOperation op;
 	op.broadcasting_mode = 0;
@@ -1332,7 +1368,7 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
 		return nullptr;
 	foo->predecessors[0] = a;
 	foo->reference_counter = 0;
-	if (a->reference_counter++ > 2)
+	if (a->reference_counter++ > 2 && worth_materializing(a))
 		fExecuteGraph(a);
 	// construct operation
 	const int dimensions = a->operation.dimensions;

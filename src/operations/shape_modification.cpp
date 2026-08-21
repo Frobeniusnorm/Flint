@@ -165,15 +165,31 @@ int RepeatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	// indices and reproject
 	index_defs += "{\n" + compiler_state.index_type +
 				  " working_index = index;\nindex = 0;\n";
+	size_t bound = compiler_state.index_bound;
 	for (int dim = 0; dim < op.dimensions; dim++) {
-		index_defs += "index += ((working_index /" +
-					  to_string(acc_sizes_d[dim]) + ") % " +
-					  to_string(pred.shape[dim]) + ") * " +
-					  to_string(acc_sizes_s[dim]) + ";\n";
-		index_defs += "working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
+		// the source repeats along this dimension, so the coordinate wraps
+		// around its shape
+		size_t coord_bound = bound;
+		const string summand =
+			index_mul(index_coordinate("working_index", dim, acc_sizes_d,
+									   pred.shape, coord_bound),
+					  acc_sizes_s[dim]);
+		if (summand != "0")
+			index_defs += "index += " + summand + ";\n";
+		// what is left over are the coordinates of the following dimensions
+		if (dim + 1 < op.dimensions && (!bound || bound > acc_sizes_d[dim])) {
+			index_defs +=
+				"working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
+			bound = acc_sizes_d[dim];
+		}
 	}
 	index_defs += "}\n";
 	compiler_state.index_defs = index_defs;
+	// every coordinate is taken modulo the shape of the predecessor, so the
+	// remapped index always stays inside of it
+	compiler_state.pred_index_bound = 1;
+	for (int dim = 0; dim < pred.dimensions; dim++)
+		compiler_state.pred_index_bound *= pred.shape[dim];
 	compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
 								";\n");
 	compiler_state.code.prepend(
@@ -243,15 +259,29 @@ int TransposeImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	// indices and reproject
 	index_defs += "{\n" + compiler_state.index_type +
 				  " working_index = index;\nindex = 0;\n";
+	size_t bound = compiler_state.index_bound;
 	for (int dim = 0; dim < op.dimensions; dim++) {
-		index_defs += "index += ((working_index /" +
-					  to_string(acc_sizes_d[dim]) + ") % " +
-					  to_string(op.shape[dim]) + ") * " +
-					  to_string(acc_sizes_s[transposition[dim]]) + ";\n";
-		index_defs += "working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
+		size_t coord_bound = bound;
+		const string summand =
+			index_mul(index_coordinate("working_index", dim, acc_sizes_d,
+									   op.shape, coord_bound),
+					  acc_sizes_s[transposition[dim]]);
+		if (summand != "0")
+			index_defs += "index += " + summand + ";\n";
+		// what is left over are the coordinates of the following dimensions
+		if (dim + 1 < op.dimensions && (!bound || bound > acc_sizes_d[dim])) {
+			index_defs +=
+				"working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
+			bound = acc_sizes_d[dim];
+		}
 	}
 	index_defs += "}\n";
 	compiler_state.index_defs = index_defs;
+	// every coordinate is taken modulo the shape of the predecessor, so the
+	// remapped index always stays inside of it
+	compiler_state.pred_index_bound = 1;
+	for (int dim = 0; dim < pred.dimensions; dim++)
+		compiler_state.pred_index_bound *= pred.shape[dim];
 	compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
 								";\n");
 	compiler_state.code.prepend(

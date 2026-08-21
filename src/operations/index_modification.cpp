@@ -192,49 +192,85 @@ int ExtendImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 			acc_sizes[d] = acc_sizes[d + 1] * node->operation.shape[d + 1];
 		}
 	}
+	// a dimension that is neither padded, strided nor inverted maps its part
+	// of the index onto itself. A run of such dimensions at the end of the
+	// shape is taken over as a whole instead of being decomposed one by one.
+	int decomposed = node->operation.dimensions;
+	while (decomposed > 0) {
+		const long d = decomposed - 1;
+		if (extend->start[d] != 0 || extend->step[d] != 1 ||
+			node->operation.shape[d] != pred.shape[d] ||
+			acc_sizes[d] != acc_sizes_pred[d])
+			break;
+		decomposed--;
+	}
 	// calculate start
-	index_defs += "index = 0";
-	std::string set_zero_cond = "if(";
-	// accumulate index
+	std::string summands;
+	std::string set_zero_cond;
+	const auto zero_if = [&set_zero_cond](const std::string &cond) {
+		if (!set_zero_cond.empty())
+			set_zero_cond += " || ";
+		set_zero_cond += cond;
+	};
 	for (long d = 0; d < node->operation.dimensions; d++) {
 		long step = extend->step[d];
-		bool inv = step < 0;
+		const bool inv = step < 0;
 		if (inv)
 			step = -step;
-		std::string dim_idx =
-			"((" +
-			(d == 0 ? string("index")
-					: string("index %" + to_string(acc_sizes[d - 1]))) +
-			") / " + to_string(acc_sizes[d]) + " - " +
-			to_string(extend->start[d]) + ") / " + to_string(step);
-		if (d != 0)
-			set_zero_cond += " || ";
-		// if di < start
-		set_zero_cond +=
-			"(" +
-			(d == 0 ? string("index")
-					: string("index %" + to_string(acc_sizes[d - 1]))) +
-			") / " + to_string(acc_sizes[d]) + " < " +
-			to_string(extend->start[d]);
-		// if di % step != 0
-		set_zero_cond +=
-			" || ((" +
-			(d == 0 ? string("index")
-					: string("index %" + to_string(acc_sizes[d - 1]))) +
-			") / " + to_string(acc_sizes[d]) + " - " +
-			to_string(extend->start[d]) + ") % " + to_string(step) + " != 0";
-		// if di >= shape
-		set_zero_cond += " || " + dim_idx + " >= " + to_string(pred.shape[d]);
-
-		// finish index
+		const long start = extend->start[d];
+		// the coordinate of this dimension in the extended tensor. Only the
+		// first one is unbounded, all others are limited by the modulo of the
+		// dimension before them.
+		const std::string rest =
+			d == 0 ? std::string("index")
+				   : "(" +
+						 index_mod("index", acc_sizes[d - 1],
+								   compiler_state.index_bound) +
+						 ")";
+		const std::string coord =
+			index_div(rest, acc_sizes[d],
+					  d == 0 ? compiler_state.index_bound : acc_sizes[d - 1]);
+		// the coordinate projected back onto the predecessor
+		std::string dim_idx = coord;
+		if (start != 0)
+			dim_idx = "(" + dim_idx + " - " + to_string(start) + ")";
+		if (step != 1)
+			dim_idx = index_div(dim_idx, step);
+		// entries the extension inserted are zero: before the start of the
+		// original tensor, between two of its entries or behind its end
+		if (start > 0)
+			zero_if(coord + " < " + to_string(start));
+		if (step != 1)
+			zero_if("(" + coord + " - " + to_string(start) + ") % " +
+					to_string(step) + " != 0");
+		// the last dimensions can only run past the predecessor if the index
+		// itself does, which only the first dimension can tell
+		const long highest =
+			((long)node->operation.shape[d] - 1 - start) / step;
+		if (d == 0 || highest >= (long)pred.shape[d])
+			zero_if(dim_idx + " >= " + to_string(pred.shape[d]));
+		if (d >= decomposed)
+			continue;
 		if (inv)
 			dim_idx =
 				"(" + to_string(pred.shape[d]) + " - " + dim_idx + " - 1)";
-		index_defs += " + " + dim_idx + " * " + to_string(acc_sizes_pred[d]);
+		const std::string summand = index_mul(dim_idx, acc_sizes_pred[d]);
+		if (summand != "0")
+			summands += " + " + summand;
 	}
+	// the dimensions that were not decomposed keep their part of the index
+	if (decomposed < node->operation.dimensions)
+		summands +=
+			" + " + (decomposed == 0
+						 ? std::string("index")
+						 : index_mod("index", acc_sizes[decomposed - 1]));
+	index_defs += "index = 0" + summands;
 	index_defs += ";\nif(index < 0) index = 0;\n";
 	compiler_state.index_defs = index_defs;
-	compiler_state.code.prepend(set_zero_cond + ") " + name + " = 0;\n");
+	// when nothing is padded away the extension only reshapes
+	if (!set_zero_cond.empty())
+		compiler_state.code.prepend("if(" + set_zero_cond + ") " + name +
+									" = 0;\n");
 	compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
 								";\n");
 	compiler_state.code.prepend(type + " " + name + " = v" +

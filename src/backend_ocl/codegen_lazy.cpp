@@ -153,7 +153,7 @@ generateCode(FGraphNode *node,
 	state.parameters = &parameters;
 	state.code = {};
 	// leave room for intermediate results of the index calculations
-	state.index_type = maximumTensorSize(node) < (1l << 30) ? "int" : "long";
+	state.index_type = maximumTensorSize(node) < (1l << 31) ? "int" : "long";
 	const string &itype = state.index_type;
 	// we use breadth first search to traverse to operation graph
 	list<CodegenTask> &todo = state.todo;
@@ -172,7 +172,11 @@ generateCode(FGraphNode *node,
 	// the node currently generated as a reused definition, it may not alias
 	// itself
 	FGraphNode *defining = nullptr;
-	todo.push_front({node, "v0", true});
+	// the kernel runs one work item per element of the root
+	size_t root_bound = 1;
+	for (int i = 0; i < node->operation.dimensions; i++)
+		root_bound *= node->operation.shape[i];
+	todo.push_front({node, "v0", true, root_bound});
 	while (true) {
 		if (todo.empty()) {
 			// everything is generated, the definitions of the reused nodes
@@ -185,13 +189,18 @@ generateCode(FGraphNode *node,
 				if (!next || distance[gn] < distance[next])
 					next = gn;
 			defining = next;
-			todo.push_front({next, reused[next], true});
+			// a reused node is only shared where `index` is still the global
+			// id, so it is bounded like the root
+			todo.push_front({next, reused[next], true, root_bound});
 			reused.erase(next);
 		}
 		// take from queue
-		const auto [node, name, same_index] = todo.front();
+		const auto [node, name, same_index, index_bound] = todo.front();
 		todo.pop_front();
 		state.index_defs = "";
+		state.index_bound = index_bound;
+		// operations that remap the index overwrite this with their own bound
+		state.pred_index_bound = node && passesIndexOn(node) ? index_bound : 0;
 		// used to insert code at a specific place
 		if (!node) {
 			code.prepend(name);
@@ -252,8 +261,9 @@ generateCode(FGraphNode *node,
 				parameters.push_back({node, "P" + to_string(pid)});
 			}
 			code.prepend("const " + type + " " + name + " = " +
-						 assigned_params[node] + "[index%" +
-						 to_string(num_entries) + "];\n");
+						 assigned_params[node] + "[" +
+						 index_mod("index", num_entries, state.index_bound) +
+						 "];\n");
 		} else {
 			const int flags =
 				OperationImplementation::implementations[node->operation
@@ -298,8 +308,8 @@ generateCode(FGraphNode *node,
 			const bool pred_same_index = same_index && passesIndexOn(node);
 			for (int i = 0; i < node->num_predecessor; i++) {
 				string parname = "v" + to_string(++variable_index);
-				todo.push_front(
-					{node->predecessors[i], parname, pred_same_index});
+				todo.push_front({node->predecessors[i], parname,
+								 pred_same_index, state.pred_index_bound});
 			}
 		}
 	}

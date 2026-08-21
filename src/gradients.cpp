@@ -176,9 +176,13 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 		const FOperationType ct = curr->operation.op_type;
 		const bool reduction = ct == FREDUCE_SUM || ct == FREDUCE_MUL ||
 							   ct == FREDUCE_MIN || ct == FREDUCE_MAX;
-		FGraphNode *adj = readers > 1 || reduction
-							  ? fExecuteGraph(adjoints[curr])
-							  : adjoints[curr];
+		// an adjoint that expands what it reads (the adjoint of the product
+		// inside a convolution for example) is cheaper to recalculate than to
+		// write out, no matter how often it is read
+		FGraphNode *adj =
+			(readers > 1 || reduction) && worth_materializing(adjoints[curr])
+				? fExecuteGraph(adjoints[curr])
+				: adjoints[curr];
 		bool allowed_to_free = true;
 		adj->reference_counter++;
 		for (int i = 0; i < curr->num_predecessor; i++) {
