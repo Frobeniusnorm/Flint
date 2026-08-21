@@ -14,6 +14,8 @@
 
 #ifndef OCL_CODEGEN_HPP
 #define OCL_CODEGEN_HPP
+// adds the operation names as comments to the generated kernels, which makes
+// the debug output readable. Measured to cost nothing.
 #define FLINT_DEBUG
 #include "../../flint.h"
 #include "../utils.hpp"
@@ -24,5 +26,6 @@
 #include <unordered_set>
 std::string
 generateCode(FGraphNode *node,
-			 std::list<std::pair<FGraphNode *, std::string>> &parameters);
+			 std::list<std::pair<FGraphNode *, std::string>> &parameters,
+			 std::vector<std::pair<FType, double>> &scalars);
 #endif

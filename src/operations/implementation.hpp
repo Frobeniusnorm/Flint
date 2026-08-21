@@ -279,9 +279,20 @@
 						  node);                                               \
 	} break;                                                                   \
 	}
+/** One entry of the code generation queue. A null node means `name` is code
+ * that is inserted as it is. */
+struct CodegenTask {
+		FGraphNode *node;
+		std::string name;
+		/** Whether `index` still is the global id here. Only then the value of
+		 * a node is independent of where it appears and may be reused.
+		 * Operations that push predecessors themselves all modify the index,
+		 * so leaving this false is the safe default. */
+		bool same_index = false;
+};
 struct OCLLazyCodegenState {
 		/** Working queue of nodes for which still code has to be generated */
-		std::list<std::tuple<FGraphNode *, std::string>> todo;
+		std::list<CodegenTask> todo;
 		/** Maps storage nodes to their kernel parameter names (for fast lookup)
 		 */
 		std::unordered_map<FGraphNode *, std::string> assigned_params;
@@ -298,6 +309,21 @@ struct OCLLazyCodegenState {
 		std::string index_defs;
 		/** Actual code as twine for fast prepend and append operations */
 		Twine code;
+		/** Type of all index calculations in the kernel. 64 bit integer
+		 * division is emulated and slow on most GPUs, so 32 bit is used
+		 * whenever every tensor of the kernel is small enough for it. */
+		std::string index_type = "long";
+		/** Values that change between executions of otherwise identical
+		 * graphs (slice offsets, random seeds, ...). They are passed as
+		 * kernel arguments instead of being written into the code, since a
+		 * literal would make the kernel cache miss on every execution. */
+		std::vector<std::pair<FType, double>> scalars;
+		/** Registers a value as a kernel argument and returns its name */
+		std::string addScalar(FType type, double value) {
+			const std::string name = "S" + std::to_string(scalars.size());
+			scalars.push_back({type, value});
+			return name;
+		}
 		/**
 		 * Checks if the nodes has already been included as a parameter for the
 		 * kernel. If it has, returnes the binded variable, else it creates a

@@ -64,7 +64,8 @@ int SliceImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	FSlice *slice = (FSlice *)node->operation.additional_data;
 	unsigned int old_idx = compiler_state.num_indices++;
 	const string type = type_string(node->operation.data_type);
-	Twine index_defs = "int old_index" + to_string(old_idx) + " = index;\n";
+	Twine index_defs = compiler_state.index_type + " old_index" +
+					   to_string(old_idx) + " = index;\n";
 	// flattened shape data
 	std::vector<size_t> acc_sizes(node->operation.dimensions);
 	std::vector<size_t> acc_sizes_pred(acc_sizes.size());
@@ -83,7 +84,9 @@ int SliceImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	for (long d = 0; d < step.size(); d++) {
 		start += slice->start[d] * acc_sizes_pred[d];
 	}
-	index_defs += "index = (" + to_string(start);
+	// the offset moves when a graph is reused on different slices, as an
+	// argument it keeps the code cacheable
+	index_defs += "index = (" + compiler_state.addScalar(F_INT64, start);
 	// accumulate index
 	for (long d = 0; d < node->operation.dimensions; d++) {
 		index_defs +=
@@ -175,7 +178,8 @@ int ExtendImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	const FExtend *extend = (FExtend *)node->operation.additional_data;
 	const unsigned int old_idx = compiler_state.num_indices++;
 	Twine index_defs;
-	index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
+	index_defs += compiler_state.index_type + " old_index" +
+				  to_string(old_idx) + " = index;\n";
 	// flattened shape data
 	std::vector<size_t> acc_sizes(node->operation.dimensions);
 	std::vector<size_t> acc_sizes_pred(acc_sizes.size());
@@ -249,10 +253,12 @@ FGraphNode *IndexImpl::local_gradient(FGraphNode *y, int dx_i,
 	FGraphNode *b = y->predecessors[1];
 	if (0 == dx_i) {
 		FGraphNode *g =
-			constant_tensor(0, a->operation.data_type, a->operation.shape, a->operation.dimensions);
+			constant_tensor(0, a->operation.data_type, a->operation.shape,
+							a->operation.dimensions);
 		return findex_set(g, prev_adj, b);
 	} else
-		return constant_tensor(0, b->operation.data_type, b->operation.shape, b->operation.dimensions);
+		return constant_tensor(0, b->operation.data_type, b->operation.shape,
+							   b->operation.dimensions);
 }
 template <typename T, typename A, typename B>
 void IndexImpl::binary_expression(T *__restrict__ result,
@@ -314,7 +320,8 @@ int IndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	compiler_state.code.prepend("index = old_index" + to_string(old_idx1) +
 								";\n" + type + " " + name + " = " + par1 +
 								";\n");
-	std::string local_index_def2 = "long old_index" + to_string(old_idx2) +
+	std::string local_index_def2 = compiler_state.index_type + " old_index" +
+								   to_string(old_idx2) +
 								   " = index;\n"
 								   "index /= " +
 								   to_string(acc_sizes_ax) + ";\n";
@@ -336,7 +343,8 @@ FGraphNode *SetIndexImpl::local_gradient(FGraphNode *y, int dx_i,
 	// a[i] = b
 	if (0 == dx_i) {
 		FGraphNode *g =
-			constant_tensor(0, b->operation.data_type, b->operation.shape, b->operation.dimensions);
+			constant_tensor(0, b->operation.data_type, b->operation.shape,
+							b->operation.dimensions);
 		// remove values that have been overwritten
 		return findex_set(prev_adj, g, i);
 	} else {

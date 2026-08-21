@@ -164,7 +164,21 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 	adjoints[y] = constant_tensor(1., y->operation.data_type,
 								  y->operation.shape, y->operation.dimensions);
 	for (FGraphNode *curr : todo) {
-		FGraphNode *adj = fExecuteGraph(adjoints[curr]);
+		// the adjoint is read once per parameter a gradient is calculated for.
+		// With one reader it is cheaper to keep it lazy so that it fuses into
+		// the gradient, with more it would be recalculated for each of them.
+		int readers = 0;
+		for (int i = 0; i < curr->num_predecessor; i++)
+			if (visited.contains(curr->predecessors[i]))
+				readers++;
+		// a reduction reads its parameter once per reduced element, keeping
+		// its adjoint lazy would recalculate the whole expression that often
+		const FOperationType ct = curr->operation.op_type;
+		const bool reduction = ct == FREDUCE_SUM || ct == FREDUCE_MUL ||
+							   ct == FREDUCE_MIN || ct == FREDUCE_MAX;
+		FGraphNode *adj = readers > 1 || reduction
+							  ? fExecuteGraph(adjoints[curr])
+							  : adjoints[curr];
 		bool allowed_to_free = true;
 		adj->reference_counter++;
 		for (int i = 0; i < curr->num_predecessor; i++) {
@@ -187,7 +201,7 @@ FErrorType fCalculateGradients(FGraphNode *y, FGraphNode **dx,
 			OCLCompilerThread::memory_barrier();
 			std::chrono::duration<double, std::milli> elapsed =
 				std::chrono::high_resolution_clock::now() - start;
-			//std::cout << fop_to_string[curr->operation.op_type] << " took "
+			// std::cout << fop_to_string[curr->operation.op_type] << " took "
 			//		  << elapsed.count() << " for " << i << " type: "
 			//		  << type_string(local_grad->operation.data_type)
 			//		  << std::endl;

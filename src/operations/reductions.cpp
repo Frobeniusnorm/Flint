@@ -57,19 +57,22 @@ static inline int reducing(const FGraphNode *node, std::string name,
 	}
 	const std::string itv = "i" + to_string(compiler_state.variable_index);
 	const unsigned int old_idx = compiler_state.num_indices++;
-	index_defs += ";\nlong old_idx" + to_string(old_idx) +
+	const std::string &itype = compiler_state.index_type;
+	const std::string base = "base" + to_string(old_idx);
+	// everything but the iteration offset is constant for the whole loop,
+	// calculating it once saves a division and a modulo per iteration
+	index_defs += ";\n" + itype + " " + base + " = (index / " +
+				  to_string(it_dim) + ") * " + to_string(it_dim) + " * " +
+				  to_string(prev->operation.shape[red_dim]) + " + index % " +
+				  to_string(it_dim) + ";\n" + itype + " old_idx" +
+				  to_string(old_idx) +
 				  " = index;\n"
-				  "for(long " +
-				  itv + " = 0; " + itv + " < " +
+				  "for(" +
+				  itype + " " + itv + " = 0; " + itv + " < " +
 				  to_string(prev->operation.shape[red_dim]) + "; " + itv +
 				  "++){\n"
-				  "index = ((old_idx" +
-				  to_string(old_idx) + " / " + to_string(it_dim) + ") * " +
-
-				  to_string(it_dim) + " * " +
-				  to_string(prev->operation.shape[red_dim]) + " + (old_idx" +
-				  to_string(old_idx) + " % " + to_string(it_dim) + ") + " +
-				  itv + " * " + to_string(it_dim) + ") % " +
+				  "index = (" +
+				  base + " + " + itv + " * " + to_string(it_dim) + ") % " +
 				  to_string(total_el_size) + ";\n";
 	compiler_state.index_defs = index_defs;
 	Twine reduce_code;
@@ -165,8 +168,8 @@ static void reducing_push_parameters(FGraphNode *node, cl_kernel kernel,
 	if (prev->operation.op_type != FGEN_CONSTANT)
 		for (int i = 0; i < prev->operation.dimensions; i++)
 			total_el_size *= prev->operation.shape[i];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&total_el_size) !=
-		CL_SUCCESS) {
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&total_el_size) != CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Could not load Argument to kernel!");
 		return;

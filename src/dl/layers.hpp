@@ -121,7 +121,8 @@ struct Variable : public LayerGraph {
 		static Variable *fromUniformRandom(std::vector<size_t> shape,
 										   float minval = -0.15,
 										   float maxval = 0.15) {
-			FGraphNode *node = frandom(shape.data(), shape.size());
+			FGraphNode *node =
+				frandom_type(shape.data(), shape.size(), F_FLOAT32);
 			FGraphNode *scaled =
 				fsub_cf(fmul_cf(node, (maxval - minval)), minval);
 			return new Variable(scaled);
@@ -131,11 +132,13 @@ struct Variable : public LayerGraph {
 			compute_fans(shape, fan_in, fan_out);
 			double limit = std::sqrt(6. / (fan_in + fan_out));
 			FGraphNode *node1 =
-				fmax(frandom(shape.data(), (unsigned int)shape.size()),
-					 std::numeric_limits<double>::epsilon());
+				fmax(frandom_type(shape.data(), (unsigned int)shape.size(),
+								  F_FLOAT32),
+					 std::numeric_limits<float>::epsilon());
 			FGraphNode *node2 =
-				fmax(frandom(shape.data(), (unsigned int)shape.size()),
-					 std::numeric_limits<double>::epsilon());
+				fmax(frandom_type(shape.data(), (unsigned int)shape.size(),
+								  F_FLOAT32),
+					 std::numeric_limits<float>::epsilon());
 			float sigma = std::sqrt(6. / (fan_in + fan_out));
 			float mu = 0.0;
 			FGraphNode *res =

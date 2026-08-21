@@ -148,7 +148,8 @@ int RepeatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	const FOperation pred = node->predecessors[0]->operation;
 	const unsigned int old_idx = compiler_state.num_indices++;
 	Twine index_defs;
-	index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
+	index_defs += compiler_state.index_type + " old_index" +
+				  to_string(old_idx) + " = index;\n";
 	// add to index_defs a redefinition of index, so that we remap
 	// to src data calculate number of elements per dimension entry
 	// for destination and source
@@ -162,7 +163,8 @@ int RepeatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	}
 	// to get the index in the source array we first calculate the
 	// indices and reproject
-	index_defs += "{\nint working_index = index;\nindex = 0;\n";
+	index_defs += "{\n" + compiler_state.index_type +
+				  " working_index = index;\nindex = 0;\n";
 	for (int dim = 0; dim < op.dimensions; dim++) {
 		index_defs += "index += ((working_index /" +
 					  to_string(acc_sizes_d[dim]) + ") % " +
@@ -224,7 +226,8 @@ int TransposeImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	const FOperation pred = node->predecessors[0]->operation;
 	unsigned int old_idx = compiler_state.num_indices++;
 	Twine index_defs;
-	index_defs += "long old_index" + to_string(old_idx) + " = index;\n";
+	index_defs += compiler_state.index_type + " old_index" +
+				  to_string(old_idx) + " = index;\n";
 	// add to index_defs a redefinition of index, so that we remap
 	// to src data calculate number of elements per dimension entry
 	// for destination and source
@@ -238,7 +241,8 @@ int TransposeImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	}
 	// to get the index in the source array we first calculate the
 	// indices and reproject
-	index_defs += "{\nint working_index = index;\nindex = 0;\n";
+	index_defs += "{\n" + compiler_state.index_type +
+				  " working_index = index;\nindex = 0;\n";
 	for (int dim = 0; dim < op.dimensions; dim++) {
 		index_defs += "index += ((working_index /" +
 					  to_string(acc_sizes_d[dim]) + ") % " +
@@ -336,7 +340,8 @@ int ConcatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	for (int i = node->operation.dimensions - 2; i >= (int)ax; i--)
 		acc_size_last *= node->operation.shape[i + 1];
 	Twine index_defs;
-	index_defs += "long old_index" + to_string(old_idx) + " = index;\n";
+	index_defs += compiler_state.index_type + " old_index" +
+				  to_string(old_idx) + " = index;\n";
 	const string sx = "index / " + to_string(acc_size_last);
 	const string sc =
 		ax > 0 ? "(" + sx + ") % " + to_string(node->operation.shape[ax]) : sx;

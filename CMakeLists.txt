@@ -28,9 +28,21 @@ if(${DEEP_LEARNING})
 	list(APPEND HEADERFILES "src/dl/model.hpp;build/onnx.proto3.pb.h;src/dl/layers.hpp;src/dl/trainer.hpp;src/dl/flint_dl.hpp")
 	find_package(absl REQUIRED)
 endif()
+# the dl sources include <flint/flint.h>, without this they would compile
+# against an installed version of the library instead of this one
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/local_include/flint")
+foreach(header ${HEADERFILES})
+	get_filename_component(header_name "${header}" NAME)
+	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${header}")
+		configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${header}"
+					   "${CMAKE_BINARY_DIR}/local_include/flint/${header_name}" COPYONLY)
+	endif()
+endforeach()
+
 add_library(flint STATIC ${SRCFILES} ${INCLFILES})
 
 set_property(TARGET flint PROPERTY CXX_STANDARD 20)
+target_include_directories(flint BEFORE PRIVATE "${CMAKE_BINARY_DIR}/local_include")
 target_include_directories(flint PRIVATE .)
 target_include_directories(flint PRIVATE build)
 target_link_libraries(flint OpenCL::OpenCL)

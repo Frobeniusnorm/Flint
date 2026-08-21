@@ -403,7 +403,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			total_size_node *= node_op.shape[i];
 	// calculate Code and Parameters
 	list<pair<FGraphNode *, string>> parameters;
-	string graph_code = generateCode(node, parameters);
+	vector<pair<FType, double>> scalars;
+	string graph_code = generateCode(node, parameters, scalars);
 	string code =
 		"#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void "
 		"execute_graph(__global ";
@@ -413,6 +414,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	for (auto &[op, name] : parameters)
 		code += ", __global const " + type_string(op->operation.data_type) +
 				" *" + name;
+	for (int i = 0; i < scalars.size(); i++)
+		code += ", const " + string(type_string(scalars[i].first)) + " S" +
+				to_string(i);
 	code += "){\n";
 	// add the execution code
 	code += graph_code;
@@ -446,9 +450,14 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		int index = 0;
 		for (auto &[gn, name] : parameters) {
 			const FOperation op = gn->operation;
+			// recycling steals the buffer, so the parameter has to be
+			// restorable afterwards: computed nodes can be calculated again,
+			// stores only if they still hold their data on the host
+			const bool restorable =
+				op.op_type != FSTORE || ((FStore *)op.additional_data)->data;
 			const bool recycle = !result_mem && gn->reference_counter == 1 &&
-								 reusable[index] && op.op_type != FGEN_CONSTANT;
-			// The problem here: optimized memory is a store
+								 reusable[index] &&
+								 op.op_type != FGEN_CONSTANT && restorable;
 			cl_mem mem_obj = nullptr;
 			bool do_write = false;
 			const size_t type_s = type_size(op.data_type);
@@ -551,6 +560,34 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			return nullptr;
 		}
 	}
+	// values that are not part of the code so that it stays cacheable
+	for (int i = 0; i < scalars.size(); i++) {
+		const int arg = parameters.size() + 1 + i;
+		err_code = CL_SUCCESS;
+		switch (scalars[i].first) {
+		case F_INT32: {
+			const int v = (int)scalars[i].second;
+			err_code = clSetKernelArg(kernel, arg, sizeof(int), &v);
+		} break;
+		case F_INT64: {
+			const long v = (long)scalars[i].second;
+			err_code = clSetKernelArg(kernel, arg, sizeof(long), &v);
+		} break;
+		case F_FLOAT32: {
+			const float v = (float)scalars[i].second;
+			err_code = clSetKernelArg(kernel, arg, sizeof(float), &v);
+		} break;
+		case F_FLOAT64: {
+			const double v = scalars[i].second;
+			err_code = clSetKernelArg(kernel, arg, sizeof(double), &v);
+		} break;
+		}
+		if (err_code != CL_SUCCESS) {
+			setErrorType(OCL_ERROR);
+			flogging(F_ERROR, "Could not load Argument to kernel!");
+			return nullptr;
+		}
+	}
 	// execute kernel
 	const size_t global_size = total_size_node;
 
@@ -585,7 +622,8 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	flogging(F_DEBUG, "compilation took " +
 						  to_string(compilation_time.count()) +
 						  "ms, execution took " + to_string(elapsed.count()) +
-						  " for " + to_string(global_size) + " elements");
+						  " for " + to_string(global_size) + " elements of " +
+						  fop_to_string[node_op.op_type]);
 	node->result_data = resultData;
 	return node;
 }

@@ -420,6 +420,12 @@ FGraphNode *fconstant_d(const double value, const size_t *shape,
  */
 FGraphNode *frandom(const size_t *shape, const int dimensions);
 
+/** Like `frandom`, but the values are generated in `type`, which has to be
+ * `F_FLOAT32` or `F_FLOAT64`. Single precision is a lot cheaper on most gpus.
+ */
+FGraphNode *frandom_type(const size_t *shape, const int dimensions,
+						 const FType type);
+
 /** Creates a int64 tensor that contains the indices relative to a given
  * dimension `ax` for each element, i.e. each entry is its index in that
  * corresponding dimension. If you need to index more than one dimension, create

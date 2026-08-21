@@ -95,14 +95,13 @@ int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 	const unsigned int old_idx = compiler_state.num_indices++;
 	const std::string i = "old_index" + to_string(old_idx);
 	Twine index_defs;
-	index_defs += "long " + i +
+	const std::string &itype = compiler_state.index_type;
+	index_defs += itype + " " + i +
 				  " = index;\n"
-				  "index = 0;\n{\n"
-				  "long wi = (" +
-				  i + "%" + to_string(num_elems) + ")/" + to_string(acc_size) +
-				  ";\n"
-				  "long rest = " +
-				  i + "%" + to_string(acc_size) + ";\n";
+				  "index = 0;\n{\n" +
+				  itype + " wi = (" + i + "%" + to_string(num_elems) + ")/" +
+				  to_string(acc_size) + ";\n" + itype + " rest = " + i + "%" +
+				  to_string(acc_size) + ";\n";
 	for (int d = 0; d < pred.dimensions; d++) {
 		std::string local_wi = "wi/" + to_string(acc_sizes_win[d]);
 		std::string loc_base = local_wi + "*" + to_string(acc_sizes_pred[d]) +
@@ -237,8 +236,9 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 					   "{\n"
 					   "const long first_w = 0";
 	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
-		local_code += " + max(0l, ((index / " + to_string(acc_sizes[d]) +
-					  ") % " + to_string(node->operation.shape[d]) + ") - " +
+		local_code += " + max((" + compiler_state.index_type +
+					  ")0, ((index / " + to_string(acc_sizes[d]) + ") % " +
+					  to_string(node->operation.shape[d]) + ") - " +
 					  to_string(pred.shape[d + 1]) + " + 1) / " +
 					  to_string(steps[d]) + " * " +
 					  to_string(acc_no_windows[d]);

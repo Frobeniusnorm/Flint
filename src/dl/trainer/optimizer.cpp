@@ -28,19 +28,17 @@ static bool same_shape(const FGraphNode *a, const FGraphNode *b) {
 	return true;
 }
 
+/** Executes `node` and turns it into a store, so that the expression it was
+ * calculated from can be released. The result keeps living where it was
+ * calculated, on the gpu this saves copying it to the host and back for every
+ * weight in every step. Consumes `node`, don't free it afterwards. */
 static FGraphNode *materialize_graph(FGraphNode *node) {
-	FGraphNode *evaluated = fCalculateResult(node);
+	FGraphNode *evaluated = fExecuteGraph(node);
 	if (!evaluated || !evaluated->result_data) {
 		flogging(F_ERROR, "Could not evaluate graph node.");
 		return nullptr;
 	}
-	FGraphNode *res = fCreateGraph(
-		evaluated->result_data->data, (int)evaluated->result_data->num_entries,
-		evaluated->operation.data_type, evaluated->operation.shape,
-		evaluated->operation.dimensions);
-	if (!res)
-		flogging(F_ERROR, "Could not materialize graph node.");
-	return res;
+	return fOptimizeMemory(evaluated);
 }
 
 static inline void free_graph_roots(std::vector<FGraphNode *> &nodes) {
@@ -459,8 +457,6 @@ FGraphNode *Adam::optimize(FGraphNode *weight, FGraphNode *gradient) {
 		fadd_g(fmul_cf(v, b2), fmul_g(gradient, fmul_cf(gradient, (1 - b2))));
 	FGraphNode *new_m = materialize_graph(new_m_expr);
 	FGraphNode *new_v = materialize_graph(new_v_expr);
-	fFreeGraph(new_m_expr);
-	fFreeGraph(new_v_expr);
 	new_m->reference_counter++;
 	new_v->reference_counter++;
 	m->reference_counter--;
@@ -476,9 +472,7 @@ FGraphNode *Adam::optimize(FGraphNode *weight, FGraphNode *gradient) {
 	FGraphNode *new_weight_expr =
 		fsub_g(weight, fdiv_g(fmul_cf(mh, learning_rate),
 							  fadd_cf(fsqrt_g(vh), epsilon)));
-	FGraphNode *new_weight = materialize_graph(new_weight_expr);
-	fFreeGraph(new_weight_expr);
-	return new_weight;
+	return materialize_graph(new_weight_expr);
 }
 
 std::string Adam::description() const {

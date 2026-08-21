@@ -20,20 +20,31 @@ void GenRandomImpl::execute_cpu(const FGraphNode *node,
 								void *__restrict__ result, size_t from,
 								size_t size) {
 	double seed = ((double *)node->operation.additional_data)[0];
-  std::minstd_rand0 g1 (seed * 1000 + from);
+	std::minstd_rand0 g1(seed * 1000 + from);
+	const bool single = node->operation.data_type == F_FLOAT32;
 	for (size_t i = from; i < from + size; i++) {
-		((double *)result)[i] = (g1() % 100000000) / 100000000.0;
+		const double val = (g1() % 100000000) / 100000000.0;
+		if (single)
+			((float *)result)[i] = (float)val;
+		else
+			((double *)result)[i] = val;
 	}
 }
 int GenRandomImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
-	const string type = type_string(node->operation.data_type);
+	const FType dt = node->operation.data_type;
+	const string type = type_string(dt);
 	double seed = ((double *)node->operation.additional_data)[0];
+	// the seed differs per node, as an argument it keeps the code cacheable
+	const string sn = compiler_state.addScalar(dt, seed);
+	// keep the literals in the type of the node, a double one would pull the
+	// whole calculation into double precision
+	const string suffix = dt == F_FLOAT32 ? "f" : "";
 	compiler_state.code.prepend(type + " " + name + " = 0;\n{\n " + name +
-								" = sin(index + " + std::to_string(seed) +
-								") * 43758.5453123;\n " + name + " = min(" +
-								name + " - floor(" + name +
-								"), 0.99999);\n"
+								" = sin(index + " + sn + ") * 43758.5453123" +
+								suffix + ";\n " + name + " = min(" + name +
+								" - floor(" + name + "), 0.99999" + suffix +
+								");\n"
 								"}\n");
 	return 0;
 }
