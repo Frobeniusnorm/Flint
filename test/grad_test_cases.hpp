@@ -313,6 +313,22 @@ TEST_SUITE("Autodiff") {
 			CHECK_EQ((i + 1) * 2, gr[4][i]);
 		}
 	}
+	TEST_CASE("Transpose with a rotation") {
+		GradientContext _;
+		// a rotation is not its own inverse, so the gradient has to undo it
+		Tensor<double, 3> x{{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 0, 1, 2}},
+							{{3, 4, 5, 6}, {7, 8, 9, 0}, {1, 2, 3, 4}}};
+		x.watch();
+		Tensor<double, 3> w{{{0, 1}, {2, 3}, {4, 5}, {6, 7}},
+							{{8, 9}, {10, 11}, {12, 13}, {14, 15}},
+							{{16, 17}, {18, 19}, {20, 21}, {22, 23}}};
+		Tensor<double, 3> y = x.transpose({1, 2, 0}) * w;
+		Tensor<double, 3> dx = y.gradient(x);
+		for (int i = 0; i < 2; i++)
+			for (int j = 0; j < 3; j++)
+				for (int k = 0; k < 4; k++)
+					CHECK_EQ(w[j][k][i], dx[i][j][k]);
+	}
 	TEST_CASE("SQRT") {
 		GradientContext _;
 		Tensor<long, 1> y = {9, 7, 13};

@@ -204,8 +204,13 @@ void RepeatImpl::execute_cpu(const FGraphNode *node,
 
 FGraphNode *TransposeImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
-	int *transp = ((int *)y->operation.additional_data);
-	return ftranspose(prev_adj, transp);
+	// the gradient undoes the transposition
+	const int *transp = ((int *)y->operation.additional_data);
+	const int dims = y->operation.dimensions;
+	int inverse[dims];
+	for (int i = 0; i < dims; i++)
+		inverse[transp[i]] = i;
+	return ftranspose(prev_adj, inverse);
 }
 template <typename T>
 void TransposeImpl::unary_expression(T *__restrict__ result,

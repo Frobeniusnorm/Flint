@@ -1268,15 +1268,16 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions) {
 	op.shape = safe_mal<size_t>(op.dimensions);
 	if (!op.shape)
 		return nullptr;
+	bool used[op.dimensions];
+	memset(used, 0, sizeof(bool) * op.dimensions);
 	for (int i = 0; i < op.dimensions; i++) {
-		op.shape[i] = a->operation.shape[transpositions[i]];
-		// check that transpositions is reflexive
-		if (transpositions[transpositions[i]] != i)
-			flogging(
-				F_ERROR,
-				"Transpositions Array must be reflexive i.e for an dimension i "
-				"let j "
-				"be transpositions[i]. Then i = transpositions[j] must hold.");
+		const int t = transpositions[i];
+		if (t < 0 || t >= op.dimensions || used[t])
+			flogging(F_ERROR, "Transpositions Array must be a permutation of "
+							  "the dimensions of the tensor, i.e. contain "
+							  "each dimension exactly once.");
+		used[t] = true;
+		op.shape[i] = a->operation.shape[t];
 	}
 	op.additional_data = safe_mal<int>(op.dimensions);
 	if (!op.additional_data)

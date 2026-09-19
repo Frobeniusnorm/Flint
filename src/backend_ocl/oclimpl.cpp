@@ -18,21 +18,13 @@
 #include "../utils.hpp"
 #include "codegen.hpp"
 #include "comp.hpp"
-#include "utils.hpp"
 #include <CL/cl.h>
-#include <iostream>
 #include <list>
-#include <mutex>
-#include <optional>
-#include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <string>
-#include <tuple>
-#include <typeinfo>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 using namespace std;
 static const char *clCompilerOpts = "-cl-no-signed-zeros";
@@ -589,10 +581,17 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		}
 	}
 	// execute kernel
+	/* TODO local work groups:
+	 * ask GPU what their prefered work groups are:
+	 * - if larger than our dimensions: don't use them
+	 * - if global sizes are divisible: all fine
+	 * - otherwise: increase global sizes to next multiple of
+	 *   local sizes and add an if-statement to the kernel to skip the "padding".
+	 */
 	const size_t global_size = total_size_node;
-
-	err_code = clEnqueueNDRangeKernel(clqueue, kernel, 1, nullptr, &global_size,
-									  nullptr, writeEvents.size(),
+	const LaunchRange range = launchRange(node);
+	err_code = clEnqueueNDRangeKernel(clqueue, kernel, range.dims, nullptr,
+									  range.size, nullptr, writeEvents.size(),
 									  writeEvents.data(), nullptr);
 	for (cl_event ev : writeEvents)
 		clReleaseEvent(ev);

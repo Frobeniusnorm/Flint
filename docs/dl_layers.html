@@ -96,9 +96,9 @@
 <br />
 <div style="margin-left: 0em;" class="card"><div style="padding: 5px;"> Convolution layer.
  Slides a set of filter kernels along the input and optionally adds a bias.
- The input has <pre class="inline_code">[batch, channels, h, w, ...]</pre>, the kernel weights have
- <pre class="inline_code">[filters, channels, p, q, ...]</pre>, the bias <pre class="inline_code">[filters]</pre> and the output has
- <pre class="inline_code">[batch, filters, y, x, ...]</pre> where <pre class="inline_code">y</pre> and <pre class="inline_code">x</pre> depend on <pre class="inline_code">stride</pre> and
+ The input has <pre class="inline_code">[batch, h, w, ..., channels]</pre>, the kernel weights have
+ <pre class="inline_code">[filters, p, q, ..., channels]</pre>, the bias <pre class="inline_code">[filters]</pre> and the output has
+ <pre class="inline_code">[batch, y, x, ..., filters]</pre> where <pre class="inline_code">y</pre> and <pre class="inline_code">x</pre> depend on <pre class="inline_code">stride</pre> and
  <pre class="inline_code">padding</pre>. <pre class="inline_code">stride</pre> defines the step size of the kernel window and <pre class="inline_code">padding</pre>
  adds a zero border around the spatial dimensions to control the output size
  and include the border elements.

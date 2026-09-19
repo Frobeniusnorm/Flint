@@ -17,7 +17,6 @@
 #include "codegen.hpp"
 #include <list>
 #include <string>
-#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -149,11 +148,11 @@ generateCode(FGraphNode *node,
 			 std::list<std::pair<FGraphNode *, std::string>> &parameters,
 			 std::vector<std::pair<FType, double>> &scalars) {
 	using namespace std;
+	const LaunchRange range = launchRange(node);
 	OCLLazyCodegenState state;
 	state.parameters = &parameters;
 	state.code = {};
-	// leave room for intermediate results of the index calculations
-	state.index_type = maximumTensorSize(node) < (1l << 31) ? "int" : "long";
+	state.index_type = maximumTensorSize(node) < (1l << 30) ? "int" : "long";
 	const string &itype = state.index_type;
 	// we use breadth first search to traverse to operation graph
 	list<CodegenTask> &todo = state.todo;
@@ -313,7 +312,19 @@ generateCode(FGraphNode *node,
 			}
 		}
 	}
-	code.prepend(itype + " index = get_global_id(0);\n");
+	{
+		// flatten the ids back to the index of the element, the first id is
+		// the innermost dimension
+		Twine index_expr = itype + " index = get_global_id(0)";
+		size_t stride = 1;
+		for (int i = 1; i < range.dims; i++) {
+			stride *= range.size[i - 1];
+			index_expr.append(" + get_global_id(" + to_string(i) + ") * " +
+							  to_string(stride));
+		}
+		index_expr.append(";\n");
+		code.prepend(index_expr);
+	}
 	scalars = std::move(state.scalars);
 	return code;
 }

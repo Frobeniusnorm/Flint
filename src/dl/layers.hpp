@@ -8,6 +8,8 @@
 #define FLINT_DEBUG
 #include <flint/flint.h>
 #include <vector>
+/** Fans of a weight tensor. Dense kernels are [in, out], convolution kernels
+ * [filters, spatial..., channels] */
 static void compute_fans(std::vector<size_t> shape, unsigned int &fan_in,
 						 unsigned int &fan_out) {
 	const int n = shape.size();
@@ -18,15 +20,18 @@ static void compute_fans(std::vector<size_t> shape, unsigned int &fan_in,
 		fan_in = shape[0];
 		fan_out = shape[1];
 	} else {
-		size_t acc = 1;
-		for (int i = 0; i < n - 2; i++)
-			acc *= shape[i];
-		fan_in = shape[n - 2] * acc;
-		fan_out = shape[n - 1] * acc;
+		// each input and output channel is connected over the whole window
+		size_t window = 1;
+		for (int i = 1; i < n - 1; i++)
+			window *= shape[i];
+		fan_in = shape[n - 1] * window;
+		fan_out = shape[0] * window;
 	}
 }
-// TODO adapt the data s.t. channels are switched to back to remove the
-// transpositions
+// Images are stored channels last, [batch, spatial..., channels], and
+// convolution kernels as [filters, spatial..., channels]. ONNX files use
+// channels first, the conversion happens once when a model is loaded or
+// serialized.
 /** Base class for all layer graph nodes. */
 struct LayerGraph {
 		std::vector<LayerGraph *> incoming; // incoming edges in graph
@@ -130,21 +135,12 @@ struct Variable : public LayerGraph {
 		static Variable *fromGlorotUniform(std::vector<size_t> shape) {
 			unsigned int fan_in, fan_out;
 			compute_fans(shape, fan_in, fan_out);
-			double limit = std::sqrt(6. / (fan_in + fan_out));
-			FGraphNode *node1 =
-				fmax(frandom_type(shape.data(), (unsigned int)shape.size(),
-								  F_FLOAT32),
-					 std::numeric_limits<float>::epsilon());
-			FGraphNode *node2 =
-				fmax(frandom_type(shape.data(), (unsigned int)shape.size(),
-								  F_FLOAT32),
-					 std::numeric_limits<float>::epsilon());
-			float sigma = std::sqrt(6. / (fan_in + fan_out));
-			float mu = 0.0;
-			FGraphNode *res =
-				fadd_cf(fmul(fmul_cf(fsqrt_g(fmul_cf(flog(node1), -2)), sigma),
-							 fcos(fmul_cf(node2, 2 * M_PI))),
-						mu);
+			// uniform in [-limit, limit)
+			const float limit = std::sqrt(6. / (fan_in + fan_out));
+			FGraphNode *res = fsub_cf(
+				fmul_cf(frandom_type(shape.data(), shape.size(), F_FLOAT32),
+						2 * limit),
+				limit);
 			return new Variable(res);
 		}
 };
@@ -299,8 +295,8 @@ convolve_shape_transform(const std::vector<size_t> in,
 						 const std::vector<unsigned int> &stride) {
 	using namespace std;
 	vector<size_t> out_shape(in.size());
-	out_shape[0] = in[0];	  // batch size
-	out_shape[1] = filter[0]; // filters
+	out_shape[0] = in[0];				  // batch size
+	out_shape[in.size() - 1] = filter[0]; // filters
 	const size_t spatial_dims = in.size() - 2;
 	auto padding_for = [&](size_t spatial_idx,
 						   bool end_padding) -> unsigned int {
@@ -313,19 +309,19 @@ convolve_shape_transform(const std::vector<size_t> in,
 		flogging(F_ERROR, "Invalid padding size for convolution layer.");
 		return 0;
 	};
-	for (int i = 2; i < in.size(); i++) {
+	for (int i = 1; i < in.size() - 1; i++) {
 		size_t padded_shape = in[i];
 		if (padding.size() != 0) {
 			padded_shape +=
-				padding_for(i - 2, false) + padding_for(i - 2, true);
+				padding_for(i - 1, false) + padding_for(i - 1, true);
 		}
 		std::cout << "padding " << i << ":" << padded_shape << ", ";
 		size_t window_size = padded_shape - filter[i] + 1;
 		std::cout << "window_size: " << padded_shape << " - " << filter[i]
-				  << ", stride: " << stride[i - 2];
-		window_size = window_size % stride[i - 2] == 0
-						  ? window_size / stride[i - 2]
-						  : window_size / stride[i - 2] + 1;
+				  << ", stride: " << stride[i - 1];
+		window_size = window_size % stride[i - 1] == 0
+						  ? window_size / stride[i - 1]
+						  : window_size / stride[i - 1] + 1;
 		std::cout << ", final: " << window_size << std::endl;
 		out_shape[i] = window_size;
 	}
@@ -333,9 +329,9 @@ convolve_shape_transform(const std::vector<size_t> in,
 }
 /** Convolution layer.
  * Slides a set of filter kernels along the input and optionally adds a bias.
- * The input has `[batch, channels, h, w, ...]`, the kernel weights have
- * `[filters, channels, p, q, ...]`, the bias `[filters]` and the output has
- * `[batch, filters, y, x, ...]` where `y` and `x` depend on `stride` and
+ * The input has `[batch, h, w, ..., channels]`, the kernel weights have
+ * `[filters, p, q, ..., channels]`, the bias `[filters]` and the output has
+ * `[batch, y, x, ..., filters]` where `y` and `x` depend on `stride` and
  * `padding`. `stride` defines the step size of the kernel window and `padding`
  * adds a zero border around the spatial dimensions to control the output size
  * and include the border elements.
@@ -390,7 +386,7 @@ pooling_shape_transform(const std::vector<size_t> in,
 	using namespace std;
 	vector<size_t> out_shape(in.size());
 	out_shape[0] = in[0]; // batch size
-	out_shape[1] = in[1];
+	out_shape[in.size() - 1] = in[in.size() - 1];
 	const size_t spatial_dims = in.size() - 2;
 	auto padding_for = [&](size_t spatial_idx,
 						   bool end_padding) -> unsigned int {
@@ -403,16 +399,16 @@ pooling_shape_transform(const std::vector<size_t> in,
 		flogging(F_ERROR, "Invalid padding size for pooling layer.");
 		return 0;
 	};
-	for (int i = 2; i < in.size(); i++) {
+	for (int i = 1; i < in.size() - 1; i++) {
 		size_t padded_shape = in[i];
 		if (padding.size() != 0) {
 			padded_shape +=
-				padding_for(i - 2, false) + padding_for(i - 2, true);
+				padding_for(i - 1, false) + padding_for(i - 1, true);
 		}
-		size_t window_size = padded_shape - filter[i - 2] + 1;
-		window_size = window_size % stride[i - 2] == 0
-						  ? window_size / stride[i - 2]
-						  : window_size / stride[i - 2] + 1;
+		size_t window_size = padded_shape - filter[i - 1] + 1;
+		window_size = window_size % stride[i - 1] == 0
+						  ? window_size / stride[i - 1]
+						  : window_size / stride[i - 1] + 1;
 		out_shape[i] = window_size;
 	}
 	return out_shape;
@@ -519,7 +515,7 @@ struct GlobalAvgPool : public LayerGraph {
 			const int dims = input[0].size();
 			vector<size_t> rank_shape(dims, 1);
 			rank_shape[0] = input[0][0];
-			rank_shape[1] = input[0][1];
+			rank_shape[dims - 1] = input[0][dims - 1];
 			return {rank_shape};
 		}
 };
@@ -743,7 +739,7 @@ inline Convolve *conv2d(size_t filters, std::array<size_t, 2> kernel_size,
 		throw std::runtime_error("conv2d expects filters/channels/kernel");
 
 	Variable *kernel = detail::make_variable(
-		{filters, in_channels, kernel_size[0], kernel_size[1]},
+		{filters, kernel_size[0], kernel_size[1], in_channels},
 		options.kernel_initializer, options.uniform_min, options.uniform_max,
 		options.kernel_constant);
 	Variable *bias = options.use_bias
