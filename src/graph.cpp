@@ -1007,9 +1007,6 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 			if (curr->result_data)
 				continue;
 			switch (curr->operation.op_type) {
-			case FCONVOLVE:
-			case FMATMUL:
-			case FGRADIENT_CONVOLVE1:
 			case FREDUCE_MAX:
 			case FREDUCE_MIN:
 			case FREDUCE_MUL:

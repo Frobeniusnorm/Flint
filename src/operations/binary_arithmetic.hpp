@@ -128,26 +128,4 @@ struct PowImpl : OperationImplementation {
 			return AddImpl::reuse_parameter_binary_impl(node);
 		}
 };
-struct MatMulImpl : OperationImplementation {
-		template <typename T, typename A, typename B>
-		static void binary_expression(T *__restrict__ result,
-									  const A *__restrict__ data1,
-									  const B *__restrict__ data2, size_t from,
-									  size_t size, size_t index_man_1,
-									  size_t inv_man_1, size_t index_man_2,
-									  size_t inv_man_2, const FGraphNode *curr);
-		void execute_cpu(const FGraphNode *node,
-						 std::vector<CPUResultData> predecessor_data,
-						 void *__restrict__ result, size_t from,
-						 size_t size) override;
-		virtual int
-		generate_ocl_lazy(const FGraphNode *node, std::string name,
-						  OCLLazyCodegenState &compiler_state) override;
-		int operation_score(FGraphNode *node) override {
-			const FGraphNode *a = node->predecessors[0];
-			return 5 * a->operation.shape[a->operation.dimensions - 1];
-		}
-		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
-								   FGraphNode *prev_adj) override;
-};
 #endif
