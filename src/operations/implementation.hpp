@@ -17,6 +17,7 @@
 #include "../../flint.h"
 #include "../backend_cpu/cpu_common.hpp"
 #include "../backend_ocl/twine.hpp"
+#include <algorithm>
 #include <set>
 #include <unordered_map>
 #include <vector>
@@ -343,8 +344,9 @@ struct OCLLazyCodegenState {
 		 */
 		std::string findOrInsertParameter(FGraphNode *gnp1) {
 			std::string par1;
-			if (assigned_params.find(gnp1) != assigned_params.end()) {
-				par1 = assigned_params[gnp1];
+			auto find_param = assigned_params.find(gnp1);
+			if (find_param != assigned_params.end()) {
+				par1 = find_param->second;
 			} else {
 				par1 = "P" + std::to_string(assigned_params.size());
 				assigned_params.insert({gnp1, par1});

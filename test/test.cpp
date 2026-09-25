@@ -13,6 +13,7 @@
    limitations under the License. */
 
 #include "../flint.h"
+#include "../src/operations/indices.hpp"
 #include <cmath>
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
@@ -1390,6 +1391,26 @@ TEST_SUITE("Advanced Broadcasting") {
 		for (int i = 0; i < 5; i++)
 			for (int j = 0; j < 2; j++)
 				CHECK_EQ(exp[i][j], l[i][j]);
+	}
+}
+TEST_SUITE("Index Optimizations") {
+	TEST_CASE("split(flatten(x)) = x") {
+		IndexMap map;
+		IndexExpr expr1, expr2, expr3;
+		expr1.a = 42;
+		expr1.exprs = {{3, 3}, {41, 9}, {3, 5}};
+		expr2.a = 3;
+		expr2.exprs = {{2, 99}, {4, 7}, {9, 8}, {5, 11}, {9, 33}};
+		expr3.a = 7;
+		expr3.exprs = {{7, 0}, {8, 10}};
+		map.expr_per_dim = {expr1, expr2, expr3};
+		std::vector<size_t> shape1 = {100, 15, 99};
+		std::vector<size_t> shape2 = {99 * 4, 10, 10};
+		for (std::vector<size_t> sh : {shape1, shape2}) {
+			auto flat_expr = map.flatten(sh.data(), sh.size());
+			auto new_map = IndexMap::split(flat_expr, sh.data(), sh.size());
+			CHECK_EQ(new_map, map);
+		}
 	}
 }
 int main(int argc, char **argv) {
