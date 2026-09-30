@@ -15,11 +15,11 @@
 #include "../operations/implementation.hpp"
 #include "../utils.hpp"
 #include "codegen.hpp"
+#include "src/operations/indices.hpp"
 #include <list>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-
 /** Largest number of elements of any tensor that occurs in the kernel, i.e.
  * the bound for every index calculation in it */
 static size_t maximumTensorSize(FGraphNode *node) {
@@ -51,51 +51,6 @@ static size_t maximumTensorSize(FGraphNode *node) {
 static bool isKernelParameter(const FGraphNode *node) {
 	return node->operation.op_type == FSTORE || node->result_data ||
 		   node->operation.op_type == FGEN_CONSTANT;
-}
-/** True if the operation evaluates its predecessors with the same `index` it
- * was called with. Only those pass the global id down unchanged, everything
- * else remaps the index for its predecessors (reductions, slices, windows,
- * ...) so that the same node means different values in different places. */
-static bool passesIndexOn(const FGraphNode *node) {
-	switch (node->operation.op_type) {
-	case FADD:
-	case FSUB:
-	case FMUL:
-	case FDIV:
-	case FPOW:
-	case FMIN:
-	case FMAX:
-	case FLESS:
-	case FEQUAL:
-	case FGREATER: {
-		// inverse broadcasting divides the index for the predecessors
-		size_t iv1 = 1, iv2 = 1;
-		calculate_divisor_for_inverse_broadcasting(node->predecessors[0], iv1,
-												   node->predecessors[1], iv2);
-		return iv1 == 1 && iv2 == 1;
-	}
-	case FNEG:
-	case FLOG:
-	case FLOG2:
-	case FLOG10:
-	case FSIGN:
-	case FEVEN:
-	case FSIN:
-	case FCOS:
-	case FTAN:
-	case FASIN:
-	case FACOS:
-	case FATAN:
-	case FSQRT:
-	case FEXP:
-	case FABS:
-	case FCONVERSION:
-	case FLATTEN:
-	case FRESHAPE:
-		return true;
-	default:
-		return false;
-	}
 }
 /** Collects the nodes that are reachable from `node` without the index being
  * remapped, together with how many of those use them and how far they are away
@@ -153,6 +108,44 @@ generateCode(FGraphNode *node,
 	state.parameters = &parameters;
 	state.code = {};
 	state.index_type = maximumTensorSize(node) < (1l << 30) ? "int" : "long";
+	// the coordinates of the result, seeded from the launch ids exactly like
+	// `launchRange` assigns them: the two innermost dimensions that are larger
+	// than one get an id of their own, all remaining ones share the third
+	Twine index_decl;
+	state.index_map.expr_per_dim.resize(node->operation.dimensions);
+	{
+		int found = 0;
+		size_t factor = 1;
+		for (int i = node->operation.dimensions - 1; i >= 0; i--) {
+			IndexExpr &coord = state.index_map.expr_per_dim[i];
+			coord.a = 0;
+			const size_t size = node->operation.shape[i];
+			// a dimension of size one is always indexed with zero, it needs
+			// neither a variable nor an id
+			if (size == 1) {
+				coord.derive_bound(state.index_atoms);
+				continue;
+			}
+			std::string value;
+			if (found < 2)
+				value = "get_global_id(" + to_string(found) + ")";
+			else {
+				value = "(get_global_id(2)";
+				if (factor > 1)
+					value += " / " + to_string(factor);
+				value += ") % " + to_string(size);
+				factor *= size;
+			}
+			const int atom =
+				state.add_atom("index_dim" + to_string(i), 0, (long)size - 1);
+			coord.exprs.push_back({1, atom});
+			coord.derive_bound(state.index_atoms);
+			index_decl.append(state.index_type + " " +
+							  state.index_atoms[atom].name + " = " + value +
+							  ";\n");
+			found++;
+		}
+	}
 	const string &itype = state.index_type;
 	// we use breadth first search to traverse to operation graph
 	list<CodegenTask> &todo = state.todo;
@@ -175,7 +168,7 @@ generateCode(FGraphNode *node,
 	size_t root_bound = 1;
 	for (int i = 0; i < node->operation.dimensions; i++)
 		root_bound *= node->operation.shape[i];
-	todo.push_front({node, "v0", true, root_bound});
+	todo.push_front({node, "v0", true, root_bound, state.index_map});
 	while (true) {
 		if (todo.empty()) {
 			// everything is generated, the definitions of the reused nodes
@@ -194,10 +187,13 @@ generateCode(FGraphNode *node,
 			reused.erase(next);
 		}
 		// take from queue
-		const auto [node, name, same_index, index_bound] = todo.front();
+		const auto [node, name, same_index, index_bound, index_map] =
+			todo.front();
 		todo.pop_front();
 		state.index_defs = "";
+		state.pred_index_maps.clear();
 		state.index_bound = index_bound;
+		state.index_map = index_map;
 		// operations that remap the index overwrite this with their own bound
 		state.pred_index_bound = node && passesIndexOn(node) ? index_bound : 0;
 		// used to insert code at a specific place
@@ -259,21 +255,71 @@ generateCode(FGraphNode *node,
 				assigned_params.insert({node, "P" + to_string(pid)});
 				parameters.push_back({node, "P" + to_string(pid)});
 			}
+			// the coordinates address the buffer of this node directly, if they
+			// are known here. `index_bound` decides about the modulo, the bound
+			// of the expression may be smaller than the range of a flat index
+			// that was split into coordinates.
+			string address = "index";
+			if (state.index_map.expr_per_dim.size() ==
+				node->operation.dimensions)
+				address =
+					state.index_map
+						.flatten(node->operation.shape,
+								 node->operation.dimensions, state.index_atoms)
+						.to_code(state.index_atoms);
 			code.prepend("const " + type + " " + name + " = " +
 						 assigned_params[node] + "[" +
-						 index_mod("index", num_entries, state.index_bound) +
+						 index_mod(address, num_entries, state.index_bound) +
 						 "];\n");
 		} else {
-			const int flags =
+			OperationImplementation *impl =
 				OperationImplementation::implementations[node->operation
-															 .op_type]
-					->generate_ocl_lazy(node, name, state);
+															 .op_type];
+			const bool has_map = state.index_map.expr_per_dim.size() ==
+								 node->operation.dimensions;
+			// where are the parameters read? Only possible if the coordinates
+			// of the node itself are known here
+			if (has_map)
+				impl->mutate_index(node, state);
+			// mapping only some parameters would leave the others without an
+			// index, the operation has to map either all of them or none
+			if (!state.pred_index_maps.empty() &&
+				state.pred_index_maps.size() != node->num_predecessor)
+				flogging(F_ERROR, "mutate_index of " +
+									  string(fop_to_string[node->operation
+															   .op_type]) +
+									  " mapped only some of its parameters.");
+			// an operation without a mapping calculates with the flat `index`,
+			// so the coordinates are folded into it before it runs. That
+			// overwrites what the parent left there, which is saved and
+			// restored around this node
+			if (has_map && state.pred_index_maps.empty()) {
+				const string flat =
+					state.index_map
+						.flatten(node->operation.shape,
+								 node->operation.dimensions, state.index_atoms)
+						.to_code(state.index_atoms);
+				if (flat != "index") {
+					const string old_idx = "old_idx" + to_string(num_indices++);
+					code.prepend("index = " + old_idx + ";\n");
+					// it has to be queued before anything the operation queues
+					// for its parameters
+					todo.push_front({nullptr, itype + " " + old_idx +
+												  " = index;\nindex = " + flat +
+												  ";\n"});
+				}
+			}
+			const int flags = impl->generate_ocl_lazy(node, name, state);
 			inverse_broadcasting =
 				flags & OperationImplementation::OCL_LAZY_INVERSE_BROADCASTING;
 			push_pred =
 				(flags & OperationImplementation::OCL_LAZY_DONT_PUSH_PREDS) ==
 				0;
 		}
+		// insert our indexing logic into the queue after the children
+		const string index_defs = state.index_defs;
+		if (!index_defs.empty())
+			todo.push_front({nullptr, index_defs});
 		if (inverse_broadcasting) {
 			// manipulate for invserse broadcasting
 			size_t iv1 = 1, iv2 = 1;
@@ -298,20 +344,36 @@ generateCode(FGraphNode *node,
 #ifdef FLINT_DEBUG
 		code.prepend("// " + opstr + "\n");
 #endif
-		// insert our indexing logic into the queue after the children
-		const string index_defs = state.index_defs;
-		if (!index_defs.empty())
-			todo.push_front({nullptr, index_defs});
 		// push predecessors dfs
 		if (push_pred) {
 			const bool pred_same_index = same_index && passesIndexOn(node);
+			// the operation has no mapping of its own yet, so it calculated the
+			// index of its predecessors into `index`. They pick it up from
+			// there, split into their own coordinates.
+			IndexExpr flat;
+			if (state.pred_index_maps.empty() && state.pred_index_bound) {
+				flat.a = 0;
+				flat.exprs.push_back(
+					{1, state.add_atom("index", 0,
+									   (long)state.pred_index_bound - 1)});
+				flat.derive_bound(state.index_atoms);
+			}
 			for (int i = 0; i < node->num_predecessor; i++) {
 				string parname = "v" + to_string(++variable_index);
+				const FOperation pred = node->predecessors[i]->operation;
+				IndexMap pred_map;
+				if (!state.pred_index_maps.empty())
+					pred_map = state.pred_index_maps[i];
+				else if (state.pred_index_bound)
+					pred_map = IndexMap::split(
+						flat, pred.shape, pred.dimensions, state.index_atoms);
 				todo.push_front({node->predecessors[i], parname,
-								 pred_same_index, state.pred_index_bound});
+								 pred_same_index, state.pred_index_bound,
+								 pred_map});
 			}
 		}
 	}
+	code.prepend(index_decl);
 	{
 		// flatten the ids back to the index of the element, the first id is
 		// the innermost dimension

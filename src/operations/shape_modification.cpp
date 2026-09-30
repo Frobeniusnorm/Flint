@@ -297,7 +297,25 @@ int TransposeImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 void TransposeImpl::execute_cpu(const FGraphNode *node,
 								vector<CPUResultData> predecessor_data,
 								void *__restrict__ result, size_t from,
-								size_t size){UNARY_EXECUTE_MONOTON_IMPL}
+								size_t size) {
+	UNARY_EXECUTE_MONOTON_IMPL
+}
+
+bool TransposeImpl::mutate_index(const FGraphNode *node,
+								 OCLLazyCodegenState &state) {
+	// retranspose indices
+	IndexMap pred = state.index_map;
+	int *transpositions = static_cast<int *>(node->operation.additional_data);
+	for (int i = 0; i < node->operation.dimensions; i++) {
+		int j = transpositions[i];
+		if (i != j) {
+			// sawp i and j in pred
+			pred.expr_per_dim[i] = state.index_map.expr_per_dim[j];
+		}
+	}
+	state.pred_index_maps = {pred};
+	return true;
+}
 
 FGraphNode *ConcatImpl::local_gradient(FGraphNode *y, int dx_i,
 									   FGraphNode *prev_adj) {

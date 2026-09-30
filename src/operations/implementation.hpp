@@ -17,11 +17,100 @@
 #include "../../flint.h"
 #include "../backend_cpu/cpu_common.hpp"
 #include "../backend_ocl/twine.hpp"
-#include <algorithm>
-#include <set>
+#include "src/operations/indices.hpp"
 #include <unordered_map>
 #include <vector>
 
+static void calculate_divisor_for_inverse_broadcasting(const FGraphNode *a,
+													   size_t &iv1,
+													   const FGraphNode *b,
+													   size_t &iv2) {
+	iv1 = 1;
+	iv2 = 1;
+	bool inv_manipulation = a->operation.dimensions != b->operation.dimensions;
+	// constants -> no inverse broadcasting
+	if ((a->operation.dimensions == 1 && a->operation.shape[0] == 1) ||
+		(b->operation.dimensions == 1 && b->operation.shape[0] == 1))
+		return;
+	// forward broadcasting -> no inverse broadcasting
+	bool forward_broad = a->operation.broadcasting_mode == 0 &&
+						 b->operation.broadcasting_mode == 0;
+	if (forward_broad) {
+		size_t *const lower = a->operation.dimensions > b->operation.dimensions
+								  ? b->operation.shape
+								  : a->operation.shape;
+		size_t *const higher = a->operation.dimensions > b->operation.dimensions
+								   ? a->operation.shape
+								   : b->operation.shape;
+		const int lower_dim =
+			std::min(a->operation.dimensions, b->operation.dimensions);
+		const int higher_dim =
+			std::max(a->operation.dimensions, b->operation.dimensions);
+		for (int i = 0; i < lower_dim; i++) {
+			const size_t s1 = higher[i + (higher_dim - lower_dim)];
+			const size_t s2 = lower[i];
+			if (s1 != s2) {
+				forward_broad = false;
+				break;
+			}
+		}
+	}
+	if (forward_broad)
+		return;
+	if (inv_manipulation) {
+		for (int i = b->operation.dimensions; i < a->operation.dimensions; i++)
+			iv2 *= a->operation.shape[i];
+		for (int i = a->operation.dimensions; i < b->operation.dimensions; i++)
+			iv1 *= b->operation.shape[i];
+	}
+}
+/** True if the operation evaluates its predecessors with the same
+ * `index` it was called with. Only those pass the global id down
+ * unchanged, everything else remaps the index for its predecessors
+ * (reductions, slices, windows,
+ * ...) so that the same node means different values in different
+ * places. */
+static bool passesIndexOn(const FGraphNode *node) {
+	switch (node->operation.op_type) {
+	case FADD:
+	case FSUB:
+	case FMUL:
+	case FDIV:
+	case FPOW:
+	case FMIN:
+	case FMAX:
+	case FLESS:
+	case FEQUAL:
+	case FGREATER: {
+		// inverse broadcasting divides the index for the predecessors
+		size_t iv1 = 1, iv2 = 1;
+		calculate_divisor_for_inverse_broadcasting(node->predecessors[0], iv1,
+												   node->predecessors[1], iv2);
+		return iv1 == 1 && iv2 == 1;
+	}
+	case FNEG:
+	case FLOG:
+	case FLOG2:
+	case FLOG10:
+	case FSIGN:
+	case FEVEN:
+	case FSIN:
+	case FCOS:
+	case FTAN:
+	case FASIN:
+	case FACOS:
+	case FATAN:
+	case FSQRT:
+	case FEXP:
+	case FABS:
+	case FCONVERSION:
+	case FLATTEN:
+	case FRESHAPE:
+		return true;
+	default:
+		return false;
+	}
+}
 #define DISPATCH_BINARY_OPERATION(T)                                           \
 	const CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];    \
 	size_t im1 = p1.num_entries, im2 = p2.num_entries;                         \
@@ -283,8 +372,8 @@
 /** One entry of the code generation queue. A null node means `name` is code
  * that is inserted as it is. */
 struct CodegenTask {
-		FGraphNode *node;
-		std::string name;
+		FGraphNode *node = nullptr;
+		std::string name = "";
 		/** Whether `index` still is the global id here. Only then the value of
 		 * a node is independent of where it appears and may be reused.
 		 * Operations that push predecessors themselves all modify the index,
@@ -294,6 +383,10 @@ struct CodegenTask {
 		 * bounds that hold for every execution may be entered, they decide
 		 * which divisions and modulos of the index calculations are left out */
 		size_t index_bound = 0;
+		/** Coordinates the node is read at, one expression per dimension of its
+		 * shape. Empty as long as only the flat `index` is known here, then the
+		 * operations fall back to calculating with that. */
+		IndexMap index_map;
 };
 struct OCLLazyCodegenState {
 		/** Working queue of nodes for which still code has to be generated */
@@ -336,6 +429,27 @@ struct OCLLazyCodegenState {
 			const std::string name = "S" + std::to_string(scalars.size());
 			scalars.push_back({type, value});
 			return name;
+		}
+		/**
+		 * Currently mapped index expressions per dimension.
+		 */
+		IndexMap index_map;
+		/**
+		 * Pool of all index atoms (e.g. index variables or other unknowns).
+		 */
+		std::vector<IndexAtom> index_atoms;
+		/** Per predecessor holds its index space.
+		 * If empty, fallback. */
+		std::vector<IndexMap> pred_index_maps;
+		/**
+		 * Registers an unknown for the index calculations and returns its id.
+		 * The id is its position in `index_atoms`, which is what
+		 * `IndexExpr::derive_bound` and `IndexExpr::to_code` rely on.
+		 */
+		int add_atom(const std::string &name, long lo, long hi) {
+			const int id = index_atoms.size();
+			index_atoms.push_back({id, {lo, hi}, name});
+			return id;
 		}
 		/**
 		 * Checks if the nodes has already been included as a parameter for the
@@ -424,6 +538,35 @@ struct OperationImplementation {
 		virtual std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) {
 			return {};
+		}
+		/**
+		 * Maps the coordinates the node is read at (`state.index_map`) to the
+		 * coordinates its parameters are read at, one entry in
+		 * `state.pred_index_maps` per parameter. Returns false if this
+		 * operation has no mapping, then it keeps calculating with the flat
+		 * `index`. The default is the identity for the operations that read
+		 * their parameters at the same position as themselves.
+		 */
+		virtual bool mutate_index(const FGraphNode *node,
+								  OCLLazyCodegenState &state) {
+			// a reshape passes the flat index on unchanged, but not the
+			// coordinates, since its shape differs from its parameter's
+			if (!passesIndexOn(node) || node->operation.op_type == FRESHAPE ||
+				node->operation.op_type == FLATTEN)
+				return false;
+			// TODO passesIndexOn denies inverse broadcasting, would be possible
+			// with a leading_map here
+			std::vector<IndexMap> maps(node->num_predecessor);
+			for (int i = 0; i < node->num_predecessor; i++) {
+				const FOperation pred = node->predecessors[i]->operation;
+				if (!trailing_map(state.index_map, node->operation.shape,
+								  node->operation.dimensions, pred.shape,
+								  pred.dimensions, maps[i]))
+					return false;
+			}
+			for (const IndexMap &map : maps)
+				state.pred_index_maps.push_back(map);
+			return true;
 		}
 };
 #endif

@@ -85,6 +85,8 @@ struct TransposeImpl : OperationImplementation {
 		void free_additional_data(FGraphNode *gn) override {
 			free(gn->operation.additional_data);
 		}
+		bool mutate_index(const FGraphNode *node,
+						  OCLLazyCodegenState &state) override;
 };
 struct ConcatImpl : OperationImplementation {
 		template <typename T>
@@ -105,5 +107,8 @@ struct ConcatImpl : OperationImplementation {
 		void free_additional_data(FGraphNode *gn) override {
 			free(gn->operation.additional_data);
 		}
+		// TODO needs a conditional ("do we mean the first or second child")
+		bool mutate_index(const FGraphNode *node,
+						  OCLLazyCodegenState &state) override;
 };
 #endif

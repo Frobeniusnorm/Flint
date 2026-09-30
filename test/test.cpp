@@ -1395,22 +1395,71 @@ TEST_SUITE("Advanced Broadcasting") {
 }
 TEST_SUITE("Index Optimizations") {
 	TEST_CASE("split(flatten(x)) = x") {
+		// each atom is 0 or 1, the bounds of the expressions follow from that
+		std::vector<IndexAtom> atoms(100);
+		for (int i = 0; i < atoms.size(); i++)
+			atoms[i] = {i, {0, 1}, "a" + std::to_string(i)};
 		IndexMap map;
 		IndexExpr expr1, expr2, expr3;
 		expr1.a = 42;
-		expr1.exprs = {{3, 3}, {41, 9}, {3, 5}};
+		expr1.exprs = {{3, 3}, {41, 9}, {3, 5}}; // in [42, 89]
 		expr2.a = 3;
-		expr2.exprs = {{2, 99}, {4, 7}, {9, 8}, {5, 11}, {9, 33}};
+		expr2.exprs = {{2, 99}, {4, 7}, {9, 8}, {5, 11}, {9, 33}}; // in [3, 32]
 		expr3.a = 7;
-		expr3.exprs = {{7, 0}, {8, 10}};
+		expr3.exprs = {{7, 0}, {8, 10}}; // in [7, 22]
 		map.expr_per_dim = {expr1, expr2, expr3};
-		std::vector<size_t> shape1 = {100, 15, 99};
-		std::vector<size_t> shape2 = {99 * 4, 10, 10};
+		for (IndexExpr &e : map.expr_per_dim)
+			e.derive_bound(atoms);
+		// every dimension has to be able to hold its coordinate, else
+		// flattening loses information
+		std::vector<size_t> shape1 = {90, 33, 23};
+		std::vector<size_t> shape2 = {100, 40, 30};
 		for (std::vector<size_t> sh : {shape1, shape2}) {
-			auto flat_expr = map.flatten(sh.data(), sh.size());
-			auto new_map = IndexMap::split(flat_expr, sh.data(), sh.size());
+			auto flat_expr = map.flatten(sh.data(), sh.size(), atoms);
+			auto new_map =
+				IndexMap::split(flat_expr, sh.data(), sh.size(), atoms);
 			CHECK_EQ(new_map, map);
+			// the flat bound is the sum of the coordinate bounds, scaled by
+			// their strides
+			long lo = 0, hi = 0, stride = 1;
+			for (int i = sh.size() - 1; i >= 0; i--) {
+				lo += stride * map.expr_per_dim[i].bound.first;
+				hi += stride * map.expr_per_dim[i].bound.second;
+				stride *= sh[i];
+			}
+			CHECK_EQ(lo, flat_expr.bound.first);
+			CHECK_EQ(hi, flat_expr.bound.second);
+			// and each coordinate stays inside its dimension
+			for (int i = 0; i < sh.size(); i++) {
+				CHECK_EQ(map.expr_per_dim[i].bound,
+						 new_map.expr_per_dim[i].bound);
+				CHECK(new_map.expr_per_dim[i].bound.first >= 0);
+				CHECK(new_map.expr_per_dim[i].bound.second < (long)sh[i]);
+			}
 		}
+	}
+	TEST_CASE("negative coefficients (a slice with a negative step)") {
+		std::vector<IndexAtom> atoms(4);
+		for (int i = 0; i < atoms.size(); i++)
+			atoms[i] = {i, {0, 4}, "a" + std::to_string(i)};
+		IndexMap map;
+		IndexExpr outer, inner;
+		outer.a = 20;
+		outer.exprs = {{-3, 1}}; // in [8, 20]
+		inner.a = 17;
+		inner.exprs = {{-4, 2}, {1, 3}}; // in [1, 21]
+		map.expr_per_dim = {outer, inner};
+		for (IndexExpr &e : map.expr_per_dim)
+			e.derive_bound(atoms);
+		CHECK_EQ(8, map.expr_per_dim[0].bound.first);
+		CHECK_EQ(20, map.expr_per_dim[0].bound.second);
+		CHECK_EQ(1, map.expr_per_dim[1].bound.first);
+		CHECK_EQ(21, map.expr_per_dim[1].bound.second);
+		std::vector<size_t> sh = {21, 22};
+		auto flat_expr = map.flatten(sh.data(), sh.size(), atoms);
+		CHECK_EQ(8 * 22 + 1, flat_expr.bound.first);
+		CHECK_EQ(20 * 22 + 21, flat_expr.bound.second);
+		CHECK_EQ(map, IndexMap::split(flat_expr, sh.data(), sh.size(), atoms));
 	}
 }
 int main(int argc, char **argv) {

@@ -50,7 +50,6 @@ const char *fop_to_string[] = {"FSTORE",
 							   "FSQRT",
 							   "FEXP",
 							   "FLATTEN",
-							   "FMATMUL",
 							   "FCONVERSION",
 							   "FRESHAPE",
 							   "FMIN",
@@ -68,17 +67,10 @@ const char *fop_to_string[] = {"FSTORE",
 							   "FLESS",
 							   "FEQUAL",
 							   "FGREATER",
-							   "FCONVOLVE",
-							   "FGRADIENT_CONVOLVE1",
-							   "FGRADIENT_CONVOLVE2",
 							   "FINDEX",
 							   "FSET_INDEX",
 							   "FSLIDING_WINDOW",
-							   "FUNSLIDE_WINDOW",
-							   "FPOOLING_MAX",
-							   "FPOOLING_SUM",
-							   "FGRADIENT_POOLING_MAX",
-							   "FDROPOUT"};
+							   "FUNSLIDE_WINDOW"};
 static bool use_cpu, use_gpu, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
