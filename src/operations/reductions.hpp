@@ -33,7 +33,9 @@ struct ReduceSumImpl : OperationImplementation {
 			free(gn->operation.additional_data);
 		}
 		std::vector<bool>
-		reuse_parameter_result(const FGraphNode *node) override; 
+		reuse_parameter_result(const FGraphNode *node) override;
+		bool mutate_index(const FGraphNode *node,
+						  OCLLazyCodegenState &state) override;
 };
 struct ReduceMulImpl : OperationImplementation {
 		template <typename T>
@@ -53,7 +55,9 @@ struct ReduceMulImpl : OperationImplementation {
 			free(gn->operation.additional_data);
 		}
 		std::vector<bool>
-		reuse_parameter_result(const FGraphNode *node) override; 
+		reuse_parameter_result(const FGraphNode *node) override;
+		bool mutate_index(const FGraphNode *node,
+						  OCLLazyCodegenState &state) override;
 };
 struct ReduceMinImpl : OperationImplementation {
 		template <typename T>
@@ -73,7 +77,9 @@ struct ReduceMinImpl : OperationImplementation {
 			free(gn->operation.additional_data);
 		}
 		std::vector<bool>
-		reuse_parameter_result(const FGraphNode *node) override; 
+		reuse_parameter_result(const FGraphNode *node) override;
+		bool mutate_index(const FGraphNode *node,
+						  OCLLazyCodegenState &state) override;
 };
 struct ReduceMaxImpl : OperationImplementation {
 		template <typename T>
@@ -93,6 +99,8 @@ struct ReduceMaxImpl : OperationImplementation {
 			free(gn->operation.additional_data);
 		}
 		std::vector<bool>
-		reuse_parameter_result(const FGraphNode *node) override; 
+		reuse_parameter_result(const FGraphNode *node) override;
+		bool mutate_index(const FGraphNode *node,
+						  OCLLazyCodegenState &state) override;
 };
 #endif

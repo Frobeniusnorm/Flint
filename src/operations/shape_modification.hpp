@@ -31,6 +31,8 @@ struct FlattenImpl : OperationImplementation {
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
 		}
+		bool mutate_index(const FGraphNode *node,
+						  OCLLazyCodegenState &state) override;
 };
 struct ConversionImpl : OperationImplementation {
 		template <typename T, typename A>
@@ -108,7 +110,7 @@ struct ConcatImpl : OperationImplementation {
 			free(gn->operation.additional_data);
 		}
 		// TODO needs a conditional ("do we mean the first or second child")
-		bool mutate_index(const FGraphNode *node,
-						  OCLLazyCodegenState &state) override;
+		// bool mutate_index(const FGraphNode *node,
+		//						  OCLLazyCodegenState &state) override;
 };
 #endif

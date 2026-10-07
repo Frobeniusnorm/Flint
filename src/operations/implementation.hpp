@@ -469,6 +469,42 @@ struct OCLLazyCodegenState {
 			return par1;
 		}
 };
+/**
+ * Coordinates for an offset whose decomposition `IndexMap::split` could not
+ * show. Each one becomes a variable `(offset / stride) % size`, which is the
+ * division a reshape cannot avoid, and an atom that everything below can keep
+ * calculating with symbolically. The declarations are put in front of
+ * `index_defs`, so an operation that assigns that field has to do so first.
+ */
+inline IndexMap split_atoms(const IndexExpr &expr, const size_t *shape,
+							int dims, OCLLazyCodegenState &state) {
+	IndexMap result;
+	result.expr_per_dim.resize(dims);
+	const std::string offset = expr.to_code(state.index_atoms);
+	std::string decls;
+	long stride = 1;
+	for (int i = dims - 1; i >= 0; i--) {
+		const long size = (long)shape[i];
+		IndexExpr coord;
+		coord.a = 0;
+		if (size > 1) {
+			const std::string name = "c" + std::to_string(state.num_indices++);
+			std::string value = offset;
+			if (stride > 1)
+				value = "(" + value + ") / " + std::to_string(stride);
+			// the outermost dimension holds everything that is left
+			if (i > 0)
+				value = "(" + value + ") % " + std::to_string(size);
+			decls += state.index_type + " " + name + " = " + value + ";\n";
+			coord.exprs.push_back({1, state.add_atom(name, 0, size - 1)});
+		}
+		coord.derive_bound(state.index_atoms);
+		result.expr_per_dim[i] = coord;
+		stride *= size;
+	}
+	state.index_defs = decls + state.index_defs;
+	return result;
+}
 struct OperationImplementation {
 		// helper function
 		static FGraphNode *constant_tensor(double val, FType type,

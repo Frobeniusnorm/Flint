@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. */
 #include "shape_modification.hpp"
-#include "../backend_ocl/utils.hpp"
 #include "../utils.hpp"
 #include "flint.h"
 #include <cstring>
@@ -58,6 +57,22 @@ int FlattenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		" = v" + to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
+bool FlattenImpl::mutate_index(const FGraphNode *node,
+							   OCLLazyCodegenState &state) {
+	const FOperation pred = node->predecessors[0]->operation;
+	IndexExpr curr = state.index_map.flatten(
+		node->operation.shape, node->operation.dimensions, state.index_atoms);
+	// the offset is the same, only the shape it addresses changes
+	IndexMap mapped =
+		IndexMap::split(curr, pred.shape, pred.dimensions, state.index_atoms);
+	// a reshape that cuts an axis in two is exactly the case that needs a
+	// division, so it emits one instead of falling back to the flat index
+	if (mapped.expr_per_dim.empty())
+		mapped = split_atoms(curr, pred.shape, pred.dimensions, state);
+	state.pred_index_maps.push_back(mapped);
+	return true;
+}
+
 FGraphNode *ConversionImpl::local_gradient(FGraphNode *y, int dx_i,
 										   FGraphNode *prev_adj) {
 	return prev_adj;
@@ -242,53 +257,56 @@ void TransposeImpl::unary_expression(T *__restrict__ result,
 }
 int TransposeImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 									 OCLLazyCodegenState &compiler_state) {
-	const FOperation op = node->operation;
-	const int *transposition = (int *)op.additional_data;
-	const FOperation pred = node->predecessors[0]->operation;
-	unsigned int old_idx = compiler_state.num_indices++;
-	Twine index_defs;
-	index_defs += compiler_state.index_type + " old_index" +
-				  to_string(old_idx) + " = index;\n";
-	// add to index_defs a redefinition of index, so that we remap
-	// to src data calculate number of elements per dimension entry
-	// for destination and source
-	std::vector<size_t> acc_sizes_d(op.dimensions);
-	std::vector<size_t> acc_sizes_s(op.dimensions);
-	acc_sizes_d[op.dimensions - 1] = 1;
-	acc_sizes_s[op.dimensions - 1] = 1;
-	for (int dim = op.dimensions - 2; dim >= 0; dim--) {
-		acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op.shape[dim + 1];
-		acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
-	}
-	// to get the index in the source array we first calculate the
-	// indices and reproject
-	index_defs += "{\n" + compiler_state.index_type +
-				  " working_index = index;\nindex = 0;\n";
-	size_t bound = compiler_state.index_bound;
-	for (int dim = 0; dim < op.dimensions; dim++) {
-		size_t coord_bound = bound;
-		const string summand =
-			index_mul(index_coordinate("working_index", dim, acc_sizes_d,
-									   op.shape, coord_bound),
-					  acc_sizes_s[transposition[dim]]);
-		if (summand != "0")
-			index_defs += "index += " + summand + ";\n";
-		// what is left over are the coordinates of the following dimensions
-		if (dim + 1 < op.dimensions && (!bound || bound > acc_sizes_d[dim])) {
-			index_defs +=
-				"working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
-			bound = acc_sizes_d[dim];
+	if (compiler_state.pred_index_maps.empty()) {
+		const FOperation op = node->operation;
+		const int *transposition = (int *)op.additional_data;
+		const FOperation pred = node->predecessors[0]->operation;
+		unsigned int old_idx = compiler_state.num_indices++;
+		Twine index_defs;
+		index_defs += compiler_state.index_type + " old_index" +
+					  to_string(old_idx) + " = index;\n";
+		// add to index_defs a redefinition of index, so that we remap
+		// to src data calculate number of elements per dimension entry
+		// for destination and source
+		std::vector<size_t> acc_sizes_d(op.dimensions);
+		std::vector<size_t> acc_sizes_s(op.dimensions);
+		acc_sizes_d[op.dimensions - 1] = 1;
+		acc_sizes_s[op.dimensions - 1] = 1;
+		for (int dim = op.dimensions - 2; dim >= 0; dim--) {
+			acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op.shape[dim + 1];
+			acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
 		}
+		// to get the index in the source array we first calculate the
+		// indices and reproject
+		index_defs += "{\n" + compiler_state.index_type +
+					  " working_index = index;\nindex = 0;\n";
+		size_t bound = compiler_state.index_bound;
+		for (int dim = 0; dim < op.dimensions; dim++) {
+			size_t coord_bound = bound;
+			const string summand =
+				index_mul(index_coordinate("working_index", dim, acc_sizes_d,
+										   op.shape, coord_bound),
+						  acc_sizes_s[transposition[dim]]);
+			if (summand != "0")
+				index_defs += "index += " + summand + ";\n";
+			// what is left over are the coordinates of the following dimensions
+			if (dim + 1 < op.dimensions &&
+				(!bound || bound > acc_sizes_d[dim])) {
+				index_defs +=
+					"working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
+				bound = acc_sizes_d[dim];
+			}
+		}
+		index_defs += "}\n";
+		compiler_state.index_defs = index_defs;
+		// every coordinate is taken modulo the shape of the predecessor, so the
+		// remapped index always stays inside of it
+		compiler_state.pred_index_bound = 1;
+		for (int dim = 0; dim < pred.dimensions; dim++)
+			compiler_state.pred_index_bound *= pred.shape[dim];
+		compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
+									";\n");
 	}
-	index_defs += "}\n";
-	compiler_state.index_defs = index_defs;
-	// every coordinate is taken modulo the shape of the predecessor, so the
-	// remapped index always stays inside of it
-	compiler_state.pred_index_bound = 1;
-	for (int dim = 0; dim < pred.dimensions; dim++)
-		compiler_state.pred_index_bound *= pred.shape[dim];
-	compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
-								";\n");
 	compiler_state.code.prepend(
 		"const " + type_string(node->operation.data_type) + " " + name +
 		" = v" + to_string(compiler_state.variable_index + 1) + ";\n");
@@ -308,10 +326,8 @@ bool TransposeImpl::mutate_index(const FGraphNode *node,
 	int *transpositions = static_cast<int *>(node->operation.additional_data);
 	for (int i = 0; i < node->operation.dimensions; i++) {
 		int j = transpositions[i];
-		if (i != j) {
-			// sawp i and j in pred
-			pred.expr_per_dim[i] = state.index_map.expr_per_dim[j];
-		}
+		// swap i and j in pred
+		pred.expr_per_dim[j] = state.index_map.expr_per_dim[i];
 	}
 	state.pred_index_maps = {pred};
 	return true;

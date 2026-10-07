@@ -55,25 +55,39 @@ static inline int reducing(const FGraphNode *node, std::string name,
 	default:
 		break;
 	}
-	const std::string itv = "i" + to_string(compiler_state.variable_index);
-	const unsigned int old_idx = compiler_state.num_indices++;
+	bool do_index_magic = !compiler_state.pred_index_maps.empty();
+	const unsigned int old_idx = compiler_state.num_indices;
 	const std::string &itype = compiler_state.index_type;
-	const std::string base = "base" + to_string(old_idx);
-	// everything but the iteration offset is constant for the whole loop,
-	// calculating it once saves a division and a modulo per iteration
-	index_defs += ";\n" + itype + " " + base + " = (index / " +
-				  to_string(it_dim) + ") * " + to_string(it_dim) + " * " +
-				  to_string(prev->operation.shape[red_dim]) + " + index % " +
-				  to_string(it_dim) + ";\n" + itype + " old_idx" +
-				  to_string(old_idx) +
-				  " = index;\n"
-				  "for(" +
-				  itype + " " + itv + " = 0; " + itv + " < " +
-				  to_string(prev->operation.shape[red_dim]) + "; " + itv +
-				  "++){\n"
-				  "index = (" +
-				  base + " + " + itv + " * " + to_string(it_dim) + ") % " +
-				  to_string(total_el_size) + ";\n";
+	if (!do_index_magic) {
+		const std::string itv = "i" + to_string(compiler_state.variable_index);
+		compiler_state.num_indices++;
+		const std::string base = "base" + to_string(old_idx);
+		// everything but the iteration offset is constant for the whole loop,
+		// calculating it once saves a division and a modulo per iteration
+		index_defs += ";\n" + itype + " " + base + " = (index / " +
+					  to_string(it_dim) + ") * " + to_string(it_dim) + " * " +
+					  to_string(prev->operation.shape[red_dim]) +
+					  " + index % " + to_string(it_dim) + ";\n" + itype +
+					  " old_idx" + to_string(old_idx) +
+					  " = index;\n"
+					  "for(" +
+					  itype + " " + itv + " = 0; " + itv + " < " +
+					  to_string(prev->operation.shape[red_dim]) + "; " + itv +
+					  "++){\n"
+					  "index = (" +
+					  base + " + " + itv + " * " + to_string(it_dim) + ") % " +
+					  to_string(total_el_size) + ";\n";
+	} else {
+		// get index variable
+		IndexAtom i =
+			compiler_state.index_atoms[compiler_state.pred_index_maps[0]
+										   .expr_per_dim[red_dim]
+										   .exprs[0]
+										   .second];
+		index_defs += ";\nfor(" + itype + " " + i.name + " = 0; " + i.name +
+					  " < " + to_string(prev->operation.shape[red_dim]) + "; " +
+					  i.name + "++){\n";
+	}
 	compiler_state.index_defs = index_defs;
 	// the loop masks the index with the size of the reduced tensor
 	compiler_state.pred_index_bound = total_el_size;
@@ -94,7 +108,9 @@ static inline int reducing(const FGraphNode *node, std::string name,
 	default:
 		break;
 	}
-	reduce_code += ";\n}\nindex = old_idx" + to_string(old_idx) + ";\n";
+	reduce_code += ";\n}";
+	if (!do_index_magic)
+		reduce_code += "\nindex = old_idx" + to_string(old_idx) + ";\n";
 	compiler_state.code.prepend(reduce_code);
 	return 0;
 }
@@ -210,6 +226,36 @@ static std::vector<bool> reducing_reuse_params(const FGraphNode *node) {
 	return {false};
 	// return {node->predecessors[0]->operation.shape[ax] == 1};
 }
+bool reducing_mutate_index(const FGraphNode *node, OCLLazyCodegenState &state) {
+	const int dim = ((int *)node->operation.additional_data)[0];
+	const FOperation pred = node->predecessors[0]->operation;
+	// generate new Atom
+	IndexAtom new_ax;
+	new_ax.id = state.index_atoms.size();
+	new_ax.bound = {0, pred.shape[dim] - 1};
+	new_ax.name = "red_index_" + to_string(new_ax.id);
+	state.index_atoms.push_back(new_ax);
+	// add the new index to the index map for the new dimension
+	IndexMap old_map = state.index_map;
+	IndexMap new_map;
+	new_map.expr_per_dim.reserve(old_map.expr_per_dim.size() + 1);
+	for (int i = 0; i < dim; i++) {
+		new_map.expr_per_dim.push_back(old_map.expr_per_dim[i]);
+	}
+	IndexExpr dim_idx;
+	dim_idx.a = 0;
+	dim_idx.exprs.push_back({1, new_ax.id});
+	dim_idx.derive_bound(state.index_atoms);
+	new_map.expr_per_dim.push_back(dim_idx);
+	// the reduced axis is not in the node's map, so everything behind it is
+	// shifted by one
+	for (int i = dim + 1; i < pred.dimensions; i++) {
+		new_map.expr_per_dim.push_back(old_map.expr_per_dim[i - 1]);
+	}
+	state.pred_index_maps.push_back(new_map);
+	return true;
+}
+
 FGraphNode *ReduceSumImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
@@ -225,6 +271,10 @@ FGraphNode *ReduceSumImpl::local_gradient(FGraphNode *y, int dx_i,
 		return frepeat(freshape(prev_adj, ns.data(), ns.size()), rep.data());
 	} else
 		return nullptr;
+}
+bool ReduceSumImpl::mutate_index(const FGraphNode *node,
+								 OCLLazyCodegenState &state) {
+	return reducing_mutate_index(node, state);
 }
 template <typename T>
 void ReduceSumImpl::unary_expression(T *__restrict__ result,
@@ -256,6 +306,10 @@ int ReduceSumImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 std::vector<bool>
 ReduceSumImpl::reuse_parameter_result(const FGraphNode *node) {
 	return reducing_reuse_params(node);
+}
+bool ReduceMulImpl::mutate_index(const FGraphNode *node,
+								 OCLLazyCodegenState &state) {
+	return reducing_mutate_index(node, state);
 }
 FGraphNode *ReduceMulImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
@@ -326,6 +380,10 @@ std::vector<bool>
 ReduceMulImpl::reuse_parameter_result(const FGraphNode *node) {
 	return reducing_reuse_params(node);
 }
+bool ReduceMinImpl::mutate_index(const FGraphNode *node,
+								 OCLLazyCodegenState &state) {
+	return reducing_mutate_index(node, state);
+}
 FGraphNode *ReduceMinImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
@@ -366,6 +424,10 @@ int ReduceMinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 std::vector<bool>
 ReduceMinImpl::reuse_parameter_result(const FGraphNode *node) {
 	return reducing_reuse_params(node);
+}
+bool ReduceMaxImpl::mutate_index(const FGraphNode *node,
+								 OCLLazyCodegenState &state) {
+	return reducing_mutate_index(node, state);
 }
 FGraphNode *ReduceMaxImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {

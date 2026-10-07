@@ -1307,6 +1307,23 @@ TEST_SUITE("Known Bugs") {
 					for (int j = 0; j < 3; j++)
 						CHECK_EQ(t3[k][i][j] * t1[j][i], t4[k][i][j]);
 		}
+		TEST_CASE("Flat index below a mapped operation") {
+			Tensor<long, 2> t1{{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 10, 11}};
+			Tensor<long, 2> r1 = t1.transpose().repeat(1, 0);
+			for (int i = 0; i < 8; i++)
+				for (int j = 0; j < 3; j++)
+					CHECK_EQ(t1[j][i % 4], r1[i][j]);
+			Tensor<long, 3> t2{{{0, 1}, {2, 3}, {4, 5}},
+							   {{6, 7}, {8, 9}, {10, 11}}};
+			Tensor<long, 2> r2 = t2.reduce_sum(1).repeat(1, 0);
+			for (int i = 0; i < 4; i++)
+				for (int j = 0; j < 2; j++) {
+					long sum = 0;
+					for (int k = 0; k < 3; k++)
+						sum += t2[i % 2][k][j];
+					CHECK_EQ(sum, r2[i][j]);
+				}
+		}
 		TEST_CASE("Matmul") {
 			Tensor<float, 2> img = Flint::arange(1, 1, 2048) / 512.0f;
 			Tensor<float, 2> kernel =
