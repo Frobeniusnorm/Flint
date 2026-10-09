@@ -412,7 +412,7 @@ void SetIndexImpl::execute_cpu_typed(
 		const long axi = (i / acc_sizes_ax) % op.shape[axis];
 		const size_t base_ind = base * c.shape[axis];
 		bool found_something = false;
-		result[i] = 0;
+		T val = 0;
 		// iterate over last dimension and find all correct indices
 		for (size_t j = base_ind; j < base_ind + c.shape[axis]; j++) {
 			const long ind =
@@ -420,12 +420,12 @@ void SetIndexImpl::execute_cpu_typed(
 										 : ((long *)c.data)[cc ? 0 : j]);
 			if (ind == axi) {
 				found_something = true;
-				result[i] += ((T *)b.data)[bc ? 0 : (j * acc_sizes_ax + rest)];
+				val += ((T *)b.data)[bc ? 0 : (j * acc_sizes_ax + rest)];
 			}
 		}
-		// if at least one index was found -> only sum of elements of b
-		if (!found_something)
-			result[i] = ((T *)a.data)[ac ? 0 : i];
+		// if at least one index was found -> only sum of elements of b.
+		// `result` may be the array of `a`, so it is written exactly once
+		result[i] = found_something ? val : ((T *)a.data)[ac ? 0 : i];
 	}
 }
 int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
