@@ -230,11 +230,7 @@ bool reducing_mutate_index(const FGraphNode *node, OCLLazyCodegenState &state) {
 	const int dim = ((int *)node->operation.additional_data)[0];
 	const FOperation pred = node->predecessors[0]->operation;
 	// generate new Atom
-	IndexAtom new_ax;
-	new_ax.id = state.index_atoms.size();
-	new_ax.bound = {0, pred.shape[dim] - 1};
-	new_ax.name = "red_index_" + to_string(new_ax.id);
-	state.index_atoms.push_back(new_ax);
+	int new_ax = state.add_atom("red_index_" + to_string(state.index_atoms.size()), 0, pred.shape[dim] - 1);
 	// add the new index to the index map for the new dimension
 	IndexMap old_map = state.index_map;
 	IndexMap new_map;
@@ -244,7 +240,7 @@ bool reducing_mutate_index(const FGraphNode *node, OCLLazyCodegenState &state) {
 	}
 	IndexExpr dim_idx;
 	dim_idx.a = 0;
-	dim_idx.exprs.push_back({1, new_ax.id});
+	dim_idx.exprs.push_back({1, new_ax});
 	dim_idx.derive_bound(state.index_atoms);
 	new_map.expr_per_dim.push_back(dim_idx);
 	// the reduced axis is not in the node's map, so everything behind it is

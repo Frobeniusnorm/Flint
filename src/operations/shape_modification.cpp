@@ -14,6 +14,7 @@
 #include "shape_modification.hpp"
 #include "../utils.hpp"
 #include "flint.h"
+#include "src/operations/indices.hpp"
 #include <cstring>
 
 using namespace std;
@@ -161,52 +162,71 @@ int RepeatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								  OCLLazyCodegenState &compiler_state) {
 	const FOperation op = node->operation;
 	const FOperation pred = node->predecessors[0]->operation;
-	const unsigned int old_idx = compiler_state.num_indices++;
-	Twine index_defs;
-	index_defs += compiler_state.index_type + " old_index" +
-				  to_string(old_idx) + " = index;\n";
-	// add to index_defs a redefinition of index, so that we remap
-	// to src data calculate number of elements per dimension entry
-	// for destination and source
-	std::vector<size_t> acc_sizes_d(op.dimensions);
-	std::vector<size_t> acc_sizes_s(op.dimensions);
-	acc_sizes_d[op.dimensions - 1] = 1;
-	acc_sizes_s[op.dimensions - 1] = 1;
-	for (int dim = op.dimensions - 2; dim >= 0; dim--) {
-		acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op.shape[dim + 1];
-		acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
-	}
-	// to get the index in the source array we first calculate the
-	// indices and reproject
-	index_defs += "{\n" + compiler_state.index_type +
-				  " working_index = index;\nindex = 0;\n";
-	size_t bound = compiler_state.index_bound;
-	for (int dim = 0; dim < op.dimensions; dim++) {
-		// the source repeats along this dimension, so the coordinate wraps
-		// around its shape
-		size_t coord_bound = bound;
-		const string summand =
-			index_mul(index_coordinate("working_index", dim, acc_sizes_d,
-									   pred.shape, coord_bound),
-					  acc_sizes_s[dim]);
-		if (summand != "0")
-			index_defs += "index += " + summand + ";\n";
-		// what is left over are the coordinates of the following dimensions
-		if (dim + 1 < op.dimensions && (!bound || bound > acc_sizes_d[dim])) {
-			index_defs +=
-				"working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
-			bound = acc_sizes_d[dim];
+	if (compiler_state.pred_index_maps.empty()) {
+		const unsigned int old_idx = compiler_state.num_indices++;
+		Twine index_defs;
+		index_defs += compiler_state.index_type + " old_index" +
+					  to_string(old_idx) + " = index;\n";
+		// add to index_defs a redefinition of index, so that we remap
+		// to src data calculate number of elements per dimension entry
+		// for destination and source
+		std::vector<size_t> acc_sizes_d(op.dimensions);
+		std::vector<size_t> acc_sizes_s(op.dimensions);
+		acc_sizes_d[op.dimensions - 1] = 1;
+		acc_sizes_s[op.dimensions - 1] = 1;
+		for (int dim = op.dimensions - 2; dim >= 0; dim--) {
+			acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op.shape[dim + 1];
+			acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
+		}
+		// to get the index in the source array we first calculate the
+		// indices and reproject
+		index_defs += "{\n" + compiler_state.index_type +
+					  " working_index = index;\nindex = 0;\n";
+		size_t bound = compiler_state.index_bound;
+		for (int dim = 0; dim < op.dimensions; dim++) {
+			// the source repeats along this dimension, so the coordinate wraps
+			// around its shape
+			size_t coord_bound = bound;
+			const string summand =
+				index_mul(index_coordinate("working_index", dim, acc_sizes_d,
+										   pred.shape, coord_bound),
+						  acc_sizes_s[dim]);
+			if (summand != "0")
+				index_defs += "index += " + summand + ";\n";
+			// what is left over are the coordinates of the following dimensions
+			if (dim + 1 < op.dimensions &&
+				(!bound || bound > acc_sizes_d[dim])) {
+				index_defs +=
+					"working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
+				bound = acc_sizes_d[dim];
+			}
+		}
+		index_defs += "}\n";
+		compiler_state.index_defs = index_defs;
+		// every coordinate is taken modulo the shape of the predecessor, so the
+		// remapped index always stays inside of it
+		compiler_state.pred_index_bound = 1;
+		for (int dim = 0; dim < pred.dimensions; dim++)
+			compiler_state.pred_index_bound *= pred.shape[dim];
+		compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
+									";\n");
+	} else {
+		for (int i = 0; i < op.dimensions; i++) {
+			if (op.shape[i] != pred.shape[i] && pred.shape[i] != 1) {
+				IndexAtom ia =
+					compiler_state.index_atoms[compiler_state.pred_index_maps[0]
+												   .expr_per_dim[i]
+												   .exprs[0]
+												   .second];
+				const std::string &itype = compiler_state.index_type;
+				compiler_state.index_defs +=
+					itype + " " + ia.name + " = (" +
+					compiler_state.index_map.expr_per_dim[i].to_code(
+						compiler_state.index_atoms) +
+					") % " + to_string(pred.shape[i]) + ";\n";
+			}
 		}
 	}
-	index_defs += "}\n";
-	compiler_state.index_defs = index_defs;
-	// every coordinate is taken modulo the shape of the predecessor, so the
-	// remapped index always stays inside of it
-	compiler_state.pred_index_bound = 1;
-	for (int dim = 0; dim < pred.dimensions; dim++)
-		compiler_state.pred_index_bound *= pred.shape[dim];
-	compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
-								";\n");
 	compiler_state.code.prepend(
 		"const " + type_string(node->operation.data_type) + " " + name +
 		" = v" + to_string(compiler_state.variable_index + 1) + ";\n");
@@ -215,7 +235,40 @@ int RepeatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 void RepeatImpl::execute_cpu(const FGraphNode *node,
 							 vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
-							 size_t size){UNARY_EXECUTE_MONOTON_IMPL}
+							 size_t size) {
+	UNARY_EXECUTE_MONOTON_IMPL
+}
+bool RepeatImpl::mutate_index(const FGraphNode *node,
+							  OCLLazyCodegenState &state) {
+	const FOperation op = node->operation;
+	const FOperation pred = node->predecessors[0]->operation;
+	IndexMap pred_map;
+	pred_map.expr_per_dim.reserve(state.index_map.expr_per_dim.size());
+	for (int i = 0; i < op.dimensions; i++) {
+		if (op.shape[i] == pred.shape[i]) { // same
+			pred_map.expr_per_dim.push_back(state.index_map.expr_per_dim[i]);
+		} else if (pred.shape[i] == 1) {
+			// a repeated constant has always index 0
+			IndexExpr zero;
+			zero.a = 0;
+			zero.exprs = {};
+			zero.bound = {0, 0};
+			pred_map.expr_per_dim.push_back(zero);
+		} else {
+			// new atom with modulo
+			int rep_ax = state.add_atom("rep_index_" +
+											to_string(state.index_atoms.size()),
+										0, pred.shape[i] - 1);
+			IndexExpr dim_idx;
+			dim_idx.a = 0;
+			dim_idx.exprs.push_back({1, rep_ax});
+			dim_idx.derive_bound(state.index_atoms);
+			pred_map.expr_per_dim.push_back(dim_idx);
+		}
+	}
+	state.pred_index_maps.push_back(pred_map);
+	return true;
+}
 
 FGraphNode *TransposeImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
