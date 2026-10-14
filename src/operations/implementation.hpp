@@ -426,7 +426,7 @@ struct OCLLazyCodegenState {
 		std::vector<std::pair<FType, double>> scalars;
 		/** Registers a value as a kernel argument and returns its name */
 		std::string addScalar(FType type, double value) {
-			const std::string name = "S" + std::to_string(scalars.size());
+			std::string name = "S" + std::to_string(scalars.size());
 			scalars.push_back({type, value});
 			return name;
 		}

@@ -52,6 +52,8 @@ struct SliceImpl : OperationImplementation {
 		reuse_parameter_result(const FGraphNode *node) override {
 			return AddImpl::reuse_parameter_binary_impl(node);
 		}
+		bool mutate_index(const FGraphNode *node,
+						  OCLLazyCodegenState &state) override;
 };
 struct ExtendImpl : OperationImplementation {
 		template <typename T>

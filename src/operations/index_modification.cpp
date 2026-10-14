@@ -62,54 +62,97 @@ int SliceImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								 OCLLazyCodegenState &compiler_state) {
 	FOperation pred = node->predecessors[0]->operation;
 	FSlice *slice = (FSlice *)node->operation.additional_data;
-	unsigned int old_idx = compiler_state.num_indices++;
 	const string type = type_string(node->operation.data_type);
-	Twine index_defs = compiler_state.index_type + " old_index" +
-					   to_string(old_idx) + " = index;\n";
-	// flattened shape data
-	std::vector<size_t> acc_sizes(node->operation.dimensions);
-	std::vector<size_t> acc_sizes_pred(acc_sizes.size());
-	for (long d = node->operation.dimensions - 1; d >= 0; d--) {
-		if (d == node->operation.dimensions - 1) {
-			acc_sizes[d] = 1;
-			acc_sizes_pred[d] = 1;
-		} else {
-			acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
-			acc_sizes[d] = acc_sizes[d + 1] * node->operation.shape[d + 1];
+	if (compiler_state.pred_index_maps.empty()) {
+		unsigned int old_idx = compiler_state.num_indices++;
+		Twine index_defs = compiler_state.index_type + " old_index" +
+						   to_string(old_idx) + " = index;\n";
+		// flattened shape data
+		std::vector<size_t> acc_sizes(node->operation.dimensions);
+		std::vector<size_t> acc_sizes_pred(acc_sizes.size());
+		for (long d = node->operation.dimensions - 1; d >= 0; d--) {
+			if (d == node->operation.dimensions - 1) {
+				acc_sizes[d] = 1;
+				acc_sizes_pred[d] = 1;
+			} else {
+				acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
+				acc_sizes[d] = acc_sizes[d + 1] * node->operation.shape[d + 1];
+			}
+		}
+		// calculate start
+		size_t start = 0;
+		for (long d = 0; d < node->operation.dimensions; d++) {
+			start += slice->start[d] * acc_sizes_pred[d];
+		}
+		// the offset moves when a graph is reused on different slices, as an
+		// argument it keeps the code cacheable
+		index_defs += "index = (" + compiler_state.addScalar(F_INT64, start);
+		// accumulate index
+		for (long d = 0; d < node->operation.dimensions; d++) {
+			index_defs +=
+				" + (((" +
+				(d == 0 ? string("index")
+						: string("index %" + to_string(acc_sizes[d - 1]))) +
+				") / " + to_string(acc_sizes[d]) + ") % " +
+				to_string(node->operation.shape[d]) + ") * " +
+				to_string(slice->step[d] * (long)acc_sizes_pred[d]);
+		}
+		index_defs += ") ;\n";
+		compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
+									";\n");
+		compiler_state.index_defs = index_defs;
+	} else {
+		for (int d = 0; d < node->operation.dimensions; d++) {
+			if (slice->start[d] != 0) {
+				const auto &exprs =
+					compiler_state.pred_index_maps[0].expr_per_dim[d].exprs;
+				int atom_idx = exprs[exprs.size() - 1].second;
+				string atom = compiler_state.index_atoms[atom_idx].name;
+				string var_name =
+					compiler_state.addScalar(F_INT64, slice->start[d]);
+				compiler_state.index_defs +=
+					"const " + compiler_state.index_type + " " + atom + " = " + var_name + ";\n";
+			}
 		}
 	}
-	// calculate start
-	size_t start = 0;
-	std::vector<long> step(node->operation.dimensions);
-	for (long d = 0; d < step.size(); d++) {
-		start += slice->start[d] * acc_sizes_pred[d];
-	}
-	// the offset moves when a graph is reused on different slices, as an
-	// argument it keeps the code cacheable
-	index_defs += "index = (" + compiler_state.addScalar(F_INT64, start);
-	// accumulate index
-	for (long d = 0; d < node->operation.dimensions; d++) {
-		index_defs +=
-			" + (((" +
-			(d == 0 ? string("index")
-					: string("index %" + to_string(acc_sizes[d - 1]))) +
-			") / " + to_string(acc_sizes[d]) + ") % " +
-			to_string(node->operation.shape[d]) + ") * " +
-			to_string(slice->step[d] * (long)acc_sizes_pred[d]);
-	}
-	index_defs += ") ;\n";
-	compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
-								";\n");
 	compiler_state.code.prepend("const " + type + " " + name + " = v" +
 								to_string(compiler_state.variable_index + 1) +
 								";\n");
-	compiler_state.index_defs = index_defs;
 	return 0;
 }
 void SliceImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,
 							void *__restrict__ result, size_t from,
-							size_t size){UNARY_EXECUTE_MONOTON_IMPL}
+							size_t size) {
+	UNARY_EXECUTE_MONOTON_IMPL
+}
+bool SliceImpl::mutate_index(const FGraphNode *node,
+							 OCLLazyCodegenState &state) {
+	// we have C[i] = P[start + i * step] per dimension
+
+	FOperation pred = node->predecessors[0]->operation;
+	FSlice *slice = (FSlice *)node->operation.additional_data;
+	IndexMap &pred_map = state.pred_index_maps.emplace_back();
+	pred_map.expr_per_dim.resize(state.index_map.expr_per_dim.size());
+	for (int i = 0; i < node->operation.dimensions; i++) {
+		IndexExpr &pred_expr = pred_map.expr_per_dim[i];
+		IndexExpr &curr_expr = state.index_map.expr_per_dim[i];
+		pred_expr.a = curr_expr.a;
+		// * step has to be added to each term
+		pred_expr.exprs = curr_expr.exprs;
+		for (int j = 0; j < pred_expr.exprs.size(); j++) {
+			pred_expr.exprs[j].first *= slice->step[i];
+		}
+		// add the start
+		if (slice->start[i] != 0) {
+			int atom = state.add_atom("slice_start" +
+										  to_string(state.index_atoms.size()),
+									  slice->start[i], slice->start[i]);
+			pred_expr.exprs.emplace_back(1, atom);
+		}
+	}
+	return true;
+}
 
 FGraphNode *ExtendImpl::local_gradient(FGraphNode *y, int dx_i,
 									   FGraphNode *prev_adj) {
