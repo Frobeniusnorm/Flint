@@ -14,6 +14,7 @@
 
 #include "../flint.h"
 #include "../src/operations/indices.hpp"
+#include "../src/operations/implementation.hpp"
 #include <cmath>
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
@@ -1324,6 +1325,29 @@ TEST_SUITE("Known Bugs") {
 					CHECK_EQ(sum, r2[i][j]);
 				}
 		}
+		TEST_CASE("Coordinate bounds below a mapped operation") {
+			// an extension decides from the bound of its coordinates which of
+			// its range tests it still needs, so every operation that hands
+			// coordinates down has to hand down their bound with them
+			Tensor<long, 2> t1{{1, 2}, {3, 4}};
+			Tensor<long, 2> r1 =
+				t1.extend(std::array<size_t, 2>{4, 4},
+						  std::array<size_t, 2>{0, 0})
+					.slice(TensorRange(0, 4, 2), TensorRange(0, 4, 2));
+			const long e1[2][2] = {{1, 0}, {0, 0}};
+			for (int i = 0; i < 2; i++)
+				for (int j = 0; j < 2; j++)
+					CHECK_EQ(e1[i][j], r1[i][j]);
+			// the same for an extension that also has to test its start
+			Tensor<long, 2> r2 =
+				t1.extend(std::array<size_t, 2>{5, 5},
+						  std::array<size_t, 2>{1, 1})
+					.slice(TensorRange(0, 5, 2), TensorRange(0, 5, 2));
+			const long e2[3][3] = {{0, 0, 0}, {0, 4, 0}, {0, 0, 0}};
+			for (int i = 0; i < 3; i++)
+				for (int j = 0; j < 3; j++)
+					CHECK_EQ(e2[i][j], r2[i][j]);
+		}
 		TEST_CASE("Matmul") {
 			Tensor<float, 2> img = Flint::arange(1, 1, 2048) / 512.0f;
 			Tensor<float, 2> kernel =
@@ -1415,7 +1439,7 @@ TEST_SUITE("Index Optimizations") {
 		// each atom is 0 or 1, the bounds of the expressions follow from that
 		std::vector<IndexAtom> atoms(100);
 		for (int i = 0; i < atoms.size(); i++)
-			atoms[i] = {i, {0, 1}, "a" + std::to_string(i)};
+			atoms[i] = {i, {0, 1}, "a" + std::to_string(i), 0};
 		IndexMap map;
 		IndexExpr expr1, expr2, expr3;
 		expr1.a = 42;
@@ -1432,7 +1456,7 @@ TEST_SUITE("Index Optimizations") {
 		std::vector<size_t> shape1 = {90, 33, 23};
 		std::vector<size_t> shape2 = {100, 40, 30};
 		for (std::vector<size_t> sh : {shape1, shape2}) {
-			auto flat_expr = map.flatten(sh.data(), sh.size(), atoms);
+			auto flat_expr = map.flatten(sh.data(), sh.size());
 			auto new_map =
 				IndexMap::split(flat_expr, sh.data(), sh.size(), atoms);
 			CHECK_EQ(new_map, map);
@@ -1458,7 +1482,7 @@ TEST_SUITE("Index Optimizations") {
 	TEST_CASE("negative coefficients (a slice with a negative step)") {
 		std::vector<IndexAtom> atoms(4);
 		for (int i = 0; i < atoms.size(); i++)
-			atoms[i] = {i, {0, 4}, "a" + std::to_string(i)};
+			atoms[i] = {i, {0, 4}, "a" + std::to_string(i), 0};
 		IndexMap map;
 		IndexExpr outer, inner;
 		outer.a = 20;
@@ -1473,10 +1497,129 @@ TEST_SUITE("Index Optimizations") {
 		CHECK_EQ(1, map.expr_per_dim[1].bound.first);
 		CHECK_EQ(21, map.expr_per_dim[1].bound.second);
 		std::vector<size_t> sh = {21, 22};
-		auto flat_expr = map.flatten(sh.data(), sh.size(), atoms);
+		auto flat_expr = map.flatten(sh.data(), sh.size());
 		CHECK_EQ(8 * 22 + 1, flat_expr.bound.first);
 		CHECK_EQ(20 * 22 + 21, flat_expr.bound.second);
 		CHECK_EQ(map, IndexMap::split(flat_expr, sh.data(), sh.size(), atoms));
+	}
+}
+TEST_SUITE("Index atom depths") {
+	static OperationImplementation *impl_of(const FGraphNode *node) {
+		const FOperationType op = node->operation.op_type;
+		return OperationImplementation::implementations[op];
+	}
+	// the coordinates of `node` as the codegen has them for a node inside
+	// `depth` loops. The ids of the launch range are declared in front of
+	// everything, so they stay at depth 0 however deep they are read
+	static void seed(OCLLazyCodegenState &state, const FGraphNode *node,
+					 unsigned int depth) {
+		state.index_map.current_depth = depth;
+		state.index_map.expr_per_dim.resize(node->operation.dimensions);
+		for (int d = 0; d < node->operation.dimensions; d++) {
+			IndexExpr &coord = state.index_map.expr_per_dim[d];
+			coord.a = 0;
+			coord.exprs.push_back(
+				{1, state.add_atom("index_dim" + std::to_string(d), 0,
+								   (long)node->operation.shape[d] - 1, 0)});
+			coord.derive_bound(state.index_atoms);
+		}
+	}
+	// an atom is declared where the operation that creates it emits it: a
+	// loop variable inside its own loop, everything else in front of the
+	// parameters and therefore inside the loops that are already open. So no
+	// parameter is read with an atom from deeper than itself, and an atom
+	// that was just before belongs to the depth of the map that reads it
+	static void check_atoms(const OCLLazyCodegenState &state, int before) {
+		for (const IndexMap &map : state.pred_index_maps)
+			for (const IndexExpr &expr : map.expr_per_dim)
+				for (const auto &[c, atom] : expr.exprs) {
+					INFO("atom " << state.index_atoms[atom].name);
+					CHECK(state.index_atoms[atom].depth <= map.current_depth);
+					if (atom >= before)
+						CHECK_EQ(map.current_depth,
+								 state.index_atoms[atom].depth);
+				}
+	}
+	TEST_CASE("an operation hands its depth down") {
+		Tensor<long, 2> t1{{0, 1}, {2, 3}, {4, 5}, {6, 7}};
+		Tensor<long, 1> t2{3, 4};
+		// the elementwise operations use the default implementation
+		Tensor<long, 2> elementwise = t1 + t1;
+		Tensor<long, 2> broadcast = t1 + t2;
+		Tensor<long, 2> transposed = t1.transpose();
+		Tensor<long, 2> sliced =
+			t1.slice(TensorRange(0, 4, 2), TensorRange(1, 2));
+		Tensor<long, 2> repeated = t1.repeat(1, 0);
+		// a reshape that cuts an axis in two is the case that materializes
+		// new atoms instead of mapping the coordinates it is given
+		Tensor<long, 2> reshaped = t1.reshape(2, 4);
+		Tensor<long, 2> extended =
+			t1.extend(std::array<size_t, 2>{9, 2}, std::array<size_t, 2>{1, 0},
+					  std::array<long, 2>{2, 1});
+		Tensor<long, 2> concatenated = Flint::concat(t1, t1, 0);
+		Tensor<long, 3> windows = t1.sliding_window(
+			std::array<size_t, 2>{3, 2}, std::array<unsigned int, 2>{1, 1});
+		const std::vector<std::pair<std::string, FGraphNode *>> nodes = {
+			{"add", elementwise.get_graph_node()},
+			{"add (broadcast)", broadcast.get_graph_node()},
+			{"transpose", transposed.get_graph_node()},
+			{"slice", sliced.get_graph_node()},
+			{"repeat", repeated.get_graph_node()},
+			{"reshape", reshaped.get_graph_node()},
+			{"extend", extended.get_graph_node()},
+			{"concat", concatenated.get_graph_node()},
+			{"sliding window", windows.get_graph_node()}};
+		for (const auto &[op, node] : nodes) {
+			INFO("operation " << op);
+			OCLLazyCodegenState state;
+			seed(state, node, 2);
+			const int before = state.index_atoms.size();
+			REQUIRE(impl_of(node)->mutate_index(node, state));
+			REQUIRE_EQ(node->num_predecessor, state.pred_index_maps.size());
+			// none of them opens a loop, so their parameters are read as
+			// deep as they are read themselves
+			for (const IndexMap &map : state.pred_index_maps)
+				CHECK_EQ(2, map.current_depth);
+			check_atoms(state, before);
+		}
+	}
+	TEST_CASE("a reduction opens a loop") {
+		Tensor<long, 2> t1{{0, 1}, {2, 3}, {4, 5}, {6, 7}};
+		Tensor<long, 1> reduced = t1.reduce_sum(1);
+		FGraphNode *node = reduced.get_graph_node();
+		OCLLazyCodegenState state;
+		seed(state, node, 2);
+		const int before = state.index_atoms.size();
+		REQUIRE(impl_of(node)->mutate_index(node, state));
+		REQUIRE_EQ(1, state.pred_index_maps.size());
+		// the parameter is read inside the loop the reduction emits
+		CHECK_EQ(3, state.pred_index_maps[0].current_depth);
+		// and the loop variable it is read with only exists in that loop
+		check_atoms(state, before);
+	}
+	TEST_CASE("nested reductions") {
+		Tensor<long, 3> t1{{{0, 1}, {2, 3}, {4, 5}, {6, 7}},
+						   {{8, 9}, {10, 11}, {12, 13}, {14, 15}}};
+		Tensor<long, 2> once = t1.reduce_sum(2);
+		Tensor<long, 1> twice = once.reduce_sum(1);
+		FGraphNode *outer = twice.get_graph_node();
+		FGraphNode *inner = outer->predecessors[0];
+		OCLLazyCodegenState state;
+		seed(state, outer, 0);
+		int before = state.index_atoms.size();
+		REQUIRE(impl_of(outer)->mutate_index(outer, state));
+		REQUIRE_EQ(1, state.pred_index_maps.size());
+		CHECK_EQ(1, state.pred_index_maps[0].current_depth);
+		check_atoms(state, before);
+		// the reduction below is generated inside the first loop, each one
+		// nests the next one deeper
+		state.index_map = state.pred_index_maps[0];
+		state.pred_index_maps.clear();
+		before = state.index_atoms.size();
+		REQUIRE(impl_of(inner)->mutate_index(inner, state));
+		REQUIRE_EQ(1, state.pred_index_maps.size());
+		CHECK_EQ(2, state.pred_index_maps[0].current_depth);
+		check_atoms(state, before);
 	}
 }
 int main(int argc, char **argv) {

@@ -85,7 +85,7 @@ Everything else composes without creating atoms.
 - `src/operations/indices.hpp`: `IndexAtom`, `IndexExpr` (`a`, `exprs`, `bound`,
   `derive_bound`, `to_code`), `IndexMap` (`expr_per_dim`, `flatten`, `split`).
 - `OCLLazyCodegenState`: `index_map`, `index_atoms`, `add_atom`,
-  `pred_index_maps`.
+  `pred_index_maps`, `pred_wrappers`.
 - `CodegenTask::index_map`, so every queued node carries its coordinates.
 - `OperationImplementation::mutate_index` with its default, and `trailing_map`
   in `indices.hpp`, which is the identity that default is built from.
@@ -127,7 +127,12 @@ The four places in `generateCode`:
    `index`.
 4. The parameters are pushed with `pred_index_maps[i]` when it is filled, else
    with `split` of the `index` atom as before. The atom is created once per
-   node, not per parameter, and only when it is going to be used.
+   node, not per parameter, and only when it is going to be used. Around each
+   parameter go the two texts of `pred_wrappers[i]`, which is how an operation
+   that only reads a parameter under a condition keeps it from being calculated
+   where the condition does not hold (step 7.8). It is all or nothing like
+   `pred_index_maps`, and the parameters of one node follow each other
+   directly, so the closing text of one meets the opening text of the next.
 
 Two ordering rules for the fold, both found the hard way:
 
@@ -204,17 +209,61 @@ Keep the offset as the kernel argument it is today (`addScalar`), as an atom
 with factor 1 — writing it as a literal would make the kernel cache miss on
 every batch again.
 
-**7.7 Sliding window** (`sliding_windows.cpp`). The result's first dimension
-enumerates all window positions, so split that coordinate by the per dimension
-window counts, then each parameter coordinate is
-`window position * step + offset inside the window`.
+**7.7 Sliding window. Done.** (`sliding_windows.cpp`). The result's first
+dimension enumerates all window positions, so split that coordinate by the per
+dimension window counts, then each parameter coordinate is
+`window position * step + offset inside the window`. The offset inside the
+window is already a coordinate of the node, so the whole `rest` half of the flat
+code disappears and only the window position needs `split_atoms` - 9 divisions
+instead of 16 in the convolution kernel of mnist, and the load loses its modulo
+because a window never reaches past its parameter. On its own it is neither
+faster nor slower (58.7 -> 58.5 ms), together with 7.2 it costs 2.8 ms: the
+reduce hands down a coordinate that the reshape above has to split, and this
+splits the result of that split again. That chain is what the cancellation in
+section 8 is for.
 
-**7.8 Conditions, then extend and concat.** These two need a predicate, so add
-`std::vector<std::string> conditions` to `IndexMap` first and let the load emit
-`condition ? load : 0`. Extend is the inverse of slice plus a range check,
-concat is two maps selected by a comparison. Do not turn a failing condition
-into an early `return`: once work groups and barriers arrive, every work item
-has to reach the barrier.
+**7.8 Extend and concat. Done.** Both read a parameter only where a condition
+holds, and a condition does not belong in `IndexMap`: it never travels further
+down, because the block that carries it encloses the whole parameter subtree.
+So `mutate_index` stays a pure coordinate mapping and the operation builds its
+condition in `generate_ocl_lazy` from `state.index_map`, which is still there -
+the same way `RepeatImpl` emits the definitions of the atoms it created.
+
+A select at the load (`condition ? load : 0`) would save nothing. A parameter's
+code is emitted *before* the use, as `const T v5 = ...`, so by the time the
+condition is evaluated the work is done - which is exactly what the old code
+did, with `if(cond) name = 0;` after the fact for extend and a ternary over two
+already computed subtrees for concat. To skip the work the condition has to
+enclose the subtree, so it is a block:
+
+    T v1 = 0;
+    if (cond) { ...the whole fused chain...  v1 = v5; }
+
+That needs no change to `generateCode` beyond `pred_wrappers`: queue order is
+code order, and the parameters of one node are adjacent, so concat writes
+`} else {` as the closing text of its first parameter. The condition is
+evaluated before the operation's own index logic runs, so that logic moves into
+the opening text, where it is only calculated when it is needed. Inside the
+condition the index provably lies within the parameter, so extend sets
+`pred_index_bound` and its loads lose `% num_entries`.
+
+Extend's mapping is `coordinate - start[d]`, with `shape[d] - 1 - that` for a
+negative step and an atom for `|step| > 1`, which is the one division left.
+Concat's is the identity except on its axis, where the second parameter gets
+`coordinate - first shape[axis]`. Both produce coordinates whose derived bound
+is wrong - it goes negative - because the bound only holds under the condition.
+Since the operation emits the condition itself it may tighten the bound, and
+that is all the interaction between the two there is. The coordinate's bound in
+turn decides which of extend's three tests a dimension still needs.
+
+Do not turn a failing condition into an early `return`: once work groups and
+barriers arrive, every work item has to reach the barrier.
+
+mnist has no extend and no concat in any kernel, so neither shows up in that
+benchmark. resnet has 18 extend kernels, but one inference is dominated by
+loading the model and compiling, and the wall time is 3.45-3.53 s with the
+mapping on or off. The step is correctness and less emitted code, not a
+measured win.
 
 **7.9 Leave on the flat path for now.** `IndexImpl` and `SetIndexImpl` push
 their parameters themselves, `UnslideWindowImpl` has a loop with a runtime trip
@@ -223,11 +272,30 @@ manipulation. They keep working unchanged because an empty map means flat path.
 
 ## 8. After the operations are migrated
 
-- **The bound at a load.** The load currently decides about its modulo with
-  `state.index_bound`, not with the coordinate's own bound, because `split`
-  clamps coordinates to their dimension and that is too tight for an opaque flat
-  index. Once a chain is fully symbolic the coordinates are real coordinates and
-  the derived bound becomes the better source. Switch it then, not before.
+- **The bound at a load. Done.** The load used to decide about its modulo with
+  `state.index_bound` alone. The flattened map's own bound is now a second,
+  independent proof: when it is non negative and below the parameter's number of
+  entries the modulo is left out, otherwise `index_bound` decides as before. The
+  per dimension bounds it is built from are honest because every atom is either
+  a launch id (the global size is the shape, `clEnqueueNDRangeKernel` is called
+  without a local size, so nothing is padded), a loop variable, or a variable
+  that was emitted with exactly that modulo. On mnist 33 of the 49 loads that
+  carried a modulo lose it (49 -> 16 of 113), which is 66.4 -> 58.5 ms, the
+  gradient 28.8 -> 20.3 ms. That is also what pays for step 7.2.
+  `flatten` adds the coordinates' bounds up along the strides instead of
+  deriving the flat expression from the atoms again, which is the same number
+  wherever no bound was tightened by hand, and keeps the tighter one where it
+  was. That is what lets extend and concat reach this path: their coordinates
+  only stay inside the parameter under their condition, and the condition
+  encloses the whole subtree, so the bound holds everywhere it is read. Both
+  lose the modulo at their loads with it.
+  The price is that `expr_per_dim` now has to carry a correct bound, since
+  nothing recomputes it. `SliceImpl::mutate_index` did not set one, which left
+  it at `{0, 0}` - too tight. An extension below a slice then dropped the range
+  test it needs and read past its parameter (`t1.extend(...).slice(...)` gave
+  `{{1, 3}, {0, 0}}` for `{{1, 0}, {0, 0}}`). Test case `Coordinate bounds below
+  a mapped operation` covers it, and it fails on the GPU without the
+  `derive_bound` in slice.
 - **Hoisting.** Split each address by the scope of its atoms, emit the part
   without loop variables before the loop, and let the rest step by its stride.
 - **CSE.** `collectReusable` currently relies on `passesIndexOn` to decide

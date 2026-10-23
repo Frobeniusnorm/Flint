@@ -66,6 +66,8 @@ struct ExtendImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
+		bool mutate_index(const FGraphNode *node,
+						  OCLLazyCodegenState &state) override;
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
 		void free_additional_data(FGraphNode *gn) override {

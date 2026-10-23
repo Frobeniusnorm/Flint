@@ -230,7 +230,9 @@ bool reducing_mutate_index(const FGraphNode *node, OCLLazyCodegenState &state) {
 	const int dim = ((int *)node->operation.additional_data)[0];
 	const FOperation pred = node->predecessors[0]->operation;
 	// generate new Atom
-	int new_ax = state.add_atom("red_index_" + to_string(state.index_atoms.size()), 0, pred.shape[dim] - 1);
+	int new_ax =
+		state.add_atom("red_index_" + to_string(state.index_atoms.size()), 0,
+					   pred.shape[dim] - 1, state.index_map.current_depth + 1);
 	// add the new index to the index map for the new dimension
 	IndexMap old_map = state.index_map;
 	IndexMap new_map;
@@ -248,6 +250,7 @@ bool reducing_mutate_index(const FGraphNode *node, OCLLazyCodegenState &state) {
 	for (int i = dim + 1; i < pred.dimensions; i++) {
 		new_map.expr_per_dim.push_back(old_map.expr_per_dim[i - 1]);
 	}
+	new_map.current_depth = state.index_map.current_depth + 1;
 	state.pred_index_maps.push_back(new_map);
 	return true;
 }

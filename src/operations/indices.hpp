@@ -24,10 +24,14 @@ struct IndexCoeeficient {
 };
 /* Some OCL Variable */
 struct IndexAtom {
-		int id; // reference from OclCompilerState
-		std::pair<long, long>
-			bound;		  // smallest and largest value it can take, inclusive
-		std::string name; // a variable needs a name
+		int id;						 // reference from OclCompilerState
+		std::pair<long, long> bound; // value bounds, inclusive
+		std::string name;			 // a variable needs a name
+		unsigned int depth;			 // depth (regarding nested loops)
+		IndexAtom() = default;
+		IndexAtom(int id, std::pair<long, long> bound, std::string name,
+				  unsigned int depth)
+			: id(id), bound(bound), name(name), depth(depth) {}
 };
 /**
  * Holds an expression a + c1 * atom1 + c2 * atom2 + ...
@@ -73,15 +77,16 @@ struct IndexExpr {
  * The resulting index for a node.
  */
 struct IndexMap {
-		std::vector<IndexExpr>
-			expr_per_dim; // index expression per dimension. Outermost dimension
-						  // is the first entry (just like for an FOperation's
-						  // shape).
+		int current_depth = 0; // depth of the current node in nestings
+		std::vector<IndexExpr> expr_per_dim;
 		/**
 		 * Flattens this multidimensional index map to a flat index expression.
+		 * The bound is strided along with the coordinates instead of being
+		 * derived again from the atoms: a coordinate may know more about
+		 * itself than its terms show, e.g. when an operation only reads it
+		 * under a condition that keeps it inside its dimension.
 		 */
-		IndexExpr flatten(const size_t *shape, int dims,
-						  const std::vector<IndexAtom> &atoms) {
+		IndexExpr flatten(const size_t *shape, int dims) {
 			if (dims != expr_per_dim.size()) {
 				flogging(F_ERROR, "Index flatten: Operation has different "
 								  "number of dimensions than the IndexMap.");
@@ -96,9 +101,10 @@ struct IndexMap {
 					exp.first *= coeff;
 					result.exprs.push_back(exp);
 				}
+				result.bound.first += curr.bound.first * coeff;
+				result.bound.second += curr.bound.second * coeff;
 				coeff *= shape[i];
 			}
-			result.derive_bound(atoms);
 			return result;
 		}
 		/**

@@ -441,14 +441,26 @@ struct OCLLazyCodegenState {
 		/** Per predecessor holds its index space.
 		 * If empty, fallback. */
 		std::vector<IndexMap> pred_index_maps;
+		/** Text put in front of and behind the code of each predecessor, one
+		 * entry per predecessor or empty if nothing is wrapped. An operation
+		 * that only reads a parameter where a condition holds puts the
+		 * condition here, so that the parameter is not calculated at all
+		 * where it does not. The predecessors of one node follow each other
+		 * directly, so the closing text of one and the opening text of the
+		 * next meet, which is how an `else` between them is written. */
+		std::vector<std::pair<std::string, std::string>> pred_wrappers;
+		/** Sorted list that tells the codegen to put the string after the first
+		 * operation that has the depth of the first element of the pair. */
+		std::list<std::pair<unsigned int, std::string>> place_at_depth;
 		/**
 		 * Registers an unknown for the index calculations and returns its id.
 		 * The id is its position in `index_atoms`, which is what
 		 * `IndexExpr::derive_bound` and `IndexExpr::to_code` rely on.
 		 */
-		int add_atom(const std::string &name, long lo, long hi) {
+		int add_atom(const std::string &name, long lo, long hi, int depth) {
 			const int id = index_atoms.size();
-			index_atoms.push_back({id, {lo, hi}, name});
+			index_atoms.emplace_back(id, std::pair<long, long>{lo, hi}, name,
+									 depth);
 			return id;
 		}
 		/**
@@ -496,7 +508,9 @@ inline IndexMap split_atoms(const IndexExpr &expr, const size_t *shape,
 			if (i > 0)
 				value = "(" + value + ") % " + std::to_string(size);
 			decls += state.index_type + " " + name + " = " + value + ";\n";
-			coord.exprs.push_back({1, state.add_atom(name, 0, size - 1)});
+			coord.exprs.push_back(
+				{1, state.add_atom(name, 0, size - 1,
+								   state.index_map.current_depth)});
 		}
 		coord.derive_bound(state.index_atoms);
 		result.expr_per_dim[i] = coord;
@@ -594,14 +608,16 @@ struct OperationImplementation {
 			// with a leading_map here
 			std::vector<IndexMap> maps(node->num_predecessor);
 			for (int i = 0; i < node->num_predecessor; i++) {
+				maps[i].current_depth = state.index_map.current_depth;
 				const FOperation pred = node->predecessors[i]->operation;
 				if (!trailing_map(state.index_map, node->operation.shape,
 								  node->operation.dimensions, pred.shape,
 								  pred.dimensions, maps[i]))
 					return false;
 			}
-			for (const IndexMap &map : maps)
+			for (const IndexMap &map : maps) {
 				state.pred_index_maps.push_back(map);
+			}
 			return true;
 		}
 };

@@ -136,8 +136,8 @@ generateCode(FGraphNode *node,
 				value += ") % " + to_string(size);
 				factor *= size;
 			}
-			const int atom =
-				state.add_atom("index_dim" + to_string(i), 0, (long)size - 1);
+			const int atom = state.add_atom("index_dim" + to_string(i), 0,
+											(long)size - 1, 0);
 			coord.exprs.push_back({1, atom});
 			coord.derive_bound(state.index_atoms);
 			index_decl.append(state.index_type + " " +
@@ -192,6 +192,7 @@ generateCode(FGraphNode *node,
 		todo.pop_front();
 		state.index_defs = "";
 		state.pred_index_maps.clear();
+		state.pred_wrappers.clear();
 		state.index_bound = index_bound;
 		state.index_map = index_map;
 		// operations that remap the index overwrite this with their own bound
@@ -201,7 +202,15 @@ generateCode(FGraphNode *node,
 			code.prepend(name);
 			continue;
 		}
-		// cash var
+		// check if we need to pop some depth-triggered codes
+		while (!state.place_at_depth.empty()) {
+			const auto [depth, dtc] = state.place_at_depth.front();
+			if (index_map.current_depth == depth) {
+				state.place_at_depth.pop_front();
+				code.prepend(name);
+			} else
+				break;
+		}
 		string type = type_string(node->operation.data_type);
 		bool push_pred = true;
 		// a node that is used more than once is only calculated once, all
@@ -260,17 +269,22 @@ generateCode(FGraphNode *node,
 			// of the expression may be smaller than the range of a flat index
 			// that was split into coordinates.
 			string address = "index";
+			size_t bound = state.index_bound;
 			if (state.index_map.expr_per_dim.size() ==
-				node->operation.dimensions)
-				address =
-					state.index_map
-						.flatten(node->operation.shape,
-								 node->operation.dimensions, state.index_atoms)
-						.to_code(state.index_atoms);
+				node->operation.dimensions) {
+				const IndexExpr flat = state.index_map.flatten(
+					node->operation.shape, node->operation.dimensions);
+				address = flat.to_code(state.index_atoms);
+				// real coordinates bound the address themselves, which is
+				// tighter than what is known about a flat index that was only
+				// split into them
+				if (flat.bound.first >= 0 &&
+					flat.bound.second < (long)num_entries)
+					bound = num_entries;
+			}
 			code.prepend("const " + type + " " + name + " = " +
 						 assigned_params[node] + "[" +
-						 index_mod(address, num_entries, state.index_bound) +
-						 "];\n");
+						 index_mod(address, num_entries, bound) + "];\n");
 		} else {
 			OperationImplementation *impl =
 				OperationImplementation::implementations[node->operation
@@ -285,20 +299,24 @@ generateCode(FGraphNode *node,
 			// index, the operation has to map either all of them or none
 			if (!state.pred_index_maps.empty() &&
 				state.pred_index_maps.size() != node->num_predecessor)
-				flogging(F_ERROR, "mutate_index of " +
-									  string(fop_to_string[node->operation
-															   .op_type]) +
-									  " mapped only some of its parameters.");
+				flogging(F_ERROR,
+						 "mutate_index of " +
+							 string(fop_to_string[node->operation.op_type]) +
+							 " mapped only some of its parameters.");
+			if (!state.pred_wrappers.empty() &&
+				state.pred_wrappers.size() != node->num_predecessor)
+				flogging(F_ERROR,
+						 string(fop_to_string[node->operation.op_type]) +
+							 " wrapped only some of its parameters.");
 			// an operation without a mapping calculates with the flat `index`,
 			// so the coordinates are folded into it before it runs. That
 			// overwrites what the parent left there, which is saved and
 			// restored around this node
 			if (has_map && state.pred_index_maps.empty()) {
-				const string flat =
-					state.index_map
-						.flatten(node->operation.shape,
-								 node->operation.dimensions, state.index_atoms)
-						.to_code(state.index_atoms);
+				const string flat = state.index_map
+										.flatten(node->operation.shape,
+												 node->operation.dimensions)
+										.to_code(state.index_atoms);
 				if (flat != "index") {
 					const string old_idx = "old_idx" + to_string(num_indices++);
 					code.prepend("index = " + old_idx + ";\n");
@@ -342,7 +360,8 @@ generateCode(FGraphNode *node,
 			}
 		}
 #ifdef FLINT_DEBUG
-		code.prepend("// " + opstr + "\n");
+		code.prepend("// " + opstr + "(" +
+					 to_string(state.index_map.current_depth) + " )\n");
 #endif
 		// push predecessors dfs
 		if (push_pred) {
@@ -355,7 +374,8 @@ generateCode(FGraphNode *node,
 				flat.a = 0;
 				flat.exprs.push_back(
 					{1, state.add_atom("index", 0,
-									   (long)state.pred_index_bound - 1)});
+									   (long)state.pred_index_bound - 1,
+									   state.index_map.current_depth)});
 				flat.derive_bound(state.index_atoms);
 			}
 			for (int i = 0; i < node->num_predecessor; i++) {
@@ -364,12 +384,22 @@ generateCode(FGraphNode *node,
 				IndexMap pred_map;
 				if (!state.pred_index_maps.empty())
 					pred_map = state.pred_index_maps[i];
-				else if (state.pred_index_bound)
+				else if (state.pred_index_bound) {
 					pred_map = IndexMap::split(
 						flat, pred.shape, pred.dimensions, state.index_atoms);
+					pred_map.current_depth = state.index_map.current_depth;
+				}
+				// the queue is processed from the front, so what is pushed
+				// first ends up first in the code
+				if (!state.pred_wrappers.empty() &&
+					!state.pred_wrappers[i].first.empty())
+					todo.push_front({nullptr, state.pred_wrappers[i].first});
 				todo.push_front({node->predecessors[i], parname,
 								 pred_same_index, state.pred_index_bound,
 								 pred_map});
+				if (!state.pred_wrappers.empty() &&
+					!state.pred_wrappers[i].second.empty())
+					todo.push_front({nullptr, state.pred_wrappers[i].second});
 			}
 		}
 	}

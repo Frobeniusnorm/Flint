@@ -61,8 +61,8 @@ int FlattenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 bool FlattenImpl::mutate_index(const FGraphNode *node,
 							   OCLLazyCodegenState &state) {
 	const FOperation pred = node->predecessors[0]->operation;
-	IndexExpr curr = state.index_map.flatten(
-		node->operation.shape, node->operation.dimensions, state.index_atoms);
+	IndexExpr curr = state.index_map.flatten(node->operation.shape,
+											 node->operation.dimensions);
 	// the offset is the same, only the shape it addresses changes
 	IndexMap mapped =
 		IndexMap::split(curr, pred.shape, pred.dimensions, state.index_atoms);
@@ -70,6 +70,7 @@ bool FlattenImpl::mutate_index(const FGraphNode *node,
 	// division, so it emits one instead of falling back to the flat index
 	if (mapped.expr_per_dim.empty())
 		mapped = split_atoms(curr, pred.shape, pred.dimensions, state);
+	mapped.current_depth = state.index_map.current_depth;
 	state.pred_index_maps.push_back(mapped);
 	return true;
 }
@@ -243,6 +244,7 @@ bool RepeatImpl::mutate_index(const FGraphNode *node,
 	const FOperation op = node->operation;
 	const FOperation pred = node->predecessors[0]->operation;
 	IndexMap pred_map;
+	pred_map.current_depth = state.index_map.current_depth;
 	pred_map.expr_per_dim.reserve(state.index_map.expr_per_dim.size());
 	for (int i = 0; i < op.dimensions; i++) {
 		if (op.shape[i] == pred.shape[i]) { // same
@@ -258,7 +260,7 @@ bool RepeatImpl::mutate_index(const FGraphNode *node,
 			// new atom with modulo
 			int rep_ax = state.add_atom("rep_index_" +
 											to_string(state.index_atoms.size()),
-										0, pred.shape[i] - 1);
+										0, pred.shape[i] - 1, state.index_map.current_depth);
 			IndexExpr dim_idx;
 			dim_idx.a = 0;
 			dim_idx.exprs.push_back({1, rep_ax});
@@ -455,38 +457,69 @@ int ConcatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								  OCLLazyCodegenState &compiler_state) {
 	FGraphNode *a = node->predecessors[0];
 	FGraphNode *b = node->predecessors[1];
-	const unsigned int old_idx = compiler_state.num_indices++;
 	const unsigned int ax =
 		((unsigned int *)node->operation.additional_data)[0];
-	size_t acc_size_last = 1;
-	for (int i = node->operation.dimensions - 2; i >= (int)ax; i--)
-		acc_size_last *= node->operation.shape[i + 1];
-	Twine index_defs;
-	index_defs += compiler_state.index_type + " old_index" +
-				  to_string(old_idx) + " = index;\n";
-	const string sx = "index / " + to_string(acc_size_last);
-	const string sc =
-		ax > 0 ? "(" + sx + ") % " + to_string(node->operation.shape[ax]) : sx;
-	const string if_em = sc + " < " + to_string(a->operation.shape[ax]);
-	index_defs += "index = " + if_em +
-				  " ? "
-				  "(" +
-				  sx + " / " + to_string(node->operation.shape[ax]) + ") * " +
-				  to_string(acc_size_last * a->operation.shape[ax]) + " + (" +
-				  sc + ") * " + to_string(acc_size_last) + " + (index % " +
-				  to_string(acc_size_last) + "): (" + sx + " / " +
-				  to_string(node->operation.shape[ax]) + ") * " +
-				  to_string(acc_size_last * b->operation.shape[ax]) + " + ((" +
-				  sc + ") - " + to_string(a->operation.shape[ax]) + ") * " +
-				  to_string(acc_size_last) + " + (index % " +
-				  to_string(acc_size_last) + ");\n";
-	compiler_state.index_defs = index_defs;
-	compiler_state.code.prepend(
-		"index = old_index" + to_string(old_idx) + ";\n" +
-		type_string(node->operation.data_type) + " " + name + " = " + if_em +
-		" ? v" + to_string(compiler_state.variable_index + 1) + " : v" +
-		to_string(compiler_state.variable_index + 2) + ";\n");
+	const string type = type_string(node->operation.data_type);
+	const string &itype = compiler_state.index_type;
+	const string par1 = "v" + to_string(compiler_state.variable_index + 1);
+	const string par2 = "v" + to_string(compiler_state.variable_index + 2);
+	// the coordinate on the concatenated axis decides which of the two
+	// parameters is read. Only that one is calculated, so each parameter is
+	// wrapped in its branch of the condition
+	string if_em, enter1, enter2, leave1, leave2;
+	if (!compiler_state.pred_index_maps.empty()) {
+		if_em = compiler_state.index_map.expr_per_dim[ax].to_code(
+					compiler_state.index_atoms) +
+				" < " + to_string(a->operation.shape[ax]);
+	} else {
+		size_t acc_size_last = 1;
+		for (int i = node->operation.dimensions - 2; i >= (int)ax; i--)
+			acc_size_last *= node->operation.shape[i + 1];
+		const string sx = "index / " + to_string(acc_size_last);
+		const string sc =
+			ax > 0 ? "(" + sx + ") % " + to_string(node->operation.shape[ax])
+				   : sx;
+		if_em = sc + " < " + to_string(a->operation.shape[ax]);
+		// the entry of the parameter that holds this coordinate
+		const auto remap = [&](const FGraphNode *p, bool second) {
+			return "(" + sx + " / " + to_string(node->operation.shape[ax]) +
+				   ") * " + to_string(acc_size_last * p->operation.shape[ax]) +
+				   " + ((" + sc + ")" +
+				   (second ? " - " + to_string(a->operation.shape[ax]) : "") +
+				   ") * " + to_string(acc_size_last) + " + (index % " +
+				   to_string(acc_size_last) + ")";
+		};
+		const unsigned int old1 = compiler_state.num_indices++;
+		const unsigned int old2 = compiler_state.num_indices++;
+		enter1 = itype + " old_index" + to_string(old1) +
+				 " = index;\nindex = " + remap(a, false) + ";\n";
+		leave1 = "index = old_index" + to_string(old1) + ";\n";
+		enter2 = itype + " old_index" + to_string(old2) +
+				 " = index;\nindex = " + remap(b, true) + ";\n";
+		leave2 = "index = old_index" + to_string(old2) + ";\n";
+	}
+	compiler_state.pred_wrappers = {
+		{type + " " + name + " = 0;\nif(" + if_em + "){\n" + enter1,
+		 leave1 + name + " = " + par1 + ";\n} else {\n" + enter2},
+		{"", leave2 + name + " = " + par2 + ";\n}\n"}};
 	return 0;
+}
+bool ConcatImpl::mutate_index(const FGraphNode *node,
+							  OCLLazyCodegenState &state) {
+	const unsigned int ax =
+		((unsigned int *)node->operation.additional_data)[0];
+	for (int i = 0; i < node->num_predecessor; i++) {
+		IndexMap &map = state.pred_index_maps.emplace_back(state.index_map);
+		map.current_depth = state.index_map.current_depth;
+		IndexExpr &expr = map.expr_per_dim[ax];
+		// the second parameter starts where the first one ends
+		if (i == 1)
+			expr.a -= (long)node->predecessors[0]->operation.shape[ax];
+		// each parameter is only read in its branch of the condition, which is
+		// where its coordinate lies inside of it
+		expr.bound = {0, (long)node->predecessors[i]->operation.shape[ax] - 1};
+	}
+	return true;
 }
 void ConcatImpl::execute_cpu(const FGraphNode *node,
 							 vector<CPUResultData> predecessor_data,

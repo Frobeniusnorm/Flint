@@ -85,6 +85,8 @@ install(FILES "flintConfig.cmake"
 if(${BUILD_TEST})
   project(test)
   add_executable(test test/test.cpp)
+  # the tests of the index calculations include the implementations
+  target_include_directories(test PRIVATE .)
   target_link_libraries(test OpenCL::OpenCL)
   target_link_libraries(test flint)
 endif()

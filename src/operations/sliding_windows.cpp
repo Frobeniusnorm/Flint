@@ -73,6 +73,18 @@ int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 	const FOperation pred = node->predecessors[0]->operation;
 	const FSlidingWindow *slidewin =
 		(FSlidingWindow *)node->operation.additional_data;
+	// a window never reaches past the predecessor, so neither does the index
+	compiler_state.pred_index_bound = 1;
+	for (int d = 0; d < pred.dimensions; d++)
+		compiler_state.pred_index_bound *= pred.shape[d];
+	// the coordinates inside the window are coordinates of the node itself,
+	// only the window position has to be calculated
+	if (!compiler_state.pred_index_maps.empty()) {
+		compiler_state.code.prepend(
+			"const " + type_string(node->operation.data_type) + " " + name +
+			" = v" + to_string(compiler_state.variable_index + 1) + ";\n");
+		return 0;
+	}
 	size_t acc_size = node->operation.shape[1];
 	vector<size_t> acc_sizes_pred(pred.dimensions);
 	vector<size_t> acc_sizes_win(pred.dimensions);
@@ -131,10 +143,6 @@ int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 	}
 	index_defs += "}\n";
 	compiler_state.index_defs = index_defs;
-	// a window never reaches past the predecessor, so neither does the index
-	compiler_state.pred_index_bound = 1;
-	for (int d = 0; d < pred.dimensions; d++)
-		compiler_state.pred_index_bound *= pred.shape[d];
 	compiler_state.code.prepend(
 		"const " + type_string(node->operation.data_type) + " " + name +
 		" = v" + to_string(compiler_state.variable_index + 1) +
@@ -142,6 +150,44 @@ int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 		"index = old_index" +
 		to_string(old_idx) + ";\n");
 	return 0;
+}
+bool SlidingWindowImpl::mutate_index(const FGraphNode *node,
+									 OCLLazyCodegenState &state) {
+	const FOperation pred = node->predecessors[0]->operation;
+	const FSlidingWindow *slidewin =
+		(FSlidingWindow *)node->operation.additional_data;
+	// the first dimension of the node enumerates the windows, the number of
+	// windows per dimension is the shape that coordinate is addressed with
+	vector<size_t> no_windows(pred.dimensions);
+	for (int d = 0; d < pred.dimensions; d++) {
+		const size_t span = pred.shape[d] - slidewin->size[d] + 1;
+		no_windows[d] = span % slidewin->step[d] == 0
+							? span / slidewin->step[d]
+							: span / slidewin->step[d] + 1;
+	}
+	// the windows arrive as one coordinate, so splitting it into the position
+	// per dimension is the one division this operation cannot avoid
+	IndexMap windows =
+		IndexMap::split(state.index_map.expr_per_dim[0], no_windows.data(),
+						pred.dimensions, state.index_atoms);
+	if (windows.expr_per_dim.empty())
+		windows = split_atoms(state.index_map.expr_per_dim[0],
+							  no_windows.data(), pred.dimensions, state);
+	IndexMap &pred_map = state.pred_index_maps.emplace_back();
+	pred_map.current_depth = state.index_map.current_depth;
+	pred_map.expr_per_dim.resize(pred.dimensions);
+	for (int d = 0; d < pred.dimensions; d++) {
+		// the windows are placed `step` entries apart, the rest is the
+		// coordinate inside of the window, which the node already has
+		IndexExpr &expr = pred_map.expr_per_dim[d];
+		const IndexExpr &window = windows.expr_per_dim[d];
+		expr = state.index_map.expr_per_dim[d + 1];
+		expr.a += window.a * (long)slidewin->step[d];
+		for (const auto &[c, atom] : window.exprs)
+			expr.exprs.push_back({c * (long)slidewin->step[d], atom});
+		expr.derive_bound(state.index_atoms);
+	}
+	return true;
 }
 void SlidingWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,

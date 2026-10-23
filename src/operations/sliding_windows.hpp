@@ -26,6 +26,8 @@ struct SlidingWindowImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
+		bool mutate_index(const FGraphNode *node,
+						  OCLLazyCodegenState &state) override;
 		int operation_score(FGraphNode *node) override {
 			return node->operation.shape[0];
 		}

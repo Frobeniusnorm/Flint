@@ -110,8 +110,9 @@ int SliceImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 				string atom = compiler_state.index_atoms[atom_idx].name;
 				string var_name =
 					compiler_state.addScalar(F_INT64, slice->start[d]);
-				compiler_state.index_defs +=
-					"const " + compiler_state.index_type + " " + atom + " = " + var_name + ";\n";
+				compiler_state.index_defs += "const " +
+											 compiler_state.index_type + " " +
+											 atom + " = " + var_name + ";\n";
 			}
 		}
 	}
@@ -133,6 +134,7 @@ bool SliceImpl::mutate_index(const FGraphNode *node,
 	FOperation pred = node->predecessors[0]->operation;
 	FSlice *slice = (FSlice *)node->operation.additional_data;
 	IndexMap &pred_map = state.pred_index_maps.emplace_back();
+	pred_map.current_depth = state.index_map.current_depth;
 	pred_map.expr_per_dim.resize(state.index_map.expr_per_dim.size());
 	for (int i = 0; i < node->operation.dimensions; i++) {
 		IndexExpr &pred_expr = pred_map.expr_per_dim[i];
@@ -147,9 +149,11 @@ bool SliceImpl::mutate_index(const FGraphNode *node,
 		if (slice->start[i] != 0) {
 			int atom = state.add_atom("slice_start" +
 										  to_string(state.index_atoms.size()),
-									  slice->start[i], slice->start[i]);
+									  slice->start[i], slice->start[i],
+									  state.index_map.current_depth);
 			pred_expr.exprs.emplace_back(1, atom);
 		}
+		pred_expr.derive_bound(state.index_atoms);
 	}
 	return true;
 }
@@ -218,108 +222,184 @@ int ExtendImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								  OCLLazyCodegenState &compiler_state) {
 	const FOperation pred = node->predecessors[0]->operation;
 	const string type = type_string(node->operation.data_type);
+	const string &itype = compiler_state.index_type;
 	const FExtend *extend = (FExtend *)node->operation.additional_data;
-	const unsigned int old_idx = compiler_state.num_indices++;
-	Twine index_defs;
-	index_defs += compiler_state.index_type + " old_index" +
-				  to_string(old_idx) + " = index;\n";
-	// flattened shape data
-	std::vector<size_t> acc_sizes(node->operation.dimensions);
-	std::vector<size_t> acc_sizes_pred(acc_sizes.size());
-	for (long d = node->operation.dimensions - 1; d >= 0; d--) {
-		if (d == node->operation.dimensions - 1) {
-			acc_sizes[d] = 1;
-			acc_sizes_pred[d] = 1;
-		} else {
-			acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
-			acc_sizes[d] = acc_sizes[d + 1] * node->operation.shape[d + 1];
-		}
-	}
-	// a dimension that is neither padded, strided nor inverted maps its part
-	// of the index onto itself. A run of such dimensions at the end of the
-	// shape is taken over as a whole instead of being decomposed one by one.
-	int decomposed = node->operation.dimensions;
-	while (decomposed > 0) {
-		const long d = decomposed - 1;
-		if (extend->start[d] != 0 || extend->step[d] != 1 ||
-			node->operation.shape[d] != pred.shape[d] ||
-			acc_sizes[d] != acc_sizes_pred[d])
-			break;
-		decomposed--;
-	}
-	// calculate start
-	std::string summands;
-	std::string set_zero_cond;
-	const auto zero_if = [&set_zero_cond](const std::string &cond) {
-		if (!set_zero_cond.empty())
-			set_zero_cond += " || ";
-		set_zero_cond += cond;
+	std::string keep_cond;
+	const auto keep_if = [&keep_cond](const std::string &cond) {
+		if (!keep_cond.empty())
+			keep_cond += " && ";
+		keep_cond += cond;
 	};
-	for (long d = 0; d < node->operation.dimensions; d++) {
-		long step = extend->step[d];
-		const bool inv = step < 0;
-		if (inv)
-			step = -step;
-		const long start = extend->start[d];
-		// the coordinate of this dimension in the extended tensor. Only the
-		// first one is unbounded, all others are limited by the modulo of the
-		// dimension before them.
-		const std::string rest =
-			d == 0 ? std::string("index")
-				   : "(" +
-						 index_mod("index", acc_sizes[d - 1],
-								   compiler_state.index_bound) +
-						 ")";
-		const std::string coord =
-			index_div(rest, acc_sizes[d],
-					  d == 0 ? compiler_state.index_bound : acc_sizes[d - 1]);
-		// the coordinate projected back onto the predecessor
-		std::string dim_idx = coord;
-		if (start != 0)
-			dim_idx = "(" + dim_idx + " - " + to_string(start) + ")";
-		if (step != 1)
-			dim_idx = index_div(dim_idx, step);
-		// entries the extension inserted are zero: before the start of the
-		// original tensor, between two of its entries or behind its end
-		if (start > 0)
-			zero_if(coord + " < " + to_string(start));
-		if (step != 1)
-			zero_if("(" + coord + " - " + to_string(start) + ") % " +
-					to_string(step) + " != 0");
-		// the last dimensions can only run past the predecessor if the index
-		// itself does, which only the first dimension can tell
-		const long highest =
-			((long)node->operation.shape[d] - 1 - start) / step;
-		if (d == 0 || highest >= (long)pred.shape[d])
-			zero_if(dim_idx + " >= " + to_string(pred.shape[d]));
-		if (d >= decomposed)
-			continue;
-		if (inv)
-			dim_idx =
-				"(" + to_string(pred.shape[d]) + " - " + dim_idx + " - 1)";
-		const std::string summand = index_mul(dim_idx, acc_sizes_pred[d]);
-		if (summand != "0")
-			summands += " + " + summand;
+	// index logic that belongs inside of the condition, and what has to be
+	// restored after the parameter was read
+	std::string opening, closing;
+	if (!compiler_state.pred_index_maps.empty()) {
+		for (long d = 0; d < node->operation.dimensions; d++) {
+			const long start = (long)extend->start[d];
+			const long step =
+				extend->step[d] < 0 ? -(long)extend->step[d] : extend->step[d];
+			const IndexExpr &coord_expr =
+				compiler_state.index_map.expr_per_dim[d];
+			const string coord = coord_expr.to_code(compiler_state.index_atoms);
+			const string shifted =
+				start == 0 ? coord
+						   : "(" + coord + " - " + to_string(start) + ")";
+			// the coordinate's own bound decides which of the three tests this
+			// dimension still needs
+			if (coord_expr.bound.first < start)
+				keep_if(coord + " >= " + to_string(start));
+			if (step != 1)
+				keep_if(shifted + " % " + to_string(step) + " == 0");
+			const long behind = start + step * (long)pred.shape[d];
+			if (coord_expr.bound.second >= behind)
+				keep_if(coord + " < " + to_string(behind));
+			if (step != 1) {
+				const auto &exprs =
+					compiler_state.pred_index_maps[0].expr_per_dim[d].exprs;
+				const IndexAtom &atom =
+					compiler_state.index_atoms[exprs[exprs.size() - 1].second];
+				opening += itype + " " + atom.name + " = " + shifted + " / " +
+						   to_string(step) + ";\n";
+			}
+		}
+	} else {
+		const unsigned int old_idx = compiler_state.num_indices++;
+		opening += itype + " old_index" + to_string(old_idx) + " = index;\n";
+		closing += "index = old_index" + to_string(old_idx) + ";\n";
+		// flattened shape data
+		std::vector<size_t> acc_sizes(node->operation.dimensions);
+		std::vector<size_t> acc_sizes_pred(acc_sizes.size());
+		for (long d = node->operation.dimensions - 1; d >= 0; d--) {
+			if (d == node->operation.dimensions - 1) {
+				acc_sizes[d] = 1;
+				acc_sizes_pred[d] = 1;
+			} else {
+				acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
+				acc_sizes[d] = acc_sizes[d + 1] * node->operation.shape[d + 1];
+			}
+		}
+		// a dimension that is neither padded, strided nor inverted maps its
+		// part of the index onto itself. A run of such dimensions at the end
+		// of the shape is taken over as a whole instead of being decomposed
+		// one by one.
+		int decomposed = node->operation.dimensions;
+		while (decomposed > 0) {
+			const long d = decomposed - 1;
+			if (extend->start[d] != 0 || extend->step[d] != 1 ||
+				node->operation.shape[d] != pred.shape[d] ||
+				acc_sizes[d] != acc_sizes_pred[d])
+				break;
+			decomposed--;
+		}
+		// calculate start
+		std::string summands;
+		for (long d = 0; d < node->operation.dimensions; d++) {
+			long step = extend->step[d];
+			const bool inv = step < 0;
+			if (inv)
+				step = -step;
+			const long start = extend->start[d];
+			// the coordinate of this dimension in the extended tensor. Only
+			// the first one is unbounded, all others are limited by the modulo
+			// of the dimension before them.
+			const std::string rest =
+				d == 0 ? std::string("index")
+					   : "(" +
+							 index_mod("index", acc_sizes[d - 1],
+									   compiler_state.index_bound) +
+							 ")";
+			const std::string coord = index_div(
+				rest, acc_sizes[d],
+				d == 0 ? compiler_state.index_bound : acc_sizes[d - 1]);
+			// the coordinate projected back onto the predecessor
+			std::string dim_idx = coord;
+			if (start != 0)
+				dim_idx = "(" + dim_idx + " - " + to_string(start) + ")";
+			if (step != 1)
+				dim_idx = index_div(dim_idx, step);
+			// entries the extension inserted are zero: before the start of the
+			// original tensor, between two of its entries or behind its end
+			if (start > 0)
+				keep_if(coord + " >= " + to_string(start));
+			if (step != 1)
+				keep_if("(" + coord + " - " + to_string(start) + ") % " +
+						to_string(step) + " == 0");
+			// the last dimensions can only run past the predecessor if the
+			// index itself does, which only the first dimension can tell
+			const long highest =
+				((long)node->operation.shape[d] - 1 - start) / step;
+			if (d == 0 || highest >= (long)pred.shape[d])
+				keep_if(dim_idx + " < " + to_string(pred.shape[d]));
+			if (d >= decomposed)
+				continue;
+			if (inv)
+				dim_idx =
+					"(" + to_string(pred.shape[d]) + " - " + dim_idx + " - 1)";
+			const std::string summand = index_mul(dim_idx, acc_sizes_pred[d]);
+			if (summand != "0")
+				summands += " + " + summand;
+		}
+		// the dimensions that were not decomposed keep their part of the index
+		if (decomposed < node->operation.dimensions)
+			summands +=
+				" + " + (decomposed == 0
+							 ? std::string("index")
+							 : index_mod("index", acc_sizes[decomposed - 1]));
+		opening += "index = 0" + summands + ";\nif(index < 0) index = 0;\n";
 	}
-	// the dimensions that were not decomposed keep their part of the index
-	if (decomposed < node->operation.dimensions)
-		summands +=
-			" + " + (decomposed == 0
-						 ? std::string("index")
-						 : index_mod("index", acc_sizes[decomposed - 1]));
-	index_defs += "index = 0" + summands;
-	index_defs += ";\nif(index < 0) index = 0;\n";
-	compiler_state.index_defs = index_defs;
-	// when nothing is padded away the extension only reshapes
-	if (!set_zero_cond.empty())
-		compiler_state.code.prepend("if(" + set_zero_cond + ") " + name +
-									" = 0;\n");
-	compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
-								";\n");
-	compiler_state.code.prepend(type + " " + name + " = v" +
-								to_string(compiler_state.variable_index + 1) +
-								";\n");
+	// inside of the condition the index always lies within the parameter
+	compiler_state.pred_index_bound = 1;
+	for (int d = 0; d < pred.dimensions; d++)
+		compiler_state.pred_index_bound *= pred.shape[d];
+	const string par = "v" + to_string(compiler_state.variable_index + 1);
+	if (keep_cond.empty()) {
+		// when nothing is padded away the extension only remaps
+		compiler_state.index_defs = opening;
+		compiler_state.code.prepend(closing + type + " " + name + " = " + par +
+									";\n");
+		return 0;
+	}
+	compiler_state.pred_wrappers = {
+		{type + " " + name + " = 0;\nif(" + keep_cond + "){\n" + opening,
+		 closing + name + " = " + par + ";\n}\n"}};
 	return 0;
+}
+bool ExtendImpl::mutate_index(const FGraphNode *node,
+							  OCLLazyCodegenState &state) {
+	const FOperation pred = node->predecessors[0]->operation;
+	const FExtend *extend = (FExtend *)node->operation.additional_data;
+	IndexMap pred_map;
+	pred_map.current_depth = state.index_map.current_depth;
+	pred_map.expr_per_dim.resize(node->operation.dimensions);
+	for (int d = 0; d < node->operation.dimensions; d++) {
+		const long step =
+			extend->step[d] < 0 ? -(long)extend->step[d] : extend->step[d];
+		IndexExpr &expr = pred_map.expr_per_dim[d];
+		if (step == 1) {
+			// the extension only shifts this dimension
+			expr = state.index_map.expr_per_dim[d];
+			expr.a -= (long)extend->start[d];
+		} else {
+			// only every `step`th entry comes from the parameter, which is a
+			// division. `generate_ocl_lazy` emits it for this atom
+			const int atom = state.add_atom(
+				"extend_index_" + to_string(state.index_atoms.size()), 0,
+				(long)pred.shape[d] - 1, state.index_map.current_depth);
+			expr.a = 0;
+			expr.exprs.push_back({1, atom});
+		}
+		if (extend->step[d] < 0) {
+			// a negative step reads the dimension backwards
+			for (auto &[c, atom] : expr.exprs)
+				c = -c;
+			expr.a = (long)pred.shape[d] - 1 - expr.a;
+		}
+		// everything outside of the parameter is guarded away, so the
+		// coordinate stays inside of it even where the terms say otherwise
+		expr.bound = {0, (long)pred.shape[d] - 1};
+	}
+	state.pred_index_maps.push_back(pred_map);
+	return true;
 }
 void ExtendImpl::execute_cpu(const FGraphNode *node,
 							 std::vector<CPUResultData> predecessor_data,
