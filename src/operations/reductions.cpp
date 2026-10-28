@@ -25,72 +25,41 @@ template <FOperationType op_type>
 static inline int reducing(const FGraphNode *node, std::string name,
 						   OCLLazyCodegenState &compiler_state) {
 	FGraphNode *prev = node->predecessors[0];
-	// we insert a index definition to introduce the for for our
-	// predecessors
+	// the accumulator and the loop over the reduced dimension stand in front
+	// of the parameter, which is read inside of it
 	const string par1 = "v" + std::to_string(compiler_state.variable_index + 1);
 	const string type = type_string(node->operation.data_type);
 	const int red_dim = ((int *)node->operation.additional_data)[0];
-	size_t it_dim = 1; // iteration size <=> product of all dimensions along dim
-	for (size_t d = red_dim + 1; d < prev->operation.dimensions; d++)
-		it_dim *= prev->operation.shape[d];
-	Twine index_defs;
-	index_defs += type + " " + name + " = ";
-	size_t total_el_size = 1;
-	if (prev->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < prev->operation.dimensions; i++)
-			total_el_size *= prev->operation.shape[i];
+	Twine opening;
+	opening += type + " " + name + " = ";
 	switch (op_type) {
 	case FREDUCE_SUM:
-		index_defs += "0";
+		opening += "0";
 		break;
 	case FREDUCE_MUL:
-		index_defs += "1";
+		opening += "1";
 		break;
 	case FREDUCE_MIN:
-		index_defs += max_for_type(node->operation.data_type);
+		opening += max_for_type(node->operation.data_type);
 		break;
 	case FREDUCE_MAX:
-		index_defs += min_for_type(node->operation.data_type);
+		opening += min_for_type(node->operation.data_type);
 		break;
 	default:
 		break;
 	}
-	bool do_index_magic = !compiler_state.pred_index_maps.empty();
-	const unsigned int old_idx = compiler_state.num_indices;
-	const std::string &itype = compiler_state.index_type;
-	if (!do_index_magic) {
-		const std::string itv = "i" + to_string(compiler_state.variable_index);
-		compiler_state.num_indices++;
-		const std::string base = "base" + to_string(old_idx);
-		// everything but the iteration offset is constant for the whole loop,
-		// calculating it once saves a division and a modulo per iteration
-		index_defs += ";\n" + itype + " " + base + " = (index / " +
-					  to_string(it_dim) + ") * " + to_string(it_dim) + " * " +
-					  to_string(prev->operation.shape[red_dim]) +
-					  " + index % " + to_string(it_dim) + ";\n" + itype +
-					  " old_idx" + to_string(old_idx) +
-					  " = index;\n"
-					  "for(" +
-					  itype + " " + itv + " = 0; " + itv + " < " +
-					  to_string(prev->operation.shape[red_dim]) + "; " + itv +
-					  "++){\n"
-					  "index = (" +
-					  base + " + " + itv + " * " + to_string(it_dim) + ") % " +
-					  to_string(total_el_size) + ";\n";
-	} else {
-		// get index variable
-		IndexAtom i =
-			compiler_state.index_atoms[compiler_state.pred_index_maps[0]
-										   .expr_per_dim[red_dim]
-										   .exprs[0]
-										   .second];
-		index_defs += ";\nfor(" + itype + " " + i.name + " = 0; " + i.name +
-					  " < " + to_string(prev->operation.shape[red_dim]) + "; " +
-					  i.name + "++){\n";
-	}
-	compiler_state.index_defs = index_defs;
-	// the loop masks the index with the size of the reduced tensor
-	compiler_state.pred_index_bound = total_el_size;
+	// the loop variable is the coordinate of the reduced dimension in the
+	// map of the parameter
+	const IndexAtom &i =
+		compiler_state.index_atoms[compiler_state.pred_index_maps[0]
+									   .expr_per_dim[red_dim]
+									   .exprs[0]
+									   .second];
+	opening += ";\nfor(" + compiler_state.type_of(i.bound) + " " +
+				  i.name + " = 0; " + i.name + " < " +
+				  to_string(prev->operation.shape[red_dim]) + "; " +
+				  i.name + "++){\n";
+	compiler_state.insert_code(opening, true);
 	Twine reduce_code;
 	switch (op_type) {
 	case FREDUCE_SUM:
@@ -109,8 +78,6 @@ static inline int reducing(const FGraphNode *node, std::string name,
 		break;
 	}
 	reduce_code += ";\n}";
-	if (!do_index_magic)
-		reduce_code += "\nindex = old_idx" + to_string(old_idx) + ";\n";
 	compiler_state.code.prepend(reduce_code);
 	return 0;
 }

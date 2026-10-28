@@ -61,15 +61,9 @@ int FlattenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 bool FlattenImpl::mutate_index(const FGraphNode *node,
 							   OCLLazyCodegenState &state) {
 	const FOperation pred = node->predecessors[0]->operation;
-	IndexExpr curr = state.index_map.flatten(node->operation.shape,
-											 node->operation.dimensions);
-	// the offset is the same, only the shape it addresses changes
-	IndexMap mapped =
-		IndexMap::split(curr, pred.shape, pred.dimensions, state.index_atoms);
-	// a reshape that cuts an axis in two is exactly the case that needs a
-	// division, so it emits one instead of falling back to the flat index
-	if (mapped.expr_per_dim.empty())
-		mapped = split_atoms(curr, pred.shape, pred.dimensions, state);
+	IndexExpr curr = state.flatten(state.index_map, node->operation.shape,
+								   node->operation.dimensions);
+	IndexMap mapped = split_atoms(curr, pred.shape, pred.dimensions, state);
 	mapped.current_depth = state.index_map.current_depth;
 	state.pred_index_maps.push_back(mapped);
 	return true;
@@ -163,71 +157,20 @@ int RepeatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								  OCLLazyCodegenState &compiler_state) {
 	const FOperation op = node->operation;
 	const FOperation pred = node->predecessors[0]->operation;
-	if (compiler_state.pred_index_maps.empty()) {
-		const unsigned int old_idx = compiler_state.num_indices++;
-		Twine index_defs;
-		index_defs += compiler_state.index_type + " old_index" +
-					  to_string(old_idx) + " = index;\n";
-		// add to index_defs a redefinition of index, so that we remap
-		// to src data calculate number of elements per dimension entry
-		// for destination and source
-		std::vector<size_t> acc_sizes_d(op.dimensions);
-		std::vector<size_t> acc_sizes_s(op.dimensions);
-		acc_sizes_d[op.dimensions - 1] = 1;
-		acc_sizes_s[op.dimensions - 1] = 1;
-		for (int dim = op.dimensions - 2; dim >= 0; dim--) {
-			acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op.shape[dim + 1];
-			acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
-		}
-		// to get the index in the source array we first calculate the
-		// indices and reproject
-		index_defs += "{\n" + compiler_state.index_type +
-					  " working_index = index;\nindex = 0;\n";
-		size_t bound = compiler_state.index_bound;
-		for (int dim = 0; dim < op.dimensions; dim++) {
-			// the source repeats along this dimension, so the coordinate wraps
-			// around its shape
-			size_t coord_bound = bound;
-			const string summand =
-				index_mul(index_coordinate("working_index", dim, acc_sizes_d,
-										   pred.shape, coord_bound),
-						  acc_sizes_s[dim]);
-			if (summand != "0")
-				index_defs += "index += " + summand + ";\n";
-			// what is left over are the coordinates of the following dimensions
-			if (dim + 1 < op.dimensions &&
-				(!bound || bound > acc_sizes_d[dim])) {
-				index_defs +=
-					"working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
-				bound = acc_sizes_d[dim];
-			}
-		}
-		index_defs += "}\n";
-		compiler_state.index_defs = index_defs;
-		// every coordinate is taken modulo the shape of the predecessor, so the
-		// remapped index always stays inside of it
-		compiler_state.pred_index_bound = 1;
-		for (int dim = 0; dim < pred.dimensions; dim++)
-			compiler_state.pred_index_bound *= pred.shape[dim];
-		compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
-									";\n");
-	} else {
-		for (int i = 0; i < op.dimensions; i++) {
-			if (op.shape[i] != pred.shape[i] && pred.shape[i] != 1) {
-				IndexAtom ia =
-					compiler_state.index_atoms[compiler_state.pred_index_maps[0]
-												   .expr_per_dim[i]
-												   .exprs[0]
-												   .second];
-				const std::string &itype = compiler_state.index_type;
-				compiler_state.index_defs +=
-					itype + " " + ia.name + " = (" +
-					compiler_state.index_map.expr_per_dim[i].to_code(
-						compiler_state.index_atoms) +
-					") % " + to_string(pred.shape[i]) + ";\n";
-			}
+	for (int i = 0; i < op.dimensions; i++) {
+		if (op.shape[i] != pred.shape[i] && pred.shape[i] != 1) {
+			compiler_state.declare_atom(
+				compiler_state.pred_index_maps[0]
+					.expr_per_dim[i]
+					.exprs[0]
+					.second,
+				"(" +
+					compiler_state.to_code(
+						compiler_state.index_map.expr_per_dim[i]) +
+					") % " + to_string(pred.shape[i]));
 		}
 	}
+
 	compiler_state.code.prepend(
 		"const " + type_string(node->operation.data_type) + " " + name +
 		" = v" + to_string(compiler_state.variable_index + 1) + ";\n");
@@ -258,9 +201,9 @@ bool RepeatImpl::mutate_index(const FGraphNode *node,
 			pred_map.expr_per_dim.push_back(zero);
 		} else {
 			// new atom with modulo
-			int rep_ax = state.add_atom("rep_index_" +
-											to_string(state.index_atoms.size()),
-										0, pred.shape[i] - 1, state.index_map.current_depth);
+			int rep_ax = state.add_atom(
+				"rep_index_" + to_string(state.index_atoms.size()), 0,
+				pred.shape[i] - 1, state.index_map.current_depth);
 			IndexExpr dim_idx;
 			dim_idx.a = 0;
 			dim_idx.exprs.push_back({1, rep_ax});
@@ -312,56 +255,6 @@ void TransposeImpl::unary_expression(T *__restrict__ result,
 }
 int TransposeImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 									 OCLLazyCodegenState &compiler_state) {
-	if (compiler_state.pred_index_maps.empty()) {
-		const FOperation op = node->operation;
-		const int *transposition = (int *)op.additional_data;
-		const FOperation pred = node->predecessors[0]->operation;
-		unsigned int old_idx = compiler_state.num_indices++;
-		Twine index_defs;
-		index_defs += compiler_state.index_type + " old_index" +
-					  to_string(old_idx) + " = index;\n";
-		// add to index_defs a redefinition of index, so that we remap
-		// to src data calculate number of elements per dimension entry
-		// for destination and source
-		std::vector<size_t> acc_sizes_d(op.dimensions);
-		std::vector<size_t> acc_sizes_s(op.dimensions);
-		acc_sizes_d[op.dimensions - 1] = 1;
-		acc_sizes_s[op.dimensions - 1] = 1;
-		for (int dim = op.dimensions - 2; dim >= 0; dim--) {
-			acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op.shape[dim + 1];
-			acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
-		}
-		// to get the index in the source array we first calculate the
-		// indices and reproject
-		index_defs += "{\n" + compiler_state.index_type +
-					  " working_index = index;\nindex = 0;\n";
-		size_t bound = compiler_state.index_bound;
-		for (int dim = 0; dim < op.dimensions; dim++) {
-			size_t coord_bound = bound;
-			const string summand =
-				index_mul(index_coordinate("working_index", dim, acc_sizes_d,
-										   op.shape, coord_bound),
-						  acc_sizes_s[transposition[dim]]);
-			if (summand != "0")
-				index_defs += "index += " + summand + ";\n";
-			// what is left over are the coordinates of the following dimensions
-			if (dim + 1 < op.dimensions &&
-				(!bound || bound > acc_sizes_d[dim])) {
-				index_defs +=
-					"working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
-				bound = acc_sizes_d[dim];
-			}
-		}
-		index_defs += "}\n";
-		compiler_state.index_defs = index_defs;
-		// every coordinate is taken modulo the shape of the predecessor, so the
-		// remapped index always stays inside of it
-		compiler_state.pred_index_bound = 1;
-		for (int dim = 0; dim < pred.dimensions; dim++)
-			compiler_state.pred_index_bound *= pred.shape[dim];
-		compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
-									";\n");
-	}
 	compiler_state.code.prepend(
 		"const " + type_string(node->operation.data_type) + " " + name +
 		" = v" + to_string(compiler_state.variable_index + 1) + ";\n");
@@ -460,48 +353,18 @@ int ConcatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 	const unsigned int ax =
 		((unsigned int *)node->operation.additional_data)[0];
 	const string type = type_string(node->operation.data_type);
-	const string &itype = compiler_state.index_type;
 	const string par1 = "v" + to_string(compiler_state.variable_index + 1);
 	const string par2 = "v" + to_string(compiler_state.variable_index + 2);
 	// the coordinate on the concatenated axis decides which of the two
 	// parameters is read. Only that one is calculated, so each parameter is
 	// wrapped in its branch of the condition
-	string if_em, enter1, enter2, leave1, leave2;
-	if (!compiler_state.pred_index_maps.empty()) {
-		if_em = compiler_state.index_map.expr_per_dim[ax].to_code(
-					compiler_state.index_atoms) +
-				" < " + to_string(a->operation.shape[ax]);
-	} else {
-		size_t acc_size_last = 1;
-		for (int i = node->operation.dimensions - 2; i >= (int)ax; i--)
-			acc_size_last *= node->operation.shape[i + 1];
-		const string sx = "index / " + to_string(acc_size_last);
-		const string sc =
-			ax > 0 ? "(" + sx + ") % " + to_string(node->operation.shape[ax])
-				   : sx;
-		if_em = sc + " < " + to_string(a->operation.shape[ax]);
-		// the entry of the parameter that holds this coordinate
-		const auto remap = [&](const FGraphNode *p, bool second) {
-			return "(" + sx + " / " + to_string(node->operation.shape[ax]) +
-				   ") * " + to_string(acc_size_last * p->operation.shape[ax]) +
-				   " + ((" + sc + ")" +
-				   (second ? " - " + to_string(a->operation.shape[ax]) : "") +
-				   ") * " + to_string(acc_size_last) + " + (index % " +
-				   to_string(acc_size_last) + ")";
-		};
-		const unsigned int old1 = compiler_state.num_indices++;
-		const unsigned int old2 = compiler_state.num_indices++;
-		enter1 = itype + " old_index" + to_string(old1) +
-				 " = index;\nindex = " + remap(a, false) + ";\n";
-		leave1 = "index = old_index" + to_string(old1) + ";\n";
-		enter2 = itype + " old_index" + to_string(old2) +
-				 " = index;\nindex = " + remap(b, true) + ";\n";
-		leave2 = "index = old_index" + to_string(old2) + ";\n";
-	}
+	const string in_a =
+		compiler_state.to_code(compiler_state.index_map.expr_per_dim[ax]) +
+		" < " + to_string(a->operation.shape[ax]);
 	compiler_state.pred_wrappers = {
-		{type + " " + name + " = 0;\nif(" + if_em + "){\n" + enter1,
-		 leave1 + name + " = " + par1 + ";\n} else {\n" + enter2},
-		{"", leave2 + name + " = " + par2 + ";\n}\n"}};
+		{type + " " + name + " = 0;\nif(" + in_a + "){\n",
+		 name + " = " + par1 + ";\n} else {\n"},
+		{"", name + " = " + par2 + ";\n}\n"}};
 	return 0;
 }
 bool ConcatImpl::mutate_index(const FGraphNode *node,

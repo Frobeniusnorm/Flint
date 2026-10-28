@@ -26,51 +26,19 @@
 #include <vector>
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
-const char *fop_to_string[] = {"FSTORE",
-							   "FGEN_RANDOM",
-							   "FGEN_CONST",
-							   "FGEN_ARANGE",
-							   "FADD",
-							   "FSUB",
-							   "FMUL",
-							   "FDIV",
-							   "FPOW",
-							   "FNEG",
-							   "FLOG",
-							   "FSIGN",
-							   "FEVEN",
-							   "FLOG2",
-							   "FLOG10",
-							   "FSIN",
-							   "FCOS",
-							   "FTAN",
-							   "FASIN",
-							   "FACOS",
-							   "FATAN",
-							   "FSQRT",
-							   "FEXP",
-							   "FLATTEN",
-							   "FCONVERSION",
-							   "FRESHAPE",
-							   "FMIN",
-							   "FMAX",
-							   "FREDUCE_SUM",
-							   "FREDUCE_MUL",
-							   "FREDUCE_MIN",
-							   "FREDUCE_MAX",
-							   "FSLICE",
-							   "FABS",
-							   "FREPEAT",
-							   "FTRANSPOSE",
-							   "FEXTEND",
-							   "FCONCAT",
-							   "FLESS",
-							   "FEQUAL",
-							   "FGREATER",
-							   "FINDEX",
-							   "FSET_INDEX",
-							   "FSLIDING_WINDOW",
-							   "FUNSLIDE_WINDOW"};
+const char *fop_to_string[] = {
+	"FSTORE",		  "FGEN_RANDOM", "FGEN_CONST",	"FGEN_ARANGE",
+	"FADD",			  "FSUB",		 "FMUL",		"FDIV",
+	"FPOW",			  "FNEG",		 "FLOG",		"FSIGN",
+	"FEVEN",		  "FLOG2",		 "FLOG10",		"FSIN",
+	"FCOS",			  "FTAN",		 "FASIN",		"FACOS",
+	"FATAN",		  "FSQRT",		 "FEXP",		"FLATTEN",
+	"FCONVERSION",	  "FRESHAPE",	 "FMIN",		"FMAX",
+	"FREDUCE_SUM",	  "FREDUCE_MUL", "FREDUCE_MIN", "FREDUCE_MAX",
+	"FSLICE",		  "FABS",		 "FREPEAT",		"FTRANSPOSE",
+	"FEXTEND",		  "FCONCAT",	 "FLESS",		"FEQUAL",
+	"FGREATER",		  "FINDEX",		 "FSET_INDEX",	"FSLIDING_WINDOW",
+	"FUNSLIDE_WINDOW"};
 static bool use_cpu, use_gpu, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
@@ -981,6 +949,13 @@ static void materialize_permutations(FGraphNode *a, const size_t reduced_size) {
 			todo.push_back(curr->predecessors[i]);
 	}
 }
+static inline size_t elements(const FOperation &op) {
+	size_t el = 1;
+	for (int i = 0; i < op.dimensions; i++) {
+		el *= op.shape[i];
+	}
+	return el;
+}
 static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 										   FOperationType type) {
 	size_t total = 1;
@@ -989,7 +964,6 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 			total *= a->operation.shape[i];
 	if (!a->result_data) {
 		materialize_permutations(a, total * a->operation.shape[dimension]);
-		// we dont want interleaved reduction since that is slow
 		std::list<FGraphNode *> todo;
 		todo.push_back(a);
 		while (!todo.empty()) {
@@ -1002,18 +976,22 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 			case FREDUCE_MAX:
 			case FREDUCE_MIN:
 			case FREDUCE_MUL:
-			case FREDUCE_SUM:
-				// interleaved reductions are slow, so the inner one is
-				// calculated first. Only it is materialized, `a` itself can be
-				// orders of magnitude larger (an expanded product for example)
-				// and would cost far more to write out.
-				fExecuteGraph(curr);
-				terminate = true;
+			case FREDUCE_SUM: {
+				/* Nested reductions are *only* viable if the outer reduction
+				 * reduces the result of the inner reduction only once (only
+				 * then is the inner reduction never aimlessly recomputed per
+				 * iteration and we won't run into quadratic effort). */
+				int axis = ((int *)curr->operation.additional_data)[0];
+				size_t el_a = elements(a->operation);
+				size_t el_curr = elements(curr->operation);
+				if (el_a < el_curr * 2 || axis <= dimension ||
+					curr->reference_counter > 2) {
+					fExecuteGraph(curr);
+				}
+			}
 			default:
 				break;
 			}
-			if (terminate)
-				break;
 			for (int i = 0; i < curr->num_predecessor; i++)
 				todo.push_back(curr->predecessors[i]);
 		}

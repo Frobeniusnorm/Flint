@@ -60,60 +60,17 @@ void SliceImpl::unary_expression(T *__restrict__ result,
 }
 int SliceImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								 OCLLazyCodegenState &compiler_state) {
-	FOperation pred = node->predecessors[0]->operation;
 	FSlice *slice = (FSlice *)node->operation.additional_data;
 	const string type = type_string(node->operation.data_type);
-	if (compiler_state.pred_index_maps.empty()) {
-		unsigned int old_idx = compiler_state.num_indices++;
-		Twine index_defs = compiler_state.index_type + " old_index" +
-						   to_string(old_idx) + " = index;\n";
-		// flattened shape data
-		std::vector<size_t> acc_sizes(node->operation.dimensions);
-		std::vector<size_t> acc_sizes_pred(acc_sizes.size());
-		for (long d = node->operation.dimensions - 1; d >= 0; d--) {
-			if (d == node->operation.dimensions - 1) {
-				acc_sizes[d] = 1;
-				acc_sizes_pred[d] = 1;
-			} else {
-				acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
-				acc_sizes[d] = acc_sizes[d + 1] * node->operation.shape[d + 1];
-			}
-		}
-		// calculate start
-		size_t start = 0;
-		for (long d = 0; d < node->operation.dimensions; d++) {
-			start += slice->start[d] * acc_sizes_pred[d];
-		}
-		// the offset moves when a graph is reused on different slices, as an
-		// argument it keeps the code cacheable
-		index_defs += "index = (" + compiler_state.addScalar(F_INT64, start);
-		// accumulate index
-		for (long d = 0; d < node->operation.dimensions; d++) {
-			index_defs +=
-				" + (((" +
-				(d == 0 ? string("index")
-						: string("index %" + to_string(acc_sizes[d - 1]))) +
-				") / " + to_string(acc_sizes[d]) + ") % " +
-				to_string(node->operation.shape[d]) + ") * " +
-				to_string(slice->step[d] * (long)acc_sizes_pred[d]);
-		}
-		index_defs += ") ;\n";
-		compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
-									";\n");
-		compiler_state.index_defs = index_defs;
-	} else {
-		for (int d = 0; d < node->operation.dimensions; d++) {
-			if (slice->start[d] != 0) {
-				const auto &exprs =
-					compiler_state.pred_index_maps[0].expr_per_dim[d].exprs;
-				int atom_idx = exprs[exprs.size() - 1].second;
-				string atom = compiler_state.index_atoms[atom_idx].name;
-				string var_name =
-					compiler_state.addScalar(F_INT64, slice->start[d]);
-				compiler_state.index_defs += "const " +
-											 compiler_state.index_type + " " +
-											 atom + " = " + var_name + ";\n";
-			}
+	// the offset moves when a graph is reused on different slices, as an
+	// argument it keeps the code cacheable
+	for (int d = 0; d < node->operation.dimensions; d++) {
+		if (slice->start[d] != 0) {
+			const auto &exprs =
+				compiler_state.pred_index_maps[0].expr_per_dim[d].exprs;
+			compiler_state.declare_atom(
+				exprs[exprs.size() - 1].second,
+				compiler_state.addScalar(F_INT64, slice->start[d]));
 		}
 	}
 	compiler_state.code.prepend("const " + type + " " + name + " = v" +
@@ -222,7 +179,6 @@ int ExtendImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								  OCLLazyCodegenState &compiler_state) {
 	const FOperation pred = node->predecessors[0]->operation;
 	const string type = type_string(node->operation.data_type);
-	const string &itype = compiler_state.index_type;
 	const FExtend *extend = (FExtend *)node->operation.additional_data;
 	std::string keep_cond;
 	const auto keep_if = [&keep_cond](const std::string &cond) {
@@ -230,138 +186,43 @@ int ExtendImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 			keep_cond += " && ";
 		keep_cond += cond;
 	};
-	// index logic that belongs inside of the condition, and what has to be
-	// restored after the parameter was read
-	std::string opening, closing;
-	if (!compiler_state.pred_index_maps.empty()) {
-		for (long d = 0; d < node->operation.dimensions; d++) {
-			const long start = (long)extend->start[d];
-			const long step =
-				extend->step[d] < 0 ? -(long)extend->step[d] : extend->step[d];
-			const IndexExpr &coord_expr =
-				compiler_state.index_map.expr_per_dim[d];
-			const string coord = coord_expr.to_code(compiler_state.index_atoms);
-			const string shifted =
-				start == 0 ? coord
-						   : "(" + coord + " - " + to_string(start) + ")";
-			// the coordinate's own bound decides which of the three tests this
-			// dimension still needs
-			if (coord_expr.bound.first < start)
-				keep_if(coord + " >= " + to_string(start));
-			if (step != 1)
-				keep_if(shifted + " % " + to_string(step) + " == 0");
-			const long behind = start + step * (long)pred.shape[d];
-			if (coord_expr.bound.second >= behind)
-				keep_if(coord + " < " + to_string(behind));
-			if (step != 1) {
-				const auto &exprs =
-					compiler_state.pred_index_maps[0].expr_per_dim[d].exprs;
-				const IndexAtom &atom =
-					compiler_state.index_atoms[exprs[exprs.size() - 1].second];
-				opening += itype + " " + atom.name + " = " + shifted + " / " +
-						   to_string(step) + ";\n";
-			}
+	for (long d = 0; d < node->operation.dimensions; d++) {
+		const long start = (long)extend->start[d];
+		const long step =
+			extend->step[d] < 0 ? -(long)extend->step[d] : extend->step[d];
+		const IndexExpr &coord_expr =
+			compiler_state.index_map.expr_per_dim[d];
+		const string coord = compiler_state.to_code(coord_expr);
+		const string shifted =
+			start == 0 ? coord
+					   : "(" + coord + " - " + to_string(start) + ")";
+		// the coordinate's own bound decides which of the three tests this
+		// dimension still needs
+		if (coord_expr.bound.first < start)
+			keep_if(coord + " >= " + to_string(start));
+		if (step != 1)
+			keep_if(shifted + " % " + to_string(step) + " == 0");
+		const long behind = start + step * (long)pred.shape[d];
+		if (coord_expr.bound.second >= behind)
+			keep_if(coord + " < " + to_string(behind));
+		// the coordinate of the parameter is the one of the extension divided
+		// by the step, which is only read where the condition says it is exact
+		if (step != 1) {
+			const auto &exprs =
+				compiler_state.pred_index_maps[0].expr_per_dim[d].exprs;
+			compiler_state.declare_atom(exprs[exprs.size() - 1].second,
+										shifted + " / " + to_string(step));
 		}
-	} else {
-		const unsigned int old_idx = compiler_state.num_indices++;
-		opening += itype + " old_index" + to_string(old_idx) + " = index;\n";
-		closing += "index = old_index" + to_string(old_idx) + ";\n";
-		// flattened shape data
-		std::vector<size_t> acc_sizes(node->operation.dimensions);
-		std::vector<size_t> acc_sizes_pred(acc_sizes.size());
-		for (long d = node->operation.dimensions - 1; d >= 0; d--) {
-			if (d == node->operation.dimensions - 1) {
-				acc_sizes[d] = 1;
-				acc_sizes_pred[d] = 1;
-			} else {
-				acc_sizes_pred[d] = acc_sizes_pred[d + 1] * pred.shape[d + 1];
-				acc_sizes[d] = acc_sizes[d + 1] * node->operation.shape[d + 1];
-			}
-		}
-		// a dimension that is neither padded, strided nor inverted maps its
-		// part of the index onto itself. A run of such dimensions at the end
-		// of the shape is taken over as a whole instead of being decomposed
-		// one by one.
-		int decomposed = node->operation.dimensions;
-		while (decomposed > 0) {
-			const long d = decomposed - 1;
-			if (extend->start[d] != 0 || extend->step[d] != 1 ||
-				node->operation.shape[d] != pred.shape[d] ||
-				acc_sizes[d] != acc_sizes_pred[d])
-				break;
-			decomposed--;
-		}
-		// calculate start
-		std::string summands;
-		for (long d = 0; d < node->operation.dimensions; d++) {
-			long step = extend->step[d];
-			const bool inv = step < 0;
-			if (inv)
-				step = -step;
-			const long start = extend->start[d];
-			// the coordinate of this dimension in the extended tensor. Only
-			// the first one is unbounded, all others are limited by the modulo
-			// of the dimension before them.
-			const std::string rest =
-				d == 0 ? std::string("index")
-					   : "(" +
-							 index_mod("index", acc_sizes[d - 1],
-									   compiler_state.index_bound) +
-							 ")";
-			const std::string coord = index_div(
-				rest, acc_sizes[d],
-				d == 0 ? compiler_state.index_bound : acc_sizes[d - 1]);
-			// the coordinate projected back onto the predecessor
-			std::string dim_idx = coord;
-			if (start != 0)
-				dim_idx = "(" + dim_idx + " - " + to_string(start) + ")";
-			if (step != 1)
-				dim_idx = index_div(dim_idx, step);
-			// entries the extension inserted are zero: before the start of the
-			// original tensor, between two of its entries or behind its end
-			if (start > 0)
-				keep_if(coord + " >= " + to_string(start));
-			if (step != 1)
-				keep_if("(" + coord + " - " + to_string(start) + ") % " +
-						to_string(step) + " == 0");
-			// the last dimensions can only run past the predecessor if the
-			// index itself does, which only the first dimension can tell
-			const long highest =
-				((long)node->operation.shape[d] - 1 - start) / step;
-			if (d == 0 || highest >= (long)pred.shape[d])
-				keep_if(dim_idx + " < " + to_string(pred.shape[d]));
-			if (d >= decomposed)
-				continue;
-			if (inv)
-				dim_idx =
-					"(" + to_string(pred.shape[d]) + " - " + dim_idx + " - 1)";
-			const std::string summand = index_mul(dim_idx, acc_sizes_pred[d]);
-			if (summand != "0")
-				summands += " + " + summand;
-		}
-		// the dimensions that were not decomposed keep their part of the index
-		if (decomposed < node->operation.dimensions)
-			summands +=
-				" + " + (decomposed == 0
-							 ? std::string("index")
-							 : index_mod("index", acc_sizes[decomposed - 1]));
-		opening += "index = 0" + summands + ";\nif(index < 0) index = 0;\n";
 	}
-	// inside of the condition the index always lies within the parameter
-	compiler_state.pred_index_bound = 1;
-	for (int d = 0; d < pred.dimensions; d++)
-		compiler_state.pred_index_bound *= pred.shape[d];
 	const string par = "v" + to_string(compiler_state.variable_index + 1);
 	if (keep_cond.empty()) {
 		// when nothing is padded away the extension only remaps
-		compiler_state.index_defs = opening;
-		compiler_state.code.prepend(closing + type + " " + name + " = " + par +
-									";\n");
+		compiler_state.code.prepend(type + " " + name + " = " + par + ";\n");
 		return 0;
 	}
 	compiler_state.pred_wrappers = {
-		{type + " " + name + " = 0;\nif(" + keep_cond + "){\n" + opening,
-		 closing + name + " = " + par + ";\n}\n"}};
+		{type + " " + name + " = 0;\nif(" + keep_cond + "){\n",
+		 name + " = " + par + ";\n}\n"}};
 	return 0;
 }
 bool ExtendImpl::mutate_index(const FGraphNode *node,
@@ -454,40 +315,28 @@ int IndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 								 OCLLazyCodegenState &compiler_state) {
 	FGraphNode *a = node->predecessors[0];
 	FGraphNode *b = node->predecessors[1];
-	const FOperation op = node->operation;
 	const unsigned int axis = b->operation.dimensions - 1;
 	const string type = type_string(node->operation.data_type);
-	string par1, par2;
-	par1 = "v" + to_string(++compiler_state.variable_index);
-	par2 = "v" + to_string(++compiler_state.variable_index);
-	size_t acc_sizes_ax = 1;
-	for (int i = axis + 1; i < op.dimensions; i++)
-		acc_sizes_ax *= op.shape[i];
-
-	const std::string base =
-		"index / " + to_string(acc_sizes_ax * op.shape[axis]);
-	const std::string rest = "index % " + to_string(acc_sizes_ax);
-	unsigned int old_idx1 = compiler_state.num_indices++;
-	unsigned int old_idx2 = compiler_state.num_indices++;
-	std::string local_index_def1 = "index = old_index" + to_string(old_idx2) +
-								   ";\nlong old_index" + to_string(old_idx1) +
-								   " = index;\n";
-	local_index_def1 += "index = " + base + " * " +
-						to_string(acc_sizes_ax * a->operation.shape[axis]) +
-						" + " + par2 + " * " + to_string(acc_sizes_ax) +
-						" + (" + rest + ");\n";
-	compiler_state.code.prepend("index = old_index" + to_string(old_idx1) +
-								";\n" + type + " " + name + " = " + par1 +
-								";\n");
-	std::string local_index_def2 = compiler_state.index_type + " old_index" +
-								   to_string(old_idx2) +
-								   " = index;\n"
-								   "index /= " +
-								   to_string(acc_sizes_ax) + ";\n";
-	compiler_state.todo.push_front({nullptr, local_index_def2});
-	compiler_state.todo.push_front({b, par2});
-	compiler_state.todo.push_front({nullptr, local_index_def1});
-	compiler_state.todo.push_front({a, par1});
+	const string par1 = "v" + to_string(++compiler_state.variable_index);
+	const string par2 = "v" + to_string(++compiler_state.variable_index);
+	compiler_state.code.prepend(type + " " + name + " = " + par1 + ";\n");
+	const IndexMap coords = compiler_state.index_map;
+	// `b` holds one index per element in front of and including the axis
+	IndexMap bmap;
+	bmap.current_depth = coords.current_depth;
+	bmap.expr_per_dim.assign(coords.expr_per_dim.begin(),
+							 coords.expr_per_dim.begin() + axis + 1);
+	compiler_state.todo.push_front({b, par2, false, bmap});
+	// `a` is read at the same coordinates, except on the axis, where the
+	// entry of `b` says which one to take
+	IndexMap amap = coords;
+	IndexExpr &on_axis = amap.expr_per_dim[axis];
+	on_axis.a = 0;
+	on_axis.exprs = {{1, compiler_state.add_atom(
+							 par2, 0, (long)a->operation.shape[axis] - 1,
+							 coords.current_depth, true)}};
+	on_axis.derive_bound(compiler_state.index_atoms);
+	compiler_state.todo.push_front({a, par1, false, amap});
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
 void IndexImpl::execute_cpu(const FGraphNode *node,
@@ -567,15 +416,27 @@ int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	size_t acc_sizes_ax = 1;
 	for (int i = axis + 1; i < op.dimensions; i++)
 		acc_sizes_ax *= op.shape[i];
+	// the coordinates in front of the axis choose the indices to compare
+	// against, the one of the axis is what they are compared to and the ones
+	// behind it address the entry inside the window
+	const IndexMap coords = compiler_state.index_map;
+	IndexMap in_front, behind;
+	in_front.expr_per_dim.assign(coords.expr_per_dim.begin(),
+								 coords.expr_per_dim.begin() + axis);
+	behind.expr_per_dim.assign(coords.expr_per_dim.begin() + axis + 1,
+							   coords.expr_per_dim.end());
 	const std::string base =
-		"index / " + to_string(acc_sizes_ax * op.shape[axis]);
-	const std::string rest = "index % " + to_string(acc_sizes_ax);
-	const std::string axi = "(index / " + to_string(acc_sizes_ax) + ")%" +
-							to_string(op.shape[axis]);
-	const std::string ind =
-		"(long) " + par3 + "[index / " + to_string(acc_sizes_ax) + "]";
+		axis > 0 ? compiler_state.to_code(
+					   in_front.flatten(op.shape, axis))
+				 : "0";
+	const std::string rest =
+		behind.expr_per_dim.empty()
+			? "0"
+			: compiler_state.to_code(behind.flatten(
+				  op.shape + axis + 1, op.dimensions - axis - 1));
+	const std::string axi = compiler_state.to_code(coords.expr_per_dim[axis]);
 	const std::string base_ind =
-		base + " * " + to_string(c->operation.shape[axis]);
+		"(" + base + ") * " + to_string(c->operation.shape[axis]);
 	const string type = type_string(node->operation.data_type);
 	compiler_state.code.prepend(
 		type + " " + name +
@@ -606,7 +467,7 @@ int SetIndexImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		name + " = " + par1 +
 		";\n"
 		"}\n");
-	compiler_state.todo.push_front({a, par1});
+	compiler_state.todo.push_front({a, par1, false, coords});
 	return OCL_LAZY_DONT_PUSH_PREDS;
 }
 void SetIndexImpl::execute_cpu(const FGraphNode *node,

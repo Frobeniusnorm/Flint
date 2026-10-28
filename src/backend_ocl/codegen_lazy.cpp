@@ -107,7 +107,7 @@ generateCode(FGraphNode *node,
 	OCLLazyCodegenState state;
 	state.parameters = &parameters;
 	state.code = {};
-	state.index_type = maximumTensorSize(node) < (1l << 30) ? "int" : "long";
+	state.index_type = maximumTensorSize(node) < (1l << 31) ? "int" : "long";
 	// the coordinates of the result, seeded from the launch ids exactly like
 	// `launchRange` assigns them: the two innermost dimensions that are larger
 	// than one get an id of their own, all remaining ones share the third
@@ -140,9 +140,9 @@ generateCode(FGraphNode *node,
 											(long)size - 1, 0);
 			coord.exprs.push_back({1, atom});
 			coord.derive_bound(state.index_atoms);
-			index_decl.append(state.index_type + " " +
-							  state.index_atoms[atom].name + " = " + value +
-							  ";\n");
+			index_decl.append(state.type_of(state.index_atoms[atom].bound) +
+							  " " + state.index_atoms[atom].name + " = " +
+							  value + ";\n");
 			found++;
 		}
 	}
@@ -154,26 +154,18 @@ generateCode(FGraphNode *node,
 		state.assigned_params;
 	unsigned int &variable_index = state.variable_index;
 	Twine &code = state.code;
-	// indexing logic (we save the old index in old_index$i to restore it)
-	unsigned int &num_indices = state.num_indices;
 	// nodes that more than one other node reads with the same index are
 	// calculated once into `reused` instead of once per path to them
 	unordered_map<FGraphNode *, int> users, distance;
 	collectReusable(node, users, distance);
 	unordered_map<FGraphNode *, string> reused;
-	// the node currently generated as a reused definition, it may not alias
-	// itself
+	// the node currently generated as a reused definition
 	FGraphNode *defining = nullptr;
-	// the kernel runs one work item per element of the root
-	size_t root_bound = 1;
-	for (int i = 0; i < node->operation.dimensions; i++)
-		root_bound *= node->operation.shape[i];
-	todo.push_front({node, "v0", true, root_bound, state.index_map});
+	// the coordinates of the result
+	const IndexMap root_map = state.index_map;
+	todo.push_front({node, "v0", true, state.index_map});
 	while (true) {
 		if (todo.empty()) {
-			// everything is generated, the definitions of the reused nodes
-			// follow. The one closest to the root goes first so that it ends up
-			// last in the code, after everything it reads.
 			if (reused.empty())
 				break;
 			FGraphNode *next = nullptr;
@@ -181,36 +173,34 @@ generateCode(FGraphNode *node,
 				if (!next || distance[gn] < distance[next])
 					next = gn;
 			defining = next;
-			// a reused node is only shared where `index` is still the global
-			// id, so it is bounded like the root
-			todo.push_front({next, reused[next], true, root_bound});
+			// a reused node is only shared where the index is still the
+			// global id
+			state.index_map = root_map;
+			IndexMap root_coords = root_map;
+			IndexMap map = split_atoms(
+				state.flatten(root_coords, node->operation.shape,
+							  node->operation.dimensions),
+				next->operation.shape, next->operation.dimensions, state);
+			todo.push_front({next, reused[next], true, map});
 			reused.erase(next);
 		}
 		// take from queue
-		const auto [node, name, same_index, index_bound, index_map] =
-			todo.front();
+		const auto [node, name, same_index, index_map, inserted_by,
+					declares_indices, opens_loop] = todo.front();
 		todo.pop_front();
-		state.index_defs = "";
 		state.pred_index_maps.clear();
 		state.pred_wrappers.clear();
-		state.index_bound = index_bound;
 		state.index_map = index_map;
-		// operations that remap the index overwrite this with their own bound
-		state.pred_index_bound = node && passesIndexOn(node) ? index_bound : 0;
-		// used to insert code at a specific place
+		// code that is inserted at a specific place
 		if (!node) {
-			code.prepend(name);
+			state.insert_text(name, index_map.current_depth, inserted_by,
+							  declares_indices, opens_loop);
 			continue;
 		}
-		// check if we need to pop some depth-triggered codes
-		while (!state.place_at_depth.empty()) {
-			const auto [depth, dtc] = state.place_at_depth.front();
-			if (index_map.current_depth == depth) {
-				state.place_at_depth.pop_front();
-				code.prepend(name);
-			} else
-				break;
-		}
+		// tells the index expressions this operation registers apart from
+		// those of the operations below it
+		state.generated_ops++;
+		state.first_text = true;
 		string type = type_string(node->operation.data_type);
 		bool push_pred = true;
 		// a node that is used more than once is only calculated once, all
@@ -264,27 +254,18 @@ generateCode(FGraphNode *node,
 				assigned_params.insert({node, "P" + to_string(pid)});
 				parameters.push_back({node, "P" + to_string(pid)});
 			}
-			// the coordinates address the buffer of this node directly, if they
-			// are known here. `index_bound` decides about the modulo, the bound
-			// of the expression may be smaller than the range of a flat index
-			// that was split into coordinates.
-			string address = "index";
-			size_t bound = state.index_bound;
-			if (state.index_map.expr_per_dim.size() ==
-				node->operation.dimensions) {
-				const IndexExpr flat = state.index_map.flatten(
-					node->operation.shape, node->operation.dimensions);
-				address = flat.to_code(state.index_atoms);
-				// real coordinates bound the address themselves, which is
-				// tighter than what is known about a flat index that was only
-				// split into them
-				if (flat.bound.first >= 0 &&
-					flat.bound.second < (long)num_entries)
-					bound = num_entries;
+			const IndexExpr flat =
+				state.flatten(state.index_map, node->operation.shape,
+							  node->operation.dimensions);
+			string address = state.to_code(flat);
+			if (flat.bound.first < 0 ||
+				flat.bound.second >= (long)num_entries) {
+				if (address.find(' ') != string::npos && address[0] != '(')
+					address = "(" + address + ")";
+				address += " % " + to_string(num_entries);
 			}
 			code.prepend("const " + type + " " + name + " = " +
-						 assigned_params[node] + "[" +
-						 index_mod(address, num_entries, bound) + "];\n");
+						 assigned_params[node] + "[" + address + "];\n");
 		} else {
 			OperationImplementation *impl =
 				OperationImplementation::implementations[node->operation
@@ -308,25 +289,6 @@ generateCode(FGraphNode *node,
 				flogging(F_ERROR,
 						 string(fop_to_string[node->operation.op_type]) +
 							 " wrapped only some of its parameters.");
-			// an operation without a mapping calculates with the flat `index`,
-			// so the coordinates are folded into it before it runs. That
-			// overwrites what the parent left there, which is saved and
-			// restored around this node
-			if (has_map && state.pred_index_maps.empty()) {
-				const string flat = state.index_map
-										.flatten(node->operation.shape,
-												 node->operation.dimensions)
-										.to_code(state.index_atoms);
-				if (flat != "index") {
-					const string old_idx = "old_idx" + to_string(num_indices++);
-					code.prepend("index = " + old_idx + ";\n");
-					// it has to be queued before anything the operation queues
-					// for its parameters
-					todo.push_front({nullptr, itype + " " + old_idx +
-												  " = index;\nindex = " + flat +
-												  ";\n"});
-				}
-			}
 			const int flags = impl->generate_ocl_lazy(node, name, state);
 			inverse_broadcasting =
 				flags & OperationImplementation::OCL_LAZY_INVERSE_BROADCASTING;
@@ -334,10 +296,6 @@ generateCode(FGraphNode *node,
 				(flags & OperationImplementation::OCL_LAZY_DONT_PUSH_PREDS) ==
 				0;
 		}
-		// insert our indexing logic into the queue after the children
-		const string index_defs = state.index_defs;
-		if (!index_defs.empty())
-			todo.push_front({nullptr, index_defs});
 		if (inverse_broadcasting) {
 			// manipulate for invserse broadcasting
 			size_t iv1 = 1, iv2 = 1;
@@ -345,18 +303,36 @@ generateCode(FGraphNode *node,
 				node->predecessors[0], iv1, node->predecessors[1], iv2);
 			if (iv1 != 1 || iv2 != 1) {
 				push_pred = false;
-				const string old_idx = "old_idx" + to_string(num_indices++);
-				code.prepend("index = " + old_idx + ";\n");
 				const int var1 = ++variable_index;
 				const int var2 = ++variable_index;
-				todo.push_front({nullptr, itype + " " + old_idx +
-											  " = index;\nindex /= " +
-											  to_string(iv2) + ";\n"});
-				todo.push_front({node->predecessors[1], "v" + to_string(var2)});
-				todo.push_front({nullptr, "index = " + old_idx +
-											  ";\nindex /= " + to_string(iv1) +
-											  ";\n"});
-				todo.push_front({node->predecessors[0], "v" + to_string(var1)});
+				// each parameter is read at a fraction of the offset
+				IndexMap coords = state.index_map;
+				const IndexExpr flat = state.flatten(
+					coords, node->operation.shape, node->operation.dimensions);
+				const string offset = state.to_code(flat);
+				const auto scaled = [&](FGraphNode *pred, size_t iv) {
+					IndexExpr e = flat;
+					if (iv != 1) {
+						const long hi = flat.bound.second / (long)iv;
+						e.a = 0;
+						e.exprs = {
+							{1, state.declare_coord(
+									state.index_map.current_depth,
+									state.type_of({0, hi}),
+									"(" + offset + ") / " + to_string(iv), 0,
+									hi)}};
+						e.derive_bound(state.index_atoms);
+					}
+					IndexMap map =
+						split_atoms(e, pred->operation.shape,
+									pred->operation.dimensions, state);
+					map.current_depth = state.index_map.current_depth;
+					return map;
+				};
+				todo.push_front({node->predecessors[1], "v" + to_string(var2),
+								 false, scaled(node->predecessors[1], iv2)});
+				todo.push_front({node->predecessors[0], "v" + to_string(var1),
+								 false, scaled(node->predecessors[0], iv1)});
 			}
 		}
 #ifdef FLINT_DEBUG
@@ -369,44 +345,34 @@ generateCode(FGraphNode *node,
 			// the operation has no mapping of its own yet, so it calculated the
 			// index of its predecessors into `index`. They pick it up from
 			// there, split into their own coordinates.
-			IndexExpr flat;
-			if (state.pred_index_maps.empty() && state.pred_index_bound) {
-				flat.a = 0;
-				flat.exprs.push_back(
-					{1, state.add_atom("index", 0,
-									   (long)state.pred_index_bound - 1,
-									   state.index_map.current_depth)});
-				flat.derive_bound(state.index_atoms);
-			}
 			for (int i = 0; i < node->num_predecessor; i++) {
 				string parname = "v" + to_string(++variable_index);
 				const FOperation pred = node->predecessors[i]->operation;
-				IndexMap pred_map;
-				if (!state.pred_index_maps.empty())
-					pred_map = state.pred_index_maps[i];
-				else if (state.pred_index_bound) {
-					pred_map = IndexMap::split(
-						flat, pred.shape, pred.dimensions, state.index_atoms);
-					pred_map.current_depth = state.index_map.current_depth;
+				if (state.pred_index_maps.empty()) {
+					flogging(F_ERROR,
+							 string(fop_to_string[node->operation.op_type]) +
+								 " did not map its parameters.");
+					break;
 				}
+				const IndexMap &pred_map = state.pred_index_maps[i];
 				// the queue is processed from the front, so what is pushed
 				// first ends up first in the code
 				if (!state.pred_wrappers.empty() &&
 					!state.pred_wrappers[i].first.empty())
-					todo.push_front({nullptr, state.pred_wrappers[i].first});
+					state.insert_code(state.pred_wrappers[i].first);
 				todo.push_front({node->predecessors[i], parname,
-								 pred_same_index, state.pred_index_bound,
-								 pred_map});
+								 pred_same_index, pred_map});
 				if (!state.pred_wrappers.empty() &&
 					!state.pred_wrappers[i].second.empty())
-					todo.push_front({nullptr, state.pred_wrappers[i].second});
+					state.insert_code(state.pred_wrappers[i].second);
 			}
 		}
 	}
+	// no scope is open any more -> pending
+	state.insert_remaining_decls();
 	code.prepend(index_decl);
 	{
-		// flatten the ids back to the index of the element, the first id is
-		// the innermost dimension
+		// flatten the ids back to the index of the element
 		Twine index_expr = itype + " index = get_global_id(0)";
 		size_t stride = 1;
 		for (int i = 1; i < range.dims; i++) {

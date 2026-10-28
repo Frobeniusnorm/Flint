@@ -233,8 +233,8 @@ int DropoutImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	const double seed = ((double *)node->operation.additional_data)[0];
 	const double prob = ((double *)node->operation.additional_data)[1];
 	compiler_state.code.prepend(
-		type + " " + name + " = 0;\n{\n double _random = sin(index + " +
-		std::to_string(seed) +
+		type + " " + name + " = 0;\n{\n double _random = sin(" +
+		node_offset(node, compiler_state) + " + " + std::to_string(seed) +
 		") * 43758.5453123;\n _random = min(_random - floor(_random), "
 		"0.99999);\n" +
 		name +

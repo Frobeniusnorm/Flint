@@ -24,14 +24,17 @@ struct IndexCoeeficient {
 };
 /* Some OCL Variable */
 struct IndexAtom {
-		int id;						 // reference from OclCompilerState
 		std::pair<long, long> bound; // value bounds, inclusive
 		std::string name;			 // a variable needs a name
 		unsigned int depth;			 // depth (regarding nested loops)
+		/** Whether the value only exists where it is read, which is the case
+		 * for one that is loaded from a parameter: an expression containing it
+		 * may not be calculated in front of the scope it appears in. */
+		bool inlined;
 		IndexAtom() = default;
-		IndexAtom(int id, std::pair<long, long> bound, std::string name,
-				  unsigned int depth)
-			: id(id), bound(bound), name(name), depth(depth) {}
+		IndexAtom(std::pair<long, long> bound, std::string name,
+				  unsigned int depth, bool inlined = false)
+			: bound(bound), name(name), depth(depth), inlined(inlined) {}
 };
 /**
  * Holds an expression a + c1 * atom1 + c2 * atom2 + ...

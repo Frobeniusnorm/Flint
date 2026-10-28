@@ -17,7 +17,7 @@
 #include "../../flint.h"
 #include "../backend_cpu/cpu_common.hpp"
 #include "../backend_ocl/twine.hpp"
-#include "src/operations/indices.hpp"
+#include "src/operations/index_code.hpp"
 #include <unordered_map>
 #include <vector>
 
@@ -379,16 +379,22 @@ struct CodegenTask {
 		 * Operations that push predecessors themselves all modify the index,
 		 * so leaving this false is the safe default. */
 		bool same_index = false;
-		/** Exclusive upper bound of `index` here, `0` if it is unknown. Only
-		 * bounds that hold for every execution may be entered, they decide
-		 * which divisions and modulos of the index calculations are left out */
-		size_t index_bound = 0;
 		/** Coordinates the node is read at, one expression per dimension of its
-		 * shape. Empty as long as only the flat `index` is known here, then the
-		 * operations fall back to calculating with that. */
+		 * shape */
 		IndexMap index_map;
+		/** For inserted code: which operation inserted it. */
+		unsigned int inserted_by = 0;
+		/** For inserted code: whether this is the first text the operation
+		 * inserted. Everything it reads stands behind that one, so it is where
+		 * its index declarations may be put in front. */
+		bool declares_indices = false;
+		/** For inserted code: whether it opens a loop */
+		bool opens_loop = false;
 };
-struct OCLLazyCodegenState {
+/** The state of the lazy code generation: the queue of nodes, the parameters
+ * and scalars of the kernel and the code itself. Everything about indices is
+ * in `IndexCode`, this part decides where code and declarations are placed. */
+struct OCLLazyCodegenState : IndexCode {
 		/** Working queue of nodes for which still code has to be generated */
 		std::list<CodegenTask> todo;
 		/** Maps storage nodes to their kernel parameter names (for fast lookup)
@@ -396,72 +402,29 @@ struct OCLLazyCodegenState {
 		std::unordered_map<FGraphNode *, std::string> assigned_params;
 		/** To register new parameter nodes to their name */
 		std::list<std::pair<FGraphNode *, std::string>> *parameters;
-		/** indexing logic (we save the old index in old_index$i to restore it)
-		 */
-		unsigned int num_indices = 0;
 		/** Number of nodes that are already assigned to variables (for naming)
 		 */
 		unsigned int variable_index = 0;
-		/** a code segment that is inserted before the predecessors (cleared
-		 * after each node) */
-		std::string index_defs;
-		/** Exclusive upper bound of `index` for the node that is currently
-		 * generated, `0` if nothing is known about it */
-		size_t index_bound = 0;
-		/** Exclusive upper bound of `index` for the predecessors of the node
-		 * that is currently generated. Operations that remap the index set it
-		 * to the largest index their mapping can produce, it defaults to the
-		 * bound of the node itself for those that pass the index on. */
-		size_t pred_index_bound = 0;
 		/** Actual code as twine for fast prepend and append operations */
 		Twine code;
-		/** Type of all index calculations in the kernel. 64 bit integer
-		 * division is emulated and slow on most GPUs, so 32 bit is used
-		 * whenever every tensor of the kernel is small enough for it. */
+		/** Current index type */
 		std::string index_type = "long";
 		/** Values that change between executions of otherwise identical
 		 * graphs (slice offsets, random seeds, ...). They are passed as
 		 * kernel arguments instead of being written into the code, since a
 		 * literal would make the kernel cache miss on every execution. */
 		std::vector<std::pair<FType, double>> scalars;
+		/** Text put in front of and behind the code of each predecessor, one
+		 * entry per predecessor. */
+		std::vector<std::pair<std::string, std::string>> pred_wrappers;
+		/** Whether the operation that is generated has not inserted code yet.
+		 * Everything it reads stands behind its first text. */
+		bool first_text = true;
 		/** Registers a value as a kernel argument and returns its name */
 		std::string addScalar(FType type, double value) {
 			std::string name = "S" + std::to_string(scalars.size());
 			scalars.push_back({type, value});
 			return name;
-		}
-		/**
-		 * Currently mapped index expressions per dimension.
-		 */
-		IndexMap index_map;
-		/**
-		 * Pool of all index atoms (e.g. index variables or other unknowns).
-		 */
-		std::vector<IndexAtom> index_atoms;
-		/** Per predecessor holds its index space.
-		 * If empty, fallback. */
-		std::vector<IndexMap> pred_index_maps;
-		/** Text put in front of and behind the code of each predecessor, one
-		 * entry per predecessor or empty if nothing is wrapped. An operation
-		 * that only reads a parameter where a condition holds puts the
-		 * condition here, so that the parameter is not calculated at all
-		 * where it does not. The predecessors of one node follow each other
-		 * directly, so the closing text of one and the opening text of the
-		 * next meet, which is how an `else` between them is written. */
-		std::vector<std::pair<std::string, std::string>> pred_wrappers;
-		/** Sorted list that tells the codegen to put the string after the first
-		 * operation that has the depth of the first element of the pair. */
-		std::list<std::pair<unsigned int, std::string>> place_at_depth;
-		/**
-		 * Registers an unknown for the index calculations and returns its id.
-		 * The id is its position in `index_atoms`, which is what
-		 * `IndexExpr::derive_bound` and `IndexExpr::to_code` rely on.
-		 */
-		int add_atom(const std::string &name, long lo, long hi, int depth) {
-			const int id = index_atoms.size();
-			index_atoms.emplace_back(id, std::pair<long, long>{lo, hi}, name,
-									 depth);
-			return id;
 		}
 		/**
 		 * Checks if the nodes has already been included as a parameter for the
@@ -480,45 +443,61 @@ struct OCLLazyCodegenState {
 			}
 			return par1;
 		}
-};
-/**
- * Coordinates for an offset whose decomposition `IndexMap::split` could not
- * show. Each one becomes a variable `(offset / stride) % size`, which is the
- * division a reshape cannot avoid, and an atom that everything below can keep
- * calculating with symbolically. The declarations are put in front of
- * `index_defs`, so an operation that assigns that field has to do so first.
- */
-inline IndexMap split_atoms(const IndexExpr &expr, const size_t *shape,
-							int dims, OCLLazyCodegenState &state) {
-	IndexMap result;
-	result.expr_per_dim.resize(dims);
-	const std::string offset = expr.to_code(state.index_atoms);
-	std::string decls;
-	long stride = 1;
-	for (int i = dims - 1; i >= 0; i--) {
-		const long size = (long)shape[i];
-		IndexExpr coord;
-		coord.a = 0;
-		if (size > 1) {
-			const std::string name = "c" + std::to_string(state.num_indices++);
-			std::string value = offset;
-			if (stride > 1)
-				value = "(" + value + ") / " + std::to_string(stride);
-			// the outermost dimension holds everything that is left
-			if (i > 0)
-				value = "(" + value + ") % " + std::to_string(size);
-			decls += state.index_type + " " + name + " = " + value + ";\n";
-			coord.exprs.push_back(
-				{1, state.add_atom(name, 0, size - 1,
-								   state.index_map.current_depth)});
+		/**
+		 * Inserts `text` into the queue, so that it is emitted at this
+		 * position of the code. `loop` tells whether it opens a loop.
+		 */
+		void insert_code(const std::string &text, bool loop = false) {
+			todo.push_front({nullptr, text, false, index_map, generated_ops,
+							 first_text, loop});
+			first_text = false;
 		}
-		coord.derive_bound(state.index_atoms);
-		result.expr_per_dim[i] = coord;
-		stride *= size;
-	}
-	state.index_defs = decls + state.index_defs;
-	return result;
-}
+		/**
+		 * Emits `text`, which was inserted at `depth`, together with the
+		 * declarations that belong around it.
+		 * - `depth`, `owner`: of the operation that inserted the text
+		 * - `declares`: whether everything that operation reads stands behind
+		 *   this text, only then its own declarations may be put in front
+		 * - `loop`: whether the text opens a loop, then a declaration of the
+		 *   depth around it is taken out of the loop
+		 */
+		void insert_text(const std::string &text, unsigned int depth,
+						 unsigned int owner, bool declares, bool loop) {
+			std::vector<std::string> inside, in_front; // before and after text
+			for (auto it = index_decls.begin(); it != index_decls.end();) {
+				std::vector<std::string> *side = nullptr;
+				if (it->depth > depth) {
+					// the scope the text opens is where it belongs
+					side = &inside;
+				} else if (it->depth == depth && it->owner == owner) {
+					// same operation -> waits for the first one
+					if (declares)
+						side = &in_front;
+				} else if (it->depth == depth && it->owner > owner) {
+					// an operation below registered it -> loops take it out
+					side = loop ? &in_front : &inside;
+				}
+				if (!side) {
+					it++;
+					continue;
+				}
+				side->push_back(declaration(*it));
+				it = index_decls.erase(it);
+			}
+			for (auto it = inside.rbegin(); it != inside.rend(); it++)
+				code.prepend(*it);
+			code.prepend(text);
+			for (auto it = in_front.rbegin(); it != in_front.rend(); it++)
+				code.prepend(*it);
+		}
+		/** Emits the declarations that are still pending (to emit remaining at
+		 * the beginning of the kernel)*/
+		void insert_remaining_decls() {
+			for (auto it = index_decls.rbegin(); it != index_decls.rend(); it++)
+				code.prepend(declaration(*it));
+			index_decls.clear();
+		}
+};
 struct OperationImplementation {
 		// helper function
 		static FGraphNode *constant_tensor(double val, FType type,
@@ -593,19 +572,16 @@ struct OperationImplementation {
 		 * Maps the coordinates the node is read at (`state.index_map`) to the
 		 * coordinates its parameters are read at, one entry in
 		 * `state.pred_index_maps` per parameter. Returns false if this
-		 * operation has no mapping, then it keeps calculating with the flat
-		 * `index`. The default is the identity for the operations that read
-		 * their parameters at the same position as themselves.
+		 * operation does not map, then it has to queue its parameters itself
+		 * in `generate_ocl_lazy`. The default is the identity for the
+		 * operations that read their parameters at the same position as
+		 * themselves.
 		 */
 		virtual bool mutate_index(const FGraphNode *node,
 								  OCLLazyCodegenState &state) {
-			// a reshape passes the flat index on unchanged, but not the
-			// coordinates, since its shape differs from its parameter's
-			if (!passesIndexOn(node) || node->operation.op_type == FRESHAPE ||
-				node->operation.op_type == FLATTEN)
+			// inverse broadcasting is mapped by the code generation itself
+			if (!passesIndexOn(node))
 				return false;
-			// TODO passesIndexOn denies inverse broadcasting, would be possible
-			// with a leading_map here
 			std::vector<IndexMap> maps(node->num_predecessor);
 			for (int i = 0; i < node->num_predecessor; i++) {
 				maps[i].current_depth = state.index_map.current_depth;

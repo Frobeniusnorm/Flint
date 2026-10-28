@@ -41,7 +41,8 @@ int GenRandomImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 	// whole calculation into double precision
 	const string suffix = dt == F_FLOAT32 ? "f" : "";
 	compiler_state.code.prepend(type + " " + name + " = 0;\n{\n " + name +
-								" = sin(index + " + sn + ") * 43758.5453123" +
+								" = sin(" + node_offset(node, compiler_state) +
+								" + " + sn + ") * 43758.5453123" +
 								suffix + ";\n " + name + " = min(" + name +
 								" - floor(" + name + "), 0.99999" + suffix +
 								");\n"
@@ -83,12 +84,12 @@ void GenArangeImpl::execute_cpu(const FGraphNode *node,
 int GenArangeImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	const string type = type_string(node->operation.data_type);
-	unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
-	size_t acc_sizes_ax = 1;
-	for (unsigned int i = ax + 1; i < node->operation.dimensions; i++)
-		acc_sizes_ax *= node->operation.shape[i];
-	compiler_state.code.prepend("const " + type + " " + name + " = (index/" +
-								to_string(acc_sizes_ax) + ")%" +
-								to_string(node->operation.shape[ax]) + ";\n");
+	const unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
+	// the value is the coordinate of its axis, which the index map holds
+	compiler_state.code.prepend(
+		"const " + type + " " + name + " = " +
+		compiler_state.to_code(
+			compiler_state.index_map.expr_per_dim[ax]) +
+		";\n");
 	return 0;
 }

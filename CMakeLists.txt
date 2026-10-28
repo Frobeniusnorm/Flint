@@ -16,6 +16,7 @@ include(GNUInstallDirs)
 find_package(OpenCL REQUIRED)
 
 FILE(GLOB SRCFILES src/*.cpp src/backend_cpu/*.cpp src/backend_ocl/*.cpp src/operations/*.cpp)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 SET(HEADERFILES "flint.h;flint.hpp;flint_helper.hpp;flint_1.hpp;flint_n.hpp")
 SET(INCLFILES)
 if(${DEEP_LEARNING})

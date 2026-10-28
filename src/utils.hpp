@@ -150,64 +150,6 @@ inline std::vector<size_t> calc_acc_sizes(const int dimensions,
 inline std::vector<size_t> calc_acc_sizes(const FOperation op) {
 	return calc_acc_sizes(op.dimensions, op.shape);
 }
-/**
- * The index calculations of the generated kernels are dominated by integer
- * divisions and modulos - they are the most expensive instructions a kernel
- * executes (the 64 bit variants are emulated in software on most GPUs) and the
- * index of a node is remapped once per operation between it and the data it
- * reads. Since all shapes are known during code generation, the following
- * helpers leave out every division and modulo that provably is the identity or
- * always yields zero.
- *
- * They all take an exclusive upper bound of their operand, `0` meaning that
- * nothing is known about it. The operand has to be a single variable or a
- * parenthesized expression, it is never wrapped in parentheses.
- */
-/** Emits `val / divisor`, or `"0"` if the quotient is always zero */
-inline std::string index_div(const std::string &val, const size_t divisor,
-							 const size_t bound = 0) {
-	if (val == "0")
-		return val;
-	if (bound && bound <= divisor)
-		return "0";
-	return divisor == 1 ? val : val + " / " + std::to_string(divisor);
-}
-/** Emits `val % modulus`, left out if `bound` proves `val` is already smaller
- */
-inline std::string index_mod(const std::string &val, const size_t modulus,
-							 const size_t bound = 0) {
-	if (val == "0" || modulus == 1)
-		return "0";
-	if (bound && bound <= modulus)
-		return val;
-	return val + " % " + std::to_string(modulus);
-}
-/** Emits `val * factor`, left out for a factor of one */
-inline std::string index_mul(const std::string &val, const size_t factor) {
-	if (val == "0" || factor == 0)
-		return "0";
-	return factor == 1 ? val : val + " * " + std::to_string(factor);
-}
-/** Exclusive upper bound of `val / divisor` for a `val` bounded by `bound` */
-inline size_t index_div_bound(const size_t bound, const size_t divisor) {
-	return bound ? (bound - 1) / divisor + 1 : 0;
-}
-/**
- * Decomposes `index` into the coordinate of dimension `dim` of the shape
- * described by `acc_sizes` (its accumulated sizes) and `shape`. `bound` is an
- * exclusive upper bound of `index` and is updated to one of the returned
- * coordinate.
- */
-inline std::string index_coordinate(const std::string &index, const int dim,
-									const std::vector<size_t> &acc_sizes,
-									const size_t *shape, size_t &bound) {
-	const std::string quotient = index_div(index, acc_sizes[dim], bound);
-	bound = index_div_bound(bound, acc_sizes[dim]);
-	const std::string coordinate = index_mod(quotient, shape[dim], bound);
-	if (bound > shape[dim] || !bound)
-		bound = shape[dim];
-	return coordinate;
-}
 inline std::vector<std::vector<FType>> all_type_permutations(int num) {
 	using namespace std;
 	if (num == 0)
