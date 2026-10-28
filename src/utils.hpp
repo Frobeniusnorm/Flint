@@ -43,7 +43,7 @@ template <typename T> inline T *safe_mal(unsigned int count) {
 extern const char *fop_to_string[];
 template <typename T>
 static inline std::string vector_string(const std::vector<T> &vec,
-									   std::string indentation = "") {
+										std::string indentation = "") {
 	std::string res = "[";
 	for (size_t i = 0; i < vec.size(); i++) {
 		res += std::to_string(vec[i]);
@@ -54,7 +54,7 @@ static inline std::string vector_string(const std::vector<T> &vec,
 }
 template <typename T>
 static inline std::string vector_string(const std::vector<std::vector<T>> &vec,
-									   std::string indentation = "") {
+										std::string indentation = "") {
 	std::string res = "[";
 	for (size_t i = 0; i < vec.size(); i++) {
 		res += vector_string(vec[i], indentation + " ");
@@ -139,7 +139,7 @@ inline size_t type_size(FType t) {
 	return 1;
 }
 inline std::vector<size_t> calc_acc_sizes(const int dimensions,
-										const size_t *shape) {
+										  const size_t *shape) {
 	std::vector<size_t> acc_sizes(dimensions);
 	acc_sizes[dimensions - 1] = 1;
 	for (int dim = dimensions - 2; dim >= 0; dim--) {
@@ -286,7 +286,8 @@ inline bool worth_materializing(const FGraphNode *node) {
  * local dimension). Every index is referenced exactly once in its local
  * dimension.
  */
-inline long *generate_permutation(size_t *shape, unsigned int ax, size_t *size) {
+inline long *generate_permutation(size_t *shape, unsigned int ax,
+								  size_t *size) {
 	size_t total_size = 1;
 	for (unsigned int i = 0; i <= ax; i++)
 		total_size *= shape[i];
