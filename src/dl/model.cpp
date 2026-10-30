@@ -16,6 +16,30 @@ int InputNode::data_no = 0;
 // // //
 // implementations
 // // //
+/** Flint stores convolution kernels as [filters, spatial..., channels], ONNX
+ * as [filters, channels, spatial...] */
+static FGraphNode *convert_kernel(FGraphNode *kernel, bool to_onnx) {
+	const int dims = kernel->operation.dimensions;
+	std::vector<int> transposition(dims);
+	transposition[0] = 0;
+	if (to_onnx) {
+		transposition[1] = dims - 1;
+		for (int i = 2; i < dims; i++)
+			transposition[i] = i - 1;
+	} else {
+		for (int i = 1; i < dims - 1; i++)
+			transposition[i] = i + 1;
+		transposition[dims - 1] = 1;
+	}
+	return ftranspose(kernel, transposition.data());
+}
+static bool is_convolution_kernel(const Variable *var) {
+	for (const LayerGraph *out : var->outgoing)
+		if (const Convolve *conv = dynamic_cast<const Convolve *>(out))
+			if (conv->incoming.size() > 1 && conv->incoming[1] == var)
+				return true;
+	return false;
+}
 GraphModel *GraphModel::load_model(std::string path) {
 	using namespace std;
 	ifstream input(path, std::ios::ate | std::ios::binary);
@@ -166,6 +190,16 @@ GraphModel *GraphModel::load_model(std::string path) {
 				flogging(F_WARNING, "Unknown input: " + in);
 		}
 	}
+	// kernels are converted once into the layout they are stored in
+	for (Variable *var : weights)
+		if (is_convolution_kernel(var)) {
+			FGraphNode *onnx_order = var->node;
+			FGraphNode *kernel =
+				fExecuteGraph(convert_kernel(onnx_order, false));
+			onnx_order->reference_counter--;
+			var->node = fOptimizeMemory(kernel);
+			var->node->reference_counter++;
+		}
 	// retreive input and output names
 	GraphModel *res = new GraphModel();
 	res->input = vector<InputNode *>(graph.input_size());
@@ -200,6 +234,9 @@ std::string GraphModel::serialize_onnx() {
 	int variable = 0;
 	for (Variable *w : weights) {
 		FGraphNode *node = w->node;
+		const bool kernel = is_convolution_kernel(w);
+		if (kernel)
+			node = convert_kernel(node, true);
 		fExecuteGraph(node);
 		fSyncMemory(node);
 		FResultData *data = node->result_data;
@@ -229,6 +266,8 @@ std::string GraphModel::serialize_onnx() {
 			proto.set_raw_data(data->data, sizeof(double) * data->num_entries);
 			break;
 		}
+		if (kernel)
+			fFreeGraph(node);
 	}
 	{
 		using namespace std;

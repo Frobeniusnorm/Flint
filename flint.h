@@ -1,4 +1,4 @@
-/* Copyright 2023 David Schwarzbeck
+/* Copyright 2026 David Schwarzbeck
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -200,21 +200,6 @@ FErrorType fErrorType();
  */
 const char *fErrorMessage();
 
-/** All graph nodes that represent actual operations are after this call
- * executed eagerly, i.e. they are executed during graph construction.
- *
- * This may improve performance when only using the CPU backend, in any other
- * case disabling eager execution should be preferred. */
-void fEnableEagerExecution();
-
-/** Disable eager execution, i.e. the graph is constructed without execution of
- * the nodes until an operation makes the execution of a parent graph necessary
- * or the user calls `fExecuteGraph`. */
-void fDisableEagerExecution();
-
-/** Returns 1 if eager execution has been enabled, else 0 */
-int fIsEagerExecution();
-
 /** The 4 allowed data types:
  * - `F_INT32`(integer, 32bit)
  * - `F_INT64`(integer, 64bit)
@@ -248,7 +233,6 @@ enum FOperationType {
 	FSQRT,
 	FEXP,
 	FLATTEN,
-	FMATMUL,
 	FCONVERSION,
 	FRESHAPE,
 	FMIN,
@@ -266,17 +250,10 @@ enum FOperationType {
 	FLESS,
 	FEQUAL,
 	FGREATER,
-	FCONVOLVE,
-	FGRADIENT_CONVOLVE1, // only for internal use!
-	FGRADIENT_CONVOLVE2, // only for internal use!
 	FINDEX,
 	FSET_INDEX,
 	FSLIDING_WINDOW,
 	FUNSLIDE_WINDOW,
-	FPOOLING_MAX,
-	FPOOLING_SUM,
-	FGRADIENT_POOLING_MAX, // only for internal use
-	FDROPOUT,
 	FNUM_OPERATION_TYPES
 };
 
@@ -435,6 +412,12 @@ FGraphNode *fconstant_d(const double value, const size_t *shape,
  */
 FGraphNode *frandom(const size_t *shape, const int dimensions);
 
+/** Like `frandom`, but the values are generated in `type`, which has to be
+ * `F_FLOAT32` or `F_FLOAT64`. Single precision is a lot cheaper on most gpus.
+ */
+FGraphNode *frandom_type(const size_t *shape, const int dimensions,
+						 const FType type);
+
 /** Creates a int64 tensor that contains the indices relative to a given
  * dimension `ax` for each element, i.e. each entry is its index in that
  * corresponding dimension. If you need to index more than one dimension, create
@@ -475,7 +458,7 @@ void fFreeGraph(FGraphNode *graph);
  * execution is enabled each node will be executed eagerly upon construction or
  * with this method.
  *
- * Also see `fEnableEagerExecution`, `fSyncMemory`*/
+ * Also see `fSyncMemory`*/
 FGraphNode *fExecuteGraph(FGraphNode *node);
 
 /** Executes the graph node operations from all yet to be executed predecessors
@@ -493,21 +476,6 @@ FGraphNode *fExecuteGraph_cpu(FGraphNode *node);
  * necessary the same nodes, but the same combination of nodes), since then the
  * backend can reuse already compiled kernels. */
 FGraphNode *fExecuteGraph_gpu(FGraphNode *node);
-
-/** Executes the graph node directly and assumes that predecessor data has
- * already been computed. Uses the CPU backend. Mainly used by helper functions
- * of the framework, only use it if you now what you are doing.
- *
- * Also see `fEnableEagerExecution`, `fExecuteGraph_cpu` and `fExecuteGraph`*/
-FGraphNode *fExecuteGraph_cpu_eagerly(FGraphNode *node);
-
-/** Executes the graph node directly and assumes that predecessor data has
- * already been computed. Uses the GPU backend where for each operation and
- * parameter type combination one eager kernel will be computed. Mainly used by
- * helper functions of the framework, only use it if you now what you are doing.
- *
- *  Also see `fEnableEagerExecution`, `fExecuteGraph_gpu` and `fExecuteGraph`*/
-FGraphNode *fExecuteGraph_gpu_eagerly(FGraphNode *node);
 
 /** `fExecuteGraoh` does not guarantee that memory is present on the cpu (it may
  * be kept on the GPU for performance reasons). This method enforces all GPU

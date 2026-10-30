@@ -26,115 +26,27 @@
 #include <vector>
 #define MAX(x, y) (x) > (y) ? (x) : (y)
 #define ABS(x) (x) < 0 ? -(x) : (x)
-const char *fop_to_string[] = {"FSTORE",
-							   "FGEN_RANDOM",
-							   "FGEN_CONST",
-							   "FGEN_ARANGE",
-							   "FADD",
-							   "FSUB",
-							   "FMUL",
-							   "FDIV",
-							   "FPOW",
-							   "FNEG",
-							   "FLOG",
-							   "FSIGN",
-							   "FEVEN",
-							   "FLOG2",
-							   "FLOG10",
-							   "FSIN",
-							   "FCOS",
-							   "FTAN",
-							   "FASIN",
-							   "FACOS",
-							   "FATAN",
-							   "FSQRT",
-							   "FEXP",
-							   "FLATTEN",
-							   "FMATMUL",
-							   "FCONVERSION",
-							   "FRESHAPE",
-							   "FMIN",
-							   "FMAX",
-							   "FREDUCE_SUM",
-							   "FREDUCE_MUL",
-							   "FREDUCE_MIN",
-							   "FREDUCE_MAX",
-							   "FSLICE",
-							   "FABS",
-							   "FREPEAT",
-							   "FTRANSPOSE",
-							   "FEXTEND",
-							   "FCONCAT",
-							   "FLESS",
-							   "FEQUAL",
-							   "FGREATER",
-							   "FCONVOLVE",
-							   "FGRADIENT_CONVOLVE1",
-							   "FGRADIENT_CONVOLVE2",
-							   "FINDEX",
-							   "FSET_INDEX",
-							   "FSLIDING_WINDOW",
-							   "FUNSLIDE_WINDOW",
-							   "FPOOLING_MAX",
-							   "FPOOLING_SUM",
-							   "FGRADIENT_POOLING_MAX",
-							   "FDROPOUT"};
-static bool use_cpu, use_gpu, eager_execution = false, gradient_context = false;
+const char *fop_to_string[] = {
+	"FSTORE",		  "FGEN_RANDOM", "FGEN_CONST",	"FGEN_ARANGE",
+	"FADD",			  "FSUB",		 "FMUL",		"FDIV",
+	"FPOW",			  "FNEG",		 "FLOG",		"FSIGN",
+	"FEVEN",		  "FLOG2",		 "FLOG10",		"FSIN",
+	"FCOS",			  "FTAN",		 "FASIN",		"FACOS",
+	"FATAN",		  "FSQRT",		 "FEXP",		"FLATTEN",
+	"FCONVERSION",	  "FRESHAPE",	 "FMIN",		"FMAX",
+	"FREDUCE_SUM",	  "FREDUCE_MUL", "FREDUCE_MIN", "FREDUCE_MAX",
+	"FSLICE",		  "FABS",		 "FREPEAT",		"FTRANSPOSE",
+	"FEXTEND",		  "FCONCAT",	 "FLESS",		"FEQUAL",
+	"FGREATER",		  "FINDEX",		 "FSET_INDEX",	"FSLIDING_WINDOW",
+	"FUNSLIDE_WINDOW"};
+static bool use_cpu, use_gpu, gradient_context = false;
 static FErrorType last_error;
 void setErrorType(FErrorType error) { last_error = error; }
 // TODO do execution of parents where necessary in parallel
-// EAGER EXECUTION WITH HELPER
-void fEnableEagerExecution() { eager_execution = true; }
-void fDisableEagerExecution() { eager_execution = false; }
-int fIsEagerExecution() { return eager_execution; }
 void fStartGradientContext() { gradient_context = true; }
 void fStopGradientContext() { gradient_context = false; }
 bool fIsGradientContext() { return gradient_context; }
 FErrorType fErrorType() { return last_error; }
-static inline FGraphNode *execute_eagerly(FGraphNode *f) {
-	if (!use_cpu && !use_gpu)
-		flintInit(FLINT_BACKEND_BOTH);
-	bool all_calculated = true;
-	for (int i = 0; i < f->num_predecessor; i++) {
-		if (f->predecessors[i]->operation.op_type != FSTORE &&
-			!f->predecessors[i]->result_data) {
-			all_calculated = false;
-			break;
-		}
-	}
-	bool prefer_gpu = false;
-	if (use_cpu && use_gpu) {
-		size_t no_elems = 1;
-		for (int i = 0; i < f->operation.dimensions; i++)
-			no_elems *= f->operation.shape[i];
-		int cpu_boost = 2, gpu_boost = 2;
-		for (int i = 0; i < f->num_predecessor; i++) {
-			if (f->result_data) {
-				if (!f->result_data->data)
-					cpu_boost = 1;
-				if (!f->result_data->mem_id)
-					gpu_boost = 1;
-			}
-		}
-		unsigned int gpu_score = compute_score(f, false);
-		prefer_gpu = no_elems * gpu_score * gpu_boost / cpu_boost >= 512;
-	}
-	if (all_calculated && (use_cpu || use_gpu)) {
-		// since we only have one node the heuristics become constant
-		return use_gpu && (prefer_gpu || !use_cpu)
-				   ? fExecuteGraph_gpu_eagerly(f)
-				   : fExecuteGraph_cpu_eagerly(f);
-	} else {
-		if (use_gpu && use_cpu) {
-			return prefer_gpu || !use_cpu ? fExecuteGraph_gpu(f)
-										  : fExecuteGraph_cpu(f);
-		}
-		if (use_gpu)
-			return fExecuteGraph_gpu(f);
-		else
-			return fExecuteGraph_cpu(f);
-	}
-}
 static inline void
 configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
 	if (!gradient_context)
@@ -162,8 +74,6 @@ FGraphNode *fExecuteGraph(FGraphNode *node) {
 	if (!use_cpu && !use_gpu)
 		if (flintInit(FLINT_BACKEND_BOTH) != NO_ERROR)
 			return nullptr;
-	if (eager_execution)
-		return execute_eagerly(node);
 	if (use_gpu && use_cpu) {
 		size_t no_elems = 1;
 		for (int i = 0; i < node->operation.dimensions; i++)
@@ -367,10 +277,10 @@ static FGraphNode *addNode(FOperation op, std::vector<FGraphNode *> pre) {
 		return nullptr;
 	for (size_t i = 0; i < pre.size(); i++) {
 		foo->predecessors[i] = pre[i];
-		if (pre[i]->reference_counter++ > 2 && !eager_execution)
+		if (pre[i]->reference_counter++ > 2 && worth_materializing(pre[i]))
 			fExecuteGraph(pre[i]);
 	}
-	return eager_execution ? execute_eagerly(foo) : foo;
+	return foo;
 }
 static inline void initShape_keep(FOperation &op, const FOperation *a,
 								  const FOperation *b) {
@@ -598,15 +508,22 @@ static inline FGraphNode *constant(const T value, const size_t *shape,
 	((T *)op.additional_data)[0] = value;
 	return addNode(op, {});
 }
+/** Creates the constant operand of an operation with a single value. It is
+ * created in the type of the result, a double literal in a float expression
+ * would otherwise calculate the whole operation in double precision. */
+template <typename T>
+static FGraphNode *operand_constant(const T b, const FOperation &op) {
+	if (std::is_same<T, double>() && op.data_type == F_FLOAT32)
+		return constant((float)b, op.shape, op.dimensions);
+	return constant(b, op.shape, op.dimensions);
+}
 template <typename T>
 static FGraphNode *addNodeWithConst(FOperation op, FGraphNode *a, const T b) {
-	return addNode(
-		op, {a, constant(b, a->operation.shape, a->operation.dimensions)});
+	return addNode(op, {a, operand_constant(b, op)});
 }
 template <typename T>
 static FGraphNode *addConstWithNode(FOperation op, const T b, FGraphNode *a) {
-	return addNode(
-		op, {constant(b, a->operation.shape, a->operation.dimensions), a});
+	return addNode(op, {operand_constant(b, op), a});
 }
 FGraphNode *fconstant_i(const int value, const size_t *shape,
 						const int dimensions) {
@@ -643,13 +560,25 @@ FGraphNode *farange(const size_t *shape, const int dimensions, const int ax) {
 	((int *)op.additional_data)[0] = ax;
 	return addNode(op, {});
 }
+/** Result type of an operation with a constant. A single value may not enlarge
+ * the type of the tensor it is applied to, else a literal like `1e-7` would
+ * pull a whole float tensor into double precision. An integer tensor still has
+ * to become floating point for a floating point constant, otherwise the
+ * constant would be truncated. */
+static inline FType constant_result_type(const FGraphNode *a,
+										 const FType constant) {
+	const FType at = a->operation.data_type;
+	if (at == F_FLOAT32 || at == F_FLOAT64)
+		return at;
+	return higher_type(at, constant);
+}
 // adds the constant value to each entry in a
 template <typename T> static inline FGraphNode *add(FGraphNode *a, const T b) {
 	FOperation op;
 	op.additional_data = nullptr;
 	op.op_type = FADD;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
+	op.data_type = constant_result_type(a, to_flint_type<T>());
 	FGraphNode *foo = addNodeWithConst(op, a, b);
 	return foo;
 }
@@ -663,7 +592,7 @@ template <typename T> static inline FGraphNode *sub(FGraphNode *a, const T b) {
 	op.op_type = FSUB;
 	op.additional_data = nullptr;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
+	op.data_type = constant_result_type(a, to_flint_type<T>());
 	return addNodeWithConst(op, a, b);
 }
 template <typename T> static inline FGraphNode *sub(const T b, FGraphNode *a) {
@@ -690,7 +619,7 @@ template <typename T> static inline FGraphNode *div(FGraphNode *a, const T b) {
 	op.additional_data = nullptr;
 	op.op_type = FDIV;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
+	op.data_type = constant_result_type(a, to_flint_type<T>());
 	return addNodeWithConst(op, a, b);
 }
 template <typename T> static inline FGraphNode *div(const T b, FGraphNode *a) {
@@ -717,7 +646,7 @@ template <typename T> static inline FGraphNode *mul(FGraphNode *a, const T b) {
 	op.additional_data = nullptr;
 	op.op_type = FMUL;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
+	op.data_type = constant_result_type(a, to_flint_type<T>());
 	return addNodeWithConst(op, a, b);
 }
 FGraphNode *fmul_cd(FGraphNode *a, const double b) { return mul<double>(a, b); }
@@ -730,7 +659,7 @@ template <typename T> static inline FGraphNode *pow(FGraphNode *a, const T b) {
 	op.additional_data = nullptr;
 	op.op_type = FPOW;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
+	op.data_type = constant_result_type(a, to_flint_type<T>());
 	return addNodeWithConst(op, a, b);
 }
 FGraphNode *fpow_cd(FGraphNode *a, const double b) { return pow<double>(a, b); }
@@ -743,7 +672,7 @@ template <typename T> static inline FGraphNode *min(FGraphNode *a, const T b) {
 	op.additional_data = nullptr;
 	op.op_type = FMIN;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
+	op.data_type = constant_result_type(a, to_flint_type<T>());
 	return addNodeWithConst(op, a, b);
 }
 FGraphNode *fmin_ci(FGraphNode *a, const int b) { return min(a, b); }
@@ -756,7 +685,7 @@ template <typename T> static inline FGraphNode *max(FGraphNode *a, const T b) {
 	op.additional_data = nullptr;
 	op.op_type = FMAX;
 	initShape_keep(op, &a->operation, nullptr);
-	op.data_type = higher_type(a->operation.data_type, to_flint_type<T>());
+	op.data_type = constant_result_type(a, to_flint_type<T>());
 	return addNodeWithConst(op, a, b);
 }
 FGraphNode *fmax_ci(FGraphNode *a, const int b) { return max(a, b); }
@@ -899,26 +828,20 @@ FGraphNode *fflatten_dimension(FGraphNode *a, const int dimension) {
 }
 
 FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
-	// TODO: lazy matmul
-	if (!x->result_data && x->operation.op_type != FSTORE) {
-		x = fExecuteGraph(x);
-	}
-	if (!y->result_data && y->operation.op_type != FSTORE) {
-		y = fExecuteGraph(y);
-	}
 	const FOperation ao = x->operation;
 	const FOperation bo = y->operation;
-
 	if (ao.dimensions < 2 || bo.dimensions < 2) {
 		last_error = ILLEGAL_DIMENSIONALITY;
 		flogging(F_ERROR, "Dimensions of operands of matrix multiplications "
 						  "must be at least 2!");
 		return nullptr;
 	}
-	size_t l = ao.shape[ao.dimensions - 2];
-	size_t m = ao.shape[ao.dimensions - 1];
-	size_t mb = bo.shape[bo.dimensions - 2];
-	size_t n = bo.shape[bo.dimensions - 1];
+	const size_t l = ao.shape[ao.dimensions - 2];
+	const size_t m = ao.shape[ao.dimensions - 1];
+	// matmul(l x m, m x n)
+	// = reduce_sum(mul(a, transpose(repeat(b, l)), {_, -1, -2, -3}), -2)
+	const size_t mb = bo.shape[bo.dimensions - 2];
+	const size_t n = bo.shape[bo.dimensions - 1];
 	if (m != mb) {
 		last_error = INCOMPATIBLE_SHAPES;
 		flogging(F_ERROR, "Incompatible Shapes for matrix multiplications: " +
@@ -929,35 +852,9 @@ FGraphNode *fmatmul(FGraphNode *x, FGraphNode *y) {
 								  bo.shape, bo.shape + bo.dimensions)));
 		return nullptr; // for c compatibility
 	}
-	FOperation res;
-	res.broadcasting_mode = 0;
-	res.dimensions = std::max(ao.dimensions, bo.dimensions);
-	res.shape = safe_mal<size_t>(res.dimensions);
-	if (!res.shape)
-		return nullptr;
-	if (res.dimensions > 2)
-		memcpy(res.shape, (ao.dimensions >= bo.dimensions ? ao : bo).shape,
-			   sizeof(size_t) * (res.dimensions - 2));
-	res.shape[res.dimensions - 2] = l;
-	res.shape[res.dimensions - 1] = n;
-	res.data_type = ao.data_type > bo.data_type ? ao.data_type : bo.data_type;
-	res.op_type = FMATMUL;
-	res.additional_data = nullptr;
-
-	FGraphNode *node = new FGraphNode();
-	configureGradientInformation(node, {x, y});
-	node->operation = res;
-	node->result_data = nullptr;
-	node->num_predecessor = 2;
-	node->predecessors = safe_mal<FGraphNode *>(2);
-	if (!node->predecessors)
-		return nullptr;
-	node->predecessors[0] = x;
-	node->predecessors[1] = y;
-	x->reference_counter++;
-	y->reference_counter++;
-	node->reference_counter = 0;
-	return eager_execution ? execute_eagerly(node) : node;
+	FGraphNode *total =
+		fmul(fexpand(x, ao.dimensions, n), fexpand(y, bo.dimensions - 2, l));
+	return freduce_sum(total, total->operation.dimensions - 2);
 }
 FGraphNode *freshape(FGraphNode *a, const size_t *newshape,
 					 const int dimensions) {
@@ -989,9 +886,9 @@ FGraphNode *freshape(FGraphNode *a, const size_t *newshape,
 		return nullptr;
 	node->predecessors[0] = a;
 	node->reference_counter = 0;
-	if (a->reference_counter++ > 2 && !eager_execution)
+	if (a->reference_counter++ > 2 && worth_materializing(a))
 		fExecuteGraph(a);
-	return eager_execution ? execute_eagerly(node) : node;
+	return node;
 }
 FGraphNode *fconvert(FGraphNode *a, FType newtype) {
 	FGraphNode *foo = new FGraphNode();
@@ -1003,7 +900,7 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
 	if (!foo->predecessors)
 		return nullptr;
 	foo->predecessors[0] = a;
-	if (a->reference_counter++ > 2 && !eager_execution)
+	if (a->reference_counter++ > 2 && worth_materializing(a))
 		fExecuteGraph(a);
 	foo->operation.data_type = newtype;
 	foo->operation.dimensions = a->operation.dimensions;
@@ -1014,21 +911,59 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
 		   sizeof(size_t) * a->operation.dimensions);
 	foo->operation.op_type = FCONVERSION;
 	foo->operation.additional_data = nullptr;
-	return eager_execution ? execute_eagerly(foo) : foo;
-	;
+	return foo;
 }
 
+/** How much larger than the tensor that reads it a permutation may become
+ * before it is left lazy. Only a permutation above an expansion grows that
+ * far, and writing such a one out costs more memory than it saves traffic. */
+static const size_t MAX_PERMUTATION_EXPANSION = 4;
+/**
+ * A reduction reads every entry of a transpose below it once per element of
+ * the tensor it reduces - for a convolution that is hundreds of times per
+ * entry. Those reads are scattered: a transpose between two channel layouts
+ * places neighbouring work items hundreds of entries apart, so every one of
+ * them pulls in its own cache line to use a single value of it. Calculating
+ * the permutation into memory once turns all of them into neighbouring reads.
+ * Since a scattered read wastes the rest of the cache line it fetches, that
+ * pays off even if the reduction reads every entry only once.
+ */
+static void materialize_permutations(FGraphNode *a, const size_t reduced_size) {
+	std::list<FGraphNode *> todo = {a};
+	std::unordered_set<FGraphNode *> visited;
+	while (!todo.empty()) {
+		FGraphNode *curr = todo.front();
+		todo.pop_front();
+		if (curr->result_data || !visited.insert(curr).second)
+			continue;
+		if (curr->operation.op_type == FTRANSPOSE) {
+			size_t size = 1;
+			for (int i = 0; i < curr->operation.dimensions; i++)
+				size *= curr->operation.shape[i];
+			if (size <= reduced_size * MAX_PERMUTATION_EXPANSION) {
+				fExecuteGraph(curr);
+				continue;
+			}
+		}
+		for (int i = 0; i < curr->num_predecessor; i++)
+			todo.push_back(curr->predecessors[i]);
+	}
+}
+static inline size_t elements(const FOperation &op) {
+	size_t el = 1;
+	for (int i = 0; i < op.dimensions; i++) {
+		el *= op.shape[i];
+	}
+	return el;
+}
 static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 										   FOperationType type) {
 	size_t total = 1;
 	for (int i = 0; i < a->operation.dimensions; i++)
 		if (i != dimension)
 			total *= a->operation.shape[i];
-	if (total <= 128 ||
-		a->reference_counter > 1) { // small reduction size will be slow on gpu
-		a = fExecuteGraph(a);
-	} else if (!a->result_data) {
-		// we dont want interleaved reduction since that is slow
+	if (!a->result_data) {
+		materialize_permutations(a, total * a->operation.shape[dimension]);
 		std::list<FGraphNode *> todo;
 		todo.push_back(a);
 		while (!todo.empty()) {
@@ -1038,20 +973,25 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 			if (curr->result_data)
 				continue;
 			switch (curr->operation.op_type) {
-			case FCONVOLVE:
-			case FMATMUL:
-			case FGRADIENT_CONVOLVE1:
 			case FREDUCE_MAX:
 			case FREDUCE_MIN:
 			case FREDUCE_MUL:
-			case FREDUCE_SUM:
-				a = fExecuteGraph(a);
-				terminate = true;
+			case FREDUCE_SUM: {
+				/* Nested reductions are *only* viable if the outer reduction
+				 * reduces the result of the inner reduction only once (only
+				 * then is the inner reduction never aimlessly recomputed per
+				 * iteration and we won't run into quadratic effort). */
+				int axis = ((int *)curr->operation.additional_data)[0];
+				size_t el_a = elements(a->operation);
+				size_t el_curr = elements(curr->operation);
+				if (el_a < el_curr * 2 || axis <= dimension ||
+					curr->reference_counter > 2) {
+					fExecuteGraph(curr);
+				}
+			}
 			default:
 				break;
 			}
-			if (terminate)
-				break;
 			for (int i = 0; i < curr->num_predecessor; i++)
 				todo.push_back(curr->predecessors[i]);
 		}
@@ -1091,21 +1031,93 @@ static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 		return nullptr;
 	((int *)op.additional_data)[0] = dimension;
 	foo->operation = op;
-	return eager_execution && total >= 128 ? execute_eagerly(foo) : foo;
+	return foo;
+}
+/** Work items a reduction needs to keep a gpu busy. Reductions are latency
+ * bound, so this is far above the number of lanes a gpu has. */
+static const size_t MIN_REDUCTION_PARALLELISM = 1 << 20;
+/** Only loops of at least this length are long enough that the parallelism
+ * gained outweighs writing and reading the intermediate result. This is what
+ * keeps short reductions like the one of a matrix multiplication untouched. */
+static const size_t MIN_REDUCTION_LOOP = 128;
+/** The first reduction has to keep looping over enough elements, otherwise the
+ * intermediate result approaches the size of the input */
+static const size_t MIN_REDUCTION_ITERATIONS = 16;
+/** The second reduction only has one work item per result, so its loop has to
+ * stay short no matter how much parallelism the first one would gain */
+static const size_t MAX_REDUCTION_CHUNKS = 256;
+/** A reduction runs one work item per result element, each looping over the
+ * reduced dimension. If there are few result elements that leaves the gpu
+ * mostly idle, so the dimension is split into `[rest, keep]` where `keep` many
+ * elements survive the first reduction to be combined by a second one.
+ * Returns the size of `keep` or 0 if the reduction is already parallel enough.
+ * `keep` is the last of the two so that neighbouring work items read
+ * neighbouring elements. */
+static size_t reduction_split(const FGraphNode *a, const int dimension) {
+	// the additional kernel only pays off for the parallelism of a gpu
+	if (!(flintInitializedBackends() & FLINT_BACKEND_ONLY_GPU))
+		return 0;
+	const size_t n = a->operation.shape[dimension];
+	size_t results = 1;
+	for (int i = 0; i < a->operation.dimensions; i++)
+		if (i != dimension)
+			results *= a->operation.shape[i];
+	if (results >= MIN_REDUCTION_PARALLELISM || n < MIN_REDUCTION_LOOP)
+		return 0;
+	const size_t target = MIN_REDUCTION_PARALLELISM / results;
+	size_t keep = 0, best = 0;
+	for (size_t d = 1; d * d <= n; d++) {
+		if (n % d != 0)
+			continue;
+		for (const size_t cand : {d, n / d}) {
+			// the first reduction has to keep enough to loop over
+			if (cand <= 1 || cand > MAX_REDUCTION_CHUNKS ||
+				n / cand < MIN_REDUCTION_ITERATIONS)
+				continue;
+			const size_t dist = cand > target ? cand - target : target - cand;
+			if (!keep || dist < best) {
+				keep = cand;
+				best = dist;
+			}
+		}
+	}
+	return keep;
+}
+static FGraphNode *reduce_parallel(FGraphNode *a, const int dimension,
+								   FOperationType type) {
+	const size_t keep = reduction_split(a, dimension);
+	if (!keep)
+		return reduce_operation(a, dimension, type);
+	const int dims = a->operation.dimensions;
+	size_t split_shape[dims + 1];
+	memcpy(split_shape, a->operation.shape, sizeof(size_t) * dimension);
+	split_shape[dimension] = a->operation.shape[dimension] / keep;
+	split_shape[dimension + 1] = keep;
+	memcpy(split_shape + dimension + 2, a->operation.shape + dimension + 1,
+		   sizeof(size_t) * (dims - dimension - 1));
+	FGraphNode *chunked = freshape(a, split_shape, dims + 1);
+	if (!chunked)
+		return nullptr;
+	// reducing the same dimension twice, the first one removes `rest` and
+	// leaves `keep` in its place
+	FGraphNode *chunks = reduce_operation(chunked, dimension, type);
+	if (!chunks)
+		return nullptr;
+	return reduce_operation(chunks, dimension, type);
 }
 // freduce_sum([[1,2,3], [4,5,6]], 0) = [5,7,9],
 // freduce_sum([[1,2,3], [4,5,6]], 1) = [6,15]
 FGraphNode *freduce_sum(FGraphNode *a, const int dimension) {
-	return reduce_operation(a, dimension, FREDUCE_SUM);
+	return reduce_parallel(a, dimension, FREDUCE_SUM);
 }
 FGraphNode *freduce_mul(FGraphNode *a, const int dimension) {
-	return reduce_operation(a, dimension, FREDUCE_MUL);
+	return reduce_parallel(a, dimension, FREDUCE_MUL);
 }
 FGraphNode *freduce_min(FGraphNode *a, const int dimension) {
-	return reduce_operation(a, dimension, FREDUCE_MIN);
+	return reduce_parallel(a, dimension, FREDUCE_MIN);
 }
 FGraphNode *freduce_max(FGraphNode *a, const int dimension) {
-	return reduce_operation(a, dimension, FREDUCE_MAX);
+	return reduce_parallel(a, dimension, FREDUCE_MAX);
 }
 
 FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
@@ -1120,7 +1132,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
 		return nullptr;
 	foo->predecessors[0] = a;
 	foo->reference_counter = 0;
-	if (a->reference_counter++ > 2 && !eager_execution)
+	if (a->reference_counter++ > 2 && worth_materializing(a))
 		fExecuteGraph(a);
 	FOperation op;
 	op.broadcasting_mode = 0;
@@ -1182,7 +1194,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
 		}
 	}
 	foo->operation = op;
-	return eager_execution ? execute_eagerly(foo) : foo;
+	return foo;
 }
 FGraphNode *fslice(FGraphNode *a, const long *start, const long *end) {
 	std::vector<long> step(a->operation.dimensions, 1);
@@ -1223,15 +1235,16 @@ FGraphNode *ftranspose(FGraphNode *a, int *transpositions) {
 	op.shape = safe_mal<size_t>(op.dimensions);
 	if (!op.shape)
 		return nullptr;
+	bool used[op.dimensions];
+	memset(used, 0, sizeof(bool) * op.dimensions);
 	for (int i = 0; i < op.dimensions; i++) {
-		op.shape[i] = a->operation.shape[transpositions[i]];
-		// check that transpositions is reflexive
-		if (transpositions[transpositions[i]] != i)
-			flogging(
-				F_ERROR,
-				"Transpositions Array must be reflexive i.e for an dimension i "
-				"let j "
-				"be transpositions[i]. Then i = transpositions[j] must hold.");
+		const int t = transpositions[i];
+		if (t < 0 || t >= op.dimensions || used[t])
+			flogging(F_ERROR, "Transpositions Array must be a permutation of "
+							  "the dimensions of the tensor, i.e. contain "
+							  "each dimension exactly once.");
+		used[t] = true;
+		op.shape[i] = a->operation.shape[t];
 	}
 	op.additional_data = safe_mal<int>(op.dimensions);
 	if (!op.additional_data)
@@ -1323,7 +1336,7 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
 		return nullptr;
 	foo->predecessors[0] = a;
 	foo->reference_counter = 0;
-	if (a->reference_counter++ > 2 && !eager_execution)
+	if (a->reference_counter++ > 2 && worth_materializing(a))
 		fExecuteGraph(a);
 	// construct operation
 	const int dimensions = a->operation.dimensions;
@@ -1348,7 +1361,7 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
 		return nullptr;
 	memcpy(extend.start, insert_at, dimensions * sizeof(size_t));
 	memcpy(extend.step, step_size, dimensions * sizeof(long));
-	return eager_execution ? execute_eagerly(foo) : foo;
+	return foo;
 }
 FGraphNode *fextend(FGraphNode *a, const size_t *new_shape,
 					const size_t *insert_at) {
@@ -1401,8 +1414,8 @@ FGraphNode *fexpand(FGraphNode *a, const unsigned int ax,
 	return ax_size == 1 ? res : frepeat(res, repet.data());
 }
 /** Calculates the shape for a sliding window operation, that accumulates all
- * elements in a window. target.shape should already be allocated */
-static void calculateShapeAggregatingWindows(FOperation &target,
+ * elements in a window. target should already be allocated */
+static void calculateShapeAggregatingWindows(size_t *target,
 											 const FOperation &orig,
 											 const size_t *size,
 											 const unsigned int *steps) {
@@ -1411,55 +1424,79 @@ static void calculateShapeAggregatingWindows(FOperation &target,
 		size_t window_size = orig.shape[i] - kernel_shape + 1;
 		window_size = window_size % steps[i] == 0 ? window_size / steps[i]
 												  : window_size / steps[i] + 1;
-		target.shape[i] = window_size;
+		target[i] = window_size;
 	}
 }
 FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
 					  const unsigned int *steps) {
 	const FOperation ao = a->operation;
 	const FOperation bo = kernel->operation;
-	if (!a->result_data && ao.op_type != FSTORE) {
-		fExecuteGraph(a);
-	}
-	if (!kernel->result_data && bo.op_type != FSTORE) {
-		fExecuteGraph(kernel);
-	}
-	if (ao.dimensions != bo.dimensions && ao.dimensions + 1 != bo.dimensions) {
-		last_error = ILLEGAL_DIMENSIONALITY;
+	if (ao.dimensions != bo.dimensions && ao.dimensions != bo.dimensions - 1) {
+		setErrorType(INCOMPATIBLE_SHAPES);
 		flogging(F_ERROR,
-				 "For a convolution the original Tensor and the filter "
-				 "kernel(s) have to have to same number of dimensions!");
-		return nullptr; // for c compatibility
+				 "Incompatible shapes in convolution! Image and Kernel have "
+				 "illegal combination of dimensionalities!");
+		return nullptr;
 	}
-	bool multiple_filters = ao.dimensions + 1 == bo.dimensions;
 	if (ao.shape[ao.dimensions - 1] != bo.shape[bo.dimensions - 1]) {
-		last_error = INCOMPATIBLE_SHAPES;
+		setErrorType(INCOMPATIBLE_SHAPES);
 		flogging(F_ERROR,
-				 "For a convolution the size of the last dimension of the "
-				 "Tensor must match that of the kernel! " +
-					 std::to_string(ao.shape[ao.dimensions - 1]) + " vs. " +
-					 std::to_string(bo.shape[bo.dimensions - 1]));
-		return nullptr; // for c compatibility
+				 "Incompatible shapes in convolution! Image and Kernel should "
+				 "have same shape in their last dimension!");
+		return nullptr;
 	}
-	FOperation op;
-	op.broadcasting_mode = 0;
-	op.dimensions = multiple_filters ? ao.dimensions : ao.dimensions - 1;
-	op.shape = safe_mal<size_t>(op.dimensions);
-	if (!op.shape)
-		return nullptr;
-	calculateShapeAggregatingWindows(
-		op, ao, multiple_filters ? bo.shape + 1 : bo.shape, steps);
-	if (multiple_filters)
-		op.shape[ao.dimensions - 1] = bo.shape[0];
-	op.data_type = higher_type(ao.data_type, bo.data_type);
-	op.op_type = FCONVOLVE;
-	op.additional_data = safe_mal<unsigned int>(op.dimensions);
-	if (!op.additional_data)
-		return nullptr;
-	memcpy(op.additional_data, steps, op.dimensions * sizeof(unsigned int));
-	return addNode(op, {a, kernel});
+	const bool multifilter = ao.dimensions < bo.dimensions;
+	// create sliding windows of a
+	size_t window_sizes[ao.dimensions];
+	unsigned int actual_steps[ao.dimensions];
+	size_t final_shape[multifilter ? ao.dimensions : ao.dimensions - 1];
+	for (int i = 0; i < ao.dimensions; i++) {
+		if (i != ao.dimensions - 1) {
+			window_sizes[i] = bo.shape[i + (bo.dimensions - ao.dimensions)];
+			actual_steps[i] = steps[i];
+		} else {
+			window_sizes[i] = ao.shape[i];
+			actual_steps[i] = ao.shape[i];
+		}
+		if (i < ao.dimensions - 1) {
+			size_t window_size = a->operation.shape[i] - window_sizes[i] + 1;
+			window_size = window_size % actual_steps[i] == 0
+							  ? window_size / actual_steps[i]
+							  : window_size / actual_steps[i] + 1;
+			final_shape[i] = window_size;
+		}
+	}
+	FGraphNode *sw = fsliding_window(a, window_sizes, actual_steps);
+	if (multifilter) {
+		// channels of multifilter is in first dimension, repeat each window of
+		// the image to match
+		sw = fexpand(sw, 1, bo.shape[0]);
+		// add the channels so the reshape below does its job correctly
+		final_shape[ao.dimensions - 1] = bo.shape[0];
+	}
+	// multiply the windows with the kernel
+	FGraphNode *conv = fmul(sw, kernel);
+	// flatten to [no_windows, elements_in_window] or [no_windows, channels,
+	// elements_in_window]
+	while (conv->operation.dimensions > (multifilter ? 3 : 2)) {
+		conv = fflatten_dimension(conv, conv->operation.dimensions - 1);
+	}
+	// reduce elements_in_window
+	conv = freduce_sum(conv, multifilter ? 2 : 1); // reproject to correct shape
+	return freshape(conv, final_shape,
+					multifilter ? ao.dimensions : ao.dimensions - 1);
 }
 FGraphNode *frandom(const size_t *shape, const int dimensions) {
+	return frandom_type(shape, dimensions, F_FLOAT64);
+}
+FGraphNode *frandom_type(const size_t *shape, const int dimensions,
+						 const FType type) {
+	if (type != F_FLOAT32 && type != F_FLOAT64) {
+		last_error = WRONG_TYPE;
+		flogging(F_ERROR, "Random values can only be generated for floating "
+						  "point types!");
+		return nullptr; // for c compatibility
+	}
 	FGraphNode *node = new FGraphNode();
 	FOperation op;
 	op.broadcasting_mode = 0;
@@ -1469,7 +1506,7 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
 	if (!op.shape)
 		return nullptr;
 	memcpy(op.shape, shape, dimensions * sizeof(size_t));
-	op.data_type = F_FLOAT64;
+	op.data_type = type;
 	// Store current time in additional data
 	std::chrono::duration<double, std::nano> tm =
 		std::chrono::high_resolution_clock::now().time_since_epoch();
@@ -1484,29 +1521,16 @@ FGraphNode *frandom(const size_t *shape, const int dimensions) {
 	node->num_predecessor = 0;
 	node->gradient_data = nullptr;
 	node->reference_counter = 0;
-	return eager_execution ? execute_eagerly(node) : node;
+	return node;
 }
 FGraphNode *fdropout(FGraphNode *g, const double p) {
-	FOperation op;
-	op.broadcasting_mode = 0;
-	op.op_type = FDROPOUT;
-	op.dimensions = g->operation.dimensions;
-	op.shape = safe_mal<size_t>(g->operation.dimensions);
-	if (!op.shape)
-		return nullptr;
-	memcpy(op.shape, g->operation.shape,
-		   g->operation.dimensions * sizeof(size_t));
-	op.data_type = g->operation.data_type;
-	// Store current time in additional data
-	std::chrono::duration<double, std::nano> tm =
-		std::chrono::high_resolution_clock::now().time_since_epoch();
-	double t = ((unsigned long)tm.count() % 1000000) / 100.0;
-	op.additional_data = safe_mal<double>(2);
-	if (!op.additional_data)
-		return nullptr;
-	((double *)op.additional_data)[0] = t;
-	((double *)op.additional_data)[1] = p;
-	return addNode(op, {g});
+	// single precision is enough to decide and much cheaper on gpus
+	const FType rt =
+		g->operation.data_type == F_FLOAT64 ? F_FLOAT64 : F_FLOAT32;
+	// mask out those entries that fall below the probability
+	FGraphNode *mask = fgreater_cd(
+		frandom_type(g->operation.shape, g->operation.dimensions, rt), p);
+	return fmul(g, fconvert(mask, g->operation.data_type));
 }
 FGraphNode *findex(FGraphNode *a, FGraphNode *indices) {
 	if (indices->operation.dimensions > a->operation.dimensions) {
@@ -1668,41 +1692,36 @@ FGraphNode *fpermutate(FGraphNode *a, unsigned int ax) {
 		return nullptr;
 	return findex(a, ind);
 }
+/** `window_size` and `step_size` have one entry less than `a` has dimensions,
+ * the last dimension is always pooled completely */
+static FGraphNode *pooling(FGraphNode *a, const size_t *window_size,
+						   const unsigned int *step_size,
+						   FGraphNode *(*reduce)(FGraphNode *, const int)) {
+	const FOperation ao = a->operation;
+	size_t windows[ao.dimensions];
+	unsigned int steps[ao.dimensions];
+	for (int i = 0; i < ao.dimensions - 1; i++) {
+		windows[i] = window_size[i];
+		steps[i] = step_size[i];
+	}
+	windows[ao.dimensions - 1] = steps[ao.dimensions - 1] =
+		ao.shape[ao.dimensions - 1];
+	FGraphNode *wins = fsliding_window(a, windows, steps);
+	// flatten to [no_windows, window_elems]
+	while (wins->operation.dimensions > 2)
+		wins = fflatten_dimension(wins, 2);
+	// do the pooling
+	wins = reduce(wins, 1);
+	// reproject to correct shape
+	size_t final_shape[ao.dimensions - 1];
+	calculateShapeAggregatingWindows(final_shape, ao, window_size, step_size);
+	return freshape(wins, final_shape, ao.dimensions - 1);
+}
 FGraphNode *fpooling_sum(FGraphNode *a, const size_t *window_size,
 						 const unsigned int *step_size) {
-	FOperation op;
-	op.dimensions = a->operation.dimensions - 1;
-	op.shape = safe_mal<size_t>(op.dimensions);
-	if (!op.shape)
-		return nullptr;
-	calculateShapeAggregatingWindows(op, a->operation, window_size, step_size);
-	op.op_type = FPOOLING_SUM;
-	op.data_type = a->operation.data_type;
-	FSlidingWindow *window = new FSlidingWindow();
-	window->size = safe_mal<size_t>(op.dimensions);
-	window->step = safe_mal<unsigned int>(op.dimensions);
-	memcpy(window->size, window_size, sizeof(size_t) * op.dimensions);
-	memcpy(window->step, step_size, sizeof(unsigned int) * op.dimensions);
-	op.additional_data = window;
-	op.broadcasting_mode = 0;
-	return addNode(op, {a});
+	return pooling(a, window_size, step_size, freduce_sum);
 }
 FGraphNode *fpooling_max(FGraphNode *a, const size_t *window_size,
 						 const unsigned int *step_size) {
-	FOperation op;
-	op.dimensions = a->operation.dimensions - 1;
-	op.shape = safe_mal<size_t>(op.dimensions);
-	if (!op.shape)
-		return nullptr;
-	calculateShapeAggregatingWindows(op, a->operation, window_size, step_size);
-	op.op_type = FPOOLING_MAX;
-	op.data_type = a->operation.data_type;
-	FSlidingWindow *window = new FSlidingWindow();
-	window->size = safe_mal<size_t>(op.dimensions);
-	window->step = safe_mal<unsigned int>(op.dimensions);
-	memcpy(window->size, window_size, sizeof(size_t) * op.dimensions);
-	memcpy(window->step, step_size, sizeof(unsigned int) * op.dimensions);
-	op.additional_data = window;
-	op.broadcasting_mode = 0;
-	return addNode(op, {a});
+	return pooling(a, window_size, step_size, freduce_max);
 }

@@ -18,6 +18,7 @@
 #include "../flint_helper.hpp"
 #include "src/errors.hpp"
 #include "src/operations/implementation.hpp"
+#include <algorithm>
 #include <cmath>
 #include <condition_variable>
 #include <iostream>
@@ -26,6 +27,7 @@
 #include <mutex>
 #include <queue>
 #include <stdexcept>
+#include <unordered_set>
 #include <vector>
 
 template <typename T> inline T *safe_mal(unsigned int count) {
@@ -41,7 +43,7 @@ template <typename T> inline T *safe_mal(unsigned int count) {
 extern const char *fop_to_string[];
 template <typename T>
 static inline std::string vector_string(const std::vector<T> &vec,
-									   std::string indentation = "") {
+										std::string indentation = "") {
 	std::string res = "[";
 	for (size_t i = 0; i < vec.size(); i++) {
 		res += std::to_string(vec[i]);
@@ -52,7 +54,7 @@ static inline std::string vector_string(const std::vector<T> &vec,
 }
 template <typename T>
 static inline std::string vector_string(const std::vector<std::vector<T>> &vec,
-									   std::string indentation = "") {
+										std::string indentation = "") {
 	std::string res = "[";
 	for (size_t i = 0; i < vec.size(); i++) {
 		res += vector_string(vec[i], indentation + " ");
@@ -137,7 +139,7 @@ inline size_t type_size(FType t) {
 	return 1;
 }
 inline std::vector<size_t> calc_acc_sizes(const int dimensions,
-										const size_t *shape) {
+										  const size_t *shape) {
 	std::vector<size_t> acc_sizes(dimensions);
 	acc_sizes[dimensions - 1] = 1;
 	for (int dim = dimensions - 2; dim >= 0; dim--) {
@@ -234,6 +236,46 @@ template <typename T> class blocking_queue {
 			return foo;
 		}
 };
+/** Number of elements of the largest tensor `node` reads from memory */
+inline size_t largest_input(const FGraphNode *node) {
+	size_t largest = 0;
+	std::unordered_set<const FGraphNode *> visited;
+	std::list<const FGraphNode *> todo = {node};
+	while (!todo.empty()) {
+		const FGraphNode *curr = todo.front();
+		todo.pop_front();
+		if (!visited.insert(curr).second)
+			continue;
+		// everything else is calculated inside of the kernel that reads it
+		if (curr != node &&
+			(curr->result_data || curr->operation.op_type == FSTORE)) {
+			size_t size = 1;
+			for (int i = 0; i < curr->operation.dimensions; i++)
+				size *= curr->operation.shape[i];
+			largest = std::max(largest, size);
+			continue;
+		}
+		for (int i = 0; i < curr->num_predecessor; i++)
+			todo.push_back(curr->predecessors[i]);
+	}
+	return largest;
+}
+/**
+ * A node that many others use is calculated once and materialized instead of
+ * being recalculated per use. That only pays off as long as it does not expand
+ * what it reads - a repetition or a sliding window can be orders of magnitude
+ * larger than its input, and writing such a node out costs far more memory
+ * bandwidth than recalculating its index arithmetic ever could.
+ */
+inline bool worth_materializing(const FGraphNode *node) {
+	size_t size = 1;
+	for (int i = 0; i < node->operation.dimensions; i++)
+		size *= node->operation.shape[i];
+	const size_t input = largest_input(node);
+	// a node that reads no memory at all (a generator) has nothing to compare
+	// against, it keeps being materialized so that its values stay stable
+	return !input || size <= input;
+}
 /**
  * Generates a permutation index array for a axis of a multidimensional tensor
  * by generating for each entry in this dimension an index in the same dimension
@@ -244,7 +286,8 @@ template <typename T> class blocking_queue {
  * local dimension). Every index is referenced exactly once in its local
  * dimension.
  */
-inline long *generate_permutation(size_t *shape, unsigned int ax, size_t *size) {
+inline long *generate_permutation(size_t *shape, unsigned int ax,
+								  size_t *size) {
 	size_t total_size = 1;
 	for (unsigned int i = 0; i <= ax; i++)
 		total_size *= shape[i];
@@ -265,49 +308,5 @@ inline long *generate_permutation(size_t *shape, unsigned int ax, size_t *size) 
 	}
 	*size = total_size;
 	return ind;
-}
-
-static void calculate_divisor_for_inverse_broadcasting(const FGraphNode *a,
-												   size_t &iv1,
-												   const FGraphNode *b,
-												   size_t &iv2) {
-	iv1 = 1;
-	iv2 = 1;
-	bool inv_manipulation = a->operation.dimensions != b->operation.dimensions;
-	// constants -> no inverse broadcasting
-	if ((a->operation.dimensions == 1 && a->operation.shape[0] == 1) ||
-		(b->operation.dimensions == 1 && b->operation.shape[0] == 1))
-		return;
-	// forward broadcasting -> no inverse broadcasting
-	bool forward_broad = a->operation.broadcasting_mode == 0 &&
-						 b->operation.broadcasting_mode == 0;
-	if (forward_broad) {
-		size_t *const lower = a->operation.dimensions > b->operation.dimensions
-								  ? b->operation.shape
-								  : a->operation.shape;
-		size_t *const higher = a->operation.dimensions > b->operation.dimensions
-								   ? a->operation.shape
-								   : b->operation.shape;
-		const int lower_dim =
-			std::min(a->operation.dimensions, b->operation.dimensions);
-		const int higher_dim =
-			std::max(a->operation.dimensions, b->operation.dimensions);
-		for (int i = 0; i < lower_dim; i++) {
-			const size_t s1 = higher[i + (higher_dim - lower_dim)];
-			const size_t s2 = lower[i];
-			if (s1 != s2) {
-				forward_broad = false;
-				break;
-			}
-		}
-	}
-	if (forward_broad)
-		return;
-	if (inv_manipulation) {
-		for (int i = b->operation.dimensions; i < a->operation.dimensions; i++)
-			iv2 *= a->operation.shape[i];
-		for (int i = a->operation.dimensions; i < b->operation.dimensions; i++)
-			iv1 *= b->operation.shape[i];
-	}
 }
 #endif

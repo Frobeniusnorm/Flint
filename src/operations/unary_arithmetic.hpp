@@ -49,27 +49,12 @@ struct NegImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 1; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct LogImpl : OperationImplementation {
@@ -83,31 +68,12 @@ struct LogImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 3; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct Log2Impl : OperationImplementation {
@@ -121,31 +87,12 @@ struct Log2Impl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 3; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct Log10Impl : OperationImplementation {
@@ -159,31 +106,12 @@ struct Log10Impl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 3; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct SignImpl : OperationImplementation {
@@ -197,37 +125,15 @@ struct SignImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		int operation_score(FGraphNode *node) override { return 1; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override {
 			return nullptr;
 		}
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_INT32, F_INT32},
-					{F_INT32, F_INT64},
-					{F_INT32, F_FLOAT32},
-					{F_INT32, F_FLOAT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {type_size(node->predecessors[0]->operation.data_type) ==
 					type_size(F_INT32)};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct EvenImpl : OperationImplementation {
@@ -237,34 +143,15 @@ struct EvenImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 1; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override {
 			return nullptr;
 		}
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_INT32, F_INT32}, {F_INT32, F_INT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {type_size(node->predecessors[0]->operation.data_type) ==
 					type_size(F_INT32)};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct SinImpl : OperationImplementation {
@@ -278,31 +165,12 @@ struct SinImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 3; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct CosImpl : OperationImplementation {
@@ -316,31 +184,12 @@ struct CosImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 3; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct TanImpl : OperationImplementation {
@@ -354,31 +203,12 @@ struct TanImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 3; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct ASinImpl : OperationImplementation {
@@ -392,31 +222,12 @@ struct ASinImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 3; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct ACosImpl : OperationImplementation {
@@ -430,31 +241,12 @@ struct ACosImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 3; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct ATanImpl : OperationImplementation {
@@ -468,31 +260,12 @@ struct ATanImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 3; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct SqrtImpl : OperationImplementation {
@@ -506,31 +279,12 @@ struct SqrtImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 3; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct ExpImpl : OperationImplementation {
@@ -544,31 +298,12 @@ struct ExpImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 3; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
-		std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node) override {
-			return {{F_FLOAT32, F_FLOAT32}, {F_FLOAT64, F_FLOAT64}};
-		}
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 struct AbsImpl : OperationImplementation {
@@ -582,27 +317,12 @@ struct AbsImpl : OperationImplementation {
 						 size_t size) override;
 		int generate_ocl_lazy(const FGraphNode *node, std::string name,
 							  OCLLazyCodegenState &compiler_state) override;
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override;
 		virtual int operation_score(FGraphNode *node) override { return 1; }
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override;
 		std::vector<bool>
 		reuse_parameter_result(const FGraphNode *node) override {
 			return {true};
-		}
-		std::string generate_ocl_parameters_eager(
-			FType res_type, std::vector<FType> parameter_types) override {
-			return unary_impl_generate_ocl_parameters_eager(res_type,
-															parameter_types);
-		}
-		void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) override {
-			unary_impl_push_additional_kernel_parameters(node, kernel, context,
-														 par_index, to_free);
 		}
 };
 #endif

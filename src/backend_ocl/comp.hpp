@@ -18,11 +18,8 @@
 #include <vector>
 
 struct OCLCompilerThread {
-		static std::list<cl_program> eager_programs;
-		static std::unordered_map<long, cl_kernel> eager_cache;
 		static std::unordered_map<std::string, std::pair<cl_program, cl_kernel>>
 			kernel_cache;
-		static cl_kernel eager_compile(FGraphNode *node, int hash);
 		static cl_kernel lazy_compile(FGraphNode *node, std::string code);
 		static cl_mem copy_memory(const cl_mem other, size_t num_bytes,
 								  cl_mem_flags memory_flags);

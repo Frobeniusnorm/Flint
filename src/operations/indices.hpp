@@ -1,0 +1,179 @@
+/* Copyright 2026 David Schwarzbeck
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. */
+#pragma once
+// This files manages the datastructures for the index dataflow graph for the
+// OpenCL implementation
+#include "flint/flint.h"
+#include <cstddef>
+#include <string>
+#include <utility>
+#include <vector>
+struct IndexCoeeficient {
+		FType c_type;
+};
+/* Some OCL Variable */
+struct IndexAtom {
+		std::pair<long, long> bound; // value bounds, inclusive
+		std::string name;			 // a variable needs a name
+		unsigned int depth;			 // depth (regarding nested loops)
+		/** Whether the value only exists where it is read, which is the case
+		 * for one that is loaded from a parameter: an expression containing it
+		 * may not be calculated in front of the scope it appears in. */
+		bool inlined;
+		IndexAtom() = default;
+		IndexAtom(std::pair<long, long> bound, std::string name,
+				  unsigned int depth, bool inlined = false)
+			: bound(bound), name(name), depth(depth), inlined(inlined) {}
+};
+/**
+ * Holds an expression a + c1 * atom1 + c2 * atom2 + ...
+ */
+struct IndexExpr {
+		long a;
+		std::vector<std::pair<long, int>> exprs; // (c_i, atom_i)
+		std::pair<long, long> bound;			 // derived, see `derive_bound`
+		bool operator==(const IndexExpr other) const {
+			return a == other.a && exprs == other.exprs;
+		}
+		/**
+		 * Emits the expression, e.g. `(3 + 2 * index_dim0 - i5)`. It is
+		 * parenthesized if it has more than one summand, so that it can be
+		 * used inside a larger expression.
+		 */
+		std::string to_code(const std::vector<IndexAtom> &atoms) const {
+			if (exprs.empty())
+				return std::to_string(a);
+			std::string res = a != 0 ? std::to_string(a) : "";
+			for (const auto &[c, atom] : exprs) {
+				const long factor = c < 0 ? -c : c;
+				if (!res.empty())
+					res += c < 0 ? " - " : " + ";
+				else if (c < 0)
+					res += "-";
+				res += factor == 1
+						   ? atoms[atom].name
+						   : std::to_string(factor) + " * " + atoms[atom].name;
+			}
+			return exprs.size() == 1 && a == 0 ? res : "(" + res + ")";
+		}
+		void derive_bound(const std::vector<IndexAtom> &atoms) {
+			bound = {a, a};
+			for (const auto &[c, atom] : exprs) {
+				const std::pair<long, long> &ab = atoms[atom].bound;
+				bound.first += c >= 0 ? c * ab.first : c * ab.second;
+				bound.second += c >= 0 ? c * ab.second : c * ab.first;
+			}
+		}
+};
+/**
+ * The resulting index for a node.
+ */
+struct IndexMap {
+		int current_depth = 0; // depth of the current node in nestings
+		std::vector<IndexExpr> expr_per_dim;
+		/**
+		 * Flattens this multidimensional index map to a flat index expression.
+		 * The bound is strided along with the coordinates instead of being
+		 * derived again from the atoms: a coordinate may know more about
+		 * itself than its terms show, e.g. when an operation only reads it
+		 * under a condition that keeps it inside its dimension.
+		 */
+		IndexExpr flatten(const size_t *shape, int dims) {
+			if (dims != expr_per_dim.size()) {
+				flogging(F_ERROR, "Index flatten: Operation has different "
+								  "number of dimensions than the IndexMap.");
+			}
+			IndexExpr result = expr_per_dim[dims - 1];
+			long coeff = shape[dims - 1];
+			for (int i = dims - 2; i >= 0; i--) {
+				IndexExpr curr = expr_per_dim[i];
+				result.a += curr.a * coeff;
+				result.exprs.reserve(result.exprs.size() + curr.exprs.size());
+				for (auto exp : curr.exprs) {
+					exp.first *= coeff;
+					result.exprs.push_back(exp);
+				}
+				result.bound.first += curr.bound.first * coeff;
+				result.bound.second += curr.bound.second * coeff;
+				coeff *= shape[i];
+			}
+			return result;
+		}
+		/**
+		 * Decomposes a flat element offset into one coordinate per dimension of
+		 * `shape`. A term belongs to one dimension if its coefficient is a
+		 * multiple of that dimension's stride, and what sits below a dimension
+		 * may not reach into it. If that cannot be shown the result is empty,
+		 * which means the coordinates are not known here and only the offset
+		 * itself may be used.
+		 */
+		static IndexMap split(IndexExpr expr, const size_t *shape, int dims,
+							  const std::vector<IndexAtom> &atoms) {
+			IndexMap result;
+			result.expr_per_dim.resize(dims);
+			IndexExpr rem = expr; // what is left for the dimensions in front
+			for (int i = dims - 1; i >= 0; i--) {
+				const long size = (long)shape[i];
+				IndexExpr coord, higher; // rem = higher * size + coord
+				coord.a = rem.a % size;
+				higher.a = rem.a / size;
+				for (const auto &[c, atom] : rem.exprs) {
+					if (c % size == 0)
+						higher.exprs.push_back({c / size, atom});
+					else
+						coord.exprs.push_back({c, atom});
+				}
+				coord.derive_bound(atoms);
+				// a coordinate that leaves its dimension carries into the next
+				// one, which only a real modulo could undo
+				if (coord.bound.first < 0 || coord.bound.second >= size)
+					return {};
+				higher.derive_bound(atoms);
+				result.expr_per_dim[i] = coord;
+				rem = higher;
+			}
+			// anything left over would sit in front of the first dimension
+			if (rem.a != 0 || !rem.exprs.empty())
+				return {};
+			return result;
+		}
+		bool operator==(const IndexMap other) const {
+			return expr_per_dim == other.expr_per_dim;
+		}
+};
+/**
+ * The coordinates a parameter is read at when it is read at the same position
+ * as the node itself. Its shape has to be the trailing part of the node's
+ * shape, then the leading coordinates are dropped and a dimension the parameter
+ * has as size 1 becomes the coordinate 0, which is how a smaller parameter is
+ * broadcast over the node. Returns false if the shapes do not fit that way,
+ * e.g. for the inverse broadcasting modes.
+ */
+inline bool trailing_map(const IndexMap &node_map, const size_t *node_shape,
+						 int node_dims, const size_t *pred_shape, int pred_dims,
+						 IndexMap &result) {
+	if (pred_dims > node_dims)
+		return false;
+	const int offset = node_dims - pred_dims;
+	result.expr_per_dim.resize(pred_dims);
+	for (int i = 0; i < pred_dims; i++) {
+		if (pred_shape[i] == 1)
+			result.expr_per_dim[i] = IndexExpr{0, {}, {0, 0}};
+		else if (pred_shape[i] == node_shape[i + offset])
+			result.expr_per_dim[i] = node_map.expr_per_dim[i + offset];
+		else
+			return false;
+	}
+	return true;
+}

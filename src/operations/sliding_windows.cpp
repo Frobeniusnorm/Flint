@@ -1,5 +1,4 @@
 #include "sliding_windows.hpp"
-#include "../backend_ocl/utils.hpp"
 #include "../utils.hpp"
 
 using namespace std;
@@ -70,154 +69,45 @@ void SlidingWindowImpl::unary_expression(T *__restrict__ result,
 int SlidingWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 										 std::string name,
 										 OCLLazyCodegenState &compiler_state) {
+	// the coordinates of the parameter are mapped in `mutate_index`
+	compiler_state.code.prepend(
+		"const " + type_string(node->operation.data_type) + " " + name +
+		" = v" + to_string(compiler_state.variable_index + 1) + ";\n");
+	return 0;
+}
+bool SlidingWindowImpl::mutate_index(const FGraphNode *node,
+									 OCLLazyCodegenState &state) {
 	const FOperation pred = node->predecessors[0]->operation;
 	const FSlidingWindow *slidewin =
 		(FSlidingWindow *)node->operation.additional_data;
-	size_t acc_size = node->operation.shape[1];
-	vector<size_t> acc_sizes_pred(pred.dimensions);
-	vector<size_t> acc_sizes_win(pred.dimensions);
-	vector<size_t> acc_sizes_rest(pred.dimensions);
-	acc_sizes_pred[acc_sizes_pred.size() - 1] = 1;
-	acc_sizes_win[acc_sizes_win.size() - 1] = 1;
-	acc_sizes_rest[acc_sizes_win.size() - 1] = 1;
-	for (int i = acc_sizes_pred.size() - 2; i >= 0; i--) {
-		acc_size *= node->operation.shape[i + 2];
-		acc_sizes_pred[i] = acc_sizes_pred[i + 1] * pred.shape[i + 1];
-		acc_sizes_rest[i] = acc_sizes_rest[i + 1] * slidewin->size[i + 1];
-		// no of windows in that dimension
-		size_t window_size = pred.shape[i + 1] - slidewin->size[i + 1] + 1;
-		window_size = window_size % slidewin->step[i + 1] == 0
-						  ? window_size / slidewin->step[i + 1]
-						  : window_size / slidewin->step[i + 1] + 1;
-		acc_sizes_win[i] = acc_sizes_win[i + 1] * window_size;
-	}
-	const size_t num_elems = acc_size * node->operation.shape[0];
-	const unsigned int old_idx = compiler_state.num_indices++;
-	const std::string i = "old_index" + to_string(old_idx);
-	Twine index_defs;
-	index_defs += "long " + i +
-				  " = index;\n"
-				  "index = 0;\n{\n"
-				  "long wi = (" +
-				  i + "%" + to_string(num_elems) + ")/" + to_string(acc_size) +
-				  ";\n"
-				  "long rest = " +
-				  i + "%" + to_string(acc_size) + ";\n";
+	// the first dimension of the node enumerates the windows, the number of
+	// windows per dimension is the shape that coordinate is addressed with
+	vector<size_t> no_windows(pred.dimensions);
 	for (int d = 0; d < pred.dimensions; d++) {
-		std::string local_wi = "wi/" + to_string(acc_sizes_win[d]);
-		std::string loc_base = local_wi + "*" + to_string(acc_sizes_pred[d]) +
-							   "*" + to_string(slidewin->step[d]);
-		std::string local_ri = "rest/" + to_string(acc_sizes_rest[d]) + "*" +
-							   to_string(acc_sizes_pred[d]);
-		index_defs += "index += " + loc_base + " + " + local_ri +
-					  ";\n"
-					  "wi %= " +
-					  to_string(acc_sizes_win[d]) +
-					  ";\n"
-					  "rest %= " +
-					  to_string(acc_sizes_rest[d]) + ";\n";
+		const size_t span = pred.shape[d] - slidewin->size[d] + 1;
+		no_windows[d] = span % slidewin->step[d] == 0
+							? span / slidewin->step[d]
+							: span / slidewin->step[d] + 1;
 	}
-	index_defs += "}\n";
-	compiler_state.index_defs = index_defs;
-	compiler_state.code.prepend(
-		"const " + type_string(node->operation.data_type) + " " + name +
-		" = v" + to_string(compiler_state.variable_index + 1) +
-		";\n"
-		"index = old_index" +
-		to_string(old_idx) + ";\n");
-	return 0;
-}
-std::string SlidingWindowImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + type_string(parameter_types[0]) +
-		   "* P0"
-		   ", const long num_entries0, const int dimensions0"
-		   ", __constant long* acc_sizes_pred, __constant long* "
-		   "acc_sizes_win, __constant long* acc_sizes_rest, const long "
-		   "acc_sizes, __constant int* steps, const long total_el_size";
-}
-std::string
-SlidingWindowImpl::generate_ocl_eager(FType res_type,
-									  std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
-		   "long wi = index / acc_sizes;\n"
-		   "long rest = index % acc_sizes;\n"
-		   "long offset = 0, base = 0;\n"
-		   "for(int d = 0; d < dimensions0; d++){\n"
-		   " long local_wi = wi / acc_sizes_win[d];\n"
-		   " long local_base = local_wi * steps[d];\n"
-		   " base += local_base * acc_sizes_pred[d];\n"
-		   " wi %= acc_sizes_win[d];\n"
-		   " long local_ri = rest / acc_sizes_rest[d];\n"
-		   " offset += local_ri * acc_sizes_pred[d];\n"
-		   " rest %= acc_sizes_rest[d];\n"
-		   "}\n"
-		   "R[index] = P0[(base + offset) % total_el_size];\n";
-}
-void SlidingWindowImpl::push_parameter_kernel_parameters(
-	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
-	int &par_index, std::list<cl_mem> &to_free) {
-	{
-		cl_int err_code;
-		const FOperation op = pred->operation;
-		const FOperation pred = node->predecessors[0]->operation;
-		size_t total_el_size = 1;
-		if (pred.op_type != FGEN_CONSTANT)
-			for (int i = 0; i < pred.dimensions; i++)
-				total_el_size *= pred.shape[i];
-		const FSlidingWindow *slidewin =
-			(FSlidingWindow *)node->operation.additional_data;
-		size_t acc_size = node->operation.shape[1];
-		std::vector<size_t> acc_sizes_win(pred.dimensions);
-		std::vector<size_t> acc_sizes_rest(pred.dimensions);
-		acc_sizes_win[acc_sizes_win.size() - 1] = 1;
-		acc_sizes_rest[acc_sizes_win.size() - 1] = 1;
-		for (int i = acc_sizes_win.size() - 2; i >= 0; i--) {
-			acc_size *= node->operation.shape[i + 2];
-			acc_sizes_rest[i] = acc_sizes_rest[i + 1] * slidewin->size[i + 1];
-			// no of windows in that dimension
-			size_t window_size = pred.shape[i + 1] - slidewin->size[i + 1] + 1;
-			window_size = window_size % slidewin->step[i + 1] == 0
-							  ? window_size / slidewin->step[i + 1]
-							  : window_size / slidewin->step[i + 1] + 1;
-			acc_sizes_win[i] = acc_sizes_win[i + 1] * window_size;
-		}
-		if (clSetKernelArg(kernel, par_index++, sizeof(int),
-						   (void *)&op.dimensions) != CL_SUCCESS) {
-			setErrorType(OCL_ERROR);
-			flogging(F_ERROR, "Could not load Argument to kernel!");
-			return;
-		}
-		cl_mem steps = clCreateBuffer(
-			context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			pred.dimensions * sizeof(unsigned int), slidewin->step, &err_code);
-		if (!steps)
-			flogging(F_ERROR,
-					 "Could not load Argument to kernel! Error Code: " +
-						 std::to_string(err_code));
-		to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape,
-												 kernel, context, par_index));
-		to_free.push_back(push_array(acc_sizes_win.size(), acc_sizes_win.data(),
-									 kernel, context, par_index));
-		to_free.push_back(push_array(acc_sizes_rest.size(),
-									 acc_sizes_rest.data(), kernel, context,
-									 par_index));
-		if (clSetKernelArg(kernel, par_index++, sizeof(long), &acc_size) !=
-			CL_SUCCESS) {
-			setErrorType(OCL_ERROR);
-			flogging(F_ERROR, "Could not load Argument to kernel!");
-			return;
-		}
-		to_free.push_back(push_array(pred.dimensions, slidewin->step, kernel,
-									 context, par_index));
-		to_free.push_back(steps);
-		if (clSetKernelArg(kernel, par_index++, sizeof(long),
-						   (void *)&total_el_size) != CL_SUCCESS) {
-			setErrorType(OCL_ERROR);
-			flogging(F_ERROR, "Could not load Argument to kernel!");
-			return;
-		}
+	// the windows arrive as one coordinate, so splitting it into the position
+	// per dimension is the one division this operation cannot avoid
+	IndexMap windows = split_atoms(state.index_map.expr_per_dim[0],
+								   no_windows.data(), pred.dimensions, state);
+	IndexMap &pred_map = state.pred_index_maps.emplace_back();
+	pred_map.current_depth = state.index_map.current_depth;
+	pred_map.expr_per_dim.resize(pred.dimensions);
+	for (int d = 0; d < pred.dimensions; d++) {
+		// the windows are placed `step` entries apart, the rest is the
+		// coordinate inside of the window, which the node already has
+		IndexExpr &expr = pred_map.expr_per_dim[d];
+		const IndexExpr &window = windows.expr_per_dim[d];
+		expr = state.index_map.expr_per_dim[d + 1];
+		expr.a += window.a * (long)slidewin->step[d];
+		for (const auto &[c, atom] : window.exprs)
+			expr.exprs.push_back({c * (long)slidewin->step[d], atom});
+		expr.derive_bound(state.index_atoms);
 	}
+	return true;
 }
 void SlidingWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,
@@ -324,37 +214,44 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 	}
 	const vector<size_t> acc_no_windows =
 		calc_acc_sizes(pred.dimensions - 1, no_windows);
+	// which windows an element is part of follows from its coordinates
+	IndexMap coords = compiler_state.index_map;
+	vector<string> coord(node->operation.dimensions);
+	for (int d = 0; d < node->operation.dimensions; d++)
+		coord[d] = compiler_state.to_code(coords.expr_per_dim[d]);
 	Twine local_code = type_string(node->operation.data_type) + " " + name +
 					   " = 0;\n"
 					   "{\n"
-					   "const long first_w = 0";
+					   "const " +
+					   compiler_state.index_type + " first_w = 0";
 	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
-		local_code += " + max(0l, ((index / " + to_string(acc_sizes[d]) +
-					  ") % " + to_string(node->operation.shape[d]) + ") - " +
-					  to_string(pred.shape[d + 1]) + " + 1) / " +
-					  to_string(steps[d]) + " * " +
+		local_code += " + max((" + compiler_state.index_type + ")0, " +
+					  coord[d] + " - " + to_string(pred.shape[d + 1]) +
+					  " + 1) / " + to_string(steps[d]) + " * " +
 					  to_string(acc_no_windows[d]);
 	}
-	local_code += ";\nconst long last_w = 0";
+	local_code += ";\nconst " + compiler_state.index_type + " last_w = 0";
 	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
-		local_code += " + ((index / " + to_string(acc_sizes[d]) + ") % " +
-					  to_string(node->operation.shape[d]) + ") / " +
-					  to_string(steps[d]) + " * " +
+		local_code += " + " + coord[d] + " / " + to_string(steps[d]) + " * " +
 					  to_string(acc_no_windows[d]);
 	}
-	local_code += ";\nfor(long w=first_w;w<=last_w;){\n"
+	local_code += ";\nfor(" + compiler_state.index_type +
+				  " w=first_w;w<=last_w;){\n"
 				  " bool contained = true;\n"
-				  " long wi = 0;\n"
-				  " long wpp = 0;\n";
+				  " " +
+				  compiler_state.index_type +
+				  " wi = 0;\n"
+				  " " +
+				  compiler_state.index_type + " wpp = 0;\n";
 	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
 		local_code += " {\n"
-					  "  const long w_start=((w/" +
+					  "  const " +
+					  compiler_state.index_type + " w_start=((w/" +
 					  to_string(acc_no_windows[d]) + ")%" +
 					  to_string(no_windows[d]) + ")*" + to_string(steps[d]) +
 					  ";\n"
-					  "  const long id=(index/" +
-					  to_string(acc_sizes[d]) + ")%" +
-					  to_string(node->operation.shape[d]) +
+					  "  const " +
+					  compiler_state.index_type + " id=" + coord[d] +
 					  ";\n"
 					  "  if(id>=w_start && id<w_start+" +
 					  to_string(pred.shape[d + 1]) +
@@ -382,111 +279,6 @@ int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 				  "}";
 	compiler_state.code.prepend(local_code);
 	return OCL_LAZY_DONT_PUSH_PREDS;
-}
-std::string UnslideWindowImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + type_string(parameter_types[0]) +
-		   "* P0"
-		   ", const long num_entries0, const int dimensions0"
-		   ", __constant long* shapeR, __constant "
-		   "long* acc_sizes"
-		   ", __constant long* shape0,  __constant long* acc_sizes_pred"
-		   ", __constant long* acc_no_windows, __constant long* no_windows"
-		   ", __constant int* steps, const long total_el_size";
-}
-std::string
-UnslideWindowImpl::generate_ocl_eager(FType res_type,
-									  std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
-		   "R[index] = 0;\n"
-		   "long first_w = 0;\n"
-		   "long last_w = 0;\n"
-		   "for (int d = 0; d < dimensions0 - 1; d++) {\n"
-		   " const long id = (index / acc_sizes[d]) % shapeR[d];\n"
-		   " const long wdf = max(0l, (id - shape0[d + 1] + 1)) / steps[d];\n"
-		   " const long wfl = id / steps[d];\n"
-		   " first_w += wdf * acc_no_windows[d];\n"
-		   " last_w += wfl * acc_no_windows[d];\n"
-		   "}\n"
-		   "for (long w = first_w; w <= last_w;) {\n"
-		   " int contained = true;\n"
-		   " long wi = 0;\n"
-		   " long wpp = 0;\n"
-		   " for (int d = dimensions0 - 2; d >= 0; d--) {\n"
-		   "  const long wd = (w/acc_no_windows[d]) % no_windows[d];\n"
-		   "  const long w_start = wd * steps[d]\n;"
-		   "  const long id = (index / acc_sizes[d]) % shapeR[d];\n"
-		   "  if (id >= w_start && id < w_start + shape0[d + 1])\n"
-		   "   wi += (id - w_start) * acc_sizes_pred[d + 1];\n"
-		   "  else {\n"
-		   "   contained = false;\n"
-		   "   wpp += acc_no_windows[d];\n"
-		   "  }\n"
-		   " }\n"
-		   " if (contained) {\n"
-		   "   R[index] += P0[(wi + w * acc_sizes_pred[0]) % total_el_size];\n"
-		   "   wpp = 1;\n"
-		   " }\n"
-		   " w += wpp;\n"
-		   "}\n";
-}
-void UnslideWindowImpl::push_parameter_kernel_parameters(
-	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
-	int &par_index, std::list<cl_mem> &to_free) {
-	{
-		cl_int err_code;
-		const FOperation op = pred->operation;
-		const FOperation pred = node->predecessors[0]->operation;
-		unsigned int *steps = (unsigned int *)node->operation.additional_data;
-		// dimensions 0
-		if (clSetKernelArg(kernel, par_index++, sizeof(int),
-						   (void *)&op.dimensions) != CL_SUCCESS) {
-			setErrorType(OCL_ERROR);
-			flogging(F_ERROR, "Could not load Argument to kernel!");
-			return;
-		}
-		// shapeR
-		to_free.push_back(push_array(node->operation.dimensions,
-									 node->operation.shape, kernel, context,
-									 par_index));
-		// acc_sizes
-		to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
-												 node->operation.shape, kernel,
-												 context, par_index));
-		// shapeR
-		to_free.push_back(push_array(pred.dimensions, pred.shape, kernel,
-									 context, par_index));
-		// acc_sizes_pred
-		to_free.push_back(calc_and_push_acc_size(pred.dimensions, pred.shape,
-												 kernel, context, par_index));
-		size_t no_windows[pred.dimensions - 1];
-		for (int i = 0; i < pred.dimensions - 1; i++) {
-			size_t window_size =
-				node->operation.shape[i] - pred.shape[i + 1] + 1;
-			no_windows[i] = window_size % steps[i] == 0
-								? window_size / steps[i]
-								: window_size / steps[i] + 1;
-		}
-		// acc_no_windows
-		to_free.push_back(calc_and_push_acc_size(
-			pred.dimensions - 1, no_windows, kernel, context, par_index));
-		// no_windows
-		to_free.push_back(push_array(pred.dimensions - 1, no_windows, kernel,
-									 context, par_index));
-		// steps
-		to_free.push_back(
-			push_array(pred.dimensions - 1, steps, kernel, context, par_index));
-		size_t total_el_size = 1;
-		if (pred.op_type != FGEN_CONSTANT)
-			for (int i = 0; i < pred.dimensions; i++)
-				total_el_size *= pred.shape[i];
-		if (clSetKernelArg(kernel, par_index++, sizeof(long),
-						   (void *)&total_el_size) != CL_SUCCESS) {
-			setErrorType(OCL_ERROR);
-			flogging(F_ERROR, "Could not load Argument to kernel!");
-			return;
-		}
-	}
 }
 void UnslideWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,

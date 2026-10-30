@@ -12,9 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. */
 #include "shape_modification.hpp"
-#include "../backend_ocl/utils.hpp"
 #include "../utils.hpp"
 #include "flint.h"
+#include "src/operations/indices.hpp"
 #include <cstring>
 
 using namespace std;
@@ -58,31 +58,17 @@ int FlattenImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		" = v" + to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
-std::string
-FlattenImpl::generate_ocl_eager(FType res_type,
-								std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
-		   "R[index] = P0[p0_is_constant ? 0 : index];";
+bool FlattenImpl::mutate_index(const FGraphNode *node,
+							   OCLLazyCodegenState &state) {
+	const FOperation pred = node->predecessors[0]->operation;
+	IndexExpr curr = state.flatten(state.index_map, node->operation.shape,
+								   node->operation.dimensions);
+	IndexMap mapped = split_atoms(curr, pred.shape, pred.dimensions, state);
+	mapped.current_depth = state.index_map.current_depth;
+	state.pred_index_maps.push_back(mapped);
+	return true;
 }
-std::string
-FlattenImpl::generate_ocl_parameters_eager(FType res_type,
-										   std::vector<FType> parameter_types) {
-	return ", const __global " + type_string(parameter_types[0]) +
-		   "* P0"
-		   ", const long num_entries0, const int p0_is_constant";
-}
-void FlattenImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	const int is_constant =
-		node->predecessors[0]->operation.op_type == FGEN_CONSTANT ? 1 : 0;
-	if (clSetKernelArg(kernel, par_index++, sizeof(int),
-					   (void *)&is_constant) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-}
+
 FGraphNode *ConversionImpl::local_gradient(FGraphNode *y, int dx_i,
 										   FGraphNode *prev_adj) {
 	return prev_adj;
@@ -107,38 +93,11 @@ int ConversionImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 		to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
-std::string
-ConversionImpl::generate_ocl_eager(FType res_type,
-								   std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
-		   "R[index] = (" +
-		   type_string(res_type) + ")P0[index % total_el_size];";
-}
-void ConversionImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	const FGraphNode *prev = node->predecessors[0];
-	size_t total_el_size = 1;
-	if (prev->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < prev->operation.dimensions; i++)
-			total_el_size *= prev->operation.shape[i];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&total_el_size) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-}
 void ConversionImpl::execute_cpu(const FGraphNode *node,
 								 vector<CPUResultData> predecessor_data,
 								 void *__restrict__ result, size_t from,
 								 size_t size){UNARY_EXECUTE_IMPL}
 
-std::string ConversionImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + type_string(parameter_types[0]) +
-		   "* P0, const long num_entries0, const long total_el_size";
-}
 FGraphNode *RepeatImpl::local_gradient(FGraphNode *y, int dx_i,
 									   FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
@@ -198,95 +157,73 @@ int RepeatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								  OCLLazyCodegenState &compiler_state) {
 	const FOperation op = node->operation;
 	const FOperation pred = node->predecessors[0]->operation;
-	const unsigned int old_idx = compiler_state.num_indices++;
-	Twine index_defs;
-	index_defs += "int old_index" + to_string(old_idx) + " = index;\n";
-	// add to index_defs a redefinition of index, so that we remap
-	// to src data calculate number of elements per dimension entry
-	// for destination and source
-	std::vector<size_t> acc_sizes_d(op.dimensions);
-	std::vector<size_t> acc_sizes_s(op.dimensions);
-	acc_sizes_d[op.dimensions - 1] = 1;
-	acc_sizes_s[op.dimensions - 1] = 1;
-	for (int dim = op.dimensions - 2; dim >= 0; dim--) {
-		acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op.shape[dim + 1];
-		acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
+	for (int i = 0; i < op.dimensions; i++) {
+		if (op.shape[i] != pred.shape[i] && pred.shape[i] != 1) {
+			compiler_state.declare_atom(
+				compiler_state.pred_index_maps[0]
+					.expr_per_dim[i]
+					.exprs[0]
+					.second,
+				"(" +
+					compiler_state.to_code(
+						compiler_state.index_map.expr_per_dim[i]) +
+					") % " + to_string(pred.shape[i]));
+		}
 	}
-	// to get the index in the source array we first calculate the
-	// indices and reproject
-	index_defs += "{\nint working_index = index;\nindex = 0;\n";
-	for (int dim = 0; dim < op.dimensions; dim++) {
-		index_defs += "index += ((working_index /" +
-					  to_string(acc_sizes_d[dim]) + ") % " +
-					  to_string(pred.shape[dim]) + ") * " +
-					  to_string(acc_sizes_s[dim]) + ";\n";
-		index_defs += "working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
-	}
-	index_defs += "}\n";
-	compiler_state.index_defs = index_defs;
-	compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
-								";\n");
+
 	compiler_state.code.prepend(
 		"const " + type_string(node->operation.data_type) + " " + name +
 		" = v" + to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
-std::string
-RepeatImpl::generate_ocl_parameters_eager(FType res_type,
-										  std::vector<FType> parameter_types) {
-	return ", const __global " + type_string(parameter_types[0]) +
-		   "* P0"
-		   ", const long num_entries0, const int dimensions0"
-		   ", __constant long* acc_sizes_d, __constant long* acc_sizes_s"
-		   ", __constant long* pred_shape, const long total_el_size";
-}
-std::string RepeatImpl::generate_ocl_eager(FType res_type,
-										   std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
-		   "long src_index = 0;\n"
-		   "int i = index;\n"
-		   "for (int dim = 0; dim < dimensions0; dim++){\n"
-		   " int curr = i / acc_sizes_d[dim];\n"
-		   " i %= acc_sizes_d[dim];\n"
-		   " src_index += (curr % pred_shape[dim]) * acc_sizes_s[dim];\n}\n"
-		   "R[index] = P0[src_index % total_el_size];\n";
-}
-void RepeatImpl::push_parameter_kernel_parameters(
-	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
-	int &par_index, std::list<cl_mem> &to_free) {
-	const FOperation op = pred->operation;
-	if (clSetKernelArg(kernel, par_index++, sizeof(int),
-					   (void *)&op.dimensions) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
-											 node->operation.shape, kernel,
-											 context, par_index));
-	to_free.push_back(calc_and_push_acc_size(op.dimensions, op.shape, kernel,
-											 context, par_index));
-	to_free.push_back(
-		push_array(op.dimensions, op.shape, kernel, context, par_index));
-	size_t total_el_size = 1;
-	if (op.op_type != FGEN_CONSTANT)
-		for (int d = 0; d < op.dimensions; d++)
-			total_el_size *= op.shape[d];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&total_el_size) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-	}
-}
 void RepeatImpl::execute_cpu(const FGraphNode *node,
 							 vector<CPUResultData> predecessor_data,
 							 void *__restrict__ result, size_t from,
-							 size_t size){UNARY_EXECUTE_MONOTON_IMPL}
+							 size_t size) {
+	UNARY_EXECUTE_MONOTON_IMPL
+}
+bool RepeatImpl::mutate_index(const FGraphNode *node,
+							  OCLLazyCodegenState &state) {
+	const FOperation op = node->operation;
+	const FOperation pred = node->predecessors[0]->operation;
+	IndexMap pred_map;
+	pred_map.current_depth = state.index_map.current_depth;
+	pred_map.expr_per_dim.reserve(state.index_map.expr_per_dim.size());
+	for (int i = 0; i < op.dimensions; i++) {
+		if (op.shape[i] == pred.shape[i]) { // same
+			pred_map.expr_per_dim.push_back(state.index_map.expr_per_dim[i]);
+		} else if (pred.shape[i] == 1) {
+			// a repeated constant has always index 0
+			IndexExpr zero;
+			zero.a = 0;
+			zero.exprs = {};
+			zero.bound = {0, 0};
+			pred_map.expr_per_dim.push_back(zero);
+		} else {
+			// new atom with modulo
+			int rep_ax = state.add_atom(
+				"rep_index_" + to_string(state.index_atoms.size()), 0,
+				pred.shape[i] - 1, state.index_map.current_depth);
+			IndexExpr dim_idx;
+			dim_idx.a = 0;
+			dim_idx.exprs.push_back({1, rep_ax});
+			dim_idx.derive_bound(state.index_atoms);
+			pred_map.expr_per_dim.push_back(dim_idx);
+		}
+	}
+	state.pred_index_maps.push_back(pred_map);
+	return true;
+}
 
 FGraphNode *TransposeImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
-	int *transp = ((int *)y->operation.additional_data);
-	return ftranspose(prev_adj, transp);
+	// the gradient undoes the transposition
+	const int *transp = ((int *)y->operation.additional_data);
+	const int dims = y->operation.dimensions;
+	int inverse[dims];
+	for (int i = 0; i < dims; i++)
+		inverse[transp[i]] = i;
+	return ftranspose(prev_adj, inverse);
 }
 template <typename T>
 void TransposeImpl::unary_expression(T *__restrict__ result,
@@ -318,115 +255,31 @@ void TransposeImpl::unary_expression(T *__restrict__ result,
 }
 int TransposeImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 									 OCLLazyCodegenState &compiler_state) {
-	const FOperation op = node->operation;
-	const int *transposition = (int *)op.additional_data;
-	const FOperation pred = node->predecessors[0]->operation;
-	unsigned int old_idx = compiler_state.num_indices++;
-	Twine index_defs;
-	index_defs += "long old_index" + to_string(old_idx) + " = index;\n";
-	// add to index_defs a redefinition of index, so that we remap
-	// to src data calculate number of elements per dimension entry
-	// for destination and source
-	std::vector<size_t> acc_sizes_d(op.dimensions);
-	std::vector<size_t> acc_sizes_s(op.dimensions);
-	acc_sizes_d[op.dimensions - 1] = 1;
-	acc_sizes_s[op.dimensions - 1] = 1;
-	for (int dim = op.dimensions - 2; dim >= 0; dim--) {
-		acc_sizes_d[dim] = acc_sizes_d[dim + 1] * op.shape[dim + 1];
-		acc_sizes_s[dim] = acc_sizes_s[dim + 1] * pred.shape[dim + 1];
-	}
-	// to get the index in the source array we first calculate the
-	// indices and reproject
-	index_defs += "{\nint working_index = index;\nindex = 0;\n";
-	for (int dim = 0; dim < op.dimensions; dim++) {
-		index_defs += "index += ((working_index /" +
-					  to_string(acc_sizes_d[dim]) + ") % " +
-					  to_string(op.shape[dim]) + ") * " +
-					  to_string(acc_sizes_s[transposition[dim]]) + ";\n";
-		index_defs += "working_index %= " + to_string(acc_sizes_d[dim]) + ";\n";
-	}
-	index_defs += "}\n";
-	compiler_state.index_defs = index_defs;
-	compiler_state.code.prepend("index = old_index" + to_string(old_idx) +
-								";\n");
 	compiler_state.code.prepend(
 		"const " + type_string(node->operation.data_type) + " " + name +
 		" = v" + to_string(compiler_state.variable_index + 1) + ";\n");
 	return 0;
 }
-std::string TransposeImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return ", const __global " + type_string(parameter_types[0]) +
-		   "* P0, const long num_entries0, const int dimensions0, __constant "
-		   "long* acc_sizes_d, __constant long* acc_sizes_s, const long "
-		   "total_el_size";
-}
-std::string
-TransposeImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
-		   "long src_index = 0;\n"
-		   "int i = index;\n"
-		   "for(int dim = 0; dim < dimensions0; dim++){\n"
-		   " int curr_idx = i / acc_sizes_d[dim];\n"
-		   " i %= acc_sizes_d[dim];\n"
-		   " src_index += curr_idx * acc_sizes_s[dim];\n}\n"
-		   "R[index] = P0[src_index % total_el_size];\n";
-}
-void TransposeImpl::push_parameter_kernel_parameters(
-	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
-	int &par_index, std::list<cl_mem> &to_free) {
-	const FOperation op = pred->operation;
-	size_t total_el_size = 1;
-	if (op.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < op.dimensions; i++)
-			total_el_size *= op.shape[i];
-	cl_int err_code;
-	if (clSetKernelArg(kernel, par_index++, sizeof(int),
-					   (void *)&op.dimensions) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	std::vector<long> acc_sizes_s(op.dimensions);
-	acc_sizes_s[op.dimensions - 1] = 1;
-	for (int dim = op.dimensions - 2; dim >= 0; dim--) {
-		acc_sizes_s[dim] = acc_sizes_s[dim + 1] * op.shape[dim + 1];
-	}
-	const int *transpositions = (int *)node->operation.additional_data;
-	std::vector<long> acc_sizes_st(op.dimensions);
-	for (int i = 0; i < op.dimensions; i++) {
-		acc_sizes_st[i] = acc_sizes_s[transpositions[i]];
-	}
-	to_free.push_back(calc_and_push_acc_size(node->operation.dimensions,
-											 node->operation.shape, kernel,
-											 context, par_index));
-	cl_mem ass_mem = clCreateBuffer(
-		context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-		op.dimensions * sizeof(long), acc_sizes_st.data(), &err_code);
-	if (clSetKernelArg(kernel, par_index++, sizeof(cl_mem), (void *)&ass_mem) !=
-		CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	if (!ass_mem) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	to_free.push_back(ass_mem);
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&total_el_size) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-}
 void TransposeImpl::execute_cpu(const FGraphNode *node,
 								vector<CPUResultData> predecessor_data,
 								void *__restrict__ result, size_t from,
-								size_t size){UNARY_EXECUTE_MONOTON_IMPL}
+								size_t size) {
+	UNARY_EXECUTE_MONOTON_IMPL
+}
+
+bool TransposeImpl::mutate_index(const FGraphNode *node,
+								 OCLLazyCodegenState &state) {
+	// retranspose indices
+	IndexMap pred = state.index_map;
+	int *transpositions = static_cast<int *>(node->operation.additional_data);
+	for (int i = 0; i < node->operation.dimensions; i++) {
+		int j = transpositions[i];
+		// swap i and j in pred
+		pred.expr_per_dim[j] = state.index_map.expr_per_dim[i];
+	}
+	state.pred_index_maps = {pred};
+	return true;
+}
 
 FGraphNode *ConcatImpl::local_gradient(FGraphNode *y, int dx_i,
 									   FGraphNode *prev_adj) {
@@ -497,127 +350,39 @@ int ConcatImpl::generate_ocl_lazy(const FGraphNode *node, string name,
 								  OCLLazyCodegenState &compiler_state) {
 	FGraphNode *a = node->predecessors[0];
 	FGraphNode *b = node->predecessors[1];
-	const unsigned int old_idx = compiler_state.num_indices++;
 	const unsigned int ax =
 		((unsigned int *)node->operation.additional_data)[0];
-	size_t acc_size_last = 1;
-	for (int i = node->operation.dimensions - 2; i >= (int)ax; i--)
-		acc_size_last *= node->operation.shape[i + 1];
-	Twine index_defs;
-	index_defs += "long old_index" + to_string(old_idx) + " = index;\n";
-	const string sx = "index / " + to_string(acc_size_last);
-	const string sc =
-		ax > 0 ? "(" + sx + ") % " + to_string(node->operation.shape[ax]) : sx;
-	const string if_em = sc + " < " + to_string(a->operation.shape[ax]);
-	index_defs += "index = " + if_em +
-				  " ? "
-				  "(" +
-				  sx + " / " + to_string(node->operation.shape[ax]) + ") * " +
-				  to_string(acc_size_last * a->operation.shape[ax]) + " + (" +
-				  sc + ") * " + to_string(acc_size_last) + " + (index % " +
-				  to_string(acc_size_last) + "): (" + sx + " / " +
-				  to_string(node->operation.shape[ax]) + ") * " +
-				  to_string(acc_size_last * b->operation.shape[ax]) + " + ((" +
-				  sc + ") - " + to_string(a->operation.shape[ax]) + ") * " +
-				  to_string(acc_size_last) + " + (index % " +
-				  to_string(acc_size_last) + ");\n";
-	compiler_state.index_defs = index_defs;
-	compiler_state.code.prepend(
-		"index = old_index" + to_string(old_idx) + ";\n" +
-		type_string(node->operation.data_type) + " " + name + " = " + if_em +
-		" ? v" + to_string(compiler_state.variable_index + 1) + " : v" +
-		to_string(compiler_state.variable_index + 2) + ";\n");
+	const string type = type_string(node->operation.data_type);
+	const string par1 = "v" + to_string(compiler_state.variable_index + 1);
+	const string par2 = "v" + to_string(compiler_state.variable_index + 2);
+	// the coordinate on the concatenated axis decides which of the two
+	// parameters is read. Only that one is calculated, so each parameter is
+	// wrapped in its branch of the condition
+	const string in_a =
+		compiler_state.to_code(compiler_state.index_map.expr_per_dim[ax]) +
+		" < " + to_string(a->operation.shape[ax]);
+	compiler_state.pred_wrappers = {
+		{type + " " + name + " = 0;\nif(" + in_a + "){\n",
+		 name + " = " + par1 + ";\n} else {\n"},
+		{"", name + " = " + par2 + ";\n}\n"}};
 	return 0;
 }
-
-std::string
-ConcatImpl::generate_ocl_parameters_eager(FType res_type,
-										  std::vector<FType> parameter_types) {
-	return ", const __global " + type_string(parameter_types[0]) +
-		   "* P0, const long num_entries0, const __global " +
-		   type_string(parameter_types[1]) +
-		   "* P1, const long num_entries1, const long acc_size_last,"
-		   "const long shape_ax, const long a_shape_ax, const long "
-		   "b_shape_ax, const int ax, const long total_el_size0, const long "
-		   "total_el_size1";
-}
-std::string ConcatImpl::generate_ocl_eager(FType res_type,
-										   std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
-		   "long sx = index / acc_size_last;\n"
-		   "long sc = ax > 0 ? sx % shape_ax : sx;\n"
-		   "if(sc < a_shape_ax){\n"
-		   " long ai = (sx / shape_ax) * acc_size_last * a_shape_ax + sc * "
-		   "acc_size_last + index % acc_size_last;\n"
-		   " R[index] = P0[ai % total_el_size0];\n"
-		   "}else{\n"
-		   " long bi = (sx / shape_ax) * acc_size_last * b_shape_ax + (sc - "
-		   "a_shape_ax) * "
-		   "acc_size_last + index % acc_size_last;\n"
-		   " R[index] = P1[bi % total_el_size1];\n"
-		   "}";
-}
-void ConcatImpl::push_additional_kernel_parameters(FGraphNode *node,
-												   cl_kernel kernel,
-												   cl_context context,
-												   int &par_index,
-												   std::list<cl_mem> &to_free) {
-	FGraphNode *a = node->predecessors[0];
-	FGraphNode *b = node->predecessors[1];
-	unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
-	size_t acc_size_last = 1;
-	for (int i = node->operation.dimensions - 2; i >= (int)ax; i--)
-		acc_size_last *= node->operation.shape[i + 1];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&acc_size_last) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
+bool ConcatImpl::mutate_index(const FGraphNode *node,
+							  OCLLazyCodegenState &state) {
+	const unsigned int ax =
+		((unsigned int *)node->operation.additional_data)[0];
+	for (int i = 0; i < node->num_predecessor; i++) {
+		IndexMap &map = state.pred_index_maps.emplace_back(state.index_map);
+		map.current_depth = state.index_map.current_depth;
+		IndexExpr &expr = map.expr_per_dim[ax];
+		// the second parameter starts where the first one ends
+		if (i == 1)
+			expr.a -= (long)node->predecessors[0]->operation.shape[ax];
+		// each parameter is only read in its branch of the condition, which is
+		// where its coordinate lies inside of it
+		expr.bound = {0, (long)node->predecessors[i]->operation.shape[ax] - 1};
 	}
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&(node->operation.shape[ax])) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&a->operation.shape[ax]) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&b->operation.shape[ax]) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	if (clSetKernelArg(kernel, par_index++, sizeof(int), (void *)&ax) !=
-		CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	size_t total_el_size0 = 1;
-	if (a->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < a->operation.dimensions; i++)
-			total_el_size0 *= a->operation.shape[i];
-	size_t total_el_size1 = 1;
-	if (b->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < b->operation.dimensions; i++)
-			total_el_size1 *= b->operation.shape[i];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&total_el_size0) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	if (clSetKernelArg(kernel, par_index++, sizeof(long),
-					   (void *)&total_el_size1) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
+	return true;
 }
 void ConcatImpl::execute_cpu(const FGraphNode *node,
 							 vector<CPUResultData> predecessor_data,

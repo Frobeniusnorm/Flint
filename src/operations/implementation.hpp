@@ -17,10 +17,100 @@
 #include "../../flint.h"
 #include "../backend_cpu/cpu_common.hpp"
 #include "../backend_ocl/twine.hpp"
-#include <set>
+#include "src/operations/index_code.hpp"
 #include <unordered_map>
 #include <vector>
 
+static void calculate_divisor_for_inverse_broadcasting(const FGraphNode *a,
+													   size_t &iv1,
+													   const FGraphNode *b,
+													   size_t &iv2) {
+	iv1 = 1;
+	iv2 = 1;
+	bool inv_manipulation = a->operation.dimensions != b->operation.dimensions;
+	// constants -> no inverse broadcasting
+	if ((a->operation.dimensions == 1 && a->operation.shape[0] == 1) ||
+		(b->operation.dimensions == 1 && b->operation.shape[0] == 1))
+		return;
+	// forward broadcasting -> no inverse broadcasting
+	bool forward_broad = a->operation.broadcasting_mode == 0 &&
+						 b->operation.broadcasting_mode == 0;
+	if (forward_broad) {
+		size_t *const lower = a->operation.dimensions > b->operation.dimensions
+								  ? b->operation.shape
+								  : a->operation.shape;
+		size_t *const higher = a->operation.dimensions > b->operation.dimensions
+								   ? a->operation.shape
+								   : b->operation.shape;
+		const int lower_dim =
+			std::min(a->operation.dimensions, b->operation.dimensions);
+		const int higher_dim =
+			std::max(a->operation.dimensions, b->operation.dimensions);
+		for (int i = 0; i < lower_dim; i++) {
+			const size_t s1 = higher[i + (higher_dim - lower_dim)];
+			const size_t s2 = lower[i];
+			if (s1 != s2) {
+				forward_broad = false;
+				break;
+			}
+		}
+	}
+	if (forward_broad)
+		return;
+	if (inv_manipulation) {
+		for (int i = b->operation.dimensions; i < a->operation.dimensions; i++)
+			iv2 *= a->operation.shape[i];
+		for (int i = a->operation.dimensions; i < b->operation.dimensions; i++)
+			iv1 *= b->operation.shape[i];
+	}
+}
+/** True if the operation evaluates its predecessors with the same
+ * `index` it was called with. Only those pass the global id down
+ * unchanged, everything else remaps the index for its predecessors
+ * (reductions, slices, windows,
+ * ...) so that the same node means different values in different
+ * places. */
+static bool passesIndexOn(const FGraphNode *node) {
+	switch (node->operation.op_type) {
+	case FADD:
+	case FSUB:
+	case FMUL:
+	case FDIV:
+	case FPOW:
+	case FMIN:
+	case FMAX:
+	case FLESS:
+	case FEQUAL:
+	case FGREATER: {
+		// inverse broadcasting divides the index for the predecessors
+		size_t iv1 = 1, iv2 = 1;
+		calculate_divisor_for_inverse_broadcasting(node->predecessors[0], iv1,
+												   node->predecessors[1], iv2);
+		return iv1 == 1 && iv2 == 1;
+	}
+	case FNEG:
+	case FLOG:
+	case FLOG2:
+	case FLOG10:
+	case FSIGN:
+	case FEVEN:
+	case FSIN:
+	case FCOS:
+	case FTAN:
+	case FASIN:
+	case FACOS:
+	case FATAN:
+	case FSQRT:
+	case FEXP:
+	case FABS:
+	case FCONVERSION:
+	case FLATTEN:
+	case FRESHAPE:
+		return true;
+	default:
+		return false;
+	}
+}
 #define DISPATCH_BINARY_OPERATION(T)                                           \
 	const CPUResultData p1 = predecessor_data[0], p2 = predecessor_data[1];    \
 	size_t im1 = p1.num_entries, im2 = p2.num_entries;                         \
@@ -279,25 +369,63 @@
 						  node);                                               \
 	} break;                                                                   \
 	}
-struct OCLLazyCodegenState {
+/** One entry of the code generation queue. A null node means `name` is code
+ * that is inserted as it is. */
+struct CodegenTask {
+		FGraphNode *node = nullptr;
+		std::string name = "";
+		/** Whether `index` still is the global id here. Only then the value of
+		 * a node is independent of where it appears and may be reused.
+		 * Operations that push predecessors themselves all modify the index,
+		 * so leaving this false is the safe default. */
+		bool same_index = false;
+		/** Coordinates the node is read at, one expression per dimension of its
+		 * shape */
+		IndexMap index_map;
+		/** For inserted code: which operation inserted it. */
+		unsigned int inserted_by = 0;
+		/** For inserted code: whether this is the first text the operation
+		 * inserted. Everything it reads stands behind that one, so it is where
+		 * its index declarations may be put in front. */
+		bool declares_indices = false;
+		/** For inserted code: whether it opens a loop */
+		bool opens_loop = false;
+};
+/** The state of the lazy code generation: the queue of nodes, the parameters
+ * and scalars of the kernel and the code itself. Everything about indices is
+ * in `IndexCode`, this part decides where code and declarations are placed. */
+struct OCLLazyCodegenState : IndexCode {
 		/** Working queue of nodes for which still code has to be generated */
-		std::list<std::tuple<FGraphNode *, std::string>> todo;
+		std::list<CodegenTask> todo;
 		/** Maps storage nodes to their kernel parameter names (for fast lookup)
 		 */
 		std::unordered_map<FGraphNode *, std::string> assigned_params;
 		/** To register new parameter nodes to their name */
 		std::list<std::pair<FGraphNode *, std::string>> *parameters;
-		/** indexing logic (we save the old index in old_index$i to restore it)
-		 */
-		unsigned int num_indices = 0;
 		/** Number of nodes that are already assigned to variables (for naming)
 		 */
 		unsigned int variable_index = 0;
-		/** a code segment that is inserted before the predecessors (cleared
-		 * after each node) */
-		std::string index_defs;
 		/** Actual code as twine for fast prepend and append operations */
 		Twine code;
+		/** Current index type */
+		std::string index_type = "long";
+		/** Values that change between executions of otherwise identical
+		 * graphs (slice offsets, random seeds, ...). They are passed as
+		 * kernel arguments instead of being written into the code, since a
+		 * literal would make the kernel cache miss on every execution. */
+		std::vector<std::pair<FType, double>> scalars;
+		/** Text put in front of and behind the code of each predecessor, one
+		 * entry per predecessor. */
+		std::vector<std::pair<std::string, std::string>> pred_wrappers;
+		/** Whether the operation that is generated has not inserted code yet.
+		 * Everything it reads stands behind its first text. */
+		bool first_text = true;
+		/** Registers a value as a kernel argument and returns its name */
+		std::string addScalar(FType type, double value) {
+			std::string name = "S" + std::to_string(scalars.size());
+			scalars.push_back({type, value});
+			return name;
+		}
 		/**
 		 * Checks if the nodes has already been included as a parameter for the
 		 * kernel. If it has, returnes the binded variable, else it creates a
@@ -305,14 +433,69 @@ struct OCLLazyCodegenState {
 		 */
 		std::string findOrInsertParameter(FGraphNode *gnp1) {
 			std::string par1;
-			if (assigned_params.find(gnp1) != assigned_params.end()) {
-				par1 = assigned_params[gnp1];
+			auto find_param = assigned_params.find(gnp1);
+			if (find_param != assigned_params.end()) {
+				par1 = find_param->second;
 			} else {
 				par1 = "P" + std::to_string(assigned_params.size());
 				assigned_params.insert({gnp1, par1});
 				parameters->push_back({gnp1, par1});
 			}
 			return par1;
+		}
+		/**
+		 * Inserts `text` into the queue, so that it is emitted at this
+		 * position of the code. `loop` tells whether it opens a loop.
+		 */
+		void insert_code(const std::string &text, bool loop = false) {
+			todo.push_front({nullptr, text, false, index_map, generated_ops,
+							 first_text, loop});
+			first_text = false;
+		}
+		/**
+		 * Emits `text`, which was inserted at `depth`, together with the
+		 * declarations that belong around it.
+		 * - `depth`, `owner`: of the operation that inserted the text
+		 * - `declares`: whether everything that operation reads stands behind
+		 *   this text, only then its own declarations may be put in front
+		 * - `loop`: whether the text opens a loop, then a declaration of the
+		 *   depth around it is taken out of the loop
+		 */
+		void insert_text(const std::string &text, unsigned int depth,
+						 unsigned int owner, bool declares, bool loop) {
+			std::vector<std::string> inside, in_front; // before and after text
+			for (auto it = index_decls.begin(); it != index_decls.end();) {
+				std::vector<std::string> *side = nullptr;
+				if (it->depth > depth) {
+					// the scope the text opens is where it belongs
+					side = &inside;
+				} else if (it->depth == depth && it->owner == owner) {
+					// same operation -> waits for the first one
+					if (declares)
+						side = &in_front;
+				} else if (it->depth == depth && it->owner > owner) {
+					// an operation below registered it -> loops take it out
+					side = loop ? &in_front : &inside;
+				}
+				if (!side) {
+					it++;
+					continue;
+				}
+				side->push_back(declaration(*it));
+				it = index_decls.erase(it);
+			}
+			for (auto it = inside.rbegin(); it != inside.rend(); it++)
+				code.prepend(*it);
+			code.prepend(text);
+			for (auto it = in_front.rbegin(); it != in_front.rend(); it++)
+				code.prepend(*it);
+		}
+		/** Emits the declarations that are still pending (to emit remaining at
+		 * the beginning of the kernel)*/
+		void insert_remaining_decls() {
+			for (auto it = index_decls.rbegin(); it != index_decls.rend(); it++)
+				code.prepend(declaration(*it));
+			index_decls.clear();
 		}
 };
 struct OperationImplementation {
@@ -357,52 +540,6 @@ struct OperationImplementation {
 		virtual int generate_ocl_lazy(const FGraphNode *node, std::string name,
 									  OCLLazyCodegenState &compiler_state) = 0;
 		/**
-		 * Generates the content of a eager kernel.
-		 * `res_type` is the result type of the kernel and `parameter_types`
-		 * contains the parameter types in order.
-		 */
-		virtual std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) = 0;
-		/**
-		 * Generates additional parameters to the kernel additional to the
-		 * result array
-		 */
-		virtual std::string
-		generate_ocl_parameters_eager(FType res_type,
-									  std::vector<FType> parameter_types);
-		/**
-		 * Pushes additional values to the eager opencl program that don't
-		 * depend on the parameters. The `par_index` has to be incremented for
-		 * every pushed parameter. Every memory object in `to_free` will be
-		 * freed after program execution.
-		 */
-		virtual void
-		push_additional_kernel_parameters(FGraphNode *node, cl_kernel kernel,
-										  cl_context context, int &par_index,
-										  std::list<cl_mem> &to_free) {}
-		/**
-		 * Pushes per parameter values (the function is called once per
-		 * parameter). See `push_additional_kernel_parameters`.
-		 */
-		virtual void push_parameter_kernel_parameters(
-			FGraphNode *node, FGraphNode *pred, cl_kernel kernel,
-			cl_context context, int &par_index, std::list<cl_mem> &to_free) {}
-		/**
-		 * Calculates all possible combinations of return types and parameter
-		 * values. Each possible combination is denoted by a vector in which the
-		 * first type represents the return type, the second the first parameter
-		 * type, the third the second parameter type and so on.
-		 * It is used to determine which kernels have to be generated for a
-		 * operation (i.e. which actually could occur). The default
-		 * implementation takes all possible parameter combinations and the
-		 * highest of them as return type (semantic of most binary operations).
-		 * The given node should be treated as an example and except for the
-		 * number of parameters no concrete values should be taken.
-		 */
-		virtual std::vector<std::vector<FType>>
-		kernel_type_combinations(const FGraphNode *node);
-		/**
 		 * Calculates the operation score for a node, i.e. assigns a score
 		 * to each node depending on its parallelizability, very high scores are
 		 * calculated on gpu, middle high scores parallel on cpus, lower scores
@@ -431,17 +568,33 @@ struct OperationImplementation {
 		reuse_parameter_result(const FGraphNode *node) {
 			return {};
 		}
-		/** Controls the number of elements that are depatched for the cpu
-		 * backend and the eager gpu backend (NOT the lazy gpu backend!). In
-		 * general you want this to be the size of the result node (s.d. for
-		 * each element in the result, one calculation takes place), but
-		 * sometimes for optimization or special operations another value makes
-		 * more sense. */
-		virtual size_t deploy_as_many_elements(const FGraphNode *node) {
-			size_t total = 1;
-			for (int d = 0; d < node->operation.dimensions; d++)
-				total *= node->operation.shape[d];
-			return total;
+		/**
+		 * Maps the coordinates the node is read at (`state.index_map`) to the
+		 * coordinates its parameters are read at, one entry in
+		 * `state.pred_index_maps` per parameter. Returns false if this
+		 * operation does not map, then it has to queue its parameters itself
+		 * in `generate_ocl_lazy`. The default is the identity for the
+		 * operations that read their parameters at the same position as
+		 * themselves.
+		 */
+		virtual bool mutate_index(const FGraphNode *node,
+								  OCLLazyCodegenState &state) {
+			// inverse broadcasting is mapped by the code generation itself
+			if (!passesIndexOn(node))
+				return false;
+			std::vector<IndexMap> maps(node->num_predecessor);
+			for (int i = 0; i < node->num_predecessor; i++) {
+				maps[i].current_depth = state.index_map.current_depth;
+				const FOperation pred = node->predecessors[i]->operation;
+				if (!trailing_map(state.index_map, node->operation.shape,
+								  node->operation.dimensions, pred.shape,
+								  pred.dimensions, maps[i]))
+					return false;
+			}
+			for (const IndexMap &map : maps) {
+				state.pred_index_maps.push_back(map);
+			}
+			return true;
 		}
 };
 #endif

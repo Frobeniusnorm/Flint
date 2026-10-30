@@ -15,17 +15,13 @@ void BatchNorm::forward() {
 	FGraphNode *x = incoming[0]->output[0];
 	FGraphNode *gamma = incoming[1]->output[0];
 	FGraphNode *beta = incoming[2]->output[0];
-	// because channels and other dimensions have to be swapped
 	FGraphNode *mean_running =
 		incoming.size() <= 3 ? nullptr : incoming[3]->output[0];
 	FGraphNode *var_running =
 		incoming.size() <= 3 ? nullptr : incoming[4]->output[0];
-	int transpositions1[x->operation.dimensions];
-	for (int i = 0; i < x->operation.dimensions; i++)
-		transpositions1[i] = i;
-	transpositions1[1] = x->operation.dimensions - 1;
-	transpositions1[x->operation.dimensions - 1] = 1;
-	FGraphNode *tx = ftranspose(x, transpositions1);
+	// channels are the last dimension, so the statistics and parameters of
+	// each channel broadcast along it
+	FGraphNode *tx = x;
 	// calculate mean and std var
 	if (training && mean_running) {
 		// mean and var for all except for the channels
@@ -66,14 +62,12 @@ void BatchNorm::forward() {
 		mean_running = mean;
 		var_running = var;
 	}
-	FGraphNode *y = ftranspose(
-		fadd_g(
-			fmul_g(gamma, fdiv_g(fsub_g(tx, mean_running),
-								 fsqrt_g(fadd_cf(
-									 var_running,
-									 std::numeric_limits<float>::epsilon())))),
-			beta),
-		transpositions1);
+	FGraphNode *y = fadd_g(
+		fmul_g(gamma,
+			   fdiv_g(fsub_g(tx, mean_running),
+					  fsqrt_g(fadd_cf(var_running,
+									  std::numeric_limits<float>::epsilon())))),
+		beta);
 	output[0] = y;
 };
 //
@@ -87,27 +81,31 @@ void Dropout::forward() {
 				 "input tensor and the second is the probability");
 #endif
 	FGraphNode *in = incoming[0]->output[0];
-	float p = 0.5f;
-	if (incoming.size() == 2) {
-		FGraphNode *pnode = incoming[1]->output[0];
-		FResultData *p_result = fCalculateResult(pnode)->result_data;
-		switch (pnode->operation.data_type) {
-		case F_FLOAT32:
-			p = *(float *)p_result->data;
-			break;
-		case F_FLOAT64:
-			p = (float)*(double *)p_result->data;
-			break;
-		case F_INT32:
-			p = (float)*(int *)p_result->data;
-			break;
-		case F_INT64:
-			p = (float)*(long *)p_result->data;
-			break;
-		default:
-			flogging(F_ERROR, "Illegal type of p-variable for Dropout");
-			return;
+	if (training) {
+		float p = 0.5f;
+		if (incoming.size() == 2) {
+			FGraphNode *pnode = incoming[1]->output[0];
+			FResultData *p_result = fCalculateResult(pnode)->result_data;
+			switch (pnode->operation.data_type) {
+			case F_FLOAT32:
+				p = *(float *)p_result->data;
+				break;
+			case F_FLOAT64:
+				p = (float)*(double *)p_result->data;
+				break;
+			case F_INT32:
+				p = (float)*(int *)p_result->data;
+				break;
+			case F_INT64:
+				p = (float)*(long *)p_result->data;
+				break;
+			default:
+				flogging(F_ERROR, "Illegal type of p-variable for Dropout");
+				return;
+			}
 		}
+		output[0] = fdropout(in, p);
+	} else {
+		output[0] = in;
 	}
-	output[0] = fdropout(in, p);
 }

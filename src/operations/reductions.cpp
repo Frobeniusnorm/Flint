@@ -25,53 +25,41 @@ template <FOperationType op_type>
 static inline int reducing(const FGraphNode *node, std::string name,
 						   OCLLazyCodegenState &compiler_state) {
 	FGraphNode *prev = node->predecessors[0];
-	// we insert a index definition to introduce the for for our
-	// predecessors
+	// the accumulator and the loop over the reduced dimension stand in front
+	// of the parameter, which is read inside of it
 	const string par1 = "v" + std::to_string(compiler_state.variable_index + 1);
 	const string type = type_string(node->operation.data_type);
 	const int red_dim = ((int *)node->operation.additional_data)[0];
-	size_t it_dim = 1; // iteration size <=> product of all dimensions along dim
-	for (size_t d = red_dim + 1; d < prev->operation.dimensions; d++)
-		it_dim *= prev->operation.shape[d];
-	Twine index_defs;
-	index_defs += type + " " + name + " = ";
-	size_t total_el_size = 1;
-	if (prev->operation.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < prev->operation.dimensions; i++)
-			total_el_size *= prev->operation.shape[i];
+	Twine opening;
+	opening += type + " " + name + " = ";
 	switch (op_type) {
 	case FREDUCE_SUM:
-		index_defs += "0";
+		opening += "0";
 		break;
 	case FREDUCE_MUL:
-		index_defs += "1";
+		opening += "1";
 		break;
 	case FREDUCE_MIN:
-		index_defs += max_for_type(node->operation.data_type);
+		opening += max_for_type(node->operation.data_type);
 		break;
 	case FREDUCE_MAX:
-		index_defs += min_for_type(node->operation.data_type);
+		opening += min_for_type(node->operation.data_type);
 		break;
 	default:
 		break;
 	}
-	const std::string itv = "i" + to_string(compiler_state.variable_index);
-	const unsigned int old_idx = compiler_state.num_indices++;
-	index_defs += ";\nlong old_idx" + to_string(old_idx) +
-				  " = index;\n"
-				  "for(long " +
-				  itv + " = 0; " + itv + " < " +
-				  to_string(prev->operation.shape[red_dim]) + "; " + itv +
-				  "++){\n"
-				  "index = ((old_idx" +
-				  to_string(old_idx) + " / " + to_string(it_dim) + ") * " +
-
-				  to_string(it_dim) + " * " +
-				  to_string(prev->operation.shape[red_dim]) + " + (old_idx" +
-				  to_string(old_idx) + " % " + to_string(it_dim) + ") + " +
-				  itv + " * " + to_string(it_dim) + ") % " +
-				  to_string(total_el_size) + ";\n";
-	compiler_state.index_defs = index_defs;
+	// the loop variable is the coordinate of the reduced dimension in the
+	// map of the parameter
+	const IndexAtom &i =
+		compiler_state.index_atoms[compiler_state.pred_index_maps[0]
+									   .expr_per_dim[red_dim]
+									   .exprs[0]
+									   .second];
+	opening += ";\nfor(" + compiler_state.type_of(i.bound) + " " +
+				  i.name + " = 0; " + i.name + " < " +
+				  to_string(prev->operation.shape[red_dim]) + "; " +
+				  i.name + "++){\n";
+	compiler_state.insert_code(opening, true);
 	Twine reduce_code;
 	switch (op_type) {
 	case FREDUCE_SUM:
@@ -89,7 +77,7 @@ static inline int reducing(const FGraphNode *node, std::string name,
 	default:
 		break;
 	}
-	reduce_code += ";\n}\nindex = old_idx" + to_string(old_idx) + ";\n";
+	reduce_code += ";\n}";
 	compiler_state.code.prepend(reduce_code);
 	return 0;
 }
@@ -165,8 +153,8 @@ static void reducing_push_parameters(FGraphNode *node, cl_kernel kernel,
 	if (prev->operation.op_type != FGEN_CONSTANT)
 		for (int i = 0; i < prev->operation.dimensions; i++)
 			total_el_size *= prev->operation.shape[i];
-	if (clSetKernelArg(kernel, par_index++, sizeof(long), (void *)&total_el_size) !=
-		CL_SUCCESS) {
+	if (clSetKernelArg(kernel, par_index++, sizeof(long),
+					   (void *)&total_el_size) != CL_SUCCESS) {
 		setErrorType(OCL_ERROR);
 		flogging(F_ERROR, "Could not load Argument to kernel!");
 		return;
@@ -205,6 +193,35 @@ static std::vector<bool> reducing_reuse_params(const FGraphNode *node) {
 	return {false};
 	// return {node->predecessors[0]->operation.shape[ax] == 1};
 }
+bool reducing_mutate_index(const FGraphNode *node, OCLLazyCodegenState &state) {
+	const int dim = ((int *)node->operation.additional_data)[0];
+	const FOperation pred = node->predecessors[0]->operation;
+	// generate new Atom
+	int new_ax =
+		state.add_atom("red_index_" + to_string(state.index_atoms.size()), 0,
+					   pred.shape[dim] - 1, state.index_map.current_depth + 1);
+	// add the new index to the index map for the new dimension
+	IndexMap old_map = state.index_map;
+	IndexMap new_map;
+	new_map.expr_per_dim.reserve(old_map.expr_per_dim.size() + 1);
+	for (int i = 0; i < dim; i++) {
+		new_map.expr_per_dim.push_back(old_map.expr_per_dim[i]);
+	}
+	IndexExpr dim_idx;
+	dim_idx.a = 0;
+	dim_idx.exprs.push_back({1, new_ax});
+	dim_idx.derive_bound(state.index_atoms);
+	new_map.expr_per_dim.push_back(dim_idx);
+	// the reduced axis is not in the node's map, so everything behind it is
+	// shifted by one
+	for (int i = dim + 1; i < pred.dimensions; i++) {
+		new_map.expr_per_dim.push_back(old_map.expr_per_dim[i - 1]);
+	}
+	new_map.current_depth = state.index_map.current_depth + 1;
+	state.pred_index_maps.push_back(new_map);
+	return true;
+}
+
 FGraphNode *ReduceSumImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
 	FGraphNode *a = y->predecessors[0];
@@ -220,6 +237,10 @@ FGraphNode *ReduceSumImpl::local_gradient(FGraphNode *y, int dx_i,
 		return frepeat(freshape(prev_adj, ns.data(), ns.size()), rep.data());
 	} else
 		return nullptr;
+}
+bool ReduceSumImpl::mutate_index(const FGraphNode *node,
+								 OCLLazyCodegenState &state) {
+	return reducing_mutate_index(node, state);
 }
 template <typename T>
 void ReduceSumImpl::unary_expression(T *__restrict__ result,
@@ -248,28 +269,13 @@ int ReduceSumImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	return reducing<FREDUCE_SUM>(node, name, compiler_state);
 }
-std::string ReduceSumImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return reducing_parameters_eager(res_type, parameter_types);
-}
-std::string
-ReduceSumImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {
-	return reducing_eager<FREDUCE_SUM>(res_type, parameter_types);
-}
-void ReduceSumImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	reducing_push_parameters(node, kernel, context, par_index, to_free);
-}
-void ReduceSumImpl::push_parameter_kernel_parameters(
-	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
-	int &par_index, std::list<cl_mem> &to_free) {
-	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
-}
 std::vector<bool>
 ReduceSumImpl::reuse_parameter_result(const FGraphNode *node) {
 	return reducing_reuse_params(node);
+}
+bool ReduceMulImpl::mutate_index(const FGraphNode *node,
+								 OCLLazyCodegenState &state) {
+	return reducing_mutate_index(node, state);
 }
 FGraphNode *ReduceMulImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
@@ -332,32 +338,17 @@ void ReduceMulImpl::unary_expression(T *__restrict__ result,
 		}
 	}
 }
-std::string ReduceMulImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return reducing_parameters_eager(res_type, parameter_types);
-}
 int ReduceMulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	return reducing<FREDUCE_MUL>(node, name, compiler_state);
 }
-std::string
-ReduceMulImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {
-	return reducing_eager<FREDUCE_MUL>(res_type, parameter_types);
-}
-void ReduceMulImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	reducing_push_parameters(node, kernel, context, par_index, to_free);
-}
-void ReduceMulImpl::push_parameter_kernel_parameters(
-	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
-	int &par_index, std::list<cl_mem> &to_free) {
-	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
-}
 std::vector<bool>
 ReduceMulImpl::reuse_parameter_result(const FGraphNode *node) {
 	return reducing_reuse_params(node);
+}
+bool ReduceMinImpl::mutate_index(const FGraphNode *node,
+								 OCLLazyCodegenState &state) {
+	return reducing_mutate_index(node, state);
 }
 FGraphNode *ReduceMinImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
@@ -396,28 +387,13 @@ int ReduceMinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	return reducing<FREDUCE_MIN>(node, name, compiler_state);
 }
-std::string ReduceMinImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return reducing_parameters_eager(res_type, parameter_types);
-}
-std::string
-ReduceMinImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {
-	return reducing_eager<FREDUCE_MIN>(res_type, parameter_types);
-}
-void ReduceMinImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	reducing_push_parameters(node, kernel, context, par_index, to_free);
-}
-void ReduceMinImpl::push_parameter_kernel_parameters(
-	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
-	int &par_index, std::list<cl_mem> &to_free) {
-	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
-}
 std::vector<bool>
 ReduceMinImpl::reuse_parameter_result(const FGraphNode *node) {
 	return reducing_reuse_params(node);
+}
+bool ReduceMaxImpl::mutate_index(const FGraphNode *node,
+								 OCLLazyCodegenState &state) {
+	return reducing_mutate_index(node, state);
 }
 FGraphNode *ReduceMaxImpl::local_gradient(FGraphNode *y, int dx_i,
 										  FGraphNode *prev_adj) {
@@ -452,25 +428,6 @@ void ReduceMaxImpl::unary_expression(T *__restrict__ result,
 int ReduceMaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	return reducing<FREDUCE_MAX>(node, name, compiler_state);
-}
-std::string ReduceMaxImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return reducing_parameters_eager(res_type, parameter_types);
-}
-std::string
-ReduceMaxImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {
-	return reducing_eager<FREDUCE_MAX>(res_type, parameter_types);
-}
-void ReduceMaxImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	reducing_push_parameters(node, kernel, context, par_index, to_free);
-}
-void ReduceMaxImpl::push_parameter_kernel_parameters(
-	FGraphNode *node, FGraphNode *pred, cl_kernel kernel, cl_context context,
-	int &par_index, std::list<cl_mem> &to_free) {
-	reducing_push_per_parameter(node, kernel, context, par_index, to_free);
 }
 std::vector<bool>
 ReduceMaxImpl::reuse_parameter_result(const FGraphNode *node) {

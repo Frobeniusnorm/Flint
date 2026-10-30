@@ -14,50 +14,66 @@
 #include "gen_data.hpp"
 #include "../utils.hpp"
 #include <random>
+#include <climits>
+#include <cstdint>
 using namespace std;
 void GenRandomImpl::execute_cpu(const FGraphNode *node,
 								std::vector<CPUResultData> predecessor_data,
 								void *__restrict__ result, size_t from,
 								size_t size) {
 	double seed = ((double *)node->operation.additional_data)[0];
-  std::minstd_rand0 g1 (seed * 1000 + from);
+	std::minstd_rand0 g1(seed * 1000 + from);
+	const bool single = node->operation.data_type == F_FLOAT32;
 	for (size_t i = from; i < from + size; i++) {
-		((double *)result)[i] = (g1() % 100000000) / 100000000.0;
+		const double val = (g1() % 100000000) / 100000000.0;
+		if (single)
+			((float *)result)[i] = (float)val;
+		else
+			((double *)result)[i] = val;
 	}
+}
+// integer hash with good avalanche (lowbias32 by Chris Wellons)
+static uint32_t hash32(uint32_t x) {
+	x ^= x >> 16;
+	x *= 0x7feb352dU;
+	x ^= x >> 15;
+	x *= 0x846ca68bU;
+	x ^= x >> 16;
+	return x;
 }
 int GenRandomImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
-	const string type = type_string(node->operation.data_type);
+	const FType dt = node->operation.data_type;
+	const string type = type_string(dt);
 	double seed = ((double *)node->operation.additional_data)[0];
-	compiler_state.code.prepend(type + " " + name + " = 0;\n{\n " + name +
-								" = sin(index + " + std::to_string(seed) +
-								") * 43758.5453123;\n " + name + " = min(" +
-								name + " - floor(" + name +
-								"), 0.99999);\n"
-								"}\n");
+	// the seed differs per node, as an argument it keeps the code cacheable.
+	// It is hashed here once so that the kernel only has to hash the offset
+	const uint32_t hs = hash32((uint32_t)(seed * 100));
+	const string sn = compiler_state.addScalar(F_INT32, (int32_t)hs);
+	// hashing the integer offset keeps neighbouring entries independent, a
+	// float offset can't distinguish them anymore beyond 2^24
+	const IndexExpr flat = compiler_state.flatten(
+		compiler_state.index_map, node->operation.shape,
+		node->operation.dimensions);
+	const string offset = compiler_state.to_code(flat);
+	const string h = name + "_h";
+	string code = type + " " + name + " = 0;\n{\n";
+	if (flat.bound.first < 0 || flat.bound.second > UINT_MAX)
+		code += " const ulong " + h + "_l = " + offset + ";\n uint " + h +
+				" = (uint)" + h + "_l ^ (uint)(" + h + "_l >> 32);\n";
+	else
+		code += " uint " + h + " = " + offset + ";\n";
+	code += " " + h + " ^= (uint)" + sn + ";\n";
+	for (const string &step : std::initializer_list<string>
+		 {"^= " + h + " >> 16", "*= 0x7feb352dU", "^= " + h + " >> 15",
+		  "*= 0x846ca68bU", "^= " + h + " >> 16"})
+		code += " " + h + " " + step + ";\n";
+	// the upper 24 bits fit exactly into a float's mantissa, so the result
+	// stays below 1
+	code += " " + name + " = (" + h + " >> 8) * " +
+			(dt == F_FLOAT32 ? "0x1p-24f" : "0x1p-24") + ";\n}\n";
+	compiler_state.code.prepend(code);
 	return 0;
-}
-std::string GenRandomImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return ", const double time";
-}
-std::string
-GenRandomImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
-		   "const double v = sin(index + time) * 43758.5453123;\n"
-		   "R[index] = min(v - floor(v), 0.99999);\n";
-}
-void GenRandomImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	double seed = ((double *)node->operation.additional_data)[0];
-	if (clSetKernelArg(kernel, par_index++, sizeof(double), (void *)&seed) !=
-		CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
 }
 
 template <typename T>
@@ -68,42 +84,11 @@ void GenConstantImpl::zeroary_expression(const FGraphNode *node,
 	for (size_t i = from; i < from + size; i++)
 		result[i] = value;
 }
-std::string GenConstantImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return ", const " + type_string(res_type) + " constant_val";
-}
 int GenConstantImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									   OCLLazyCodegenState &compiler_state) {
 	flogging(F_ERROR, "Constant Generation should not be implemented in OpenCL "
 					  "code generation!");
 	return 0;
-}
-std::string
-GenConstantImpl::generate_ocl_eager(FType res_type,
-									std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
-		   "R[index] = constant_val;\n";
-}
-void GenConstantImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	unsigned int byte_size;
-	switch (node->operation.data_type) {
-	case F_FLOAT64:
-	case F_INT64:
-		byte_size = 8;
-		break;
-	case F_INT32:
-	case F_FLOAT32:
-		byte_size = 4;
-		break;
-	}
-	if (clSetKernelArg(kernel, par_index++, byte_size,
-					   node->operation.additional_data) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
 }
 void GenConstantImpl::execute_cpu(const FGraphNode *node,
 								  std::vector<CPUResultData> predecessor_data,
@@ -125,45 +110,12 @@ void GenArangeImpl::execute_cpu(const FGraphNode *node,
 int GenArangeImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 									 OCLLazyCodegenState &compiler_state) {
 	const string type = type_string(node->operation.data_type);
-	unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
-	size_t acc_sizes_ax = 1;
-	for (unsigned int i = ax + 1; i < node->operation.dimensions; i++)
-		acc_sizes_ax *= node->operation.shape[i];
-	compiler_state.code.prepend("const " + type + " " + name + " = (index/" +
-								to_string(acc_sizes_ax) + ")%" +
-								to_string(node->operation.shape[ax]) + ";\n");
+	const unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
+	// the value is the coordinate of its axis, which the index map holds
+	compiler_state.code.prepend(
+		"const " + type + " " + name + " = " +
+		compiler_state.to_code(
+			compiler_state.index_map.expr_per_dim[ax]) +
+		";\n");
 	return 0;
-}
-std::string GenArangeImpl::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	return ", const long acc_sizes_ax, const long shape_ax";
-}
-std::string
-GenArangeImpl::generate_ocl_eager(FType res_type,
-								  std::vector<FType> parameter_types) {
-	return "if(index >= num_entriesR) return;\n"
-		   "const long i = (index / acc_sizes_ax) % shape_ax\n;"
-		   "R[index] = i;\n";
-}
-void GenArangeImpl::push_additional_kernel_parameters(
-	FGraphNode *node, cl_kernel kernel, cl_context context, int &par_index,
-	std::list<cl_mem> &to_free) {
-	unsigned int ax = ((unsigned int *)node->operation.additional_data)[0];
-	size_t acc_sizes_ax = 1;
-	for (unsigned int i = ax + 1; i < node->operation.dimensions; i++)
-		acc_sizes_ax *= node->operation.shape[i];
-	// push acc_sizes_ax
-	if (clSetKernelArg(kernel, par_index++, sizeof(size_t),
-					   (void *)&acc_sizes_ax) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
-	// push shape_ax
-	if (clSetKernelArg(kernel, par_index++, sizeof(size_t),
-					   (void *)&node->operation.shape[ax]) != CL_SUCCESS) {
-		setErrorType(OCL_ERROR);
-		flogging(F_ERROR, "Could not load Argument to kernel!");
-		return;
-	}
 }

@@ -12,13 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. */
 #include "implementation.hpp"
-#include "../utils.hpp"
 #include "binary_arithmetic.hpp"
 #include "comparison.hpp"
-#include "convolution.hpp"
 #include "gen_data.hpp"
 #include "index_modification.hpp"
-#include "pooling.hpp"
 #include "reductions.hpp"
 #include "shape_modification.hpp"
 #include "sliding_windows.hpp"
@@ -80,11 +77,6 @@ struct NopImpl : OperationImplementation {
 							  OCLLazyCodegenState &compiler_state) override {
 			return 0;
 		}
-		std::string
-		generate_ocl_eager(FType res_type,
-						   std::vector<FType> parameter_types) override {
-			return "";
-		}
 		FGraphNode *local_gradient(FGraphNode *y, int dx_i,
 								   FGraphNode *prev_adj) override {
 			return nullptr;
@@ -92,78 +84,50 @@ struct NopImpl : OperationImplementation {
 };
 
 std::vector<OperationImplementation *>
-	OperationImplementation::implementations = {new NopImpl(), // store
-												new GenRandomImpl(),
-												new GenConstantImpl(),
-												new GenArangeImpl(),
-												new AddImpl(),
-												new SubImpl(),
-												new MulImpl(),
-												new DivImpl(),
-												new PowImpl(),
-												new NegImpl(),
-												new LogImpl(),
-												new SignImpl(),
-												new EvenImpl(),
-												new Log2Impl(),
-												new Log10Impl(),
-												new SinImpl(),
-												new CosImpl(),
-												new TanImpl(),
-												new ASinImpl(),
-												new ACosImpl(),
-												new ATanImpl(),
-												new SqrtImpl(),
-												new ExpImpl(),
-												new FlattenImpl(),
-												new MatMulImpl(),
-												new ConversionImpl(),
-												new FlattenImpl(),
-												new MinImpl(),
-												new MaxImpl(),
-												new ReduceSumImpl(),
-												new ReduceMulImpl(),
-												new ReduceMinImpl(),
-												new ReduceMaxImpl(),
-												new SliceImpl(),
-												new AbsImpl(),
-												new RepeatImpl(),
-												new TransposeImpl(),
-												new ExtendImpl(),
-												new ConcatImpl(),
-												new LessImpl(),
-												new EqualImpl(),
-												new GreaterImpl(),
-												new ConvolveImpl(),
-												new GradientConvolve1Impl(),
-												new GradientConvolve2Impl(),
-												new IndexImpl(),
-												new SetIndexImpl(),
-												new SlidingWindowImpl(),
-												new UnslideWindowImpl(),
-												new PoolingMaxImpl(),
-												new PoolingSumImpl(),
-												new GradientPoolingMax(),
-												new DropoutImpl()};
-
-std::string OperationImplementation::generate_ocl_parameters_eager(
-	FType res_type, std::vector<FType> parameter_types) {
-	Twine code;
-	for (int i = 0; i < parameter_types.size(); i++)
-		code += ", const __global " + type_string(parameter_types[i]) + "* P" +
-				std::to_string(i) + ", long num_entries" + std::to_string(i);
-	return code;
-}
-
-std::vector<std::vector<FType>>
-OperationImplementation::kernel_type_combinations(const FGraphNode *node) {
-	std::vector<std::vector<FType>> par_poss =
-		all_type_permutations(node->num_predecessor);
-	for (int i = 0; i < par_poss.size(); i++) {
-		FType highest = par_poss[i][0];
-		for (int j = 1; j < par_poss[i].size(); j++)
-			highest = higher_type(highest, par_poss[i][j]);
-		par_poss[i].insert(par_poss[i].begin(), highest);
-	}
-	return par_poss;
-}
+	OperationImplementation::implementations = {
+		new NopImpl(), // store
+		new GenRandomImpl(),
+		new GenConstantImpl(),
+		new GenArangeImpl(),
+		new AddImpl(),
+		new SubImpl(),
+		new MulImpl(),
+		new DivImpl(),
+		new PowImpl(),
+		new NegImpl(),
+		new LogImpl(),
+		new SignImpl(),
+		new EvenImpl(),
+		new Log2Impl(),
+		new Log10Impl(),
+		new SinImpl(),
+		new CosImpl(),
+		new TanImpl(),
+		new ASinImpl(),
+		new ACosImpl(),
+		new ATanImpl(),
+		new SqrtImpl(),
+		new ExpImpl(),
+		new FlattenImpl(),
+		new ConversionImpl(),
+		new FlattenImpl(),
+		new MinImpl(),
+		new MaxImpl(),
+		new ReduceSumImpl(),
+		new ReduceMulImpl(),
+		new ReduceMinImpl(),
+		new ReduceMaxImpl(),
+		new SliceImpl(),
+		new AbsImpl(),
+		new RepeatImpl(),
+		new TransposeImpl(),
+		new ExtendImpl(),
+		new ConcatImpl(),
+		new LessImpl(),
+		new EqualImpl(),
+		new GreaterImpl(),
+		new IndexImpl(),
+		new SetIndexImpl(),
+		new SlidingWindowImpl(),
+		new UnslideWindowImpl()
+};

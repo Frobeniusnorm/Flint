@@ -36,7 +36,9 @@ static FGraphNode *load_idx_images(const std::string path) {
 				}
 			}
 		}
-		std::array<size_t, 4> shape{(size_t)no, 1, (size_t)h, (size_t)w};
+		// channels last, with a single channel the memory is the same as for
+		// channels first
+		std::array<size_t, 4> shape{(size_t)no, (size_t)h, (size_t)w, 1};
 		return fCreateGraph(data.data(), no * h * w, F_FLOAT32, shape.data(),
 							shape.size());
 	} else
