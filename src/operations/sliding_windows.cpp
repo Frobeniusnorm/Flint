@@ -189,96 +189,185 @@ void UnslideWindowImpl::unary_expression(T *__restrict__ result,
 		}
 	}
 }
+/** Geometry of one dimension of an unslide */
+struct UnslideDim {
+		long size;	 // of the window
+		long step;	 // between two windows
+		long nw;	 // number of windows
+		long k;		 // number of windows an element can be part of
+		IndexExpr q; // coordinate / step: the last window that may contain it
+		IndexExpr r; // coordinate % step: its offset in that window
+		std::string j; // loop variable of the candidates, if there are some
+		// the window and the offset in it of a candidate, and their code if
+		// they are variables of their own
+		IndexExpr w, offset;
+		std::string w_code, offset_code;
+		bool misses_low() const { return q.bound.first < k - 1; }
+		bool misses_high() const { return q.bound.second >= nw; }
+		bool misses_window() const {
+			return r.bound.second + step * (k - 1) >= size;
+		}
+};
+struct Unslide {
+		std::vector<UnslideDim> dims;
+		bool loop = false, guarded = false;
+		unsigned int depth; // of the candidates
+};
+/** The atom called `name`, it is registered if there is none yet. */
+static int unslide_atom(OCLLazyCodegenState &state, const string &name,
+						long hi, unsigned int depth) {
+	for (int i = state.index_atoms.size() - 1; i >= 0; i--)
+		if (state.index_atoms[i].name == name)
+			return i;
+	return state.add_atom(name, 0, hi, depth);
+}
+// An element x is part of the windows w = x / step - j whose offset
+// x % step + j * step is still inside of them, for the j below
+// ceil(size / step). If the windows do not overlap that is at most one, so
+// the unslide is only an index map, else the candidates are summed in a loop.
+// `mutate_index` and `generate_ocl_lazy` both derive it, the atoms are named
+// after the operation so that both find the same ones.
+static Unslide unslide_of(const FGraphNode *node, OCLLazyCodegenState &state) {
+	const FOperation pred = node->predecessors[0]->operation;
+	const unsigned int *steps = (unsigned int *)node->operation.additional_data;
+	const string prefix = "unslide" + to_string(state.generated_ops) + "_";
+	Unslide res;
+	res.dims.resize(node->operation.dimensions);
+	for (int d = 0; d < node->operation.dimensions; d++) {
+		UnslideDim &u = res.dims[d];
+		u.size = (long)pred.shape[d + 1];
+		u.step = steps[d];
+		const long span = (long)node->operation.shape[d] - u.size + 1;
+		u.nw = (span + u.step - 1) / u.step;
+		u.k = (u.size + u.step - 1) / u.step;
+		const IndexExpr &x = state.index_map.expr_per_dim[d];
+		if (u.step == 1) {
+			u.q = x;
+			u.r.derive_bound(state.index_atoms);
+		} else {
+			const size_t split[2] = {
+				(node->operation.shape[d] + u.step - 1) / u.step,
+				(size_t)u.step};
+			IndexMap qr = split_atoms(x, split, 2, state);
+			u.q = qr.expr_per_dim[0];
+			u.r = qr.expr_per_dim[1];
+		}
+		res.loop |= u.k > 1;
+		res.guarded |= u.misses_low() || u.misses_high() || u.misses_window();
+	}
+	res.depth = state.index_map.current_depth + res.loop;
+	for (int d = 0; d < node->operation.dimensions; d++) {
+		UnslideDim &u = res.dims[d];
+		u.w = u.q;
+		u.offset = u.r;
+		string minus_j, plus_j;
+		if (u.k > 1) {
+			u.j = prefix + to_string(d);
+			const int j = unslide_atom(state, u.j, u.k - 1, res.depth);
+			u.w.exprs.push_back({-1, j});
+			u.offset.exprs.push_back({u.step, j});
+			minus_j = " - " + u.j;
+			plus_j = " + " + to_string(u.step) + " * " + u.j;
+		}
+		// a candidate that misses is guarded away, so what is read lies
+		// inside of the window. That bound is only true behind the guard,
+		// as a variable of its own it holds for every use of the coordinate
+		const auto inside = [&](IndexExpr &expr, string &code,
+								const string &name, const string &value,
+								long hi) {
+			expr.derive_bound(state.index_atoms);
+			if (!res.guarded ||
+				(expr.bound.first >= 0 && expr.bound.second <= hi))
+				return;
+			code = value;
+			expr.a = 0;
+			expr.exprs = {{1, unslide_atom(state, name, hi, res.depth)}};
+			expr.derive_bound(state.index_atoms);
+		};
+		inside(u.w, u.w_code, prefix + "w" + to_string(d),
+			   state.to_code(u.q) + minus_j, u.nw - 1);
+		inside(u.offset, u.offset_code, prefix + "o" + to_string(d),
+			   state.to_code(u.r) + plus_j, u.size - 1);
+	}
+	return res;
+}
+bool UnslideWindowImpl::mutate_index(const FGraphNode *node,
+									 OCLLazyCodegenState &state) {
+	const FOperation pred = node->predecessors[0]->operation;
+	const Unslide unslide = unslide_of(node, state);
+	IndexMap &pred_map = state.pred_index_maps.emplace_back();
+	pred_map.current_depth = unslide.depth;
+	pred_map.expr_per_dim.resize(pred.dimensions);
+	IndexExpr &window = pred_map.expr_per_dim[0];
+	window.a = 0;
+	long acc = 1; // windows of the dimensions behind
+	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
+		const UnslideDim &u = unslide.dims[d];
+		window.a += u.w.a * acc;
+		for (const auto &[c, atom] : u.w.exprs)
+			window.exprs.push_back({c * acc, atom});
+		pred_map.expr_per_dim[d + 1] = u.offset;
+		acc *= u.nw;
+	}
+	window.derive_bound(state.index_atoms);
+	return true;
+}
 int UnslideWindowImpl::generate_ocl_lazy(const FGraphNode *node,
 										 std::string name,
 										 OCLLazyCodegenState &compiler_state) {
-
-	FGraphNode *gnp1 = node->predecessors[0];
-	const FOperation pred = gnp1->operation;
-	size_t total_el_size = 1;
-	if (pred.op_type != FGEN_CONSTANT)
-		for (int i = 0; i < pred.dimensions; i++)
-			total_el_size *= pred.shape[i];
-	const string par1 = compiler_state.findOrInsertParameter(gnp1);
-	const unsigned int *steps = (unsigned int *)node->operation.additional_data;
-	const vector<size_t> acc_sizes =
-		calc_acc_sizes(node->operation.dimensions, node->operation.shape);
-	const vector<size_t> acc_sizes_pred =
-		calc_acc_sizes(pred.dimensions, pred.shape);
-	size_t no_windows[pred.dimensions - 1];
-	for (int i = 0; i < pred.dimensions - 1; i++) {
-		size_t window_size = node->operation.shape[i] - pred.shape[i + 1] + 1;
-		no_windows[i] = window_size % steps[i] == 0
-							? window_size / steps[i]
-							: window_size / steps[i] + 1;
+	const string type = type_string(node->operation.data_type);
+	const string par = "v" + to_string(compiler_state.variable_index + 1);
+	const Unslide unslide = unslide_of(node, compiler_state);
+	string loops, cond, coords;
+	const auto keep_if = [&cond](const string &c) {
+		cond += (cond.empty() ? "" : " && ") + c;
+	};
+	for (const UnslideDim &u : unslide.dims) {
+		if (!u.j.empty())
+			loops += "for(int " + u.j + " = 0; " + u.j + " < " +
+					 to_string(u.k) + "; " + u.j + "++)\n";
+		const string q = compiler_state.to_code(u.q);
+		const string r = compiler_state.to_code(u.r);
+		if (u.misses_low())
+			keep_if(u.j.empty() ? q + " >= 0" : u.j + " <= " + q);
+		if (u.misses_high())
+			keep_if(q + " < " + to_string(u.nw) +
+					(u.j.empty() ? "" : " + " + u.j));
+		if (u.misses_window())
+			keep_if(r +
+					(u.j.empty() ? ""
+								 : " + " + to_string(u.step) + " * " + u.j) +
+					" < " + to_string(u.size));
+		// declared behind the guard, which is what makes their bounds true
+		for (const auto &[expr, code] :
+			 {std::pair{&u.w, &u.w_code}, {&u.offset, &u.offset_code}})
+			if (!code->empty()) {
+				const IndexAtom &atom =
+					compiler_state.index_atoms[expr->exprs[0].second];
+				coords += compiler_state.type_of(atom.bound) + " " +
+						  atom.name + " = " + *code + ";\n";
+			}
 	}
-	const vector<size_t> acc_no_windows =
-		calc_acc_sizes(pred.dimensions - 1, no_windows);
-	// which windows an element is part of follows from its coordinates
-	IndexMap coords = compiler_state.index_map;
-	vector<string> coord(node->operation.dimensions);
-	for (int d = 0; d < node->operation.dimensions; d++)
-		coord[d] = compiler_state.to_code(coords.expr_per_dim[d]);
-	Twine local_code = type_string(node->operation.data_type) + " " + name +
-					   " = 0;\n"
-					   "{\n"
-					   "const " +
-					   compiler_state.index_type + " first_w = 0";
-	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
-		local_code += " + max((" + compiler_state.index_type + ")0, " +
-					  coord[d] + " - " + to_string(pred.shape[d + 1]) +
-					  " + 1) / " + to_string(steps[d]) + " * " +
-					  to_string(acc_no_windows[d]);
+	if (!unslide.loop) {
+		if (cond.empty())
+			compiler_state.code.prepend("const " + type + " " + name + " = " +
+										par + ";\n");
+		else
+			compiler_state.pred_wrappers = {
+				{type + " " + name + " = 0;\nif(" + cond + "){\n" + coords,
+				 name + " = " + par + ";\n}\n"}};
+		return 0;
 	}
-	local_code += ";\nconst " + compiler_state.index_type + " last_w = 0";
-	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
-		local_code += " + " + coord[d] + " / " + to_string(steps[d]) + " * " +
-					  to_string(acc_no_windows[d]);
+	compiler_state.insert_code(type + " " + name + " = 0;\n" + loops + "{\n",
+							   true);
+	if (cond.empty())
+		compiler_state.code.prepend(name + " += " + par + ";\n}\n");
+	else {
+		compiler_state.pred_wrappers = {{"if(" + cond + "){\n" + coords,
+										 name + " += " + par + ";\n}\n"}};
+		compiler_state.code.prepend("}\n");
 	}
-	local_code += ";\nfor(" + compiler_state.index_type +
-				  " w=first_w;w<=last_w;){\n"
-				  " bool contained = true;\n"
-				  " " +
-				  compiler_state.index_type +
-				  " wi = 0;\n"
-				  " " +
-				  compiler_state.index_type + " wpp = 0;\n";
-	for (int d = node->operation.dimensions - 1; d >= 0; d--) {
-		local_code += " {\n"
-					  "  const " +
-					  compiler_state.index_type + " w_start=((w/" +
-					  to_string(acc_no_windows[d]) + ")%" +
-					  to_string(no_windows[d]) + ")*" + to_string(steps[d]) +
-					  ";\n"
-					  "  const " +
-					  compiler_state.index_type + " id=" + coord[d] +
-					  ";\n"
-					  "  if(id>=w_start && id<w_start+" +
-					  to_string(pred.shape[d + 1]) +
-					  ")\n"
-					  "   wi+=(id-w_start)*" +
-					  to_string(acc_sizes_pred[d + 1]) +
-					  ";\n"
-					  "  else{\n"
-					  "   contained = false;\n"
-					  "   wpp += " +
-					  to_string(acc_no_windows[d]) +
-					  ";\n"
-					  "  }\n"
-					  " }\n";
-	}
-	local_code += " if(contained) {"
-				  "  " +
-				  name + "+=" + par1 + "[(wi+w*" +
-				  to_string(acc_sizes_pred[0]) + ")%" +
-				  to_string(total_el_size) +
-				  "];\n"
-				  "  wpp = 1;\n}\n"
-				  " w += wpp;\n"
-				  "}\n"
-				  "}";
-	compiler_state.code.prepend(local_code);
-	return OCL_LAZY_DONT_PUSH_PREDS;
+	return 0;
 }
 void UnslideWindowImpl::execute_cpu(const FGraphNode *node,
 									std::vector<CPUResultData> predecessor_data,

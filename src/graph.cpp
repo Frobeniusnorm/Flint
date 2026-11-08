@@ -1645,8 +1645,6 @@ FGraphNode *fsliding_window(FGraphNode *a, const size_t *size,
 }
 FGraphNode *funslide_window(FGraphNode *a, const size_t *shape,
 							const unsigned int *steps) {
-	if (!a->result_data && a->operation.op_type != FSTORE)
-		fExecuteGraph(a);
 	FOperation op;
 	op.broadcasting_mode = 0;
 	op.op_type = FUNSLIDE_WINDOW;
