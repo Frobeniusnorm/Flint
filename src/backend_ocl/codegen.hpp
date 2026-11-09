@@ -1,4 +1,4 @@
-/* Copyright 2023 David Schwarzbeck
+/* Copyright 2026 David Schwarzbeck
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,5 +58,6 @@ inline LaunchRange launchRange(const FGraphNode *node) {
 std::string
 generateCode(FGraphNode *node,
 			 std::list<std::pair<FGraphNode *, std::string>> &parameters,
-			 std::vector<std::pair<FType, double>> &scalars);
+			 std::vector<std::pair<FType, double>> &scalars,
+			 std::list<std::pair<FGraphNode *, std::string>> &imm_results);
 #endif

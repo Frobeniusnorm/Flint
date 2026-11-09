@@ -1,4 +1,4 @@
-/* Copyright 2023 David Schwarzbeck
+/* Copyright 2026 David Schwarzbeck
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 #include "../utils.hpp"
 #include "codegen.hpp"
 #include "src/operations/indices.hpp"
+#include <flint/flint.h>
 #include <list>
 #include <string>
 #include <unordered_map>
@@ -98,28 +99,49 @@ static void collectReusable(FGraphNode *root,
 		}
 	}
 }
-std::string
-generateCode(FGraphNode *node,
-			 std::list<std::pair<FGraphNode *, std::string>> &parameters,
-			 std::vector<std::pair<FType, double>> &scalars) {
+/** How often each node is read by the to-be-executed graph `root`./ */
+static std::unordered_map<FGraphNode *, size_t>
+collectInsideUses(FGraphNode *root) {
 	using namespace std;
-	const LaunchRange range = launchRange(node);
+	unordered_map<FGraphNode *, size_t> uses;
+	unordered_set<FGraphNode *> expanded;
+	list<FGraphNode *> todo = {root};
+	while (!todo.empty()) {
+		FGraphNode *curr = todo.front();
+		todo.pop_front();
+		if (!expanded.insert(curr).second || isKernelParameter(curr))
+			continue;
+		for (int i = 0; i < curr->num_predecessor; i++) {
+			uses[curr->predecessors[i]]++;
+			todo.push_back(curr->predecessors[i]);
+		}
+	}
+	return uses;
+}
+std::string
+generateCode(FGraphNode *root_node,
+			 std::list<std::pair<FGraphNode *, std::string>> &parameters,
+			 std::vector<std::pair<FType, double>> &scalars,
+			 std::list<std::pair<FGraphNode *, std::string>> &imm_results) {
+	using namespace std;
+	const LaunchRange range = launchRange(root_node);
 	OCLLazyCodegenState state;
 	state.parameters = &parameters;
 	state.code = {};
-	state.index_type = maximumTensorSize(node) < (1l << 31) ? "int" : "long";
+	state.index_type =
+		maximumTensorSize(root_node) < (1l << 31) ? "int" : "long";
 	// the coordinates of the result, seeded from the launch ids exactly like
 	// `launchRange` assigns them: the two innermost dimensions that are larger
 	// than one get an id of their own, all remaining ones share the third
 	Twine index_decl;
-	state.index_map.expr_per_dim.resize(node->operation.dimensions);
+	state.index_map.expr_per_dim.resize(root_node->operation.dimensions);
 	{
 		int found = 0;
 		size_t factor = 1;
-		for (int i = node->operation.dimensions - 1; i >= 0; i--) {
+		for (int i = root_node->operation.dimensions - 1; i >= 0; i--) {
 			IndexExpr &coord = state.index_map.expr_per_dim[i];
 			coord.a = 0;
-			const size_t size = node->operation.shape[i];
+			const size_t size = root_node->operation.shape[i];
 			// a dimension of size one is always indexed with zero, it needs
 			// neither a variable nor an id
 			if (size == 1) {
@@ -157,13 +179,21 @@ generateCode(FGraphNode *node,
 	// nodes that more than one other node reads with the same index are
 	// calculated once into `reused` instead of once per path to them
 	unordered_map<FGraphNode *, int> users, distance;
-	collectReusable(node, users, distance);
+	collectReusable(root_node, users, distance);
 	unordered_map<FGraphNode *, string> reused;
+	// nodes that are read outside of this kernel too are written into a
+	// result of their own while they are calculated
+	unordered_map<FGraphNode *, size_t> inside_uses =
+		collectInsideUses(root_node);
+	unordered_set<FGraphNode *> stored;
+	size_t root_entries = 1;
+	for (int i = 0; i < root_node->operation.dimensions; i++)
+		root_entries *= root_node->operation.shape[i];
 	// the node currently generated as a reused definition
 	FGraphNode *defining = nullptr;
 	// the coordinates of the result
 	const IndexMap root_map = state.index_map;
-	todo.push_front({node, "v0", true, state.index_map});
+	todo.push_front({root_node, "v0", true, state.index_map});
 	while (true) {
 		if (todo.empty()) {
 			if (reused.empty())
@@ -178,8 +208,8 @@ generateCode(FGraphNode *node,
 			state.index_map = root_map;
 			IndexMap root_coords = root_map;
 			IndexMap map = split_atoms(
-				state.flatten(root_coords, node->operation.shape,
-							  node->operation.dimensions),
+				state.flatten(root_coords, root_node->operation.shape,
+							  root_node->operation.dimensions),
 				next->operation.shape, next->operation.dimensions, state);
 			todo.push_front({next, reused[next], true, map});
 			reused.erase(next);
@@ -214,6 +244,26 @@ generateCode(FGraphNode *node,
 			code.prepend("const " + type + " " + name + " = " + known->second +
 						 ";\n");
 			continue;
+		}
+		// store intermediate result if referenced outside and evaluated with
+		// the basic index of the kernel (else we evaluate it multiple times or
+		// not exhaustively).
+		const FOperationType optype = node->operation.op_type;
+		size_t num_entries = 1;
+		for (int i = 0; i < node->operation.dimensions; i++)
+			num_entries *= node->operation.shape[i];
+		if (node != root_node && !node->result_data && optype != FSTORE &&
+			optype != FGEN_CONSTANT && optype != FGEN_ARANGE &&
+			inside_uses[node] < (size_t)node->reference_counter && same_index &&
+			index_map.current_depth == 0 && num_entries == root_entries &&
+			stored.insert(node).second) {
+			const std::string immediate = "IR" + to_string(stored.size() - 1);
+			imm_results.push_back({node, immediate});
+			const IndexExpr flat =
+				state.flatten(state.index_map, node->operation.shape,
+							  node->operation.dimensions);
+			code.prepend(immediate + "[" + state.to_code(flat) + "] = " + name +
+						 ";\n");
 		}
 		// write code
 		const string opstr = string(fop_to_string[node->operation.op_type]);
@@ -336,10 +386,8 @@ generateCode(FGraphNode *node,
 			}
 		}
 #ifdef FLINT_DEBUG
-		code.prepend("// " + opstr + "(" +
-					 to_string(state.index_map.current_depth) + " )\n");
+		code.prepend("// " + opstr + "\n");
 #endif
-		// push predecessors dfs
 		if (push_pred) {
 			const bool pred_same_index = same_index && passesIndexOn(node);
 			// the operation has no mapping of its own yet, so it calculated the

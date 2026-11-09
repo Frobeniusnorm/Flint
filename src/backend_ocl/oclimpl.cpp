@@ -1,4 +1,4 @@
-/* Copyright 2023 David Schwarzbeck
+/* Copyright 2026 David Schwarzbeck
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 #include "codegen.hpp"
 #include "comp.hpp"
 #include <CL/cl.h>
+#include <flint/flint.h>
 #include <list>
 #include <stdio.h>
 #include <stdlib.h>
@@ -375,17 +376,6 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 		if (node->result_data)
 			return node;
 	}
-	// eager if all parameters have result
-	bool all_have_result = true; // TODO should be true, but does not work,
-								 // probably because of constants
-	for (int i = 0; i < node->num_predecessor; i++) {
-		const FGraphNode *pred = node->predecessors[i];
-		if (!pred->result_data ||
-			(!pred->result_data->data && !pred->result_data->mem_id)) {
-			all_have_result = false;
-			break;
-		}
-	}
 	auto start = chrono::high_resolution_clock::now();
 	FResultData *resultData = new FResultData();
 	const FOperation node_op = node->operation;
@@ -396,7 +386,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	// calculate Code and Parameters
 	list<pair<FGraphNode *, string>> parameters;
 	vector<pair<FType, double>> scalars;
-	string graph_code = generateCode(node, parameters, scalars);
+	list<pair<FGraphNode *, string>>
+		imm_results; // these are "intermediate results" of predecessors
+	string graph_code = generateCode(node, parameters, scalars, imm_results);
 	string code =
 		"#pragma OPENCL EXTENSION cl_khr_fp64 : enable \n__kernel void "
 		"execute_graph(__global ";
@@ -409,6 +401,9 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 	for (int i = 0; i < scalars.size(); i++)
 		code += ", const " + string(type_string(scalars[i].first)) + " S" +
 				to_string(i);
+	for (auto &[op, name] : imm_results)
+		code +=
+			", __global " + type_string(op->operation.data_type) + " *" + name;
 	code += "){\n";
 	// add the execution code
 	code += graph_code;
@@ -580,13 +575,47 @@ FGraphNode *fExecuteGraph_gpu(FGraphNode *node) {
 			return nullptr;
 		}
 	}
+	// predecessors that have multiple consumers besides this graph and have to
+	// be stored as well
+	{
+		size_t index = parameters.size() + scalars.size() + 1;
+		for (auto &[gn, name] : imm_results) {
+			if (!gn->result_data || !gn->result_data->mem_id) {
+				size_t total_size_node = 1;
+				for (int i = 0; i < gn->operation.dimensions; i++)
+					total_size_node *= gn->operation.shape[i];
+				size_t type_size_node = type_size(gn->operation.data_type);
+				cl_mem imm_mem = clCreateBuffer(
+					context, CL_MEM_READ_WRITE,
+					total_size_node * type_size_node, nullptr, &err_code);
+				if (err_code == CL_OUT_OF_HOST_MEMORY) {
+					setErrorType(OUT_OF_MEMORY);
+					flogging(F_ERROR, "Not enough memory to create buffer!");
+					return nullptr;
+				}
+				if (!gn->result_data) {
+					gn->result_data = new FResultData();
+					gn->result_data->num_entries = total_size_node;
+					gn->result_data->data = nullptr;
+				}
+				gn->result_data->mem_id = imm_mem;
+			}
+			if (clSetKernelArg(kernel, index++, sizeof(cl_mem),
+							   (void *)&gn->result_data->mem_id) != CL_SUCCESS) {
+				setErrorType(OCL_ERROR);
+				flogging(F_ERROR, "Could not load intermediate result to kernel!");
+				return nullptr;
+			}
+		}
+	}
 	// execute kernel
 	/* TODO local work groups:
 	 * ask GPU what their prefered work groups are:
 	 * - if larger than our dimensions: don't use them
 	 * - if global sizes are divisible: all fine
 	 * - otherwise: increase global sizes to next multiple of
-	 *   local sizes and add an if-statement to the kernel to skip the "padding".
+	 *   local sizes and add an if-statement to the kernel to skip the
+	 * "padding".
 	 */
 	const size_t global_size = total_size_node;
 	const LaunchRange range = launchRange(node);

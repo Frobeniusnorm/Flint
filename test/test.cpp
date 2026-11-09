@@ -1629,6 +1629,8 @@ int main(int argc, char **argv) {
 			doCPU = true;
 		if (arg == "gpu")
 			doGPU = true;
+		if (arg == "-d" || arg == "--debug")
+			fSetLoggingLevel(F_DEBUG);
 	}
 	if (!doCPU && !doGPU) {
 		doCPU = doGPU = true;
