@@ -448,6 +448,11 @@ void fFreeGraph(FGraphNode *graph);
  * `FResultData` may not have a `data` member!). To force synchronization use
  * `fSyncMemory` or replace the call with `fCalculateResult`.
  *
+ * Before that, nodes of the graph that are cheaper to store than to recompute
+ * in every work item of the kernel (e.g. a reduction whose result is read
+ * many times) are executed in kernels of their own, decided by an estimate of
+ * how often each node would be evaluated and how expensive it is.
+ *
  * If the CPU backend is chosen, it
  * does not matter, since every operation is executed independently (here eager
  * execution might be faster).
@@ -772,11 +777,8 @@ FGraphNode *fequal_cd(FGraphNode *a, const double b);
  * E.g. a matrix multiplication of two tensors with shapes `(64, 32, 16)` and
  * `(16, 24)` will yield a tensor with shape `(64, 32, 24)`.
  *
- * Since for one entry of the
- * tensor multiple other previous entries are needed, the operand tensors need
- * to be executed first. Therefor the method will implicitly (or eagerly)
- * execute the two parameter nodes `a` and `b` if their data is not already
- * present. */
+ * The operands are not executed, the multiplication is fused lazily into the
+ * kernel like every other operation. */
 FGraphNode *fmatmul(FGraphNode *a, FGraphNode *b);
 /** Flattens the complete tensor to a tensor with one
 dimension.

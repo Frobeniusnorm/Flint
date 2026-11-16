@@ -12,9 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. */
 #pragma once
-// This files manages the datastructures for the index dataflow graph for the
-// OpenCL implementation
-#include "flint/flint.h"
+#include "../../flint.h"
 #include <cstddef>
 #include <string>
 #include <utility>

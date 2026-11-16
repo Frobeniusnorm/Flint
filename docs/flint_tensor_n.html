@@ -580,10 +580,8 @@
  tensors (broadcasts all others). E.g. a matrix multiplication of two
  tensors with shapes <pre class="inline_code">(64, 32, 16)</pre> and <pre class="inline_code">(16, 24)</pre> will yield a tensor
  with shape <pre class="inline_code">(64, 32, 24)</pre>.<div style="display:block; height: 0.5em"></div>
- Since for one entry of the tensor multiple other
- previous entries are needed, the operand tensors need to be executed
- first. Therefor the method will implicitly (or eagerly) execute this
- Tensor and <pre class="inline_code">other</pre> if their data is not allready present. E.g.<div style="display:block; height: 0.5em"></div>
+ The operands are not executed, the multiplication is fused lazily
+ into the kernel like every other operation. E.g.<div style="display:block; height: 0.5em"></div>
  <pre class="card code" style="margin: 5px;">
  <span style="color: #FFF030">Tensor</span>&lt;<span style="color: #FFF030">int</span>, <span style="color: #30F0FF">3</span>&gt; a{{{<span style="color: #30F0FF">0</span>, <span style="color: #30F0FF">1</span>},
                    {<span style="color: #30F0FF">2</span>, <span style="color: #30F0FF">3</span>}},
@@ -1331,7 +1329,7 @@ summed up in the result. <pre class="inline_code">result_size</pre> and <pre cla
     <div class="content">
       <div class="row">
         <div class="column">
-          © David Schwarzbeck, 2022</br>
+          © David Schwarzbeck, 2026</br>
           Licensed under the <a href="https://github.com/Frobeniusnorm/Flint/blob/main/LICENCE">Apache License</a>, Version 2.0
         </div>
         <div class="column">&nbsp;</div>

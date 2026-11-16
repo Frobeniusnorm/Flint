@@ -9,7 +9,6 @@ allowing you to use Tensor operations, which are semi-lazily computed by the lib
 for its operations including a gradient calculation algorithm. Once finished, it will contain example implementations of
 the most popular optimization algorithms, loss functions and Neural Layers for machine learning.
 THE LIBRARY IS A WORK IN PROGRESS. WHILE YOU CAN LOAD ONNX MODELS AND EXECUTE MANY DEEP LEARNING TASKS, IT IS FAR FROM FINISHED. 
-THE PERFORMANCE ALSO STILL LACKS BEHIND LARGER DEEP LEARNING FRAMEWORKS
 
 ## Motivation ##
 
@@ -26,8 +25,9 @@ Planed Language Bindings include Go, Java and maybe Haskell (Go are already in c
 Just as other Tensor libraries, Flint collects operations in a graph and executes multiple operations at once in one of
 its backends when needed.
 The Graph (i.e. all yet to be calculated indirect parent nodes to one needed leaf node) is executed when the user of the
-library requests the resulting data or another operation depends on the full result so that combining those operations
-becomes impossible (i.e. operations like matrix multiplication or reducing). The Framework allows you to choose between
+library requests the resulting data. The GPU backend fuses the whole graph into one OpenCL kernel; only nodes that would
+be cheaper to store than to recompute in every work item (e.g. a reduction whose result is read many times) are
+computed in kernels of their own, which is decided by a cost model at execution time. The Framework allows you to choose between
 CPU (with a thread pool that executes the tensor operations in parallel) and GPU execution (which generates OpenCL
 kernels for the execution graph), or you can let the framework decide on certain heuristics which backend to use. It
 additionally supports eager execution, for e.g. efficient cpu calculation or debugging purposes.
@@ -35,6 +35,67 @@ additionally supports eager execution, for e.g. efficient cpu calculation or deb
 The main library contains the implementation of the backends, the C++ frontend with the Tensor class and the
 operations with automatic gradient calculations. There is an example implementation of often used deep learning
 algorithms and concepts in the `dl/` folder in work, the documentation can be found in the [documentation](https://frobeniusnorm.github.io/Flint/dl.html). It will be installed by the `install` target as well.
+
+## Example ##
+
+Operations only build a graph, the data is computed when it is needed:
+
+```cpp
+#include <flint/flint.hpp>
+#include <iostream>
+
+int main() {
+	FlintContext _(FLINT_BACKEND_ONLY_GPU);
+	GradientContext gc;
+	Tensor<double, 2> w = Flint::random(64, 10);
+	w.watch();
+	Tensor<double, 2> x = Flint::random(32, 64);
+	Tensor<double, 2> y = x.matmul(w).max(0.0);
+	Tensor<double, 1> loss = (y * y).reduce_sum();
+	Tensor<double, 2> dw = loss.gradient(w);
+	// reading the data generates, compiles and runs the kernels
+	std::cout << loss() << std::endl;
+	std::cout << dw[0][0] << std::endl;
+}
+```
+
+The deep learning library builds and trains models like this (from `examples/mnist`):
+
+```cpp
+GraphModel *gm = GraphModel::builder()
+		.conv2d(32, {3, 3}, 1, FlintDL::ActivationKind::Relu)
+		.maxpool2d({2, 2}, std::array<unsigned int, 2>{2, 2})
+		.conv2d(64, {3, 3}, 32, FlintDL::ActivationKind::Relu)
+		.maxpool2d({2, 2}, std::array<unsigned int, 2>{2, 2})
+		.flatten()
+		.dropout(0.5f)
+		.dense(1600, 10, FlintDL::ActivationKind::Softmax)
+		.build();
+IDXFormatLoader idx(512, "train-images-idx3-ubyte", "train-labels-idx1-ubyte",
+		"t10k-images-idx3-ubyte", "t10k-labels-idx1-ubyte");
+Adam adam;
+CrossEntropyLoss loss;
+Trainer t(gm);
+t.set_data_loader(&idx);
+t.set_optimizer(&adam);
+t.set_loss(&loss);
+t.train(10);
+```
+
+Models can also be loaded from and stored to ONNX (`GraphModel::load_model`, `serialize_onnx`), see `examples/resnet`.
+
+## Performance ##
+
+Training the MNIST model above (batch size 512, Adam), time per batch on an AMD RX 6900 XT:
+
+| | time per batch |
+|---|---|
+| Flint (Release build) | 7.5 ms |
+| PyTorch 2.9 with ROCm, same model and optimizer | 9.5 ms |
+
+The Flint time includes loading the batch, the PyTorch time does not. The GPU backend fuses the whole graph of a
+training step into few kernels (about 50 per batch) and decides at execution time which intermediate results are stored.
+Build in Release mode (see below), a Debug build is about 1.5 times slower.
 
 ## Usage ##
 
@@ -48,7 +109,7 @@ To build the library execute this inside of the project folder:
 ```
 mkdir build;
 cd build;
-cmake ..;
+cmake .. -DCMAKE_BUILD_TYPE=Release;
 make;
 ```
 
@@ -86,8 +147,8 @@ with `cmake -Wdev --fresh .. -DC_COMPATIBLE=ON`
 
 The project is and will be worked on for the forseeable future.
 Although it already has a large number of commits, a library like this 
-needs much time for optimization and feature implementations
-and is therefore still in an early state performance and feature wise. 
+needs much time for feature implementations and is therefore still
+in an early state feature wise. 
 All requests and tips for future developement are very welcome :)
 
 ## Dependencies ##
@@ -105,8 +166,9 @@ pacman -S gcc opencl-headers rocm-opencl-runtime make cmake
 
 ## Examples ##
 
-There is an example model for the MNIST dataset showcasing the Deep Learning front end and a simple implementation of a Gauss filter with convolutions.
-Both help seeing Flint in action [https://github.com/Frobeniusnorm/Flint/tree/main/examples#readme](examples/README.md)
+There is an example model for the MNIST dataset showcasing the Deep Learning front end, an ONNX ResNet50 image
+classifier and a simple implementation of a Gauss filter with convolutions.
+They help seeing Flint in action [https://github.com/Frobeniusnorm/Flint/tree/main/examples#readme](examples/README.md)
 
 ## Contribution ##
 

@@ -261,16 +261,36 @@ inline IndexMap split_atoms(const IndexExpr &expr, const size_t *shape,
 		// the caller may only want the decomposition if it is free
 		if (free_only)
 			return {};
-		if (!stride) {
+		// what does not divide in a later dimension either can only stay
+		// in it if nothing of `left` reaches into that dimension too
+		const bool stays = (coord.a == 0 && coord.exprs.empty()) ||
+						   (left.bound.second < stride &&
+							coord.bound.first >= 0 && coord.bound.second < size);
+		if (!stride || !stays) {
+			if (stride) {
+				// else it carries over together with the rest of `left`
+				if (left.bound.second >= stride)
+					coord.exprs.push_back(
+						{1, state.declare_coord(
+								depth,
+								IndexCode::type_of(
+									{0, left.bound.second / stride}),
+								"(" + value + ") / " + std::to_string(stride),
+								0, left.bound.second / stride)});
+				coord.derive_bound(state.index_atoms);
+				bias /= stride;
+			}
 			// from here on the coordinates are masked out of `left`. A
 			// negative value would let the divisions round towards zero, so
 			// it is shifted by a multiple of everything it is divided by,
 			// which the modulos do not see
 			left = coord;
-			bias = left.bound.first < 0
-					   ? ((-left.bound.first + total - 1) / total) * total
-					   : 0;
-			left.a += bias;
+			const long shift =
+				left.bound.first < 0
+					? ((-left.bound.first + total - 1) / total) * total
+					: 0;
+			bias += shift;
+			left.a += shift;
 			left.derive_bound(state.index_atoms);
 			// it belongs into the scope of the atoms it is calculated from,
 			// which is what takes it out of a loop it does not depend on

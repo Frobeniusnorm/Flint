@@ -1,4 +1,4 @@
-/* Copyright 2023 David Schwarzbeck
+/* Copyright 2026 David Schwarzbeck
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 #include "../utils.hpp"
 #include "codegen.hpp"
 #include "src/operations/indices.hpp"
+#include <flint/flint.h>
 #include <list>
 #include <string>
 #include <unordered_map>
@@ -98,28 +99,124 @@ static void collectReusable(FGraphNode *root,
 		}
 	}
 }
-std::string
-generateCode(FGraphNode *node,
-			 std::list<std::pair<FGraphNode *, std::string>> &parameters,
-			 std::vector<std::pair<FType, double>> &scalars) {
+/** How often each node is read by the to-be-executed graph `root`./ */
+static std::unordered_map<FGraphNode *, size_t>
+collectInsideUses(FGraphNode *root) {
 	using namespace std;
-	const LaunchRange range = launchRange(node);
+	unordered_map<FGraphNode *, size_t> uses;
+	unordered_set<FGraphNode *> expanded;
+	list<FGraphNode *> todo = {root};
+	while (!todo.empty()) {
+		FGraphNode *curr = todo.front();
+		todo.pop_front();
+		if (!expanded.insert(curr).second || isKernelParameter(curr))
+			continue;
+		for (int i = 0; i < curr->num_predecessor; i++) {
+			uses[curr->predecessors[i]]++;
+			todo.push_back(curr->predecessors[i]);
+		}
+	}
+	return uses;
+}
+/** Copies of stored nodes with one of their dimensions moved to the end, by
+ * the node they were copied from: (the dimension, the copy). Neighbouring work
+ * items are executed together, if they read neighbouring entries that is one
+ * memory access instead of one per work item. */
+static std::unordered_map<const FGraphNode *,
+						  std::vector<std::pair<int, FGraphNode *>>>
+	layout_copies;
+/** Larger nodes are not copied */
+static const size_t MAX_LAYOUT_COPY = 1 << 20;
+/** How often each entry has to be read for a copy to pay off */
+static const size_t MIN_LAYOUT_READS = 64;
+void freeLayoutCopies(const FGraphNode *node) {
+	const auto copies = layout_copies.find(node);
+	if (copies == layout_copies.end())
+		return;
+	for (const auto &[dim, copy] : copies->second)
+		if (--copy->reference_counter == 0)
+			fFreeGraph(copy);
+	layout_copies.erase(copies);
+}
+/** The copy of `node` with dimension `dim` moved to the end */
+static FGraphNode *layoutCopy(FGraphNode *node, int dim) {
+	auto &copies = layout_copies[node];
+	for (const auto &[d, copy] : copies)
+		if (d == dim)
+			return copy;
+	std::vector<int> order;
+	for (int i = 0; i < node->operation.dimensions; i++)
+		if (i != dim)
+			order.push_back(i);
+	order.push_back(dim);
+	// the copy may not hold the node alive, so it is no part of a gradient
+	const bool in_context = fIsGradientContext();
+	if (in_context)
+		fStopGradientContext();
+	FGraphNode *copy =
+		fOptimizeMemory(fExecuteGraph(ftranspose(node, order.data())));
+	if (in_context)
+		fStartGradientContext();
+	copy->reference_counter++;
+	layout_copies[node].push_back({dim, copy});
+	return copy;
+}
+/** The dimension of the stored `node` that should be its last one: the one
+ * that changes between neighbouring work items (which is `fastest`, the atom
+ * of the first launch id), if their entries are more than a cache line apart.
+ * -1 if the layout is fine or a copy would not pay off. */
+static int layoutDimension(const FGraphNode *node, const IndexCode &state,
+						   size_t root_entries, int fastest) {
+	const FOperation &op = node->operation;
+	if (fastest < 0 || op.dimensions < 2 ||
+		state.index_map.expr_per_dim.size() != (size_t)op.dimensions)
+		return -1;
+	size_t entries = 1, reads = root_entries;
+	int dim = -1;
+	std::unordered_set<int> loops;
+	for (int i = 0; i < op.dimensions; i++) {
+		entries *= op.shape[i];
+		for (const auto &[c, atom] : state.index_map.expr_per_dim[i].exprs) {
+			if (atom == fastest)
+				dim = i;
+			// each loop the address depends on reads the node again
+			const IndexAtom &ia = state.index_atoms[atom];
+			if (ia.depth > 0 && loops.insert(atom).second)
+				reads *= ia.bound.second - ia.bound.first + 1;
+		}
+	}
+	if (dim < 0 || dim == op.dimensions - 1 || entries > MAX_LAYOUT_COPY ||
+		reads < MIN_LAYOUT_READS * entries)
+		return -1;
+	size_t stride = 1;
+	for (int i = dim + 1; i < op.dimensions; i++)
+		stride *= op.shape[i];
+	return stride >= 16 ? dim : -1;
+}
+std::string
+generateCode(FGraphNode *root_node,
+			 std::list<std::pair<FGraphNode *, std::string>> &parameters,
+			 std::vector<std::pair<FType, double>> &scalars,
+			 std::list<std::pair<FGraphNode *, std::string>> &imm_results) {
+	using namespace std;
+	const LaunchRange range = launchRange(root_node);
 	OCLLazyCodegenState state;
 	state.parameters = &parameters;
 	state.code = {};
-	state.index_type = maximumTensorSize(node) < (1l << 31) ? "int" : "long";
+	state.index_type =
+		maximumTensorSize(root_node) < (1l << 31) ? "int" : "long";
 	// the coordinates of the result, seeded from the launch ids exactly like
 	// `launchRange` assigns them: the two innermost dimensions that are larger
 	// than one get an id of their own, all remaining ones share the third
 	Twine index_decl;
-	state.index_map.expr_per_dim.resize(node->operation.dimensions);
+	state.index_map.expr_per_dim.resize(root_node->operation.dimensions);
 	{
 		int found = 0;
 		size_t factor = 1;
-		for (int i = node->operation.dimensions - 1; i >= 0; i--) {
+		for (int i = root_node->operation.dimensions - 1; i >= 0; i--) {
 			IndexExpr &coord = state.index_map.expr_per_dim[i];
 			coord.a = 0;
-			const size_t size = node->operation.shape[i];
+			const size_t size = root_node->operation.shape[i];
 			// a dimension of size one is always indexed with zero, it needs
 			// neither a variable nor an id
 			if (size == 1) {
@@ -146,6 +243,8 @@ generateCode(FGraphNode *node,
 			found++;
 		}
 	}
+	// the atom of the first launch id, neighbouring work items differ in it
+	const int fastest = state.index_atoms.empty() ? -1 : 0;
 	const string &itype = state.index_type;
 	// we use breadth first search to traverse to operation graph
 	list<CodegenTask> &todo = state.todo;
@@ -157,13 +256,21 @@ generateCode(FGraphNode *node,
 	// nodes that more than one other node reads with the same index are
 	// calculated once into `reused` instead of once per path to them
 	unordered_map<FGraphNode *, int> users, distance;
-	collectReusable(node, users, distance);
+	collectReusable(root_node, users, distance);
 	unordered_map<FGraphNode *, string> reused;
+	// nodes that are read outside of this kernel too are written into a
+	// result of their own while they are calculated
+	unordered_map<FGraphNode *, size_t> inside_uses =
+		collectInsideUses(root_node);
+	unordered_set<FGraphNode *> stored;
+	size_t root_entries = 1;
+	for (int i = 0; i < root_node->operation.dimensions; i++)
+		root_entries *= root_node->operation.shape[i];
 	// the node currently generated as a reused definition
 	FGraphNode *defining = nullptr;
 	// the coordinates of the result
 	const IndexMap root_map = state.index_map;
-	todo.push_front({node, "v0", true, state.index_map});
+	todo.push_front({root_node, "v0", true, state.index_map});
 	while (true) {
 		if (todo.empty()) {
 			if (reused.empty())
@@ -178,8 +285,8 @@ generateCode(FGraphNode *node,
 			state.index_map = root_map;
 			IndexMap root_coords = root_map;
 			IndexMap map = split_atoms(
-				state.flatten(root_coords, node->operation.shape,
-							  node->operation.dimensions),
+				state.flatten(root_coords, root_node->operation.shape,
+							  root_node->operation.dimensions),
 				next->operation.shape, next->operation.dimensions, state);
 			todo.push_front({next, reused[next], true, map});
 			reused.erase(next);
@@ -215,6 +322,26 @@ generateCode(FGraphNode *node,
 						 ";\n");
 			continue;
 		}
+		// store intermediate result if referenced outside and evaluated with
+		// the basic index of the kernel (else we evaluate it multiple times or
+		// not exhaustively).
+		const FOperationType optype = node->operation.op_type;
+		size_t num_entries = 1;
+		for (int i = 0; i < node->operation.dimensions; i++)
+			num_entries *= node->operation.shape[i];
+		if (node != root_node && !node->result_data && optype != FSTORE &&
+			optype != FGEN_CONSTANT && optype != FGEN_ARANGE &&
+			inside_uses[node] < (size_t)node->reference_counter && same_index &&
+			index_map.current_depth == 0 && num_entries == root_entries &&
+			stored.insert(node).second) {
+			const std::string immediate = "IR" + to_string(stored.size() - 1);
+			imm_results.push_back({node, immediate});
+			const IndexExpr flat =
+				state.flatten(state.index_map, node->operation.shape,
+							  node->operation.dimensions);
+			code.prepend(immediate + "[" + state.to_code(flat) + "] = " + name +
+						 ";\n");
+		}
 		// write code
 		const string opstr = string(fop_to_string[node->operation.op_type]);
 		bool inverse_broadcasting =
@@ -249,14 +376,25 @@ generateCode(FGraphNode *node,
 				node->operation.op_type == FSTORE
 					? ((FStore *)node->operation.additional_data)->num_entries
 					: node->result_data->num_entries;
-			if (assigned_params.find(node) == assigned_params.end()) {
+			// read from a copy in another layout if that one suits the work
+			// items better
+			FGraphNode *source = node;
+			IndexMap source_map = state.index_map;
+			const int last = layoutDimension(node, state, root_entries, fastest);
+			if (last >= 0) {
+				source = layoutCopy(node, last);
+				auto &coords = source_map.expr_per_dim;
+				coords.push_back(coords[last]);
+				coords.erase(coords.begin() + last);
+			}
+			if (assigned_params.find(source) == assigned_params.end()) {
 				size_t pid = assigned_params.size();
-				assigned_params.insert({node, "P" + to_string(pid)});
-				parameters.push_back({node, "P" + to_string(pid)});
+				assigned_params.insert({source, "P" + to_string(pid)});
+				parameters.push_back({source, "P" + to_string(pid)});
 			}
 			const IndexExpr flat =
-				state.flatten(state.index_map, node->operation.shape,
-							  node->operation.dimensions);
+				state.flatten(source_map, source->operation.shape,
+							  source->operation.dimensions);
 			string address = state.to_code(flat);
 			if (flat.bound.first < 0 ||
 				flat.bound.second >= (long)num_entries) {
@@ -265,7 +403,7 @@ generateCode(FGraphNode *node,
 				address += " % " + to_string(num_entries);
 			}
 			code.prepend("const " + type + " " + name + " = " +
-						 assigned_params[node] + "[" + address + "];\n");
+						 assigned_params[source] + "[" + address + "];\n");
 		} else {
 			OperationImplementation *impl =
 				OperationImplementation::implementations[node->operation
@@ -336,10 +474,8 @@ generateCode(FGraphNode *node,
 			}
 		}
 #ifdef FLINT_DEBUG
-		code.prepend("// " + opstr + "(" +
-					 to_string(state.index_map.current_depth) + " )\n");
+		code.prepend("// " + opstr + "\n");
 #endif
-		// push predecessors dfs
 		if (push_pred) {
 			const bool pred_same_index = same_index && passesIndexOn(node);
 			// the operation has no mapping of its own yet, so it calculated the
@@ -370,19 +506,24 @@ generateCode(FGraphNode *node,
 	}
 	// no scope is open any more -> pending
 	state.insert_remaining_decls();
-	code.prepend(index_decl);
 	{
-		// flatten the ids back to the index of the element
-		Twine index_expr = itype + " index = get_global_id(0)";
+		// the index of the element, flattened from its coordinates. Not from
+		// the launch ids: the coordinates are bounded, and with them known
+		// the same address is measurably faster to write to
+		Twine index_expr = itype + " index = 0";
 		size_t stride = 1;
-		for (int i = 1; i < range.dims; i++) {
-			stride *= range.size[i - 1];
-			index_expr.append(" + get_global_id(" + to_string(i) + ") * " +
-							  to_string(stride));
+		for (int i = root_node->operation.dimensions - 1; i >= 0; i--) {
+			const IndexExpr &coord = root_map.expr_per_dim[i];
+			if (!coord.exprs.empty())
+				index_expr.append(
+					" + " + state.index_atoms[coord.exprs[0].second].name +
+					(stride > 1 ? " * " + to_string(stride) : ""));
+			stride *= root_node->operation.shape[i];
 		}
 		index_expr.append(";\n");
 		code.prepend(index_expr);
 	}
+	code.prepend(index_decl);
 	scalars = std::move(state.scalars);
 	return code;
 }
