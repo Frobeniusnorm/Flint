@@ -778,10 +778,8 @@ template <typename T, unsigned int n> struct Tensor {
 		 * tensors with shapes `(64, 32, 16)` and `(16, 24)` will yield a tensor
 		 * with shape `(64, 32, 24)`.
 		 *
-		 * Since for one entry of the tensor multiple other
-		 * previous entries are needed, the operand tensors need to be executed
-		 * first. Therefor the method will implicitly (or eagerly) execute this
-		 * Tensor and `other` if their data is not allready present. E.g.
+		 * The operands are not executed, the multiplication is fused lazily
+		 * into the kernel like every other operation. E.g.
 		 *
 		 * @code{
 		 * Tensor<int, 3> a{{{0, 1},

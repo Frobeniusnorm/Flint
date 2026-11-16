@@ -13,6 +13,7 @@
  * limitations under the License. */
 
 #include "../flint.h"
+#include "backend_ocl/codegen.hpp"
 #include "backend_ocl/comp.hpp"
 #include "errors.hpp"
 #include "src/operations/implementation.hpp"
@@ -70,10 +71,210 @@ configureGradientInformation(FGraphNode *g, std::vector<FGraphNode *> pred) {
 }
 static const int cores = std::thread::hardware_concurrency();
 // INTERFACE METHODS
+static inline size_t elements(const FOperation &op) {
+	size_t el = 1;
+	for (int i = 0; i < op.dimensions; i++) {
+		el *= op.shape[i];
+	}
+	return el;
+}
+/** number of times a reads an element of b if a is calculated once */
+static double read_factor(FGraphNode *a, FGraphNode *b) {
+	switch (a->operation.op_type) {
+	case FREDUCE_MAX:
+	case FREDUCE_MIN:
+	case FREDUCE_MUL:
+	case FREDUCE_SUM:
+	case FUNSLIDE_WINDOW:
+	case FCONCAT:
+	case FEXTEND:
+		// read every element once
+		return 1;
+	default:
+		return (double)elements(a->operation) / (double)elements(b->operation);
+	}
+}
+/** whether `node` only reads its parameters at another index */
+static bool remaps_index(const FGraphNode *node) {
+	switch (node->operation.op_type) {
+	case FRESHAPE:
+	case FLATTEN:
+	case FREPEAT:
+	case FTRANSPOSE:
+	case FSLICE:
+	case FEXTEND:
+	case FCONCAT:
+	case FSLIDING_WINDOW:
+		return true;
+	default:
+		return false;
+	}
+}
+/** Estimates for early-execution */
+struct NodeEstimate {
+		FGraphNode *node;
+		/** consumers that were not visited yet */
+		size_t pending = 0;
+		/** number of evaluations of each element */
+		double evals = 0;
+		/** largest amount of evaluations of a consumer that reads the node at
+		 * its index. Those share one calculation of it in the kernel, so only
+		 * the largest of them counts */
+		double shared = 0;
+		/** operations to calculate one element */
+		double cost = 0;
+		/** whether the gradient of a consumer reads the node */
+		bool read_by_gradient = false;
+		/** number of times something outside of the graph reads the node */
+		double later = 0;
+};
+/** Whether the gradient of `node` reads the values of its parameters. That of
+ * a sum or of a remapping of the index does not, it only passes the adjoint
+ * on. */
+static bool gradient_reads_parameters(const FGraphNode *node) {
+	switch (node->operation.op_type) {
+	case FADD:
+	case FSUB:
+	case FNEG:
+	case FCONVERSION:
+	case FREDUCE_SUM:
+	case FINDEX:
+	case FSET_INDEX:
+	case FUNSLIDE_WINDOW:
+		return false;
+	default:
+		return !remaps_index(node);
+	}
+}
+/** Estimates the number of evaluations and the cost of each node below `root`,
+ * used for early-execution. Every consumer is in front of what it reads. */
+static std::vector<NodeEstimate> estimate_evals(FGraphNode *root) {
+	using namespace std;
+
+	unordered_map<FGraphNode *, size_t> index = {{root, 0}};
+	vector<NodeEstimate> nodes = {{root}};
+	for (size_t i = 0; i < nodes.size(); i++) {
+		FGraphNode *curr = nodes[i].node;
+		if (curr->result_data)
+			continue;
+		for (int j = 0; j < curr->num_predecessor; j++) {
+			const auto entry =
+				index.insert({curr->predecessors[j], nodes.size()}).first;
+			if (entry->second == nodes.size())
+				nodes.push_back({curr->predecessors[j]});
+			nodes[entry->second].pending++;
+		}
+	}
+	nodes[0].evals = 1;
+	for (size_t i = 1; i < nodes.size(); i++) {
+		const FGraphNode *node = nodes[i].node;
+		// whatever else reads a node will calculate it again later
+		if ((size_t)node->reference_counter > nodes[i].pending)
+			nodes[i].later = node->reference_counter - nodes[i].pending;
+	}
+	// topological order
+	vector<size_t> order = {0};
+	for (size_t i = 0; i < order.size(); i++) {
+		NodeEstimate &curr = nodes[order[i]];
+		// so will the gradient that is not constructed yet, if the node
+		// depends on a variable and something that reads it needs its values
+		if (curr.read_by_gradient && curr.node->gradient_data)
+			curr.later = max(curr.later, 1.0);
+		curr.evals += curr.later + curr.shared;
+		// what is stored is not calculated again
+		if (curr.node->result_data)
+			continue;
+		for (int j = 0; j < curr.node->num_predecessor; j++) {
+			FGraphNode *pred = curr.node->predecessors[j];
+			NodeEstimate &est = nodes[index[pred]];
+			est.read_by_gradient |=
+				gradient_reads_parameters(curr.node) ||
+				(remaps_index(curr.node) && curr.read_by_gradient);
+			if (passesIndexOn(curr.node) &&
+				elements(curr.node->operation) == elements(pred->operation))
+				est.shared = max(est.shared, curr.evals);
+			else
+				est.evals += curr.evals * read_factor(curr.node, pred);
+			if (--est.pending == 0)
+				order.push_back(index[pred]);
+		}
+	}
+	// the cost of a node needs those of what it reads
+	for (size_t i = order.size(); i-- > 0;) {
+		NodeEstimate &curr = nodes[order[i]];
+		const FGraphNode *node = curr.node;
+		if (node->result_data || node->num_predecessor == 0)
+			continue;
+		curr.cost = remaps_index(node) ? 0 : 1;
+		for (int j = 0; j < node->num_predecessor; j++)
+			curr.cost += nodes[index[node->predecessors[j]]].cost;
+		switch (node->operation.op_type) {
+		case FREDUCE_MAX:
+		case FREDUCE_MIN:
+		case FREDUCE_MUL:
+		case FREDUCE_SUM:
+		case FUNSLIDE_WINDOW:
+			// a loop executes all of it once per element it reads
+			curr.cost *= (double)elements(node->predecessors[0]->operation) /
+						 (double)elements(node->operation);
+		default:
+			break;
+		}
+	}
+	vector<NodeEstimate> sorted(order.size());
+	for (size_t i = 0; i < order.size(); i++)
+		sorted[i] = nodes[order[i]];
+	return sorted;
+}
+/** cost of writing an element and reading it back, in operations */
+static const double MATERIALIZE_COST = 128;
+/** cost of launching a kernel, in operations */
+static const double LAUNCH_COST = 1 << 16;
+/** operations one work item may execute before the loops below it are
+ * calculated in a kernel of their own, where they run in parallel */
+static const double WORK_ITEM_LIMIT = 1 << 14;
+/** Work items that keep a gpu busy no matter how long each of them runs */
+static const size_t MIN_WORK_ITEMS = 1 << 14;
+/** Executes the nodes below `root` that are cheaper to store than to
+ * calculate once per evaluation if they were fused into it. */
+static void execute_subgraphs(FGraphNode *root) {
+	while (true) {
+		const std::vector<NodeEstimate> nodes = estimate_evals(root);
+		const NodeEstimate *split = nullptr;
+		// the node that saves the most operations if it is stored instead of
+		// calculated once per evaluation
+		double saved = 0;
+		for (size_t i = 1; i < nodes.size(); i++) {
+			const double n = elements(nodes[i].node->operation);
+			const double saves = (nodes[i].evals - 1) * nodes[i].cost * n -
+								 MATERIALIZE_COST * n - LAUNCH_COST;
+			if (saves > saved) {
+				saved = saves;
+				split = &nodes[i];
+			}
+		}
+		// else the first loop that makes the work items of the root too long,
+		// unless there are enough of them to keep the gpu busy anyway
+		if (!split && nodes[0].cost > WORK_ITEM_LIMIT &&
+			elements(root->operation) < MIN_WORK_ITEMS)
+			for (size_t i = 1; i < nodes.size() && !split; i++) {
+				const FGraphNode *curr = nodes[i].node;
+				if (nodes[i].cost > 1 && nodes[i].cost * 2 <= nodes[0].cost &&
+					curr->num_predecessor == 1 &&
+					elements(curr->predecessors[0]->operation) >
+						elements(curr->operation))
+					split = &nodes[i];
+			}
+		if (!split || !fExecuteGraph(split->node))
+			return;
+	}
+}
 FGraphNode *fExecuteGraph(FGraphNode *node) {
 	if (!use_cpu && !use_gpu)
 		if (flintInit(FLINT_BACKEND_BOTH) != NO_ERROR)
 			return nullptr;
+	if (use_gpu && !node->result_data)
+		execute_subgraphs(node);
 	if (use_gpu && use_cpu) {
 		size_t no_elems = 1;
 		for (int i = 0; i < node->operation.dimensions; i++)
@@ -225,6 +426,7 @@ void fFreeGraph(FGraphNode *graph) {
 		if (gn->gradient_data) {
 			delete (std::unordered_set<const FGraphNode *> *)gn->gradient_data;
 		}
+		freeLayoutCopies(gn);
 		bool freed_res = false;
 		if (gn->result_data != nullptr) {
 			freed_res = true;
@@ -277,8 +479,7 @@ static FGraphNode *addNode(FOperation op, std::vector<FGraphNode *> pre) {
 		return nullptr;
 	for (size_t i = 0; i < pre.size(); i++) {
 		foo->predecessors[i] = pre[i];
-		if (pre[i]->reference_counter++ > 2 && worth_materializing(pre[i]))
-			fExecuteGraph(pre[i]);
+		pre[i]->reference_counter++;
 	}
 	return foo;
 }
@@ -886,8 +1087,7 @@ FGraphNode *freshape(FGraphNode *a, const size_t *newshape,
 		return nullptr;
 	node->predecessors[0] = a;
 	node->reference_counter = 0;
-	if (a->reference_counter++ > 2 && worth_materializing(a))
-		fExecuteGraph(a);
+	a->reference_counter++;
 	return node;
 }
 FGraphNode *fconvert(FGraphNode *a, FType newtype) {
@@ -900,8 +1100,7 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
 	if (!foo->predecessors)
 		return nullptr;
 	foo->predecessors[0] = a;
-	if (a->reference_counter++ > 2 && worth_materializing(a))
-		fExecuteGraph(a);
+	a->reference_counter++;
 	foo->operation.data_type = newtype;
 	foo->operation.dimensions = a->operation.dimensions;
 	foo->operation.shape = safe_mal<size_t>(a->operation.dimensions);
@@ -914,88 +1113,8 @@ FGraphNode *fconvert(FGraphNode *a, FType newtype) {
 	return foo;
 }
 
-/** How much larger than the tensor that reads it a permutation may become
- * before it is left lazy. Only a permutation above an expansion grows that
- * far, and writing such a one out costs more memory than it saves traffic. */
-static const size_t MAX_PERMUTATION_EXPANSION = 4;
-/**
- * A reduction reads every entry of a transpose below it once per element of
- * the tensor it reduces - for a convolution that is hundreds of times per
- * entry. Those reads are scattered: a transpose between two channel layouts
- * places neighbouring work items hundreds of entries apart, so every one of
- * them pulls in its own cache line to use a single value of it. Calculating
- * the permutation into memory once turns all of them into neighbouring reads.
- * Since a scattered read wastes the rest of the cache line it fetches, that
- * pays off even if the reduction reads every entry only once.
- */
-static void materialize_permutations(FGraphNode *a, const size_t reduced_size) {
-	std::list<FGraphNode *> todo = {a};
-	std::unordered_set<FGraphNode *> visited;
-	while (!todo.empty()) {
-		FGraphNode *curr = todo.front();
-		todo.pop_front();
-		if (curr->result_data || !visited.insert(curr).second)
-			continue;
-		if (curr->operation.op_type == FTRANSPOSE) {
-			size_t size = 1;
-			for (int i = 0; i < curr->operation.dimensions; i++)
-				size *= curr->operation.shape[i];
-			if (size <= reduced_size * MAX_PERMUTATION_EXPANSION) {
-				fExecuteGraph(curr);
-				continue;
-			}
-		}
-		for (int i = 0; i < curr->num_predecessor; i++)
-			todo.push_back(curr->predecessors[i]);
-	}
-}
-static inline size_t elements(const FOperation &op) {
-	size_t el = 1;
-	for (int i = 0; i < op.dimensions; i++) {
-		el *= op.shape[i];
-	}
-	return el;
-}
 static inline FGraphNode *reduce_operation(FGraphNode *a, const int dimension,
 										   FOperationType type) {
-	size_t total = 1;
-	for (int i = 0; i < a->operation.dimensions; i++)
-		if (i != dimension)
-			total *= a->operation.shape[i];
-	if (!a->result_data) {
-		materialize_permutations(a, total * a->operation.shape[dimension]);
-		std::list<FGraphNode *> todo;
-		todo.push_back(a);
-		while (!todo.empty()) {
-			FGraphNode *curr = todo.front();
-			todo.pop_front();
-			bool terminate = false;
-			if (curr->result_data)
-				continue;
-			switch (curr->operation.op_type) {
-			case FREDUCE_MAX:
-			case FREDUCE_MIN:
-			case FREDUCE_MUL:
-			case FREDUCE_SUM: {
-				/* Nested reductions are *only* viable if the outer reduction
-				 * reduces the result of the inner reduction only once (only
-				 * then is the inner reduction never aimlessly recomputed per
-				 * iteration and we won't run into quadratic effort). */
-				int axis = ((int *)curr->operation.additional_data)[0];
-				size_t el_a = elements(a->operation);
-				size_t el_curr = elements(curr->operation);
-				if (el_a < el_curr * 2 || axis <= dimension ||
-					curr->reference_counter > 2) {
-					fExecuteGraph(curr);
-				}
-			}
-			default:
-				break;
-			}
-			for (int i = 0; i < curr->num_predecessor; i++)
-				todo.push_back(curr->predecessors[i]);
-		}
-	}
 	FGraphNode *foo = new FGraphNode();
 	configureGradientInformation(foo, {a});
 	foo->reference_counter = 0;
@@ -1046,9 +1165,7 @@ static const size_t MIN_REDUCTION_ITERATIONS = 16;
 /** The second reduction only has one work item per result, so its loop has to
  * stay short no matter how much parallelism the first one would gain */
 static const size_t MAX_REDUCTION_CHUNKS = 256;
-/** A reduction runs one work item per result element, each looping over the
- * reduced dimension. If there are few result elements that leaves the gpu
- * mostly idle, so the dimension is split into `[rest, keep]` where `keep` many
+/** Splits the dimension split into `[rest, keep]` where `keep` many
  * elements survive the first reduction to be combined by a second one.
  * Returns the size of `keep` or 0 if the reduction is already parallel enough.
  * `keep` is the last of the two so that neighbouring work items read
@@ -1085,6 +1202,35 @@ static size_t reduction_split(const FGraphNode *a, const int dimension) {
 }
 static FGraphNode *reduce_parallel(FGraphNode *a, const int dimension,
 								   FOperationType type) {
+	if (a->operation.op_type == FLATTEN && type == FREDUCE_SUM) {
+		// reducing an axis that a flatten merged is the same as reducing the
+		// axes it was merged from, e.g. instead of
+		// [7, 32, 24, 3] -(flatten)-> [7, 32 * 24, 3] -(reduce 1)-> [7, 3]
+		// [7, 32, 24, 3] -(reduce 2)-> [7, 32, 3] -(reduce 1)-> [7, 3]
+		// Only for sums: the gradient of the others needs the values of
+		// every reduction in between
+		const FOperation f = a->operation;
+		FGraphNode *b = a->predecessors[0];
+		const FOperation p = b->operation;
+		// the axes of b that were merged: fflatten merges all of them,
+		// fflatten_dimension two, in front of them the shapes are the same
+		int first = 0, last = p.dimensions - 1;
+		if (f.dimensions == p.dimensions - 1) {
+			while (first < f.dimensions - 1 && f.shape[first] == p.shape[first])
+				first++;
+			last = first + 1;
+		}
+		if (dimension == first && last > first) {
+			// the last one first, it becomes the innermost loop
+			for (int i = last; i >= first && b; i--)
+				b = reduce_parallel(b, i, type);
+			// nothing reads the flatten anymore, but it still holds its
+			// parameter (and everything below it) alive
+			if (b && a->reference_counter == 0)
+				fFreeGraph(a);
+			return b;
+		}
+	}
 	const size_t keep = reduction_split(a, dimension);
 	if (!keep)
 		return reduce_operation(a, dimension, type);
@@ -1132,8 +1278,7 @@ FGraphNode *fslice_step(FGraphNode *a, const long *start, const long *end,
 		return nullptr;
 	foo->predecessors[0] = a;
 	foo->reference_counter = 0;
-	if (a->reference_counter++ > 2 && worth_materializing(a))
-		fExecuteGraph(a);
+	a->reference_counter++;
 	FOperation op;
 	op.broadcasting_mode = 0;
 	op.op_type = FSLICE;
@@ -1336,8 +1481,7 @@ FGraphNode *fextend_step(FGraphNode *a, const size_t *new_shape,
 		return nullptr;
 	foo->predecessors[0] = a;
 	foo->reference_counter = 0;
-	if (a->reference_counter++ > 2 && worth_materializing(a))
-		fExecuteGraph(a);
+	a->reference_counter++;
 	// construct operation
 	const int dimensions = a->operation.dimensions;
 	FOperation op;
@@ -1471,20 +1615,27 @@ FGraphNode *fconvolve(FGraphNode *a, FGraphNode *kernel,
 		// channels of multifilter is in first dimension, repeat each window of
 		// the image to match
 		sw = fexpand(sw, 1, bo.shape[0]);
-		// add the channels so the reshape below does its job correctly
 		final_shape[ao.dimensions - 1] = bo.shape[0];
 	}
+	// the windows are enumerated in one dimension, give each direction its
+	// own one again
+	const int window_dims = ao.dimensions - 1;
+	const int result_dims = multifilter ? ao.dimensions : ao.dimensions - 1;
+	const int sw_dims = sw->operation.dimensions;
+	size_t window_shape[window_dims + sw_dims - 1];
+	memcpy(window_shape, final_shape, sizeof(size_t) * window_dims);
+	memcpy(window_shape + window_dims, sw->operation.shape + 1,
+		   sizeof(size_t) * (sw_dims - 1));
+	sw = freshape(sw, window_shape, window_dims + sw_dims - 1);
 	// multiply the windows with the kernel
 	FGraphNode *conv = fmul(sw, kernel);
-	// flatten to [no_windows, elements_in_window] or [no_windows, channels,
+	// flatten to [windows..., elements_in_window] or [windows..., channels,
 	// elements_in_window]
-	while (conv->operation.dimensions > (multifilter ? 3 : 2)) {
+	while (conv->operation.dimensions > result_dims + 1) {
 		conv = fflatten_dimension(conv, conv->operation.dimensions - 1);
 	}
-	// reduce elements_in_window
-	conv = freduce_sum(conv, multifilter ? 2 : 1); // reproject to correct shape
-	return freshape(conv, final_shape,
-					multifilter ? ao.dimensions : ao.dimensions - 1);
+	// reduce elements_in_window, which leaves the shape of the result
+	return freduce_sum(conv, result_dims);
 }
 FGraphNode *frandom(const size_t *shape, const int dimensions) {
 	return frandom_type(shape, dimensions, F_FLOAT64);

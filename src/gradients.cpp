@@ -68,8 +68,9 @@ static FGraphNode *unbroadcast(FGraphNode *adjoint, const FGraphNode *node) {
 		size_t diff =
 			adjoint->operation.dimensions - node->operation.dimensions;
 		FGraphNode *res = adjoint;
-		for (int i = 0; i < diff; i++) {
-			res = freduce_sum(res, 0);
+		// the last one first, it becomes the innermost loop
+		for (int i = diff - 1; i >= 0; i--) {
+			res = freduce_sum(res, i);
 		}
 		return res;
 	} else if (adjoint->operation.dimensions < node->operation.dimensions) {

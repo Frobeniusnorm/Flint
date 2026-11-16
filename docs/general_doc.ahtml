@@ -52,7 +52,7 @@
         <div class="card" style="padding: 20px 20px;">
           There are two different backends for the execution of Operations with two different execution strategies.
           <ul>
-            <li><b>Lazy Execution</b>: the nodes are only executed if the operation enforces it (e.g. matrix multiplication or reduction enforces complete execution of the parental nodes) 
+            <li><b>Lazy Execution</b>: the nodes are only executed if their data is needed (e.g. it is read by the user)
             or `fExecuteGraph` (in C) or `.execute()` (in C++) is called. 
             Else the graph is constructed with the operations, but the result data is only calculated for a node if it is executed.
             <div class="spacer2"></div>
@@ -74,6 +74,11 @@ m3.execute();
                 }</br>
                 Here it is possible for the GPU Backend to lazily only compute the 4*4*2 elements of m3 and their corresponding elements in the Matrix multiplication without having to calculate
                 the other 2097120 elements (128*128*128 = 2097152 elements).
+                <div class="spacer2"></div>
+                Before the kernel is generated, Flint estimates how often each node of the graph would be evaluated in it and how expensive that is.
+                Nodes that are cheaper to store than to recompute (e.g. a reduction whose result is read by every element of the kernel) are executed
+                in kernels of their own first. Small tensors that are read very often with a bad memory access pattern (like the weights of a convolution)
+                are additionally kept in a transposed copy that the kernels read instead.
                 </li>
               </ul>
               <div class="spacer2"></div>
@@ -89,7 +94,8 @@ m3.execute();
           <div class="spacer2"></div>
           As one can see from the benchmarks especially for many small operations eager execution is better for the CPU backend since the performance load is better distributed
           and it has much less overhead. For the GPU backend lazy execution is far better. The best overall performance is achieved with activating both backends without eager execution, 
-          where Flint chooses one by some heuristics. This yields currently a few milliseconds, but with some additional optimizations i am working on it might be much more.
+          where Flint chooses one by some heuristics. Training the MNIST example (<code>examples/mnist</code>, batch size 512) takes about 7.5 ms per batch on an AMD RX 6900 XT,
+          PyTorch 2.9 with ROCm takes 9.5 ms for the same model on the same GPU.
         </div>
         <div style="display: block; height: 2em;" id="data"></div>
         <div class="card">

@@ -38,10 +38,9 @@
  * If eager execution is enabled (see `Flint::enable_eager_execution()`) the
  * operation is directly executed with the generation of the new object,
  * else it only executes if you query its data (with `operator*` or
- * `operator[]`) or if a previous operation requires its data (keep in mind
- * that some operations have to execute the operations of their parameters
- * directly, because their data is already completly needed during execution
- * e.g. reduce operations or matrix multiplication).
+ * `operator[]`) or if a previous operation requires its data (e.g. indexed
+ * assignments execute their indices). When it is executed the GPU backend
+ * decides which intermediate results are worth storing.
  *
  * The template is recursively defined on the dimensionality `n`. Meaning
  * there are two implementations: one for the basis case `n=1` and one for

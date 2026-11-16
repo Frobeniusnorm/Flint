@@ -55,6 +55,9 @@ inline LaunchRange launchRange(const FGraphNode *node) {
  *   fills this list. It finds the parameters as the nodes with results .
  * - `scalars`: All parameters that are constant scalars.
  */
+/** Frees the copies in other memory layouts the code generation made of
+ * `node`, has to be called when the node is freed */
+void freeLayoutCopies(const FGraphNode *node);
 std::string
 generateCode(FGraphNode *node,
 			 std::list<std::pair<FGraphNode *, std::string>> &parameters,
