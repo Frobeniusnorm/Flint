@@ -344,8 +344,6 @@ generateCode(FGraphNode *root_node,
 		}
 		// write code
 		const string opstr = string(fop_to_string[node->operation.op_type]);
-		bool inverse_broadcasting =
-			false; // adds index manipulation code for inverse broadcasting
 		// a constant is a single value, passing it as an argument spares a
 		// buffer allocation and upload per execution
 		if (node->operation.op_type == FGEN_CONSTANT) {
@@ -408,12 +406,8 @@ generateCode(FGraphNode *root_node,
 			OperationImplementation *impl =
 				OperationImplementation::implementations[node->operation
 															 .op_type];
-			const bool has_map = state.index_map.expr_per_dim.size() ==
-								 node->operation.dimensions;
-			// where are the parameters read? Only possible if the coordinates
-			// of the node itself are known here
-			if (has_map)
-				impl->mutate_index(node, state);
+			// where are the parameters read?
+			impl->mutate_index(node, state);
 			// mapping only some parameters would leave the others without an
 			// index, the operation has to map either all of them or none
 			if (!state.pred_index_maps.empty() &&
@@ -428,50 +422,9 @@ generateCode(FGraphNode *root_node,
 						 string(fop_to_string[node->operation.op_type]) +
 							 " wrapped only some of its parameters.");
 			const int flags = impl->generate_ocl_lazy(node, name, state);
-			inverse_broadcasting =
-				flags & OperationImplementation::OCL_LAZY_INVERSE_BROADCASTING;
 			push_pred =
 				(flags & OperationImplementation::OCL_LAZY_DONT_PUSH_PREDS) ==
 				0;
-		}
-		if (inverse_broadcasting) {
-			// manipulate for invserse broadcasting
-			size_t iv1 = 1, iv2 = 1;
-			calculate_divisor_for_inverse_broadcasting(
-				node->predecessors[0], iv1, node->predecessors[1], iv2);
-			if (iv1 != 1 || iv2 != 1) {
-				push_pred = false;
-				const int var1 = ++variable_index;
-				const int var2 = ++variable_index;
-				// each parameter is read at a fraction of the offset
-				IndexMap coords = state.index_map;
-				const IndexExpr flat = state.flatten(
-					coords, node->operation.shape, node->operation.dimensions);
-				const string offset = state.to_code(flat);
-				const auto scaled = [&](FGraphNode *pred, size_t iv) {
-					IndexExpr e = flat;
-					if (iv != 1) {
-						const long hi = flat.bound.second / (long)iv;
-						e.a = 0;
-						e.exprs = {
-							{1, state.declare_coord(
-									state.index_map.current_depth,
-									state.type_of({0, hi}),
-									"(" + offset + ") / " + to_string(iv), 0,
-									hi)}};
-						e.derive_bound(state.index_atoms);
-					}
-					IndexMap map =
-						split_atoms(e, pred->operation.shape,
-									pred->operation.dimensions, state);
-					map.current_depth = state.index_map.current_depth;
-					return map;
-				};
-				todo.push_front({node->predecessors[1], "v" + to_string(var2),
-								 false, scaled(node->predecessors[1], iv2)});
-				todo.push_front({node->predecessors[0], "v" + to_string(var1),
-								 false, scaled(node->predecessors[0], iv1)});
-			}
 		}
 #ifdef FLINT_DEBUG
 		code.prepend("// " + opstr + "\n");

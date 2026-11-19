@@ -57,7 +57,7 @@ int MinImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		"const " + type + " " + name + " = min((" + type + ")v" +
 		to_string(compiler_state.variable_index + 1) + ", (" + type + ")v" +
 		to_string(compiler_state.variable_index + 2) + ");\n");
-	return OCL_LAZY_INVERSE_BROADCASTING;
+	return 0;
 }
 FGraphNode *MaxImpl::local_gradient(FGraphNode *y, int dx_i,
 									FGraphNode *prev_adj) {
@@ -88,7 +88,7 @@ int MaxImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		"const " + type + " " + name + " = max((" + type + ")v" +
 		to_string(compiler_state.variable_index + 1) + ", (" + type + ")v" +
 		to_string(compiler_state.variable_index + 2) + ");\n");
-	return OCL_LAZY_INVERSE_BROADCASTING;
+	return 0;
 }
 void MaxImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
@@ -120,7 +120,7 @@ int LessImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " < v" +
 		to_string(compiler_state.variable_index + 2) + " ? 1 : 0;\n");
-	return OCL_LAZY_INVERSE_BROADCASTING;
+	return 0;
 }
 void LessImpl::execute_cpu(const FGraphNode *node,
 						   std::vector<CPUResultData> predecessor_data,
@@ -152,7 +152,7 @@ int GreaterImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " > v" +
 		to_string(compiler_state.variable_index + 2) + " ? 1 : 0;\n");
-	return OCL_LAZY_INVERSE_BROADCASTING;
+	return 0;
 }
 void GreaterImpl::execute_cpu(const FGraphNode *node,
 							  std::vector<CPUResultData> predecessor_data,
@@ -194,7 +194,7 @@ int EqualImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		to_string(compiler_state.variable_index + 1) + " <= v" +
 		to_string(compiler_state.variable_index + 2) + " + " +
 		epsilon_for_type(y.data_type) + "? 1 : 0;\n");
-	return OCL_LAZY_INVERSE_BROADCASTING;
+	return 0;
 }
 void EqualImpl::execute_cpu(const FGraphNode *node,
 							std::vector<CPUResultData> predecessor_data,

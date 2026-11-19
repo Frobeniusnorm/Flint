@@ -25,10 +25,7 @@ struct IndexAtom {
 		std::pair<long, long> bound; // value bounds, inclusive
 		std::string name;			 // a variable needs a name
 		unsigned int depth;			 // depth (regarding nested loops)
-		/** Whether the value only exists where it is read, which is the case
-		 * for one that is loaded from a parameter: an expression containing it
-		 * may not be calculated in front of the scope it appears in. */
-		bool inlined;
+		bool inlined; // whether the value only exists where it is read
 		IndexAtom() = default;
 		IndexAtom(std::pair<long, long> bound, std::string name,
 				  unsigned int depth, bool inlined = false)
@@ -155,15 +152,16 @@ struct IndexMap {
  * as the node itself. Its shape has to be the trailing part of the node's
  * shape, then the leading coordinates are dropped and a dimension the parameter
  * has as size 1 becomes the coordinate 0, which is how a smaller parameter is
- * broadcast over the node. Returns false if the shapes do not fit that way,
- * e.g. for the inverse broadcasting modes.
+ * broadcast over the node. With `front` (inverse broadcasting) the shape of the
+ * parameter is the leading part of the node's shape instead, the trailing
+ * coordinates are dropped. Returns false if the shapes do not fit that way.
  */
 inline bool trailing_map(const IndexMap &node_map, const size_t *node_shape,
 						 int node_dims, const size_t *pred_shape, int pred_dims,
-						 IndexMap &result) {
+						 IndexMap &result, bool front = false) {
 	if (pred_dims > node_dims)
 		return false;
-	const int offset = node_dims - pred_dims;
+	const int offset = front ? 0 : node_dims - pred_dims;
 	result.expr_per_dim.resize(pred_dims);
 	for (int i = 0; i < pred_dims; i++) {
 		if (pred_shape[i] == 1)

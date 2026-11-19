@@ -64,13 +64,8 @@ static void calculate_divisor_for_inverse_broadcasting(const FGraphNode *a,
 			iv1 *= b->operation.shape[i];
 	}
 }
-/** True if the operation evaluates its predecessors with the same
- * `index` it was called with. Only those pass the global id down
- * unchanged, everything else remaps the index for its predecessors
- * (reductions, slices, windows,
- * ...) so that the same node means different values in different
- * places. */
-static bool passesIndexOn(const FGraphNode *node) {
+/** True for the binary operations that broadcast their parameters */
+static bool isBinaryElementwise(const FGraphNode *node) {
 	switch (node->operation.op_type) {
 	case FADD:
 	case FSUB:
@@ -81,13 +76,27 @@ static bool passesIndexOn(const FGraphNode *node) {
 	case FMAX:
 	case FLESS:
 	case FEQUAL:
-	case FGREATER: {
-		// inverse broadcasting divides the index for the predecessors
+	case FGREATER:
+		return true;
+	default:
+		return false;
+	}
+}
+/** True if the operation evaluates its predecessors with the same
+ * `index` it was called with. Only those pass the global id down
+ * unchanged, everything else remaps the index for its predecessors
+ * (reductions, slices, windows,
+ * ...) so that the same node means different values in different
+ * places. */
+static bool passesIndexOn(const FGraphNode *node) {
+	if (isBinaryElementwise(node)) {
+		// inverse broadcasting reads the predecessors at fewer coordinates
 		size_t iv1 = 1, iv2 = 1;
 		calculate_divisor_for_inverse_broadcasting(node->predecessors[0], iv1,
 												   node->predecessors[1], iv2);
 		return iv1 == 1 && iv2 == 1;
 	}
+	switch (node->operation.op_type) {
 	case FNEG:
 	case FLOG:
 	case FLOG2:
@@ -507,9 +516,6 @@ struct OperationImplementation {
 									   std::vector<FGraphNode *> pred);
 		/** Disables automatic code generation for the parents */
 		static const int OCL_LAZY_DONT_PUSH_PREDS = 1;
-		/** Enables automatic index insertion for inverse broadcasting if the
-		 * node request it */
-		static const int OCL_LAZY_INVERSE_BROADCASTING = 2;
 		static std::vector<OperationImplementation *> implementations;
 		virtual ~OperationImplementation() {}
 		/** Calculates the local gradient for the operation.
@@ -579,8 +585,13 @@ struct OperationImplementation {
 		 */
 		virtual bool mutate_index(const FGraphNode *node,
 								  OCLLazyCodegenState &state) {
-			// inverse broadcasting is mapped by the code generation itself
-			if (!passesIndexOn(node))
+			// the parameter with fewer dimensions of an inverse broadcast is
+			// aligned at the front
+			size_t iv[2] = {1, 1};
+			if (isBinaryElementwise(node))
+				calculate_divisor_for_inverse_broadcasting(
+					node->predecessors[0], iv[0], node->predecessors[1], iv[1]);
+			else if (!passesIndexOn(node))
 				return false;
 			std::vector<IndexMap> maps(node->num_predecessor);
 			for (int i = 0; i < node->num_predecessor; i++) {
@@ -588,7 +599,7 @@ struct OperationImplementation {
 				const FOperation pred = node->predecessors[i]->operation;
 				if (!trailing_map(state.index_map, node->operation.shape,
 								  node->operation.dimensions, pred.shape,
-								  pred.dimensions, maps[i]))
+								  pred.dimensions, maps[i], iv[i] != 1))
 					return false;
 			}
 			for (const IndexMap &map : maps) {

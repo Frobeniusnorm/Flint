@@ -39,7 +39,7 @@ int AddImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " + v" +
 		to_string(compiler_state.variable_index + 2) + ";\n");
-	return OCL_LAZY_INVERSE_BROADCASTING;
+	return 0;
 }
 std::vector<bool> AddImpl::reuse_parameter_binary_impl(const FGraphNode *node) {
 	const FOperation op = node->operation;
@@ -87,7 +87,7 @@ int SubImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " - v" +
 		to_string(compiler_state.variable_index + 2) + ";\n");
-	return OCL_LAZY_INVERSE_BROADCASTING;
+	return 0;
 }
 FGraphNode *MulImpl::local_gradient(FGraphNode *y, int dx_i,
 									FGraphNode *prev_adj) {
@@ -117,7 +117,7 @@ int MulImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " * v" +
 		to_string(compiler_state.variable_index + 2) + ";\n");
-	return OCL_LAZY_INVERSE_BROADCASTING;
+	return 0;
 }
 template <typename T, typename A, typename B>
 void DivImpl::binary_expression(T *__restrict__ result,
@@ -138,7 +138,7 @@ int DivImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		"const " + type + " " + name + " = v" +
 		to_string(compiler_state.variable_index + 1) + " / v" +
 		to_string(compiler_state.variable_index + 2) + ";\n");
-	return OCL_LAZY_INVERSE_BROADCASTING;
+	return 0;
 }
 FGraphNode *DivImpl::local_gradient(FGraphNode *y, int dx_i,
 									FGraphNode *prev_adj) {
@@ -207,7 +207,7 @@ int PowImpl::generate_ocl_lazy(const FGraphNode *node, std::string name,
 		code.prepend("const " + type + " " + name + " = pow((double)v" +
 					 to_string(variable_index + 1) + ", (double)v" +
 					 to_string(variable_index + 2) + ");\n");
-	return OCL_LAZY_INVERSE_BROADCASTING;
+	return 0;
 }
 void SubImpl::execute_cpu(const FGraphNode *node,
 						  std::vector<CPUResultData> predecessor_data,
